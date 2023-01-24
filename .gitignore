@@ -1,0 +1,9 @@
+.devenv
+# taken from https://github.com/tree-sitter/tree-sitter-haskell/blob/2a0aa1cb5f1b787a4056a29fa0791e87846e33fb/.gitignore
+node_modules
+build
+*.log
+package-lock.json
+repos
+examples/*
+!examples/.gitkeep
