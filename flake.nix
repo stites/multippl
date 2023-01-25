@@ -37,6 +37,7 @@
           # difftastic.enable = true; # https://devenv.sh/integrations/difftastic/
           # packages = with pkgs; [ leanPkgs.lean ];
 
+
           ## https://devenv.sh/basics/
           #env.GREET = "devenv";
           #
@@ -47,6 +48,52 @@
           #'';
           ## https://devenv.sh/pre-commit-hooks/
           #pre-commit.hooks.shellcheck.enable = true;
+
+          ## # taken from devshell.toml
+          ## devshell.packages = ["nixpkgs-fmt", "vscode-dev"]
+          ## 
+          ## # general tools
+          ## [[commands]]
+          ## package = "devshell.cli"
+          ## help = "Per project developer environments"
+          ## 
+          ## [[commands]]
+          ## package = "lldb"
+          ## 
+          ## [[commands]]
+          ## package = "rr-unstable"
+          ## 
+          ## # lean dependencies
+          ## [[commands]]
+          ## package = "lean-bin-dev"
+          ## help = "A functional programming language that makes it easy to write correct and maintainable code"
+          ## category = "lean"
+          ## 
+          ## [[commands]]
+          ## package = "lake-dev"
+          ## category = "lean"
+          ## 
+          ## [[commands]]
+          ## package = "emacs-dev"
+          ## help = "open a pinned version of Emacs with lean4-mode fully set up"
+          ## category = "lean"
+          ## 
+          ## [[commands]]
+          ## command = "code"
+          ## name = "vscode-dev"
+          ## help = "open a pinned version of VSCode with a lean4 set up"
+          ## category = "lean"
+          ## 
+          ## # taken from Mathlib, but not applicable in advent of code
+          ## # [[commands]]
+          ## # name = "mk-adventofcode"
+          ## # command = """
+          ## # cd $(git rev-parse --show-toplevel)
+          ## # find . -name '*.lean' -not -name 'AdventOfCode.lean' | env LC_ALL=C sort | cut -d '/' -f 2- | sed 's/\\.lean//;s,/,.,g;s/^/import /' > AdventOfCode.lean
+          ## # """
+          ## # help = "Add all new *.lean files to AdventOfCode.lean"
+          ## # category = "lean"
+
         } ];
       };
     });
