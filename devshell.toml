@@ -1,0 +1,106 @@
+# https://numtide.github.io/devshell
+devshell.packages = ["nixpkgs-fmt", "vscode-dev"]
+
+# general tools
+[[commands]]
+package = "devshell.cli"
+help = "Per project developer environments"
+
+[[commands]]
+package = "lldb"
+
+[[commands]]
+package = "rr-unstable"
+
+# lean dependencies
+[[commands]]
+package = "lean-bin-dev"
+help = "A functional programming language that makes it easy to write correct and maintainable code"
+category = "lean"
+
+[[commands]]
+package = "lake-dev"
+category = "lean"
+
+[[commands]]
+package = "emacs-dev"
+help = "open a pinned version of Emacs with lean4-mode fully set up"
+category = "lean"
+
+[[commands]]
+command = "code"
+name = "vscode-dev"
+help = "open a pinned version of VSCode with a lean4 set up"
+category = "lean"
+
+# taken from Mathlib, but not applicable in advent of code
+# [[commands]]
+# name = "mk-adventofcode"
+# command = """
+# cd $(git rev-parse --show-toplevel)
+# find . -name '*.lean' -not -name 'AdventOfCode.lean' | env LC_ALL=C sort | cut -d '/' -f 2- | sed 's/\\.lean//;s,/,.,g;s/^/import /' > AdventOfCode.lean
+# """
+# help = "Add all new *.lean files to AdventOfCode.lean"
+# category = "lean"
+
+# Rust dependencies
+[[commands]]
+package = "cargo"
+category = "rust"
+
+[[commands]]
+package = "rustc"
+category = "rust"
+
+[[commands]]
+package = "clippy"
+category = "rust"
+
+[[commands]]
+package = "rust-analyzer"
+help = "IDE for emacs"
+category = "rust"
+
+[[commands]]
+package = "rustfmt"
+category = "rust"
+
+[[commands]]
+package = "cargo-watch"
+category = "rust"
+
+
+[[commands]]
+package = "cargo-nextest"
+category = "rust"
+
+
+[[commands]]
+package = "cargo-expand"
+help = """Expands macros in a given crate and lets you inspect the output, which makes it
+                     much easier to spot mistakes deep down in macro transcribers or procedural
+                     macros. cargo-expand is an invaluable tool when you’re writing your own macros."""
+category = "rust"
+
+[[commands]]
+package = "cargo-llvm-lines"
+help = """Count the number of lines of LLVM IR across all instantiations of a generic function
+                     Analyzes the mapping from Rust code to the intermediate representation (IR)
+                     that’s passed to the part of the Rust compiler that actually generates machine
+                     code (LLVM), and tells you which bits of Rust code produce the largest IR. This
+                     is useful because a larger IR means longer compile times, so identifying what
+                     Rust code generates a bigger IR (due to, for example, monomorphization) can
+                     highlight opportunities for reducing compile times."""
+category = "rust"
+
+[[commands]]
+package = "cargo-inspect"
+category = "rust"
+
+[[commands]]
+package = "cargo-rr"
+category = "rust"
+
+[[commands]]
+package = "cargo-criterion"
+category = "rust"
