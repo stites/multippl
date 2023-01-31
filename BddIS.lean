@@ -204,7 +204,7 @@ instance : Monoid Compiled where
   unit := { global := Formula.bool true, accept := Formula.bool true, weightMap := HashMap.empty, substitutions := HashMap.empty, probability := Prob.mk 1, importanceWeight := 1 }
   op l r := { global := Formula.conj l.global r.global, accept := Formula.conj l.accept r.accept, weightMap := l.unionMaps r, substitutions := l.unionSubs r, probability := Prob.mul l.probability r.probability, importanceWeight := l.importanceWeight * r.importanceWeight }
 
-def map2lits (m: WeightMap) : HashSet Nat := Id.run do
+def map2vars (m: WeightMap) : HashSet Nat := Id.run do
   let list := (Lit.var ∘ Prod.fst) <$> m.toList
   let mut fin : HashSet Nat := Lean.mkHashSet (capacity := m.size)
   for n in list do
@@ -212,34 +212,54 @@ def map2lits (m: WeightMap) : HashSet Nat := Id.run do
   fin
 
 abbrev Assignment := Array Bool
+
 structure AllAssignments where
-  vars : HashSet Nat
+  cur  : Option Assignment
+  num_vars : Nat
+deriving Repr
+
+-- tired of trying to get HXor to synthesize
+def bXor : Bool -> Bool -> Bool
+  | false, true => true
+  | true, false  => true
+  | _, _  => false
 
 instance : Stream AllAssignments Assignment where
-  next?
-    | []    => none
-    | a::as => some (a, as)
+  next? state :=
+    match state.cur with
+    | none => -- start a stream
+      let cur := Array.mk ((fun _ => false) <$> List.range state.num_vars)
+      some (cur, { state with cur := cur})
+    | some cur =>
+      let emptyBoolArr : Array Bool := Array.empty
+      let (nxt, carry) := Array.foldl (fun (cur_l, carry) cur_assgn =>
+        let new_itm := bXor cur_assgn carry
+        let new_carry := cur_assgn && carry
+        (cur_l.push new_itm, new_carry)
+        ) (emptyBoolArr, true) cur
+      if carry
+      then none
+      else some (nxt, { state with cur := nxt })
 
+#eval Stream.next? (AllAssignments.mk none 3)
+#eval Stream.next? (AllAssignments.mk #[true, true, false] 3)
+#eval Stream.next? (AllAssignments.mk #[true, true, true] 3)
 
-def findNatInAssigned? [Applicative m] [MonadExceptOf String m] {x:Type}(assignment: HashMap Lit x) (i : Nat) : m x :=
-    match assignment.find? (Lit.mk i true) with
-    | none => match assignment.find? (Lit.mk i false) with
-      | none => throw "error! no weight found in wmc map for {i}"
-      | some x => pure x
-    | some x => pure x
-
-def isSAT [Monad m] [MonadExceptOf String m] (assignment: HashMap Lit Bool) : Formula -> m Bool
-  | .id i => findNatInAssigned? assignment i
+def isSAT [Monad m] [MonadExceptOf String m] (a: Assignment) : Formula -> m Bool
+  | .id i =>
+    match a[i]? with
+    | none => throw s!"id {i} was not foud in assignments list of length {a.size}!"
+    | some b => pure b
   | .bool b => return (b == true)
-  | .disj l r => (. || .) <$> isSAT assignment l <*> isSAT assignment r
-  | .conj l r => (. && .) <$> isSAT assignment l <*> isSAT assignment r
-  | .neg b => not <$> isSAT assignment b
+  | .disj l r => (. || .) <$> isSAT a l <*> isSAT a r
+  | .conj l r => (. && .) <$> isSAT a l <*> isSAT a r
+  | .neg b => not <$> isSAT a b
 
 def wmc_incomplete [Monad m] [MonadExceptOf String m] (map: WeightMap) : Formula -> m Float
   | .id i =>
     match map.find? (Lit.mk i true) with
     | none => throw "error! no weight found in wmc map for {i}"
-    | some x => return 0
+    | some _ => return 0
   | .bool b => return (if b then 1 else 0)
   | .disj l r => do
     let l <- wmc_incomplete map l

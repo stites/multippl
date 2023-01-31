@@ -208,7 +208,7 @@
               cd $(git rev-parse --show-toplevel)
               find . -name '*.lean' -not -name '${myPackageName}.lean' | env LC_ALL=C sort | cut -d '/' -f 2- | sed 's/\\.lean//;s,/,.,g;s/^/import /' > ${myPackageName}.lean
             '';
-            watch.exec = "${pkgs.watchexec}/bin/watchexec -w *.lean -w flake.nix nix build";
+            watch.exec = ''${pkgs.watchexec}/bin/watchexec -w *.lean -w flake.nix "nix build && echo '               ...compiled!' && echo"'';
           };
           enterShell = "hello";
         } ];
