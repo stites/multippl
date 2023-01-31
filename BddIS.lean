@@ -152,7 +152,12 @@ def Formula.subst (f: Formula) (x: Nat) (v: Formula) :=
   | conj l r => conj (l.subst x v) (r.subst x v)
   | neg b => neg (b.subst x v)
 
-abbrev WeightMap := HashMap (Prod Nat Bool) Float
+structure Lit where
+  var : Nat
+  pol : Bool
+deriving Repr, Hashable, BEq
+
+abbrev WeightMap := HashMap Lit Float
 abbrev SubstMap := HashMap Nat Formula
 
 def Formula.apply (f: Formula) (m: SubstMap) : Formula :=
@@ -177,10 +182,6 @@ deriving Repr
 def Prob.add (l: Prob) (r:Prob) := Prob.mk (l.prob + r.prob)
 def Prob.mul (l: Prob) (r:Prob) := Prob.mk (l.prob * r.prob)
 
-structure Density where
-  density : Float
-deriving Repr
-
 def leftEntry {a b : Type} (_ : a) (left : b) (_ : b) : b := left
 
 structure Compiled where
@@ -203,10 +204,40 @@ instance : Monoid Compiled where
   unit := { global := Formula.bool true, accept := Formula.bool true, weightMap := HashMap.empty, substitutions := HashMap.empty, probability := Prob.mk 1, importanceWeight := 1 }
   op l r := { global := Formula.conj l.global r.global, accept := Formula.conj l.accept r.accept, weightMap := l.unionMaps r, substitutions := l.unionSubs r, probability := Prob.mul l.probability r.probability, importanceWeight := l.importanceWeight * r.importanceWeight }
 
+def map2lits (m: WeightMap) : HashSet Nat := Id.run do
+  let list := (Lit.var ∘ Prod.fst) <$> m.toList
+  let mut fin : HashSet Nat := Lean.mkHashSet (capacity := m.size)
+  for n in list do
+     fin := HashSet.insert fin n
+  fin
+
+abbrev Assignment := Array Bool
+structure AllAssignments where
+  vars : HashSet Nat
+
+instance : Stream AllAssignments Assignment where
+  next?
+    | []    => none
+    | a::as => some (a, as)
+
+
+def findNatInAssigned? [Applicative m] [MonadExceptOf String m] {x:Type}(assignment: HashMap Lit x) (i : Nat) : m x :=
+    match assignment.find? (Lit.mk i true) with
+    | none => match assignment.find? (Lit.mk i false) with
+      | none => throw "error! no weight found in wmc map for {i}"
+      | some x => pure x
+    | some x => pure x
+
+def isSAT [Monad m] [MonadExceptOf String m] (assignment: HashMap Lit Bool) : Formula -> m Bool
+  | .id i => findNatInAssigned? assignment i
+  | .bool b => return (b == true)
+  | .disj l r => (. || .) <$> isSAT assignment l <*> isSAT assignment r
+  | .conj l r => (. && .) <$> isSAT assignment l <*> isSAT assignment r
+  | .neg b => not <$> isSAT assignment b
 
 def wmc_incomplete [Monad m] [MonadExceptOf String m] (map: WeightMap) : Formula -> m Float
   | .id i =>
-    match map.find? (i, true) with
+    match map.find? (Lit.mk i true) with
     | none => throw "error! no weight found in wmc map for {i}"
     | some x => return 0
   | .bool b => return (if b then 1 else 0)
@@ -272,7 +303,7 @@ def evalExpr [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] : Expr -> W
            }
   | Expr.flip param, m, p => do
     let f <- fresh
-    let flipMap := (HashMap.empty.insert (f, true) param).insert (f, false) (1-param)
+    let flipMap := (HashMap.empty.insert (Lit.mk f true) param).insert (Lit.mk f false) (1-param)
     return { global := id f
            , accept := bool true
            , weightMap     := flipMap.mergeWith leftEntry m
