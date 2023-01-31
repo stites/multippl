@@ -169,17 +169,46 @@
           difftastic.enable = true; # https://devenv.sh/integrations/difftastic/
           pre-commit.hooks.shellcheck.enable = true;
 
-          packages = with pkgs; [  lldb rr-unstable lean-bin-dev lake-dev emacs-dev ]; # leanPkgs.lean
+          packages = with pkgs; [
+            lldb
+            rr-unstable
+            watchexec
+            lean-bin-dev emacs-dev
+          ];
+
           env.GREET = "devenv";
           # taken from Mathlib, but not really applicable for most use-cases
           scripts = {
-            hello.exec = "echo hello from $GREET";
+            hello.exec = pkgs.lib.concatStringsSep "\n" [
+              "echo"
+              ''echo "Hello from $GREET! Here are some nifty dev tools to use for this project:"''
+              "echo"
+              # packages
+              ''
+              echo "watchexec   -- ${pkgs.watchexec.meta.description}"
+              echo "lldb        -- ${pkgs.lldb.meta.description}"
+              echo "rr          -- ${pkgs.rr-unstable.meta.description}"
+              echo "lean        -- the lean 4 compiler"
+              ''
+
+              ''echo''
+              # scripts
+
+              #''echo "emacs-dev   -- pinned emacs with pre-configured lean4-mode"''
+              #''echo "code        -- (script) launch vscode with lean4 plugins"''
+              ''
+              echo "mk-lib-root -- (script) Generate ${myPackageName}.lean from all lean files"
+              echo "watch       -- (script) watchexec wrapper to watch all top-level lean files and flake.nix"
+              echo
+              ''
+            ];
             code.exec = "${pkgs.vscode-dev}/bin/vscode-dev";
             # Add all new *.lean files to ${myPackageName}.lean
             mk-lib-root.exec = ''
               cd $(git rev-parse --show-toplevel)
               find . -name '*.lean' -not -name '${myPackageName}.lean' | env LC_ALL=C sort | cut -d '/' -f 2- | sed 's/\\.lean//;s,/,.,g;s/^/import /' > ${myPackageName}.lean
             '';
+            watch.exec = "${pkgs.watchexec}/bin/watchexec -w *.lean -w flake.nix nix build";
           };
           enterShell = "hello";
         } ];

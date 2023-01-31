@@ -2,3 +2,5 @@
 target
 .git
 .direnv
+result
+.devenv
