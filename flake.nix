@@ -46,6 +46,13 @@
     lake.url = github:leanprover/lake;
     lake.inputs.lean.follows = "lean";
     lake.inputs.flake-utils.follows = "flake-utils";
+
+    # take the streaming library from:
+    kha-aoc-2022.url = github:Kha/aoc-2022;
+    kha-aoc-2022.inputs.lean.follows = "lean";
+    kha-aoc-2022.inputs.lean-doc.follows = "lean-doc";
+    kha-aoc-2022.inputs.flake-utils.follows = "lean/flake-utils";
+    kha-aoc-2022.inputs.std4.follows = "std4";
   };
 
   outputs = inputs@{ self, lean, ... }: inputs.flake-utils.lib.eachDefaultSystem (system:
@@ -69,10 +76,16 @@
         name = myPackageName;
         src = ./.;
         roots = [ myPackageName ];
+        #deps = [ std4 inputs.kha-aoc-2022.defaultPackage ];
         deps = [ std4 ];
         libName = myPackageName;
         # executableName = myPackageName;
       };
+      # having some trouble with this one. Going to just inline the definitions
+      # kha-aoc-2022 = inputs.kha-aoc-2022.packages.${system}.modRoot.overrideAttrs (old: {
+      #   #allExternalDeps = old.allExternalDeps;
+      #   allExternalDeps = [];
+      # });
 
       mathlib = leanPkgs.buildLeanPackage {
         name = "Mathlib";

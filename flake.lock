@@ -170,6 +170,36 @@
         "type": "github"
       }
     },
+    "kha-aoc-2022": {
+      "inputs": {
+        "flake-utils": [
+          "lean",
+          "flake-utils"
+        ],
+        "lean": [
+          "lean"
+        ],
+        "lean-doc": [
+          "lean-doc"
+        ],
+        "std4": [
+          "std4"
+        ]
+      },
+      "locked": {
+        "lastModified": 1671004474,
+        "narHash": "sha256-xUjcv04th0UbmaZHKNYZTPDE/GBxK6w2a125ambc8W8=",
+        "owner": "Kha",
+        "repo": "aoc-2022",
+        "rev": "3d5e31dd1c3bc04232d49f981b6bc8f46c545280",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Kha",
+        "repo": "aoc-2022",
+        "type": "github"
+      }
+    },
     "lake": {
       "inputs": {
         "flake-utils": [
@@ -553,6 +583,7 @@
           "lean",
           "flake-utils"
         ],
+        "kha-aoc-2022": "kha-aoc-2022",
         "lake": "lake",
         "lean": "lean",
         "lean-doc": "lean-doc",
