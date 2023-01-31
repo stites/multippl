@@ -105,13 +105,11 @@ inductive Val where
   | bool (b:Bool) : Val
   | prod (l : Val) (r : Val) : Val
 deriving Repr, BEq
-abbrev V := Val
 
 inductive ANF where
   | var (s:String) : ANF
   | val (v:Val) : ANF
 deriving Repr, BEq
-abbrev A := ANF
 
 inductive Expr where
   | anf (a:ANF)
@@ -125,7 +123,6 @@ inductive Expr where
   | observe (a:ANF) -- TODO this can be a full expression, I think
   | sample (e:Expr)
 deriving Repr, BEq
-abbrev E := Expr
 
 structure Func where
   name : String
@@ -146,7 +143,6 @@ inductive Formula where
   | conj (l: Formula) (r: Formula) : Formula
   | neg (b: Formula)  : Formula
 deriving Repr, BEq
-abbrev F := Formula
 
 def Formula.subst (f: Formula) (x: Nat) (v: Formula) :=
   match f with
