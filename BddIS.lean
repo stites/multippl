@@ -2,9 +2,9 @@ import Std.Data.HashMap
 import Lean.Data.HashSet
 import Std.Data.RBMap
 import Init.Control.Id
-open Std
+import Init.Data.Option
+open Std -- (HashMap)
 open Lean (HashSet)
-open Option
 open Prod
 -------------------------------------------------------------------------------------------------
 -- flake.nix is giving me trouble, taking the following from https://github.com/Kha/aoc-2022/blob/master/Aoc/Util.lean
@@ -157,7 +157,7 @@ structure Lit where
   pol : Bool
 deriving Repr, Hashable, BEq
 
-abbrev WeightMap := HashMap Lit Float
+abbrev WeightMap := HashMap Nat (Prod Float Float)
 abbrev SubstMap := HashMap Nat Formula
 
 def Formula.apply (f: Formula) (m: SubstMap) : Formula :=
@@ -205,7 +205,7 @@ instance : Monoid Compiled where
   op l r := { global := Formula.conj l.global r.global, accept := Formula.conj l.accept r.accept, weightMap := l.unionMaps r, substitutions := l.unionSubs r, probability := Prob.mul l.probability r.probability, importanceWeight := l.importanceWeight * r.importanceWeight }
 
 def map2vars (m: WeightMap) : HashSet Nat := Id.run do
-  let list := (Lit.var ∘ Prod.fst) <$> m.toList
+  let list := Prod.fst <$> m.toList
   let mut fin : HashSet Nat := Lean.mkHashSet (capacity := m.size)
   for n in list do
      fin := HashSet.insert fin n
@@ -244,6 +244,7 @@ instance : Stream AllAssignments Assignment where
 #eval Stream.next? (AllAssignments.mk none 3)
 #eval Stream.next? (AllAssignments.mk #[true, true, false] 3)
 #eval Stream.next? (AllAssignments.mk #[true, true, true] 3)
+def all_assignments (n : Nat) : AllAssignments := { cur := none, num_vars := n }
 
 def isSAT [Monad m] [MonadExceptOf String m] (a: Assignment) : Formula -> m Bool
   | .id i =>
@@ -255,9 +256,20 @@ def isSAT [Monad m] [MonadExceptOf String m] (a: Assignment) : Formula -> m Bool
   | .conj l r => (. && .) <$> isSAT a l <*> isSAT a r
   | .neg b => not <$> isSAT a b
 
+@[always_inline, inline] protected def Option.tryCatchStr (x : Option α) (handle : String → Option α) : Option α :=
+  match x with
+  | some _ => x
+  | none => handle ""
+
+instance : MonadExceptOf String Option where
+  throw    := fun _ => Option.none
+  tryCatch := Option.tryCatchStr
+
+def isSAT? : Assignment -> Formula -> Option Bool := isSAT
+
 def wmc_incomplete [Monad m] [MonadExceptOf String m] (map: WeightMap) : Formula -> m Float
   | .id i =>
-    match map.find? (Lit.mk i true) with
+    match map.find? i with
     | none => throw "error! no weight found in wmc map for {i}"
     | some _ => return 0
   | .bool b => return (if b then 1 else 0)
@@ -271,7 +283,42 @@ def wmc_incomplete [Monad m] [MonadExceptOf String m] (map: WeightMap) : Formula
     return l+r
   | .neg b => wmc_incomplete map b
 
-def wmc [Monad m] [MonadExceptOf String m] : WeightMap -> Formula -> m Float := wmc_incomplete
+def isConsecutive [Monad m] [MonadExceptOf String m] (nats: List Nat) : m Bool :=
+  match nats.maximum? with
+  | none => throw "error: empty weight map in validVars"
+  | some mx => pure $ nats.length - 1 == mx
+
+#eval (isConsecutive [] : Except String Bool)
+#eval (isConsecutive [2,1,3,0] : Except String Bool)
+
+def validVars [Monad m] [MonadExceptOf String m] (weights: WeightMap) : m Bool :=
+  map2vars weights |> HashSet.toList |> isConsecutive
+
+def assertConsecutiveVars [Monad m] [MonadExceptOf String m] (weights: WeightMap) : m Unit := do
+  let num_vars := weights.size - 1
+  let isValid <- validVars weights
+  if not isValid
+  then
+    let keys : List Nat := weights.toList.map Prod.fst
+    throw s!"weight keys are not consecutive nats.\nExpected: 0-{num_vars}\nGot:{keys}"
+  else
+    pure ()
+
+def wmc [Monad m] [MonadExceptOf String m] (weights: WeightMap) (f: Formula) : m Float := do
+  assertConsecutiveVars weights
+  pure $ Id.run do
+    let num_vars := weights.size - 1
+    let init : Float := 0
+    Stream.fold (all_assignments num_vars) (fun tot assgn =>
+      match isSAT? assgn f with
+      | none => tot
+      | some b => if not b then pure tot else Id.run do
+        let cur <- tot
+        (Function.comp (. + cur) Prod.snd) <$> (Array.foldl (fun (ix, v) p =>
+          let (l, h) := weights.find! ix
+          (ix+1, if p then l else h)
+        ) ((0 : Nat), (1 : Float)) assgn)
+    ) init
 
 def bernoulli [Monad m] [MonadStateOf Env m] (theta : Prob) : m Bool := do
   let env <- get
@@ -323,7 +370,7 @@ def evalExpr [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] : Expr -> W
            }
   | Expr.flip param, m, p => do
     let f <- fresh
-    let flipMap := (HashMap.empty.insert (Lit.mk f true) param).insert (Lit.mk f false) (1-param)
+    let flipMap := HashMap.empty.insert f (1-param, param)
     return { global := id f
            , accept := bool true
            , weightMap     := flipMap.mergeWith leftEntry m
