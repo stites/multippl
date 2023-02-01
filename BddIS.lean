@@ -3,7 +3,7 @@ import Lean.Data.HashSet
 import Std.Data.RBMap
 import Init.Control.Id
 import Init.Data.Option
-open Std -- (HashMap)
+open Std
 open Lean (HashSet)
 open Prod
 -------------------------------------------------------------------------------------------------
@@ -16,57 +16,6 @@ def Stream.fold [ToStream ρ ρ'] [Stream ρ' α] (s : ρ) (f : β → α → β
   for a in toStream s do
     b := f b a
   b
-
-class Collect (α β : Type) where
-  collect : α → β
-
-instance [Stream ρ α] : Collect ρ (Array α) where
-  collect s := Stream.fold s (·.push) ∅
-
-instance [Stream ρ α] : Collect ρ (List α) where
-  collect s := Stream.fold s (fun as a => a :: as) ∅ |>.reverse
-
-def Stream.collect [ToStream α β] [Collect β γ] (a : α) : γ :=
-  Collect.collect (toStream a)
-
-def Stream.toArray [ToStream α β] [Stream β γ] [Collect β (Array γ)] (a : α) : (Array γ) :=
-  Stream.collect a
-
-def Stream.sum [ToStream α β] [Stream β γ] [Add γ] [OfNat γ 0] (a : α) : γ :=
-  Stream.fold a (· + ·) 0
-
-def Stream.prod [ToStream α β] [Stream β γ] [Mul γ] [OfNat γ 1] (a : α) : γ :=
-  Stream.fold a (· * ·) 1
-
-def Stream.head! [ToStream α β] [Stream β γ] [Inhabited β] [Inhabited γ] (a : α) : γ :=
-  Stream.next? (toStream a) |>.get!.1
-
-def Stream.min! [ToStream α β] [Stream β γ] [Inhabited β] [Inhabited γ] [Min γ] (a : α) : γ :=
-  Stream.fold a min (Stream.head! a)
-
-def Stream.max! [ToStream α β] [Stream β γ] [Inhabited β] [Inhabited γ] [Max γ] (a : α) : γ :=
-  Stream.fold a max (Stream.head! a)
--------------------------------------------------------------------------------------------------
--- taken from: https://github.com/leanprover/lean4/blob/b6eb7801445366d2441b2f1ace19a2c37e15c535/tests/compiler/lazylist.lean
-inductive LazyList (α : Type u) where
-  | nil                               : LazyList α
-  | cons (hd : α) (tl : LazyList α)   : LazyList α
-  | delayed (t : Thunk $ LazyList α)  : LazyList α
-
-instance : Inhabited (LazyList α) :=
-  ⟨LazyList.nil⟩
-
-partial def iterate (f : α → α) : α → LazyList α
-  | x => LazyList.cons x (LazyList.delayed (iterate f (f x)))
--------------------------------------------------------------------------------------------------
--- #check iterate (fun prev => Id.run {
---   let mut nxt := prev
---   for n in prev do {
---     v := n.fst ^
-
---   }
--- } [(1,true),(3,true),(2,true)])
--- #check [(1,true),(3,true),(2,true)]
 -------------------------------------------------------------------------------------------------
 
 structure Env where
@@ -152,11 +101,6 @@ def Formula.subst (f: Formula) (x: Nat) (v: Formula) :=
   | conj l r => conj (l.subst x v) (r.subst x v)
   | neg b => neg (b.subst x v)
 
-structure Lit where
-  var : Nat
-  pol : Bool
-deriving Repr, Hashable, BEq
-
 abbrev WeightMap := HashMap Nat (Prod Float Float)
 abbrev SubstMap := HashMap Nat Formula
 
@@ -192,6 +136,7 @@ structure Compiled where
   probability : Prob
   importanceWeight : Float
 
+-- could really use some lenses, I think
 def Compiled.unionMaps (l: Compiled) (r:Compiled) := l.weightMap.mergeWith leftEntry r.weightMap
 def Compiled.unionSubs (l: Compiled) (r:Compiled) := l.substitutions.mergeWith leftEntry r.substitutions
 def Compiled.convexCombIW (l: Compiled) (r:Compiled) := l.probability.prob * l.importanceWeight + r.probability.prob * r.importanceWeight
