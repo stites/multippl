@@ -91,7 +91,7 @@ def mkFresh [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] (os : Option
     set { env with gen := n+1, vars := env.vars.insert ns [n] }
     let oenv := env
     let env <- get
-    dbg_trace "[mkFresh.getter]  ( {HashMap.toList oenv.vars} + {oenv.gen} ) {os}->{n} ( {HashMap.toList env.vars} + {env.gen} )";
+    -- dbg_trace "[mkFresh.getter]  ( {HashMap.toList oenv.vars} + {oenv.gen} ) {os}->{n} ( {HashMap.toList env.vars} + {env.gen} )";
     return n
   match os with
   -- A little hack to work around unnamed vars missing from context.
@@ -130,7 +130,7 @@ def getVar?? [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] (x: String)
     pure (v, false)
   | some v => do
     let vv := _getVar?? p v 20
-    dbg_trace "[getVar??] {v}->{vv}"
+    -- dbg_trace "[getVar??] {v}->{vv}"
     pure (vv, true)
 
 inductive Ty where
@@ -196,6 +196,22 @@ def Formula.apply (f: Formula) (m: SubstMap) : Formula :=
   | conj l r => conj (l.apply m) (r.apply m)
   | neg b => neg (b.apply m)
 
+def Formula._max (cur: Nat) (f: Formula) : Nat :=
+  match f with
+  | id x => if cur > x then cur else x
+  | bool b => cur
+  | disj l r =>
+    let lmx := l._max cur
+    let rmx := r._max cur
+    if lmx > rmx then lmx else rmx
+  | conj l r =>
+    let lmx := l._max cur
+    let rmx := r._max cur
+    if lmx > rmx then lmx else rmx
+  | neg b => b._max cur
+
+def Formula.max (f: Formula) : Nat := f._max 0
+
 infixl:55 " \\/ " => Formula.disj
 infixl:55 " /\\ " => Formula.conj
 
@@ -235,6 +251,7 @@ def map2vars (m: WeightMap) : HashSet Nat := Id.run do
      fin := HashSet.insert fin n
   fin
 
+-- abbrev Assignment := HashMap Nat Bool
 abbrev Assignment := Array Bool
 
 structure AllAssignments where
@@ -274,7 +291,7 @@ def isSAT [Monad m] [MonadExceptOf String m] (a: Assignment) : Formula -> m Bool
   | .id i =>
     match a[i]? with
     | none =>
-      dbg_trace "{a}?{i}"
+      -- dbg_trace "{a}?{i}"
       throw s!"id {i} was not foud in assignments list of length {a.size}!"
     | some b => pure b
   | .bool b => pure (b == true)
@@ -306,33 +323,34 @@ def assertConsecutiveVars [Monad m] [MonadExceptOf String m] (weights: WeightMap
     let keys : List Nat := weights.toList.map fst
     throw s!"weight keys are not consecutive nats. Expected keys: [0,{num_vars}). Got:{keys}"
 
-def wmc [Monad m] [MonadExceptOf String m] (weights: WeightMap) (f: Formula) : m Float := do
+def wmc [Monad m] [MonadExceptOf String m] (env: Env) (weights: WeightMap) (f: Formula) : m Float := do
   dbg_trace "[wmc] {HashMap.toList weights} {f}";
   -- assertConsecutiveVars weights
   let t := Id.run do
-    let num_vars := weights.size
+    let num_vars := f.max + 1 -- env.vars.size -- weights.size
     let init : Float := 0
     Stream.fold (all_assignments num_vars) (fun tot assgn =>
-      match (isSAT assgn f : Option Bool) with
-      | none =>
-        dbg_trace "[wmc]{assgn}: {(isSAT assgn f : Option Bool)}";
+      match (isSAT assgn f : Except String Bool) with
+      | .error e =>
+        dbg_trace "[wmc]{assgn}: false -- got err: {e}";
         tot
-      | some b =>
+      | .ok b =>
         if not b
         then
-          dbg_trace "[wmc]{assgn}: {(isSAT assgn f : Option Bool)}";
+          dbg_trace "[wmc]{assgn}: false";
           pure tot
         else
           let w := Id.run do
             let cur <- tot
-            -- (Function.comp (. + cur) snd) <$> (Array.foldl (fun (ix, v) p =>
             let (_, diff) <- (Array.foldl (fun (ix, v) p =>
-              let (l, h) := match weights.find? ix with | none => (1, 1) | some (l, h) => (l, h)
-              let inc := v * (if p then h else l)
-              -- -- dbg_trace "( {assgn} ) {p} ( {l}, {h} )";
-              (ix+1, inc)
+              match weights.find? ix with
+              | none => (ix+1, v)
+              | some (l, h) => if l + h == 0 then (ix+1, v) else
+                let w := if p then h else l
+                -- -- dbg_trace "( {assgn} ) {p} ( {l}, {h} )";
+                (ix+1, v * w)
             ) ((0 : Nat), (1 : Float)) assgn)
-            dbg_trace "[wmc]{assgn}: {(isSAT assgn f : Option Bool)} : {diff}";
+            dbg_trace "[wmc]{assgn}: true : {diff}";
             return diff + cur
           pure w
     ) init
@@ -348,7 +366,7 @@ def bernoulli [Monad m] [MonadStateOf Env m] (theta : Prob) : m Bool := do
   let val : Bool := asprob > theta.prob
   return val
 
-def constWeight := (0.5, 0.5)
+def constWeight := (0.0, 0.0)
 
 def evalANF [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] : ANF -> WeightMap -> SubstMap -> m Compiled
 -- $\begin{prooftree}
@@ -359,13 +377,13 @@ def evalANF [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] : ANF -> Wei
     let (v, inEnv) <- getVar?? s p
     let m := if inEnv then m else m.insert v constWeight
     let c := { (Monoid.unit : Compiled) with global := Formula.id v, weightMap := m, substitutions := p }
-    dbg_trace "[evalANF][var {s}->{v}]";
-    dbg_trace "[evalANF] ( ,  {HashMap.toList m}, {HashMap.toList p} )";
-    dbg_trace "[evalANF]      \\||/  {c.global}";
-    dbg_trace "[evalANF]      \\||/  {c.accept}";
-    dbg_trace "[evalANF]      \\||/  {HashMap.toList c.weightMap}";
-    dbg_trace "[evalANF]      \\||/  {HashMap.toList c.substitutions}";
-    dbg_trace "[evalANF][var]";
+    -- +dbg_trace "[evalANF][var {s}->{v}]";
+    -- +dbg_trace "[evalANF] ( ,  {HashMap.toList m}, {HashMap.toList p} )";
+    -- +dbg_trace "[evalANF]      \\||/  {c.global}";
+    -- +dbg_trace "[evalANF]      \\||/  {c.accept}";
+    -- +dbg_trace "[evalANF]      \\||/  {HashMap.toList c.weightMap}";
+    -- +dbg_trace "[evalANF]      \\||/  {HashMap.toList c.substitutions}";
+    -- +dbg_trace "[evalANF][var]";
     return c
 
   | ANF.val (Val.bool b), m, p   => return { (Monoid.unit : Compiled) with global := Formula.bool b, weightMap := m, substitutions := p }
@@ -386,6 +404,17 @@ def evalANF [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] : ANF -> Wei
     let r <- evalANF r m p
     return { Monoid.op l r with global := Formula.disj l.global r.global }
 
+def dbg_compiled [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] (s:String) (w: WeightMap) (p: SubstMap) (c: Compiled) : m Unit := do
+    dbg_trace "[evalExpr][{s}]";
+    dbg_trace "[evalExpr] (_,  {HashMap.toList w}, {HashMap.toList p} )";
+    dbg_trace "[evalExpr]      \\||/  {c.global}";
+    dbg_trace "[evalExpr]      \\||/  {c.accept}";
+    dbg_trace "[evalExpr]      \\||/  {HashMap.toList c.weightMap}";
+    dbg_trace "[evalExpr]      \\||/  {HashMap.toList c.substitutions}";
+    dbg_trace "[evalExpr]      \\||/  {c.probability.prob}";
+    dbg_trace "[evalExpr]      \\||/  {c.importanceWeight}";
+    dbg_trace "[evalExpr][{s}]";
+    pure ()
 open Formula in
 def evalExpr [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] : Expr -> WeightMap -> SubstMap -> m Compiled
   | Expr.anf a, m, p => evalANF a m p
@@ -401,23 +430,19 @@ def evalExpr [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] : Expr -> W
     let m := if inEnv then m else m.insert x constWeight
     let comp_1 <- evalExpr e m p
     let comp_2 <- evalExpr rest comp_1.weightMap (comp_1.substitutions.insert x comp_1.global)
-    let global        := comp_2.global.subst x comp_1.global
-    let accept        := fconj comp_1.accept (comp_2.accept.subst x comp_1.accept)
-    let weightMap     := comp_1.unionMaps comp_2
-    let substitutions := comp_1.unionSubs comp_2
-    let probability   := comp_1.probability.mul comp_2.probability
-    let importanceWeight := comp_1.importanceWeight * comp_2.importanceWeight
-    dbg_trace "[evalExpr][letIn({s}->{x})]";
-    dbg_trace "[evalExpr] (e,  {HashMap.toList m}, {HashMap.toList p} )";
-    dbg_trace "[evalExpr]      \\||/  {global}";
-    dbg_trace "[evalExpr]      \\||/  {accept}";
-    dbg_trace "[evalExpr]      \\||/  {HashMap.toList weightMap}";
-    dbg_trace "[evalExpr]      \\||/  {HashMap.toList substitutions}";
-    dbg_trace "[evalExpr]      ---------------";
-    dbg_trace "[evalExpr]      let {s}:{x} / {foo} in ..."
-    dbg_trace "[evalExpr]      global with substitution: {comp_2.global} -> {global}"
+    let c := {
+      global        := comp_2.global.subst x comp_1.global
+      accept        := fconj comp_1.accept (comp_2.accept.subst x comp_1.accept)
+      weightMap     := comp_1.unionMaps comp_2
+      substitutions := comp_1.unionSubs comp_2
+      probability   := comp_1.probability.mul comp_2.probability
+      importanceWeight := comp_1.importanceWeight * comp_2.importanceWeight
+      }
+    dbg_compiled "letIn({s}->{x})" m p c
+    dbg_trace "[evalExpr]      let {s}:{x} / {foo} in ...";
+    dbg_trace "[evalExpr]      global with substitution: {comp_2.global} -> {c.global}"
     dbg_trace "[evalExpr][letIn]";
-    return { global := global, accept := accept, weightMap := weightMap, substitutions := substitutions, probability := probability, importanceWeight := importanceWeight }
+    pure c
 
   | Expr.ite pred t f, m, p => do
     let a <- evalANF pred m p
@@ -433,43 +458,48 @@ def evalExpr [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] : Expr -> W
   | Expr.flip param, m, p => do
     let f <- fresh
     let flipMap := HashMap.empty.insert f (1-param, param)
-    let global := Formula.id f
-    let accept := Formula.bool true
-    let weightMap     := flipMap.mergeWith leftEntry m
-    let substitutions := p
-    let probability   := Prob.mk 1
-    let importanceWeight := 1
-    dbg_trace "[evalExpr][flip {f}]";
-    dbg_trace "[evalExpr] ( ,  {HashMap.toList m}, {HashMap.toList p} )";
-    dbg_trace "[evalExpr]      \\||/  {global}";
-    dbg_trace "[evalExpr]      \\||/  {accept}";
-    dbg_trace "[evalExpr]      \\||/  {HashMap.toList weightMap}";
-    dbg_trace "[evalExpr]      \\||/  {HashMap.toList substitutions}";
-    dbg_trace "[evalExpr][flip]";
-    return { global := global, accept := accept, weightMap := weightMap, substitutions := substitutions, probability := probability, importanceWeight := importanceWeight }
+    let c := {
+      global := Formula.id f
+      accept := Formula.bool true
+      weightMap     := flipMap.mergeWith leftEntry m
+      substitutions := p
+      probability   := Prob.mk 1
+      importanceWeight := 1
+      }
+    dbg_compiled "flip {f}" m p c
+    pure c
   | Expr.observe a, m, p => do
     let acomp <- evalANF a m p
-    let w <- wmc m (acomp.global.apply p)
-    return { global := bool true
-           , accept := acomp.global
-           , weightMap     := m
-           , substitutions := p
-           , probability   := Prob.mk 1
-           , importanceWeight := w
-           }
+    let env <- get
+    let w <- wmc env m (acomp.global.apply p)
+    let c := {
+      global := Formula.bool true
+      accept := acomp.global
+      weightMap     := m
+      substitutions := p
+      probability   := Prob.mk 1
+      importanceWeight := w
+      }
+    dbg_compiled "observe _" m p c
+    pure c
   | Expr.sample e, m, p => do
     let ecomp <- evalExpr e m p
     if ecomp.accept != bool true then throw "sample statement includes observe statement" else
-    let theta_q <- wmc ecomp.weightMap ecomp.global
+    let env <- get
+    let theta_q <- wmc env ecomp.weightMap ecomp.global
     let v <- bernoulli (Prob.mk theta_q)
     let q := Prob.mk (if v then theta_q else 1-theta_q)
-    return { global := bool true
-           , accept := ecomp.global
-           , weightMap     := m
-           , substitutions := p
-           , probability   := q
-           , importanceWeight := 1
-           }
+
+    let c := {
+      global := Formula.bool v
+      accept := Formula.bool true -- FIXME(!!!) need to switch back to this when you are clear on part 1 of sample statements: ecomp.global
+      weightMap     := m
+      substitutions := p
+      probability   := q
+      importanceWeight := 1
+      }
+    dbg_compiled "sample {v}" m p c
+    pure c
 
 --------------------------------------------------------------------------------------------------------
 -- examples
@@ -491,25 +521,38 @@ def compile (rgen : Option StdGen) : Program -> Except String (Compiled × Env)
     flip StateT.run {vars := HashMap.empty, gen := 0, rgen := rgen : Env} do
       let r <- evalExpr e HashMap.empty HashMap.empty
       let env <- get
-      dbg_trace "[wmc] {HashMap.toList env.vars}";
       pure r
 
 def compile' (x : Option StdGen) (y : Program) : Except String Compiled
   := fst <$> compile x y
 
-def wmcProb (c: Compiled) : Except String Float := do
-  let a <- wmc c.weightMap (Formula.conj c.global c.accept)
-  let z <- wmc c.weightMap c.accept
+def wmcProb' (env : Env) (c: Compiled) : Except String (Prod Float Float) := do
+  let a <- wmc env c.weightMap (Formula.conj c.global c.accept)
+  let z <- wmc env c.weightMap c.accept
+  pure (a, z)
+
+def wmcProb (env : Env) (c: Compiled) : Except String Float := do
+  let (a,z) <- wmcProb' env c
   pure $ a / z
 
+
+
 def exactInf (p: Program) : Except String Float := do
-  let c <- compile' none p.stripSamples
-  let p <- wmcProb c
-  dbg_trace "[exactInf] map: {HashMap.toList c.weightMap}"
-  dbg_trace "[exactInf] global: {Formula.conj c.global c.accept}"
-  dbg_trace "[exactInf] accept: {c.accept}"
-  dbg_trace "[exactInf] P = {p}"
+  let (c, env) <- compile none p.stripSamples
+  let p <- wmcProb env c
+  -- dbg_trace "[exactInf] map: {HashMap.toList c.weightMap}"
+  -- dbg_trace "[exactInf] global: {Formula.conj c.global c.accept}"
+  -- dbg_trace "[exactInf] accept: {c.accept}"
+  -- dbg_trace "[exactInf] P = {p}"
   pure p
+
+def check_exact (s: Option String) (f : Float) (p : Program) : IO Unit := do
+  let pr <- IO.ofExcept (exactInf p)
+  IO.print "[check_exact]"
+  IO.print $ match s with | none => "" | some s => s!"[{s}]"
+  IO.println $ if (pr - f).abs < 0.000001
+    then s!"[ok!][exp: {f}] == {pr}"
+    else s!"[err][exp: {f}] != {pr}"
 
 structure IxStream where
   ix  : Nat
@@ -518,48 +561,93 @@ deriving Repr
 
 instance : Stream IxStream Nat where
   next? state :=
-    if state.ix > state.mx then none else
-    let cur := state.ix + 1
-    some (cur, { state with ix := cur})
+    if state.ix >= state.mx then none else
+    let cur := state.ix
+    some (cur, { state with ix := cur+1})
 
--- stream summation of the (numerator, denominator)
-def acc (p: Program) (prev : IO (Float × Float × StdGen)) (ix:Nat) : IO (Float × Float × StdGen) := do
-  let (num, denom, rgen) <- prev
+-- Stream summation of the (numerator, denominator, stdgen, E_q[w^2])
+def acc (p: Program) (prev : IO (Float × Float × StdGen × Float)) (ix:Nat) : IO (Float × Float × StdGen × Float) := do
+  let (exp, ew, rgen, ew2) <- prev
   IO.ofExcept $ do
     let (c, env) <- compile rgen p
-    let pr <- wmcProb c
-    let weightedProb := c.probability.prob * c.importanceWeight
-    (if c.probability.prob < 0 || c.probability.prob > 1 then dbg_trace "!!! {c.probability.prob} @ {ix}"; pure () else pure ())
-    pure (num + weightedProb * pr, denom + weightedProb, env.rgen)
+    let (a, z) <- wmcProb' env c
+    let pr := a / z
+    let q := c.probability.prob
+    let w := c.importanceWeight
+    -- dbg_trace "{ix}: P = {a} / {z} ({pr}); w = {c.importanceWeight}; q = {c.probability.prob}"
+    dbg_trace "{ix}: P = {pr}; w = {c.importanceWeight}; q = {c.probability.prob}"
+    pure (exp + w * q * pr, ew + w * q, env.rgen, ew2 + (q * w * w))
 
-def importanceWeightingInf (n: Nat) (p: Program) : IO Float := do
+-- expectation (and variance of weights)
+def importanceWeightingInf (n: Nat) (p: Program) : IO (Float × Float) := do
   let rgen ← IO.stdGenRef.get
-  let init : IO (Float × Float × StdGen) := pure (0, 0, rgen)
-  let (num, denom, _) <- Stream.fold { ix := 0, mx := n : IxStream } (acc p) init
-  pure $ num / denom
+  -- let mut rgen := mkStdGen 100
+  let mut rgen := rgen
+  -- let init : IO (Float × Float × StdGen × Float) := pure (0, 0, rgen, 0)
+  -- let (num, denom, _, ew2) <- Stream.fold { ix := 0, mx := n : IxStream } (acc p) init
+  let mut exp := 0; let mut ew  := 0; let mut ew2 := 0
+  let mut ws : List Float := []
+  let mut ps : List Float := []
+  let mut qs : List Float := []
+  for ix in [0 : n] do
+    let rg :=
+      match ix with
+      | 0 => mkStdGen 7
+      | 1 => mkStdGen 6
+      | _ => rgen
+
+    let (c, env) <- IO.ofExcept $ compile rg p
+
+    let (a, z) <- IO.ofExcept $ wmcProb' env c
+    let pr := a / z
+    let q := c.probability.prob
+    let w := c.importanceWeight
+    -- dbg_trace "{ix}: P = {a} / {z} ({pr}); w = {c.importanceWeight}; q = {c.probability.prob}"
+    dbg_trace "{ix}: P = {pr}; w = {c.importanceWeight}; q = {c.probability.prob}; phi = {c.global}, gamma = {c.accept}, "
+    exp := exp + w * q * pr
+    ew  := ew + w * q
+    rgen := env.rgen
+    ew2 := ew2 + (q * w * w)
+    ws := List.cons w  ws
+    qs := List.cons q  qs
+    ps := List.cons pr ps
+    -- dbg_trace "{exp} / {ew}, {ew2}"
+  -- let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0 -- FIXME: doublecheck later
+  pure $ (exp / ew, 0)
+
+
+def check_apprx (s: Option String) (n: Nat) (prec f : Float) (p : Program) : IO Unit := do
+  let (pr, var) <- importanceWeightingInf n p
+  IO.print "[check_apprx]"
+  IO.print $ match s with | none => "" | some s => s!"[{s}]"
+  IO.println $ if (pr - f).abs < prec
+    then s!"[ok!][exp: {f}] abs(exp - {pr})  < {prec}" -- : var: {var}"
+    else s!"[err][exp: {f}] abs(exp - {pr}) !< {prec}" -- : var: {var}"
+
 
 -- open Expr in open ANF in
 -- def program00 : Program := Program.body $
 --   letIn "x" atrue $
 --   anf (var "x")
--- -- #eval (exactInf program00.stripSamples : Except String Float)
+-- #eval check_exact "p00    " 1 program00
 -- --------------------------------------------------------------------------------------------------------
 
 -- open Expr in open ANF in
 -- def program01 : Program := Program.body $
 --   letIn "x" (flip (1/3)) $
 --   avar "x"
--- -- #eval (exactInf program01.stripSamples : Except String Float)
+-- #eval check_exact "p01/x  " (1/3)  (program01)
 
 -- open Expr in open ANF in
 -- def program02 (ret : Expr) : Program := Program.body $
 --   letIn "x" (flip (1/3)) $
 --   letIn "y" (flip (1/4)) $
 --   ret
--- #eval ((1/4 : Float), (exactInf (program02 (Expr.avar "y")).stripSamples : Except String Float)) -- 1/4
--- #eval ((1/3 : Float), (exactInf (program02 (Expr.avar "x")).stripSamples : Except String Float)) -- 1/3
--- #eval ((1/12: Float), (exactInf (program02 (Expr.anf (ANF.and (ANF.var "x") (ANF.var "y")))).stripSamples : Except String Float)) -- 1/12
--- #eval ((6/12: Float), (exactInf (program02 (Expr.anf (ANF.or (ANF.var "x") (ANF.var "y")))).stripSamples : Except String Float))  -- 6/12
+-- #eval check_exact "p02/y  " (1/4)  (program02 (Expr.avar "y"))
+-- #eval check_exact "p02/x  " (1/3)  (program02 (Expr.avar "x"))
+-- #eval check_exact "p02/x&y" (1/12) (program02 (Expr.anf (ANF.and (ANF.var "x") (ANF.var "y"))))
+-- #eval check_exact "p02/x|y" (6/12) (program02 (Expr.anf (ANF.or  (ANF.var "x") (ANF.var "y"))))
+
 
 -- open Expr in open ANF in
 -- def program03 (ret : Expr) : Program := Program.body $
@@ -567,27 +655,26 @@ def importanceWeightingInf (n: Nat) (p: Program) : IO Float := do
 --   letIn "y" (flip (1/4)) $
 --   letIn "_" (observe (or (var "x") (var "y"))) $
 --   ret
--- #eval ((3/6: Float), (exactInf (program03 (Expr.avar "y")) : Except String Float))
--- #eval ((4/6: Float), (exactInf (program03 (Expr.avar "x")) : Except String Float))
--- #eval ((1/6 : Float), (exactInf (program03 (Expr.anf (ANF.and (ANF.var "x") (ANF.var "y")))) : Except String Float))
--- #eval ((6/6 : Float), (exactInf (program03 (Expr.anf (ANF.or (ANF.var "x") (ANF.var "y")))) : Except String Float))
+-- #eval check_exact "p03/y  " (3/6) (program03 (Expr.avar "y"))
+-- #eval check_exact "p03/x  " (4/6) (program03 (Expr.avar "x"))
+-- #eval check_exact "p03/x&y" (1/6) (program03 (Expr.anf (ANF.and (ANF.var "x") (ANF.var "y"))))
+-- #eval check_exact "p03/x|y" (6/6) (program03 (Expr.anf (ANF.or  (ANF.var "x") (ANF.var "y"))))
+
 
 open Expr in open ANF in
 def program1 (ret : Expr) : Program := Program.body $
   letIn "x" (sample (flip (1/3))) $
-  letIn "y" (flip 0.25) $
-  -- letIn "_" (observe (or (var "x") (var "y"))) $
+  letIn "y" (flip (1/4)) $
+  letIn "_" (observe (or (var "x") (var "y"))) $
   ret
--- #eval (program1 (Expr.avar "y"))
--- #eval (program1 (Expr.avar "y")).stripSamples
--- #eval ((3/6 : Float), exactInf (program1 (Expr.avar "y")))
-#eval importanceWeightingInf 1 (program1 (Expr.avar "y"))
--- #eval ((4/6 : Float), (exactInf (program1 (Expr.avar "x")) : Except String Float), (importanceWeightingInf (program1 (Expr.avar "x")) : Except String Float))
 
--- TODO evaluating the expectation over many runs
--- def program1Expect (nruns : Nat) : Except String Float := do
---   let c <- compile program1
---   let a <- wmc c.weightMap (Formula.conj c.global c.accept)
---   let z <- wmc c.weightMap c.global
---   pure $ a / z
--- #eval program1Expect 1000
+-- -- these should be unchanged from the original results
+-- #eval check_exact "p1/y  " (3/6) (program1 (Expr.avar "y"))
+-- #eval check_exact "p1/x  " (4/6) (program1 (Expr.avar "x"))
+-- #eval check_exact "p1/x&y" (1/6) (program1 (Expr.anf (ANF.and (ANF.var "x") (ANF.var "y"))))
+-- #eval check_exact "p1/x|y" (6/6) (program1 (Expr.anf (ANF.or  (ANF.var "x") (ANF.var "y"))))
+
+#eval check_apprx "p1/y  " 1 0.25 (3/6) (program1 (Expr.avar "y"))
+-- #eval check_apprx "p1/x  " 2 0.25 (4/6) (program1 (Expr.avar "x"))
+-- #eval check_apprx "p1/x&y" 2 0.25 (1/6) (program1 (Expr.anf (ANF.and (ANF.var "x") (ANF.var "y"))))
+-- #eval check_apprx "p1/x|y" 2 0.25 (6/6) (program1 (Expr.anf (ANF.or  (ANF.var "x") (ANF.var "y"))))
