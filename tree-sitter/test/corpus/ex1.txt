@@ -1,0 +1,99 @@
+======================
+exact: trivial
+======================
+
+let x = true in
+x
+
+---
+
+(source_file
+  (let_binding
+    (identifier)
+    (anf (value (true)))
+    (anf (var (identifier)))))
+
+======================
+exact: one flip
+======================
+
+let x = flip (1/3) in
+x
+
+---
+
+(source_file
+  (let_binding
+    (identifier)
+    (flip (parameter))
+    (anf (var (identifier)))))
+
+
+======================
+exact: two flips
+======================
+
+let x = flip 0.3333 in
+let y = flip (1/4) in
+x || y
+
+---
+
+(source_file
+  (let_binding
+    (identifier)
+    (flip (parameter))
+  (let_binding
+    (identifier)
+    (flip (parameter))
+  (anf (or (identifier) (identifier))))))
+
+
+======================
+exact: observed two flips
+======================
+
+let x = flip 0.3333 in
+let y = flip (1/4) in
+let _ = observe (x || y)
+x
+
+---
+
+
+(source_file
+  (let_binding
+    (identifier)
+    (flip (parameter))
+  (let_binding
+    (identifier)
+    (flip (parameter))
+  (let_binding
+    (identifier)
+    (observe (anf (or (identifier) (identifier))))
+  (anf (identifier))))))
+
+
+======================
+approx: observed two flips
+======================
+
+let x = sample (flip (1/3)) in
+let y = flip (1/4) in
+let _ = observe (x || y)
+x
+
+---
+
+
+(source_file
+  (let_binding
+    (identifier)
+    (sample (flip (parameter)))
+  (let_binding
+    (identifier)
+    (flip (parameter))
+  (let_binding
+    (identifier)
+    (observe (anf (or (identifier) (identifier))))
+  (anf (identifier))))))
