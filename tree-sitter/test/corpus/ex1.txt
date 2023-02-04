@@ -10,8 +10,8 @@ x
 (source_file
   (let_binding
     (identifier)
-    (anf (value (true)))
-    (anf (var (identifier)))))
+    (anf (bool))
+  (anf (identifier))))
 
 ======================
 exact: one flip
@@ -25,8 +25,8 @@ x
 (source_file
   (let_binding
     (identifier)
-    (flip (parameter))
-    (anf (var (identifier)))))
+    (flip (float) (float_op) (float))
+  (anf (identifier))))
 
 
 ======================
@@ -34,7 +34,7 @@ exact: two flips
 ======================
 
 let x = flip 0.3333 in
-let y = flip (1/4) in
+let y = flip 1/4 in
 x || y
 
 ---
@@ -42,20 +42,39 @@ x || y
 (source_file
   (let_binding
     (identifier)
-    (flip (parameter))
+    (flip (float))
   (let_binding
     (identifier)
-    (flip (parameter))
-  (anf (or (identifier) (identifier))))))
-
+    (flip (float) (float_op) (float))
+  (anf (anf (identifier)) (bool_biop) (anf (identifier))))))
 
 ======================
+exact: two flips, implicit 'in's
+======================
+
+let x = flip 0.3333
+let y = flip 1/4
+x || y
+
+---
+
+(source_file
+  (let_binding
+    (identifier)
+    (flip (float))
+  (let_binding
+    (identifier)
+    (flip (float) (float_op) (float))
+  (anf (anf (identifier)) (bool_biop) (anf (identifier))))))
+
+
+===========================
 exact: observed two flips
-======================
+===========================
 
 let x = flip 0.3333 in
-let y = flip (1/4) in
-let _ = observe (x || y)
+let y = flip 1/4 in
+let _ = observe (x || y) in
 x
 
 ---
@@ -64,13 +83,13 @@ x
 (source_file
   (let_binding
     (identifier)
-    (flip (parameter))
+    (flip (float))
   (let_binding
     (identifier)
-    (flip (parameter))
+    (flip (float) (float_op) (float))
   (let_binding
     (identifier)
-    (observe (anf (or (identifier) (identifier))))
+    (observe (anf (anf (identifier)) (bool_biop) (anf (identifier))))
   (anf (identifier))))))
 
 
@@ -78,8 +97,8 @@ x
 approx: observed two flips
 ======================
 
-let x = sample (flip (1/3)) in
-let y = flip (1/4) in
+let x = sample (flip 1/3) in
+let y = flip 1/4 in
 let _ = observe (x || y)
 x
 
@@ -89,11 +108,11 @@ x
 (source_file
   (let_binding
     (identifier)
-    (sample (flip (parameter)))
+    (sample (flip (float) (float_op) (float)))
   (let_binding
     (identifier)
-    (flip (parameter))
+    (flip (float) (float_op) (float))
   (let_binding
     (identifier)
-    (observe (anf (or (identifier) (identifier))))
+    (observe (anf (anf (identifier)) (bool_biop) (anf (identifier))))
   (anf (identifier))))))

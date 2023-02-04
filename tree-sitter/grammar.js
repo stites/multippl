@@ -1,28 +1,56 @@
 module.exports = grammar({
   name: 'BddIS',
-
+  word: $ => $.identifier,
   rules: {
-    VAR: $ => /[a-zA-Z][a-zA-Z0-9]*/,
-    PARAM: $ => /[0-9]+(?\.[0-9]*)/,
 
     // source_file: $ => seq(repeat($._function), $._expr)
     source_file: $ => $._expr,
 
-    _type:  $ => choice('Bool', seq('(', $._type, ',', $._type, ')')),
-    _value: $ => choice('true', 'false', seq('(', $._value, ',', $._value, ')')),
-    _anf:   $ => choice($.VAR, $._value),
-    _expr:  $ => choice(
-      $._anf,
-      seq($._fst, $._anf),
-      seq($._snd, $._anf),
-      seq('(', $._anf, ',', $._anf, ')'),
-      seq('let', $.VAR, '=', $._expr, 'in', $._expr),
-      seq('if', $._anf, 'then', $._expr, 'else', $._expr),
-      // seq($._function_name, '(', $._anf ,')'),
-      seq('flip', $.PARAM),
-      seq('observe', $._anf),
-      seq('sample', $._expr),
+    // _type:  $ => choice('Bool', seq('(', $._type, ',', $._type, ')')),
+    _expr: $ => choice(
+      $.let_binding,
+      $.ite_binding,
+      $.flip,
+      $.observe,
+      $.sample,
+      // seq($._function_name, '(', $.anf ,')'),
+      $.anf,
+      seq('fst', $.anf),
+      seq('snd', $.anf),
+      seq('(', $.anf, ',', $.anf, ')'),
+
     ),
+    let_binding: $ => choice(
+      seq('let', $.identifier, '=', $._expr, 'in', $._expr),
+      prec.left(1, seq('let', $.identifier, '=', $._expr, $._expr)),
+    ),
+    ite_binding: $ => seq('if', $.anf, 'then', $._expr, 'else', $._expr),
+    flip: $ => seq('flip', $._float),
+    observe: $ => choice(
+      seq('observe', $.anf),
+      seq('observe', '(', $.anf, ')'),
+    ),
+    sample: $ => seq('sample', '(', $._expr, ')' ),
+
+    bool: $ => choice('true', 'false'),
+    bool_biop: $ => choice('||', '&&'),
+
+
+    bool_unop: $ => '!',
+
+    _float: $ => choice(
+      $.float,
+      seq($.float, $.float_op, $.float),
+      seq('(', $._float, ')'),
+    ),
+    float: $ => /\d+(?:\.\d*|)/, // 0.3  0.3. 3 0.
+    float_op: $ => choice('*', '/', '+', '-'),
+
+    _value: $ => choice($.bool), // , seq('(', $._value, ',', $._value, ')')),
+
+    anf: $ => choice($.identifier, $._value, prec.left(1, seq($.anf, $.bool_biop, $.anf)), prec.left(2, seq($.bool_unop, $.anf))),
+
+    identifier: $ => /[a-zA-Z_][_a-zA-Z0-9]*/,
     // _func: $ => seq('fun', $._function_name, '(', $.VAR, ')', ':', $._type, '{', $._expr, '}'),
   }
 });
