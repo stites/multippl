@@ -13,8 +13,10 @@
     nixpkgs,
     devenv,
     ...
-  } @ inputs:
-    inputs.flake-utils.lib.eachDefaultSystem (system: let
+  } @ inputs: let
+    flklib = inputs.flake-utils.lib;
+  in
+    flklib.eachSystem (with flklib.system; [x86_64-linux aarch64-darwin]) (system: let
       pkgs = import nixpkgs {
         inherit system;
       };
@@ -61,23 +63,27 @@
 
             # https://devenv.sh/reference/options/
             packages =
-              with pkgs; [
-                lldb
-                rr-unstable
+              with pkgs;
+                [
+                  lldb
 
-                cargo
-                rustc
-                rustfmt
-                rust-analyzer
-                clippy
-                cargo-watch
-                cargo-nextest
-                cargo-expand # expand macros and inspect the output
-                cargo-llvm-lines # count number of lines of LLVM IR of a generic function
-                cargo-inspect
-                cargo-rr
-                cargo-criterion
-              ]
+                  cargo
+                  rustc
+                  rustfmt
+                  rust-analyzer
+                  clippy
+                  cargo-watch
+                  cargo-nextest
+                  cargo-expand # expand macros and inspect the output
+                  cargo-llvm-lines # count number of lines of LLVM IR of a generic function
+                  cargo-inspect
+                  cargo-criterion
+                ]
+                ++ lib.optionals stdenv.isDarwin []
+                ++ lib.optionals stdenv.isLinux [
+                  cargo-rr
+                  rr-unstable
+                ]
               # ++ builtins.attrValues self.checks
               ;
           }
