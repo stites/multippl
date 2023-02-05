@@ -8,51 +8,87 @@
     flake-utils.url = "github:numtide/flake-utils";
   };
 
-  outputs = { self, nixpkgs, devenv, ... } @ inputs:
-    inputs.flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = import nixpkgs {
-          inherit system;
-        };
-        craneLib = inputs.crane.lib.${system};
-        my-crate = craneLib.buildPackage {
-          src = craneLib.cleanCargoSource ./.;
-          buildInputs = [
+  outputs = {
+    self,
+    nixpkgs,
+    devenv,
+    ...
+  } @ inputs:
+    inputs.flake-utils.lib.eachDefaultSystem (system: let
+      pkgs = import nixpkgs {
+        inherit system;
+      };
+      craneLib = inputs.crane.lib.${system};
+      my-crate = craneLib.buildPackage {
+        src = craneLib.cleanCargoSource ./.;
+        buildInputs =
+          [
             # Add additional build inputs here
-          ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+          ]
+          ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
             # Additional darwin specific inputs can be set here
             pkgs.libiconv
           ];
-        };
-      in
-      {
-        checks = {
-          inherit my-crate;
-        };
+      };
+    in {
+      checks = {
+        inherit my-crate;
+      };
 
-        packages.default = my-crate;
+      packages.default = my-crate;
 
-        apps.default = inputs.flake-utils.lib.mkApp {
-          drv = my-crate;
-        };
+      apps.default = inputs.flake-utils.lib.mkApp {
+        drv = my-crate;
+      };
 
-        default = devenv.lib.mkShell {
-          inherit inputs pkgs;
-          modules = [
-            {
-              # https://devenv.sh/reference/options/
-              packages = with pkgs; [
-                hello tree-sitter
+      devShell = devenv.lib.mkShell {
+        inherit inputs pkgs;
+        modules = [
+          {
+            pre-commit.hooks = {
+              shellcheck.enable = true;
+              clippy.enable = true;
+              hunspell.enable = true;
+              alejandra.enable = true; # nix formatter
+              # statix.enable = true; # lints for nix, but apparently borked
+              rustfmt.enable = true;
+            };
+          }
+          {
+            languages.rust.enable = true;
+
+            # https://devenv.sh/reference/options/
+            packages =
+              with pkgs; [
+                lldb
+                rr-unstable
+
                 cargo
                 rustc
-              ] # ++ builtins.attrValues self.checks
+                rustfmt
+                rust-analyzer
+                clippy
+                cargo-watch
+                cargo-nextest
+                cargo-expand # expand macros and inspect the output
+                cargo-llvm-lines # count number of lines of LLVM IR of a generic function
+                cargo-inspect
+                cargo-rr
+                cargo-criterion
+              ]
+              # ++ builtins.attrValues self.checks
               ;
-
-              enterShell = ''
-                hello
-              '';
-            }
-          ];
-        };
-      });
+          }
+          {
+            packages = with pkgs; [tree-sitter];
+          }
+          {
+            env.DEVSHELL = "devshell+flake.nix";
+            enterShell = ''
+              echo "hello from $DEVSHELL!"
+            '';
+          }
+        ];
+      };
+    });
 }

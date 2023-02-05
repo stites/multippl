@@ -12,6 +12,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bddis"
+version = "0.1.0"
+
+[[package]]
 name = "cc"
 version = "1.0.79"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -51,7 +55,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tree-sitter-BddIS"
+name = "tree-sitter-bddis"
 version = "0.0.1"
 dependencies = [
  "cc",

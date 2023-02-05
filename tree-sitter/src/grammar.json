@@ -1,5 +1,5 @@
 {
-  "name": "BddIS",
+  "name": "bddis",
   "word": "identifier",
   "rules": {
     "source_file": {

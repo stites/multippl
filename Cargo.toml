@@ -1,10 +1,11 @@
 [workspace]
 members = [
   "tree-sitter",
+  "core",
 ]
 [workspace.package]
 version = "0.0.0"
 edition = "2021"
 
 [workspace.dependencies]
-tree-sitter-BddIS = { path = "tree-sitter" }
+tree-sitter-bddis = { path = "tree-sitter" }
