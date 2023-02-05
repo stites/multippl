@@ -1,0 +1,6 @@
+/.direnv/
+target
+.git
+.direnv
+result
+.devenv

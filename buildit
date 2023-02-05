@@ -1,0 +1,14 @@
+#!/usr/bin/env bash 
+OUT="$(lean BddIS.lean 2>&1)"
+OUTSIG="$?"
+
+run_nix_log() {
+  echo "$1" | sed -nr "s/.*(nix log \/nix\/store\/[^']*).*/\1/p"
+}
+
+if [[ "$OUTSIG" == "0" ]]; then
+    echo "$OUT"
+else 
+    eval "$(run_nix_log "$OUT")"
+fi
+
