@@ -928,7 +928,6 @@ checksum = "456c603be3e8d448b072f410900c09faf164fbce2d480456f50eea6e25f9c848"
 [[package]]
 name = "rsdd"
 version = "0.1.0"
-source = "git+https://github.com/pmall-neu/rsdd#6b8c6c82be21fd923feca0e15001b86f54ae2034"
 dependencies = [
  "bit-set",
  "bumpalo",

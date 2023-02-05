@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 rand = "0.8.5"
-rsdd = { git = "https://github.com/pmall-neu/rsdd" }
+rsdd = { path = "../rsdd" }
 nalgebra = "0.30.1"
 itertools = "0.10.3"
 tracing = "0.1.37"
