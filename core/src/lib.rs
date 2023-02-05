@@ -1,245 +1,205 @@
+#![allow(dead_code)]
+use rsdd::builder::bdd_builder::BddManager;
+use rsdd::builder::cache::all_app::AllTable;
 use std::collections::HashMap;
 use std::string::String;
 
-#[derive(Debug)]
-struct Env {
-    vars: HashMap<String, Vec<u8>>,
-    gen: u8,
-    // rgen : StdGen,
+pub mod grammar {
+    #[derive(Debug, Copy, Clone)]
+    pub enum Ty {
+        Bool,
+        // Prod(Box<Ty>, Box<Ty>), // TODO for now, no tuples
+    }
+    #[derive(Debug, Copy, Clone)]
+    pub enum Val {
+        Bool(bool),
+        // Prod(Box<Val>, Box<Val>), // TODO punt
+    }
+    #[derive(Debug, Clone)]
+    pub enum ANF {
+        AVar(String),
+        AVal(Val),
+        // TODO: not sure this is where I should add booleans, but it makes
+        // the observe statements stay closer to the semantics: ~observe anf~
+        And(Box<ANF>, Box<ANF>),
+        Or(Box<ANF>, Box<ANF>),
+        Neg(Box<ANF>),
+    }
+    #[derive(Debug, Clone)]
+    pub enum Expr {
+        EAnf(Box<ANF>),
+        // TODO Ignore product types for now:
+        // EFst (Box<ANF>),
+        // ESnd (Box<ANF>),
+        // EProd (Box<ANF>, Box<ANF>),
+
+        // TODO Ignore function calls for now
+        // EApp(String, Box<ANF>),
+        ELetIn(String, Box<Expr>, Box<Expr>),
+        EIte(Box<ANF>, Box<Expr>, Box<Expr>),
+        EFlip(f32),
+        EObserve(Box<ANF>),
+        ESample(Box<Expr>),
+    }
+    // TODO
+    // structure Func where
+    //   name : String
+    //   arg : String × Ty
+    //   ret : Ty
+    //   body : Expr
+    // deriving Repr
+
+    #[derive(Debug, Clone)]
+    pub enum Program {
+        Body(Expr),
+        // TODO
+        // | define (f: Func) (rest: Program) : Program
+    }
 }
+pub mod semantics {
+    use super::*;
+    use grammar::*;
+    use rsdd::builder::cache::*;
+    use rsdd::repr::bdd::*;
+    use rsdd::repr::ddnnf::*;
+    use rsdd::repr::var_label::*;
+    use rsdd::sample::probability::Probability;
+    type WeightMap = HashMap<VarLabel, (f32, f32)>;
+    fn const_weight() -> (f32, f32) {
+        (0.5, 0.5)
+    }
+    type SubstMap = HashMap<VarLabel, BddPtr>;
 
-// -- unified identity for variables and the weight map
-// def mkFresh [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] (os : Option String) : m Nat :=
-//   let getter := do
-//     let env <- get
-//     let n := env.gen
-//     let ns := match os with | none => s!"_{n}" | some x => s!"{x}"
-//     set { env with gen := n+1, vars := env.vars.insert ns [n] }
-//     let oenv := env
-//     let env <- get
-//     -- dbg_trace "[mkFresh.getter]  ( {HashMap.toList oenv.vars} + {oenv.gen} ) {os}->{n} ( {HashMap.toList env.vars} + {env.gen} )";
-//     return n
-//   match os with
-//   -- A little hack to work around unnamed vars missing from context.
-//   | none => getter
-//   | some x => do
-//     let env <- get
-//     match env.vars.find? x with
-//     | none => getter
-//     | some _ => MonadExceptOf.throw s!"{x} already in environment"
+    pub struct Compiled {
+        dist: BddPtr,
+        accept: BddPtr,
+        weight_map: WeightMap, // must be a hashmap as sample will collapse variables
+        substitutions: SubstMap,
+        probability: Probability,
+        importance_weight: f64,
+    }
+    impl Compiled {
+        // FIXME: need to think about these semantics again.
+        fn conj_extend<T: LruTable<BddPtr>>(&mut self, mgr: &mut BddManager<T>, o: Compiled) {
+            self.dist = mgr.and(self.dist, o.dist);
+            self.accept = mgr.and(self.accept, o.accept);
+            self.weight_map.extend(o.weight_map);
+            self.substitutions.extend(o.substitutions);
+            self.probability = self.probability * o.probability;
+            self.importance_weight *= o.importance_weight;
+        }
+        // FIXME: need to think about these semantics again.
+        fn disj_extend<T: LruTable<BddPtr>>(&mut self, mgr: &mut BddManager<T>, o: Compiled) {
+            self.dist = mgr.or(self.dist, o.dist);
+            self.accept = mgr.or(self.accept, o.accept);
+            self.weight_map.extend(o.weight_map);
+            self.substitutions.extend(o.substitutions);
+            self.probability = self.probability + o.probability;
+            self.importance_weight = self.importance_weight * self.probability.as_f64()
+                + o.importance_weight * o.probability.as_f64();
+        }
+    }
 
-// def fresh [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] : m Nat := mkFresh none
+    impl Default for Compiled {
+        fn default() -> Compiled {
+            Compiled {
+                dist: BddPtr::PtrTrue,
+                accept: BddPtr::PtrTrue,
+                weight_map: HashMap::new(),
+                substitutions: HashMap::new(),
+                probability: Probability::new(1.0),
+                importance_weight: 1.0,
+            }
+        }
+    }
 
-// def getVar? [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] (x: String) : m (Option Nat) := do
-//   let env <- get
-//   match env.vars.find? x with
-//   | none => pure none
-//   | some [v] => pure (some v)
-//   | some vs => MonadExceptOf.throw s!"multiple ids found for {x}: {vs}"
+    pub type Sym = u64;
 
-// -- hacks on hacks, just want this out the door
-// def _getVar?? (p : SubstMap) (n: Nat) : Nat -> Nat
-//   | Nat.zero => n
-//   | Nat.succ lvl =>
-//     match p.find? n with
-//     | none => n
-//     | some (Formula.id n) => _getVar?? p n lvl
-//     | some _ => n
-
-// -- getVar? but also say if it was in the environment
-// def getVar?? [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] (x: String) (p : SubstMap) : m (Nat × Bool) := do
-//   let ov <- getVar? x
-//   match ov with
-//   | none => do
-//     let v <- mkFresh (some x)
-//     pure (v, false)
-//   | some v => do
-//     let vv := _getVar?? p v 20
-//     -- dbg_trace "[getVar??] {v}->{vv}"
-//     pure (vv, true)
-
-// inductive Ty where
-//   | bool : Ty
-//   | prod (l : Ty) (r : Ty) : Ty
-// deriving Repr, BEq
-
-// inductive Val where
-//   | bool (b:Bool) : Val
-//   | prod (l : Val) (r : Val) : Val
-// deriving Repr, BEq
-
-// inductive ANF where
-//   | var (s:String) : ANF
-//   | val (v:Val) : ANF
-
-//   -- I don't think I /should/ do this, but it does add some nice sugar...
-//   | and (l:ANF) (r:ANF) : ANF
-//   | or  (l:ANF) (r:ANF) : ANF
-//   | neg (l:ANF) : ANF
-// deriving Repr, BEq
-
-// inductive Expr where
-//   | anf (a:ANF)
-//   | fst (a:ANF)
-//   | snd (a:ANF)
-//   | prod (l:ANF) (r:ANF)
-//   | letIn (x:String) (e:Expr) (rest:Expr)
-//   | ite (a:ANF) (t:Expr) (f:Expr)
-//   -- | app (f:String) (a:ANF) -- FIXME: later
-//   | flip (p:Float)
-//   | observe (a:ANF) -- TODO this can be a full expression, I think
-//   | sample (e:Expr)
-// deriving Repr, BEq
-
-// def Expr.avar (s:String) := Expr.anf (ANF.var s)
-// def Expr.atrue := Expr.anf (ANF.val (Val.bool true))
-// def Expr.afalse := Expr.anf (ANF.val (Val.bool false))
-// def Expr.and (l:ANF) (r:ANF) := Expr.anf (ANF.and l r)
-// def Expr.or  (l:ANF) (r:ANF) := Expr.anf (ANF.or l r)
-// def Expr.neg (l:ANF) := Expr.anf (ANF.neg l)
-
-// structure Func where
-//   name : String
-//   arg : String × Ty
-//   ret : Ty
-//   body : Expr
-// deriving Repr
-
-// inductive Program where
-//   | body (body: Expr) : Program
-//   | define (f: Func) (rest: Program) : Program
-// deriving Repr
-
-// def Formula.apply (f: Formula) (m: SubstMap) : Formula :=
-//   match f with
-//   | id x =>
-//     match m.find? x with
-//     | none => id x
-//     | some x' => x'
-//   | bool b => bool b
-//   | disj l r => disj (l.apply m) (r.apply m)
-//   | conj l r => conj (l.apply m) (r.apply m)
-//   | neg b => neg (b.apply m)
-
-// def Formula._max (cur: Nat) (f: Formula) : Nat :=
-//   match f with
-//   | id x => if cur > x then cur else x
-//   | bool b => cur
-//   | disj l r =>
-//     let lmx := l._max cur
-//     let rmx := r._max cur
-//     if lmx > rmx then lmx else rmx
-//   | conj l r =>
-//     let lmx := l._max cur
-//     let rmx := r._max cur
-//     if lmx > rmx then lmx else rmx
-//   | neg b => b._max cur
-
-// def Formula.max (f: Formula) : Nat := f._max 0
-
-// infixl:55 " \\/ " => Formula.disj
-// infixl:55 " /\\ " => Formula.conj
-
-// structure Prob where
-//   prob : Float
-// deriving Repr
-
-// def Prob.add (l: Prob) (r:Prob) := Prob.mk (l.prob + r.prob)
-// def Prob.mul (l: Prob) (r:Prob) := Prob.mk (l.prob * r.prob)
-
-// def leftEntry {a b : Type} (_ : a) (left : b) (_ : b) : b := left
-
-// structure Compiled where
-//   global : Formula
-//   accept : Formula
-//   weightMap : WeightMap
-//   substitutions : SubstMap
-//   probability : Prob
-//   importanceWeight : Float
-
-// def Compiled.unionMaps (l: Compiled) (r:Compiled) := l.weightMap.mergeWith leftEntry r.weightMap
-// def Compiled.unionSubs (l: Compiled) (r:Compiled) := l.substitutions.mergeWith leftEntry r.substitutions
-// def Compiled.convexCombIW (l: Compiled) (r:Compiled) := l.probability.prob * l.importanceWeight + r.probability.prob * r.importanceWeight
-
-// class Monoid (α : Type u) where
-//   unit : α
-//   op   : α → α → α
-
-// instance : Monoid Compiled where
-//   unit := { global := Formula.bool true, accept := Formula.bool true, weightMap := HashMap.empty, substitutions := HashMap.empty, probability := Prob.mk 1, importanceWeight := 1 }
-//   op l r := { global := Formula.conj l.global r.global, accept := Formula.conj l.accept r.accept, weightMap := l.unionMaps r, substitutions := l.unionSubs r, probability := Prob.mul l.probability r.probability, importanceWeight := l.importanceWeight * r.importanceWeight }
-
-// def map2vars (m: WeightMap) : HashSet Nat := Id.run do
-//   let list := fst <$> m.toList
-//   let mut fin : HashSet Nat := Lean.mkHashSet (capacity := m.size)
-//   for n in list do
-//      fin := HashSet.insert fin n
-//   fin
-
-// -- abbrev Assignment := HashMap Nat Bool
-// abbrev Assignment := Array Bool
-
-// structure AllAssignments where
-//   cur  : Option Assignment
-//   num_vars : Nat
-// deriving Repr
-
-// -- tired of trying to get HXor to synthesize
-// def bXor : Bool -> Bool -> Bool
-//   | false, true => true
-//   | true, false  => true
-//   | _, _  => false
-
-// instance : Stream AllAssignments Assignment where
-//   next? state :=
-//     match state.cur with
-//     | none => -- start a stream
-//       let cur := Array.mk ((fun _ => false) <$> List.range state.num_vars)
-//       some (cur, { state with cur := cur})
-//     | some cur =>
-//       let emptyBoolArr : Array Bool := Array.empty
-//       let (nxt, carry) := Array.foldl (fun (cur_l, carry) cur_assgn =>
-//         let new_itm := bXor cur_assgn carry
-//         let new_carry := cur_assgn && carry
-//         (cur_l.push new_itm, new_carry)
-//         ) (emptyBoolArr, true) cur
-//       if carry
-//       then none
-//       else some (nxt, { state with cur := nxt })
-
-// -- #eval Stream.next? (AllAssignments.mk none 3)
-// -- #eval Stream.next? (AllAssignments.mk #[true, true, false] 3)
-// -- #eval Stream.next? (AllAssignments.mk #[true, true, true] 3)
-// def all_assignments (n : Nat) : AllAssignments := { cur := none, num_vars := n }
-
-// def isSAT [Monad m] [MonadExceptOf String m] (a: Assignment) : Formula -> m Bool
-//   | .id i =>
-//     match a[i]? with
-//     | none =>
-//       -- dbg_trace "{a}?{i}"
-//       throw s!"id {i} was not foud in assignments list of length {a.size}!"
-//     | some b => pure b
-//   | .bool b => pure (b == true)
-//   | .disj l r => (. || .) <$> isSAT a l <*> isSAT a r
-//   | .conj l r => (. && .) <$> isSAT a l <*> isSAT a r
-//   | .neg b => not <$> isSAT a b
-
-// @[always_inline, inline] protected def Option.tryCatchStr (x : Option α) (handle : String → Option α) : Option α :=
-//   match x with
-//   | some _ => x
-//   | none => handle ""
-
-// instance : MonadExceptOf String Option where
-//   throw    := fun _ => Option.none
-//   tryCatch := Option.tryCatchStr
-
-// def isConsecutive [Monad m] [MonadExceptOf String m] (nats: List Nat) : m Bool :=
-//   match nats.maximum? with
-//   | none => throw "error: empty weight map in validVars"
-//   | some mx => pure $ nats.length - 1 == mx
-
-// -- #eval (isConsecutive [] : Except String Bool)
-// -- #eval (isConsecutive [2,1,3,0] : Except String Bool)
+    pub struct Env<'a> {
+        vars: HashMap<String, Sym>,
+        gensym: Sym,
+        mgr: &'a mut BddManager<AllTable<BddPtr>>,
+        // rgen : StdGen,
+    }
+    impl<'a> Env<'a> {
+        fn _fresh(&mut self, ovar: Option<String>) -> Sym {
+            let sym = self.gensym;
+            self.gensym += 1;
+            let var = ovar.unwrap_or(format!("_{sym}"));
+            self.vars.insert(var, sym);
+            sym
+        }
+        fn fresh(&mut self) -> Sym {
+            self._fresh(None)
+        }
+        fn get_var(&self, var: String) -> Option<Sym> {
+            self.vars.get(&var).copied()
+        }
+        fn get_or_create(&mut self, var: String) -> Sym {
+            let osym = self.get_var(var.clone());
+            osym.unwrap_or_else(|| self._fresh(Some(var)))
+        }
+        fn eval_anf(&mut self, a: ANF, m: &WeightMap, p: &SubstMap) -> Compiled {
+            use ANF::*;
+            match a {
+                AVar(s) => {
+                    let (lbl, wm) = match self.get_var(s) {
+                        None => {
+                            let sym = self.fresh();
+                            let lbl = VarLabel::new(sym);
+                            let m_ = &mut m.clone();
+                            m_.insert(lbl, const_weight());
+                            (lbl, m_.clone())
+                        }
+                        Some(sym) => {
+                            let lbl = VarLabel::new(sym);
+                            (lbl, m.clone())
+                        }
+                    };
+                    Compiled {
+                        substitutions: p.clone(),
+                        dist: self.mgr.var(lbl, true),
+                        weight_map: wm,
+                        ..Default::default()
+                    }
+                }
+                AVal(Val::Bool(b)) => Compiled {
+                    dist: BddPtr::from_bool(b),
+                    substitutions: p.clone(),
+                    weight_map: m.clone(),
+                    ..Default::default()
+                },
+                And(bl, br) => {
+                    let mut l = self.eval_anf(*bl, m, p);
+                    let r = self.eval_anf(*br, m, p);
+                    l.conj_extend(self.mgr, r);
+                    l
+                }
+                Or(bl, br) => {
+                    let mut l = self.eval_anf(*bl, m, p);
+                    let r = self.eval_anf(*br, m, p);
+                    l.disj_extend(self.mgr, r);
+                    l
+                }
+                Neg(bp) => {
+                    let mut p = self.eval_anf(*bp, m, p);
+                    p.dist = p.dist.neg();
+                    p
+                }
+            }
+        }
+    }
+    //   -- boolean operators:
+    //   | .neg a, m, p => do
+    //     let c <- evalANF a m p
+    //     return { c with global := Formula.neg c.global }
+    //   | .and l r, m, p => do
+    //     return { Monoid.op l r with global := fconj l.global r.global }
+    //   | .or l r, m, p => do
+    //     let l <- evalANF l m p
+    //     let r <- evalANF r m p
+    //     return { Monoid.op l r with global := Formula.disj l.global r.global }
+}
 
 // def assertConsecutiveVars [Monad m] [MonadExceptOf String m] (weights: WeightMap) : m Unit := do
 //   let num_vars := weights.size
@@ -292,42 +252,6 @@ struct Env {
 //   return val
 
 // def constWeight := (0.0, 0.0)
-
-// def evalANF [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] : ANF -> WeightMap -> SubstMap -> m Compiled
-// -- $\begin{prooftree}
-// -- \hypo{\textrm{fresh } x^{\prime}}
-// -- \infer1[IS-Id]{\langle x, m, \rho\rangle \Downarrow \langle x^{\prime}, \texttt{T}, m \cup [x^{\prime} \mapsto \frac{1}{2},\bar{x}^{\prime} \mapsto \frac{1}{2}], \rho, 1, 1 \rangle }
-// -- \end{prooftree}$
-//   | ANF.var s, m, p => do
-//     let (v, inEnv) <- getVar?? s p
-//     let m := if inEnv then m else m.insert v constWeight
-//     let c := { (Monoid.unit : Compiled) with global := Formula.id v, weightMap := m, substitutions := p }
-//     -- +dbg_trace "[evalANF][var {s}->{v}]";
-//     -- +dbg_trace "[evalANF] ( ,  {HashMap.toList m}, {HashMap.toList p} )";
-//     -- +dbg_trace "[evalANF]      \\||/  {c.global}";
-//     -- +dbg_trace "[evalANF]      \\||/  {c.accept}";
-//     -- +dbg_trace "[evalANF]      \\||/  {HashMap.toList c.weightMap}";
-//     -- +dbg_trace "[evalANF]      \\||/  {HashMap.toList c.substitutions}";
-//     -- +dbg_trace "[evalANF][var]";
-//     return c
-
-//   | ANF.val (Val.bool b), m, p   => return { (Monoid.unit : Compiled) with global := Formula.bool b, weightMap := m, substitutions := p }
-//   | ANF.val (Val.prod l r), m, p => do
-//     let l <- evalANF (ANF.val l) m p
-//     let r <- evalANF (ANF.val r) m p
-//     return Monoid.op l r
-//   -- boolean operators:
-//   | .neg a, m, p => do
-//     let c <- evalANF a m p
-//     return { c with global := Formula.neg c.global }
-//   | .and l r, m, p => do
-//     let l <- evalANF l m p
-//     let r <- evalANF r m p
-//     return { Monoid.op l r with global := fconj l.global r.global }
-//   | .or l r, m, p => do
-//     let l <- evalANF l m p
-//     let r <- evalANF r m p
-//     return { Monoid.op l r with global := Formula.disj l.global r.global }
 
 // def dbg_compiled [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] (s:String) (w: WeightMap) (p: SubstMap) (c: Compiled) : m Unit := do
 //     dbg_trace "[evalExpr][{s}]";
