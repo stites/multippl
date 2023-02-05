@@ -45,6 +45,7 @@
         inherit inputs pkgs;
         modules = [
           {
+            # git configuration block
             pre-commit.hooks = {
               shellcheck.enable = true;
               clippy.enable = true;
@@ -55,6 +56,7 @@
             };
           }
           {
+            # rust dev block
             languages.rust.enable = true;
 
             # https://devenv.sh/reference/options/
@@ -80,9 +82,11 @@
               ;
           }
           {
+            # tree-sitter specific block
             packages = with pkgs; [tree-sitter];
           }
           {
+            # shell block
             env.DEVSHELL = "devshell+flake.nix";
             enterShell = ''
               echo "hello from $DEVSHELL!"
