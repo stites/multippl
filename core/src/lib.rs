@@ -59,17 +59,30 @@ pub mod grammar {
 pub mod semantics {
     use super::*;
     use grammar::*;
+    use rand::distributions::{Bernoulli, Distribution};
+    use rand::rngs::StdRng;
     use rsdd::builder::cache::*;
     use rsdd::repr::bdd::*;
     use rsdd::repr::ddnnf::*;
     use rsdd::repr::var_label::*;
+    use rsdd::repr::var_order::VarOrder;
+    use rsdd::repr::wmc::WmcParams;
     use rsdd::sample::probability::Probability;
+
     type WeightMap = HashMap<VarLabel, (f32, f32)>;
     fn const_weight() -> (f32, f32) {
         (0.5, 0.5)
     }
+    fn weight_map_to_params(m: &WeightMap) -> WmcParams<f32> {
+        let mut wmc_params = WmcParams::new(0.0, 1.0);
+        for (lbl, (l, h)) in m {
+            wmc_params.set_weight(*lbl, *l, *h);
+        }
+        wmc_params
+    }
     type SubstMap = HashMap<VarLabel, BddPtr>;
 
+    #[derive(Debug, Clone)]
     pub struct Compiled {
         dist: BddPtr,
         accept: BddPtr,
@@ -79,6 +92,11 @@ pub mod semantics {
         importance_weight: f64,
     }
     impl Compiled {
+        fn convex_combination(&self, o: &Compiled) -> f64 {
+            self.probability.as_f64() * self.importance_weight
+                + o.probability.as_f64() * o.importance_weight
+        }
+
         // FIXME: need to think about these semantics again.
         fn conj_extend<T: LruTable<BddPtr>>(&mut self, mgr: &mut BddManager<T>, o: Compiled) {
             self.dist = mgr.and(self.dist, o.dist);
@@ -92,11 +110,10 @@ pub mod semantics {
         fn disj_extend<T: LruTable<BddPtr>>(&mut self, mgr: &mut BddManager<T>, o: Compiled) {
             self.dist = mgr.or(self.dist, o.dist);
             self.accept = mgr.or(self.accept, o.accept);
-            self.weight_map.extend(o.weight_map);
-            self.substitutions.extend(o.substitutions);
+            self.weight_map.extend(o.weight_map.clone());
+            self.substitutions.extend(o.substitutions.clone());
             self.probability = self.probability + o.probability;
-            self.importance_weight = self.importance_weight * self.probability.as_f64()
-                + o.importance_weight * o.probability.as_f64();
+            self.importance_weight = self.convex_combination(&o);
         }
     }
 
@@ -118,8 +135,9 @@ pub mod semantics {
     pub struct Env<'a> {
         vars: HashMap<String, Sym>,
         gensym: Sym,
+        var_order: VarOrder,
         mgr: &'a mut BddManager<AllTable<BddPtr>>,
-        // rgen : StdGen,
+        rng: &'a mut StdRng,
     }
     impl<'a> Env<'a> {
         fn _fresh(&mut self, ovar: Option<String>) -> Sym {
@@ -139,23 +157,25 @@ pub mod semantics {
             let osym = self.get_var(var.clone());
             osym.unwrap_or_else(|| self._fresh(Some(var)))
         }
+        fn get_or_create_varlabel(&mut self, s: String, m: &WeightMap) -> (VarLabel, WeightMap) {
+            match self.get_var(s) {
+                None => {
+                    let lbl = VarLabel::new(self.fresh());
+                    let mut mm = m.clone();
+                    mm.insert(lbl, const_weight());
+                    (lbl, mm)
+                }
+                Some(sym) => {
+                    let lbl = VarLabel::new(sym);
+                    (lbl, m.clone())
+                }
+            }
+        }
         fn eval_anf(&mut self, a: ANF, m: &WeightMap, p: &SubstMap) -> Compiled {
             use ANF::*;
             match a {
                 AVar(s) => {
-                    let (lbl, wm) = match self.get_var(s) {
-                        None => {
-                            let sym = self.fresh();
-                            let lbl = VarLabel::new(sym);
-                            let m_ = &mut m.clone();
-                            m_.insert(lbl, const_weight());
-                            (lbl, m_.clone())
-                        }
-                        Some(sym) => {
-                            let lbl = VarLabel::new(sym);
-                            (lbl, m.clone())
-                        }
-                    };
+                    let (lbl, wm) = self.get_or_create_varlabel(s, m);
                     Compiled {
                         substitutions: p.clone(),
                         dist: self.mgr.var(lbl, true),
@@ -188,167 +208,123 @@ pub mod semantics {
                 }
             }
         }
+        fn apply_substitutions(&mut self, bdd: BddPtr, p: &SubstMap) -> BddPtr {
+            let mut fin = bdd;
+            for (lbl, sub) in p.iter() {
+                fin = self.mgr.compose(fin, *lbl, *sub);
+            }
+            fin
+        }
+        fn eval_expr(&mut self, e: Expr, m: &WeightMap, p: &SubstMap) -> Compiled {
+            use Expr::*;
+            match e {
+                EAnf(a) => self.eval_anf(*a, m, p),
+                // EFst(a) => self.eval_anf(a, m, p),
+                // ESnd(a) => self.eval_anf(a, m, p),
+                // EProd(al,ar) => self.eval_anf(a, m, p),
+                ELetIn(s, ebound, ebody) => {
+                    let (lbl, wm) = self.get_or_create_varlabel(s, m);
+                    let bound = self.eval_expr(*ebound, &wm, p);
+                    let mut subst = bound.substitutions.clone();
+                    subst.insert(lbl, bound.dist);
+                    let body = self.eval_expr(*ebody, &bound.weight_map, &subst);
+                    let mut weight_map = bound.weight_map;
+                    weight_map.extend(body.weight_map);
+                    let mut substitutions = bound.substitutions.clone();
+                    substitutions.extend(body.substitutions);
+                    let body_accept = self.mgr.compose(body.accept, lbl, bound.dist);
+                    Compiled {
+                        dist: self.mgr.compose(body.dist, lbl, bound.dist),
+                        accept: self.mgr.and(bound.accept, body_accept),
+                        weight_map,
+                        substitutions,
+                        probability: bound.probability * body.probability,
+                        importance_weight: bound.importance_weight * body.importance_weight,
+                    }
+                }
+                EIte(cond, t, f) => {
+                    let pred = self.eval_anf(*cond, &m.clone(), &p.clone());
+                    let truthy = self.eval_expr(*t, &m.clone(), &p.clone());
+                    let falsey = self.eval_expr(*f, &m.clone(), &p.clone());
+
+                    let dist_l = self.mgr.and(pred.dist, truthy.dist);
+                    let dist_r = self.mgr.and(pred.dist.neg(), falsey.dist);
+                    let dist = self.mgr.or(dist_l, dist_r);
+
+                    let accept_l = self.mgr.and(pred.accept, truthy.accept);
+                    let accept_r = self.mgr.and(pred.accept.neg(), falsey.accept);
+                    let accept = self.mgr.or(accept_l, accept_r);
+
+                    let mut weight_map = truthy.weight_map.clone();
+                    weight_map.extend(falsey.weight_map.clone());
+                    let mut substitutions = truthy.substitutions.clone();
+                    substitutions.extend(falsey.substitutions.clone());
+                    let probability = truthy.probability + falsey.probability;
+                    let importance_weight = truthy.convex_combination(&falsey);
+                    Compiled {
+                        dist,
+                        accept,
+                        weight_map,
+                        substitutions,
+                        probability,
+                        importance_weight,
+                    }
+                }
+                EFlip(param) => {
+                    let sym = self.fresh();
+                    let mut weight_map = m.clone();
+                    let lbl = VarLabel::new(sym);
+                    weight_map.insert(lbl, (1.0 - param, param));
+                    Compiled {
+                        dist: self.mgr.var(lbl, true),
+                        accept: BddPtr::PtrTrue,
+                        weight_map,
+                        substitutions: p.clone(),
+                        probability: Probability::new(1.0),
+                        importance_weight: 1.0,
+                    }
+                }
+                EObserve(a) => {
+                    let comp = self.eval_anf(*a, m, p);
+                    let dist = self.apply_substitutions(comp.dist, p); // FIXME: I don't think there is a need to apply substitutions here, but doing this doesn't hurt
+                    let w = dist.wmc(&self.var_order, &weight_map_to_params(m));
+
+                    // let accept = self.apply_substitutions(comp.accept, p); // this is always true
+                    // let a = self.mgr.and(dist, accept).wmc(&self.var_order, &weight_map_to_params(m));
+                    // let z = accept.wmc(&self.var_order, &weight_map_to_params(m));
+                    // let w = a / z;
+
+                    Compiled {
+                        dist: BddPtr::PtrTrue,
+                        accept: dist,
+                        weight_map: m.clone(),
+                        substitutions: p.clone(),
+                        probability: Probability::new(1.0),
+                        importance_weight: w as f64,
+                    }
+                }
+                ESample(e) => {
+                    let comp = self.eval_expr(*e, m, p);
+                    if comp.accept != BddPtr::PtrTrue {
+                        panic!("sample statement includes observe statement");
+                    }
+                    let theta_q = comp
+                        .dist
+                        .wmc(&self.var_order, &weight_map_to_params(&comp.weight_map))
+                        as f64;
+                    let bern = Bernoulli::new(theta_q).unwrap();
+                    let sample = bern.sample(self.rng);
+                    let q = Probability::new(if sample { theta_q } else { 1.0 - theta_q });
+                    Compiled {
+                        dist: BddPtr::from_bool(sample),
+                        accept: BddPtr::PtrTrue, // FIXME should be `dist` after resolving the initial example
+                        weight_map: m.clone(),
+                        substitutions: p.clone(),
+                        probability: q,
+                        importance_weight: 1.0,
+                    }
+                }
+            }
+        }
     }
-    //   -- boolean operators:
-    //   | .neg a, m, p => do
-    //     let c <- evalANF a m p
-    //     return { c with global := Formula.neg c.global }
-    //   | .and l r, m, p => do
-    //     return { Monoid.op l r with global := fconj l.global r.global }
-    //   | .or l r, m, p => do
-    //     let l <- evalANF l m p
-    //     let r <- evalANF r m p
-    //     return { Monoid.op l r with global := Formula.disj l.global r.global }
 }
-
-// def assertConsecutiveVars [Monad m] [MonadExceptOf String m] (weights: WeightMap) : m Unit := do
-//   let num_vars := weights.size
-//   let isValid <- isConsecutive <| HashSet.toList <| map2vars weights
-//   if isValid then pure () else
-//     let keys : List Nat := weights.toList.map fst
-//     throw s!"weight keys are not consecutive nats. Expected keys: [0,{num_vars}). Got:{keys}"
-
-// def wmc [Monad m] [MonadExceptOf String m] (env: Env) (weights: WeightMap) (f: Formula) : m Float := do
-//   dbg_trace "[wmc] {HashMap.toList weights} {f}";
-//   -- assertConsecutiveVars weights
-//   let t := Id.run do
-//     let num_vars := f.max + 1 -- env.vars.size -- weights.size
-//     let init : Float := 0
-//     Stream.fold (all_assignments num_vars) (fun tot assgn =>
-//       match (isSAT assgn f : Except String Bool) with
-//       | .error e =>
-//         dbg_trace "[wmc]{assgn}: false -- got err: {e}";
-//         tot
-//       | .ok b =>
-//         if not b
-//         then
-//           dbg_trace "[wmc]{assgn}: false";
-//           pure tot
-//         else
-//           let w := Id.run do
-//             let cur <- tot
-//             let (_, diff) <- (Array.foldl (fun (ix, v) p =>
-//               match weights.find? ix with
-//               | none => (ix+1, v)
-//               | some (l, h) => if l + h == 0 then (ix+1, v) else
-//                 let w := if p then h else l
-//                 -- -- dbg_trace "( {assgn} ) {p} ( {l}, {h} )";
-//                 (ix+1, v * w)
-//             ) ((0 : Nat), (1 : Float)) assgn)
-//             dbg_trace "[wmc]{assgn}: true : {diff}";
-//             return diff + cur
-//           pure w
-//     ) init
-//   dbg_trace "[wmc] ...final: {t}";
-//   pure t
-
-// def bernoulli [Monad m] [MonadStateOf Env m] (theta : Prob) : m Bool := do
-//   let env <- get
-//   let mx := stdRange.snd
-//   let (n, rgen) := randNat env.rgen 0 mx
-//   set { env with rgen := rgen }
-//   let asprob : Float := n.toFloat / mx.toFloat
-//   let val : Bool := asprob > theta.prob
-//   return val
-
-// def constWeight := (0.0, 0.0)
-
-// def dbg_compiled [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] (s:String) (w: WeightMap) (p: SubstMap) (c: Compiled) : m Unit := do
-//     dbg_trace "[evalExpr][{s}]";
-//     dbg_trace "[evalExpr] (_,  {HashMap.toList w}, {HashMap.toList p} )";
-//     dbg_trace "[evalExpr]      \\||/  {c.global}";
-//     dbg_trace "[evalExpr]      \\||/  {c.accept}";
-//     dbg_trace "[evalExpr]      \\||/  {HashMap.toList c.weightMap}";
-//     dbg_trace "[evalExpr]      \\||/  {HashMap.toList c.substitutions}";
-//     dbg_trace "[evalExpr]      \\||/  {c.probability.prob}";
-//     dbg_trace "[evalExpr]      \\||/  {c.importanceWeight}";
-//     dbg_trace "[evalExpr][{s}]";
-//     pure ()
-// open Formula in
-// def evalExpr [Monad m] [MonadStateOf Env m] [MonadExceptOf String m] : Expr -> WeightMap -> SubstMap -> m Compiled
-//   | Expr.anf a, m, p => evalANF a m p
-//   | Expr.fst a, m, p => evalANF a m p
-//   | Expr.snd a, m, p => evalANF a m p
-//   | Expr.prod l r, m, p => do
-//     let l <- evalANF l m p
-//     let r <- evalANF r m p
-//     return Monoid.op l r
-//   | Expr.letIn s e rest, m, p => do
-//     let foo <- getVar? s
-//     let (x, inEnv) <- getVar?? s p
-//     let m := if inEnv then m else m.insert x constWeight
-//     let comp_1 <- evalExpr e m p
-//     let comp_2 <- evalExpr rest comp_1.weightMap (comp_1.substitutions.insert x comp_1.global)
-//     let c := {
-//       global        := comp_2.global.subst x comp_1.global
-//       accept        := fconj comp_1.accept (comp_2.accept.subst x comp_1.accept)
-//       weightMap     := comp_1.unionMaps comp_2
-//       substitutions := comp_1.unionSubs comp_2
-//       probability   := comp_1.probability.mul comp_2.probability
-//       importanceWeight := comp_1.importanceWeight * comp_2.importanceWeight
-//       }
-//     dbg_compiled "letIn({s}->{x})" m p c
-//     dbg_trace "[evalExpr]      let {s}:{x} / {foo} in ...";
-//     dbg_trace "[evalExpr]      global with substitution: {comp_2.global} -> {c.global}"
-//     dbg_trace "[evalExpr][letIn]";
-//     pure c
-
-//   | Expr.ite pred t f, m, p => do
-//     let a <- evalANF pred m p
-//     let comp_t <- evalExpr t m p
-//     let comp_f <- evalExpr f m p
-//     return { global := (fconj a.global comp_t.global) \/ (neg a.global /\ comp_f.global)
-//            , accept := (fconj a.accept comp_t.accept) \/ (neg a.accept /\ comp_f.accept)
-//            , weightMap     := comp_t.unionMaps comp_f
-//            , substitutions := comp_t.unionSubs comp_f
-//            , probability   := comp_t.probability.add comp_f.probability
-//            , importanceWeight := comp_t.convexCombIW comp_f
-//            }
-//   | Expr.flip param, m, p => do
-//     let f <- fresh
-//     let flipMap := HashMap.empty.insert f (1-param, param)
-//     let c := {
-//       global := Formula.id f
-//       accept := Formula.bool true
-//       weightMap     := flipMap.mergeWith leftEntry m
-//       substitutions := p
-//       probability   := Prob.mk 1
-//       importanceWeight := 1
-//       }
-//     dbg_compiled "flip {f}" m p c
-//     pure c
-//   | Expr.observe a, m, p => do
-//     let acomp <- evalANF a m p
-//     let env <- get
-//     -- let w <- wmc env m (acomp.global.apply p)
-//     let a <- wmc env m (Formula.conj (acomp.global.apply p) (acomp.accept.apply p))
-//     let z <- wmc env m (acomp.accept.apply p)
-//     let w := a / z
-//     let c := {
-//       global := Formula.bool true
-//       accept := acomp.global
-//       weightMap     := m
-//       substitutions := p
-//       probability   := Prob.mk 1
-//       importanceWeight := w
-//       }
-//     dbg_compiled "observe _" m p c
-//     pure c
-//   | Expr.sample e, m, p => do
-//     let ecomp <- evalExpr e m p
-//     if ecomp.accept != bool true then throw "sample statement includes observe statement" else
-//     let env <- get
-//     let theta_q <- wmc env ecomp.weightMap ecomp.global
-//     let v <- bernoulli (Prob.mk theta_q)
-//     let q := Prob.mk (if v then theta_q else 1-theta_q)
-
-//     let c := {
-//       global := Formula.bool v
-//       accept := Formula.bool true -- FIXME(!!!) need to switch back to this when you are clear on part 1 of sample statements: ecomp.global
-//       weightMap     := m
-//       substitutions := p
-//       probability   := q
-//       importanceWeight := 1
-//       }
-//     dbg_compiled "sample {v}" m p c
-//     pure c
