@@ -328,3 +328,76 @@ pub mod semantics {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::grammar::*;
+    use super::*;
+    use Expr::*;
+
+    #[macro_export]
+    macro_rules! val {
+        ( $x:ident ) => {
+            Expr::EAnf(Box::new(ANF::AVal(Val::Bool($x))))
+        };
+    }
+    #[macro_export]
+    macro_rules! var {
+        ( $x:literal ) => {
+            Expr::EAnf(Box::new(ANF::AVar($x.to_string())))
+        };
+    }
+    #[macro_export]
+    macro_rules! or {
+        ( $x:literal, $y:literal ) => {{
+            ANF::Or(
+                Box::new(ANF::AVar($x.to_string())),
+                Box::new(ANF::AVar($y.to_string())),
+            )
+        }};
+    }
+    #[macro_export]
+    macro_rules! anf {
+        ( $x:expr ) => {{
+            Expr::EAnf(Box::new($x))
+        }};
+    }
+    #[macro_export]
+    macro_rules! lets {
+        ( $( $var:literal := $bound:expr );+ ;... $body:expr ) => {
+            {
+                let mut fin = Box::new($body);
+                $(
+                    fin = Box::new(Expr::ELetIn($var.to_string(), Box::new($bound), fin));
+                )+
+                *fin
+            }
+        };
+    }
+
+    #[test]
+    fn program00() {
+        let p00 = ELetIn(String::from("x"), Box::new(val!(true)), Box::new(var!("x")));
+        let p01 = lets![
+            "x" := EFlip(1.0/3.0);
+            ... var!("x")
+        ];
+        let p02 = lets![
+            "x" := EFlip(0.3333);
+            "y" := EFlip(1.0/4.0);
+            ... anf!(or!("x", "y"))
+        ];
+        let p03 = lets![
+            "x" := EFlip(0.3333);
+            "y" := EFlip(1.0/4.0);
+            "_" := EObserve(Box::new(or!("x", "y")));
+            ... var!("x")
+        ];
+        let p1 = lets![
+            "x" := ESample(Box::new(EFlip(0.3333)));
+            "y" := EFlip(1.0/4.0);
+            "_" := EObserve(Box::new(or!("x", "y")));
+            ... var!("x")
+        ];
+    }
+}
