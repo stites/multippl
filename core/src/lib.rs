@@ -48,6 +48,25 @@ pub mod grammar {
     //   ret : Ty
     //   body : Expr
     // deriving Repr
+    impl Expr {
+        fn strip_samples(&self) -> Expr {
+            use Expr::*;
+            match self {
+                ESample(e) => *e.clone(),
+                ELetIn(s, x, y) => ELetIn(
+                    s.clone(),
+                    Box::new(x.strip_samples()),
+                    Box::new(y.strip_samples()),
+                ),
+                EIte(p, x, y) => EIte(
+                    p.clone(),
+                    Box::new(x.strip_samples()),
+                    Box::new(y.strip_samples()),
+                ),
+                e => e.clone(),
+            }
+        }
+    }
 
     #[derive(Debug, Clone)]
     pub enum Program {
@@ -55,12 +74,21 @@ pub mod grammar {
         // TODO
         // | define (f: Func) (rest: Program) : Program
     }
+    impl Program {
+        fn strip_samples(&self) -> Program {
+            use Program::*;
+            match self {
+                Body(e) => Body(e.strip_samples()),
+            }
+        }
+    }
 }
 pub mod semantics {
     use super::*;
     use grammar::*;
     use rand::distributions::{Bernoulli, Distribution};
     use rand::rngs::StdRng;
+    use rand::SeedableRng;
     use rsdd::builder::cache::*;
     use rsdd::repr::bdd::*;
     use rsdd::repr::ddnnf::*;
@@ -136,14 +164,52 @@ pub mod semantics {
 
     pub type Sym = u64;
 
+    pub struct EnvArgs {
+        // FIXME: just have env own BddManager and StdRng
+        vars: HashMap<String, Sym>,
+        gensym: Sym,
+        mgr: BddManager<AllTable<BddPtr>>,
+        rng: StdRng,
+    }
+    impl EnvArgs {
+        pub fn default_args(seed: Option<u64>) -> EnvArgs {
+            let mgr = BddManager::<AllTable<BddPtr>>::new_default_order(1000);
+            let rng = match seed {
+                None => StdRng::from_entropy(),
+                Some(s) => StdRng::seed_from_u64(s),
+            };
+            EnvArgs {
+                vars: HashMap::new(),
+                gensym: 0,
+                mgr,
+                rng,
+            }
+        }
+    }
+
     pub struct Env<'a> {
         vars: HashMap<String, Sym>,
         gensym: Sym,
-        var_order: VarOrder,
         mgr: &'a mut BddManager<AllTable<BddPtr>>,
         rng: &'a mut StdRng,
     }
     impl<'a> Env<'a> {
+        pub fn new(mgr: &'a mut BddManager<AllTable<BddPtr>>, rng: &'a mut StdRng) -> Env<'a> {
+            Env {
+                vars: HashMap::new(),
+                gensym: 0,
+                mgr,
+                rng,
+            }
+        }
+        pub fn from_args(x: &'a mut EnvArgs) -> Env<'a> {
+            Env {
+                vars: x.vars.clone(),
+                gensym: x.gensym.clone(),
+                mgr: &mut x.mgr,
+                rng: &mut x.rng,
+            }
+        }
         fn _fresh(&mut self, ovar: Option<String>) -> Sym {
             let sym = self.gensym;
             self.gensym += 1;
@@ -175,7 +241,7 @@ pub mod semantics {
                 }
             }
         }
-        fn eval_anf(&mut self, a: ANF, m: &WeightMap, p: &SubstMap) -> Compiled {
+        pub fn eval_anf(&mut self, a: ANF, m: &WeightMap, p: &SubstMap) -> Compiled {
             use ANF::*;
             match a {
                 AVar(s) => {
@@ -212,14 +278,14 @@ pub mod semantics {
                 }
             }
         }
-        fn apply_substitutions(&mut self, bdd: BddPtr, p: &SubstMap) -> BddPtr {
+        pub fn apply_substitutions(&mut self, bdd: BddPtr, p: &SubstMap) -> BddPtr {
             let mut fin = bdd;
             for (lbl, sub) in p.iter() {
                 fin = self.mgr.compose(fin, *lbl, *sub);
             }
             fin
         }
-        fn eval_expr(&mut self, e: Expr, m: &WeightMap, p: &SubstMap) -> Compiled {
+        pub fn eval_expr(&mut self, e: Expr, m: &WeightMap, p: &SubstMap) -> Compiled {
             use Expr::*;
             match e {
                 EAnf(a) => self.eval_anf(*a, m, p),
@@ -332,11 +398,29 @@ pub mod semantics {
             }
         }
     }
+    pub fn compile(env: &mut Env, p: Program) -> Compiled {
+        match p {
+            Program::Body(e) => env.eval_expr(e, &HashMap::new(), &HashMap::new()),
+        }
+    }
+    pub fn wmc_prob(env: &mut Env, c: Compiled) -> (f32, f32) {
+        let (params, mx) = weight_map_to_params(&c.weight_map);
+        let var_order = VarOrder::linear_order(mx as usize);
+        let a = env.mgr.and(c.dist, c.accept).wmc(&var_order, &params);
+        let z = c.accept.wmc(&var_order, &params);
+        (a, z)
+    }
+    pub fn exact_inf(env: &mut Env, p: Program) -> f32 {
+        let c = compile(env, p);
+        let (a, z) = wmc_prob(env, c);
+        a / z
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::grammar::*;
+    use super::semantics::*;
     use super::*;
     use Expr::*;
 
@@ -362,6 +446,15 @@ mod tests {
         }};
     }
     #[macro_export]
+    macro_rules! and {
+        ( $x:literal, $y:literal ) => {{
+            ANF::And(
+                Box::new(ANF::AVar($x.to_string())),
+                Box::new(ANF::AVar($y.to_string())),
+            )
+        }};
+    }
+    #[macro_export]
     macro_rules! anf {
         ( $x:expr ) => {{
             Expr::EAnf(Box::new($x))
@@ -380,29 +473,113 @@ mod tests {
         };
     }
 
+    fn check_exact(s: &str, f: f32, env: &mut Env, p: Program) {
+        let pr = exact_inf(env, p);
+        // print!("[check_exact][{s}]");
+        let ret = (pr - f).abs() < 0.000001;
+        assert!(ret, "[check_exact][{s}][err][exp: {f}] != {pr}");
+        // println!(if ret {
+        //     format!("[ok!][exp: {f}] == {pr}")
+        // } else {
+        //     format!("[err][exp: {f}] != {pr}")
+        // });
+    }
+
     #[test]
     fn program00() {
-        let p00 = ELetIn(String::from("x"), Box::new(val!(true)), Box::new(var!("x")));
+        let mut env_args = EnvArgs::default_args(None);
+        let mut env = Env::from_args(&mut env_args);
+        let p00 = lets![
+            "x" := val!(true);
+            ... var!("x")
+        ];
+        check_exact("p00", 1.0, &mut env, Program::Body(p00));
+    }
+    #[test]
+    fn program01() {
+        let mut env_args = EnvArgs::default_args(None);
+        let mut env = Env::from_args(&mut env_args);
+
         let p01 = lets![
             "x" := EFlip(1.0/3.0);
             ... var!("x")
         ];
-        let p02 = lets![
-            "x" := EFlip(0.3333);
-            "y" := EFlip(1.0/4.0);
-            ... anf!(or!("x", "y"))
-        ];
-        let p03 = lets![
-            "x" := EFlip(0.3333);
-            "y" := EFlip(1.0/4.0);
-            "_" := EObserve(Box::new(or!("x", "y")));
-            ... var!("x")
-        ];
-        let p1 = lets![
-            "x" := ESample(Box::new(EFlip(0.3333)));
-            "y" := EFlip(1.0/4.0);
-            "_" := EObserve(Box::new(or!("x", "y")));
-            ... var!("x")
-        ];
+        check_exact("p01", 1.0 / 3.0, &mut env, Program::Body(p01));
+    }
+    #[test]
+    fn program02() {
+        let mut env_args = EnvArgs::default_args(None);
+        let mut env = Env::from_args(&mut env_args);
+
+        let mk02 = |ret| {
+            lets![
+                "x" := EFlip(0.3333);
+                "y" := EFlip(1.0/4.0);
+                ... ret
+            ]
+        };
+        check_exact(
+            "p02/y  ",
+            3.0 / 12.0,
+            &mut env,
+            Program::Body(mk02(var!("y"))),
+        );
+        check_exact(
+            "p02/x  ",
+            4.0 / 12.0,
+            &mut env,
+            Program::Body(mk02(var!("x"))),
+        );
+        check_exact(
+            "p02/x|y",
+            1.0 / 12.0,
+            &mut env,
+            Program::Body(mk02(anf!(or!("x", "y")))),
+        );
+        check_exact(
+            "p02/x&y",
+            6.0 / 12.0,
+            &mut env,
+            Program::Body(mk02(anf!(and!("x", "y")))),
+        );
+    }
+
+    #[test]
+    fn program03() {
+        let mut env_args = EnvArgs::default_args(None);
+        let mut env = Env::from_args(&mut env_args);
+
+        let mk03 = |ret| {
+            lets![
+                "x" := EFlip(0.3333);
+                "y" := EFlip(1.0/4.0);
+                "_" := EObserve(Box::new(or!("x", "y")));
+                ... ret
+            ]
+        };
+        check_exact(
+            "p03/y  ",
+            3.0 / 6.0,
+            &mut env,
+            Program::Body(mk03(var!("y"))),
+        );
+        check_exact(
+            "p03/x  ",
+            4.0 / 6.0,
+            &mut env,
+            Program::Body(mk03(var!("x"))),
+        );
+        check_exact(
+            "p03/x|y",
+            1.0 / 6.0,
+            &mut env,
+            Program::Body(mk03(anf!(or!("x", "y")))),
+        );
+        check_exact(
+            "p03/x&y",
+            6.0 / 6.0,
+            &mut env,
+            Program::Body(mk03(anf!(and!("x", "y")))),
+        );
     }
 }
