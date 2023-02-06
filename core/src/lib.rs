@@ -3,6 +3,7 @@ use rsdd::builder::bdd_builder::BddManager;
 use rsdd::builder::cache::all_app::AllTable;
 use std::collections::HashMap;
 use std::string::String;
+use tracing::{debug, error, info, span, warn, Level};
 
 pub mod grammar {
     #[derive(Debug, Copy, Clone)]
@@ -86,6 +87,7 @@ pub mod grammar {
 pub mod semantics {
     use super::*;
     use grammar::*;
+    use itertools::*;
     use rand::distributions::{Bernoulli, Distribution};
     use rand::rngs::StdRng;
     use rand::SeedableRng;
@@ -96,8 +98,18 @@ pub mod semantics {
     use rsdd::repr::var_order::VarOrder;
     use rsdd::repr::wmc::WmcParams;
     use rsdd::sample::probability::Probability;
+    use std::fmt;
 
-    type WeightMap = HashMap<VarLabel, (f32, f32)>;
+    #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
+    pub struct UniqueId(u64);
+
+    impl fmt::Display for UniqueId {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(f, "#{}", self.0)
+        }
+    }
+
+    type WeightMap = HashMap<UniqueId, (f32, f32)>;
     fn const_weight() -> (f32, f32) {
         (0.5, 0.5)
     }
@@ -105,14 +117,14 @@ pub mod semantics {
         let mut wmc_params = WmcParams::new(0.0, 1.0);
         let mut max = 0;
         for (lbl, (l, h)) in m {
-            wmc_params.set_weight(*lbl, *l, *h);
-            if lbl.value() > max {
-                max = lbl.value()
+            wmc_params.set_weight(VarLabel::new(lbl.0), *l, *h);
+            if lbl.0 > max {
+                max = lbl.0;
             }
         }
         (wmc_params, max)
     }
-    type SubstMap = HashMap<VarLabel, BddPtr>;
+    type SubstMap = HashMap<UniqueId, BddPtr>;
 
     #[derive(Debug, Clone)]
     pub struct Compiled {
@@ -162,12 +174,10 @@ pub mod semantics {
         }
     }
 
-    pub type Sym = u64;
-
     pub struct EnvArgs {
         // FIXME: just have env own BddManager and StdRng
-        vars: HashMap<String, Sym>,
-        gensym: Sym,
+        names: HashMap<String, UniqueId>,
+        gensym: u64,
         mgr: BddManager<AllTable<BddPtr>>,
         rng: StdRng,
     }
@@ -179,7 +189,7 @@ pub mod semantics {
                 Some(s) => StdRng::seed_from_u64(s),
             };
             EnvArgs {
-                vars: HashMap::new(),
+                names: HashMap::new(),
                 gensym: 0,
                 mgr,
                 rng,
@@ -188,15 +198,15 @@ pub mod semantics {
     }
 
     pub struct Env<'a> {
-        vars: HashMap<String, Sym>,
-        gensym: Sym,
+        names: HashMap<String, UniqueId>,
+        gensym: u64,
         mgr: &'a mut BddManager<AllTable<BddPtr>>,
         rng: &'a mut StdRng,
     }
     impl<'a> Env<'a> {
         pub fn new(mgr: &'a mut BddManager<AllTable<BddPtr>>, rng: &'a mut StdRng) -> Env<'a> {
             Env {
-                vars: HashMap::new(),
+                names: HashMap::new(),
                 gensym: 0,
                 mgr,
                 rng,
@@ -204,39 +214,40 @@ pub mod semantics {
         }
         pub fn from_args(x: &'a mut EnvArgs) -> Env<'a> {
             Env {
-                vars: x.vars.clone(),
+                names: x.names.clone(),
                 gensym: x.gensym.clone(),
                 mgr: &mut x.mgr,
                 rng: &mut x.rng,
             }
         }
-        fn _fresh(&mut self, ovar: Option<String>) -> Sym {
+        fn _fresh(&mut self, ovar: Option<String>) -> UniqueId {
             let sym = self.gensym;
             self.gensym += 1;
             let var = ovar.unwrap_or(format!("_{sym}"));
-            self.vars.insert(var, sym);
-            sym
+            self.names.insert(var, UniqueId(sym));
+            UniqueId(sym)
         }
-        fn fresh(&mut self) -> Sym {
+        fn fresh(&mut self) -> UniqueId {
             self._fresh(None)
         }
-        fn get_var(&self, var: String) -> Option<Sym> {
-            self.vars.get(&var).copied()
+        fn get_var(&self, var: String) -> Option<UniqueId> {
+            self.names.get(&var).copied()
         }
-        fn get_or_create(&mut self, var: String) -> Sym {
+        fn get_or_create(&mut self, var: String) -> UniqueId {
             let osym = self.get_var(var.clone());
             osym.unwrap_or_else(|| self._fresh(Some(var)))
         }
         fn get_or_create_varlabel(&mut self, s: String, m: &WeightMap) -> (VarLabel, WeightMap) {
             match self.get_var(s) {
                 None => {
-                    let lbl = VarLabel::new(self.fresh());
+                    let id = self.fresh();
+                    let lbl = VarLabel::new(id.0);
                     let mut mm = m.clone();
-                    mm.insert(lbl, const_weight());
+                    mm.insert(id, const_weight());
                     (lbl, mm)
                 }
                 Some(sym) => {
-                    let lbl = VarLabel::new(sym);
+                    let lbl = VarLabel::new(sym.0);
                     (lbl, m.clone())
                 }
             }
@@ -281,10 +292,71 @@ pub mod semantics {
         pub fn apply_substitutions(&mut self, bdd: BddPtr, p: &SubstMap) -> BddPtr {
             let mut fin = bdd;
             for (lbl, sub) in p.iter() {
-                fin = self.mgr.compose(fin, *lbl, *sub);
+                fin = self.mgr.compose(fin, VarLabel::new(lbl.0), *sub);
             }
             fin
         }
+
+        /// Print a debug form of the BDD with the label remapping given by `map`
+        pub fn print_bdd_lbl(ptr: BddPtr, map: &HashMap<VarLabel, VarLabel>) -> String {
+            match ptr {
+                BddPtr::PtrTrue => String::from("T"),
+                // BddPtr::PtrFalse => String::from("T"),
+                BddPtr::PtrFalse => String::from("F"), // TODO: check that this is right?
+                BddPtr::Compl(n) => {
+                    let s = Self::print_bdd_lbl(BddPtr::Reg(n), map);
+                    format!("!{}", s)
+                }
+                BddPtr::Reg(n) => unsafe {
+                    let l_p = (*n).low;
+                    let r_p = (*n).high;
+                    let l_s = Self::print_bdd_lbl(l_p, map);
+                    let r_s = Self::print_bdd_lbl(r_p, map);
+                    let lbl = (*n).var;
+                    format!(
+                        "({:?}, {}, {})",
+                        map.get(&lbl).unwrap_or(&lbl).value(),
+                        l_s,
+                        r_s
+                    )
+                },
+            }
+        }
+
+        pub fn print_bdd(ptr: BddPtr) -> String {
+            Self::print_bdd_lbl(ptr, &HashMap::new())
+        }
+
+        fn debug_compiled(s: &str, w: &WeightMap, p: &SubstMap, c: Compiled) {
+            debug!("[evalExpr][{s}]");
+            let wmap = w
+                .iter()
+                .map(|(k, (l, h))| format!("{k}: ({l}, {h})"))
+                .join(", ");
+            let subm = p
+                .iter()
+                .map(|(k, v)| format!("{k}: {}", Self::print_bdd(v.clone())))
+                .join(", ");
+            debug!("[evalExpr] _,  [{}], [{}]", wmap, subm);
+            debug!("[evalExpr]      \\||/  {}", Self::print_bdd(c.dist));
+            debug!("[evalExpr]      \\||/  {}", Self::print_bdd(c.accept));
+            let wmap = c
+                .weight_map
+                .iter()
+                .map(|(k, (l, h))| format!("{k}: ({l}, {h})"))
+                .join(", ");
+            let subm = c
+                .substitutions
+                .iter()
+                .map(|(k, v)| format!("{k}: {}", Self::print_bdd(v.clone())))
+                .join(", ");
+            debug!("[evalExpr]      \\||/  {}", wmap);
+            debug!("[evalExpr]      \\||/  {}", subm);
+            debug!("[evalExpr]      \\||/  {}", c.probability.as_f64());
+            debug!("[evalExpr]      \\||/  {}", c.importance_weight);
+            debug!("[evalExpr][{s}]");
+        }
+
         pub fn eval_expr(&mut self, e: Expr, m: &WeightMap, p: &SubstMap) -> Compiled {
             use Expr::*;
             match e {
@@ -296,7 +368,7 @@ pub mod semantics {
                     let (lbl, wm) = self.get_or_create_varlabel(s, m);
                     let bound = self.eval_expr(*ebound, &wm, p);
                     let mut subst = bound.substitutions.clone();
-                    subst.insert(lbl, bound.dist);
+                    subst.insert(UniqueId(lbl.value()), bound.dist);
                     let body = self.eval_expr(*ebody, &bound.weight_map, &subst);
                     let mut weight_map = bound.weight_map;
                     weight_map.extend(body.weight_map);
@@ -343,8 +415,8 @@ pub mod semantics {
                 EFlip(param) => {
                     let sym = self.fresh();
                     let mut weight_map = m.clone();
-                    let lbl = VarLabel::new(sym);
-                    weight_map.insert(lbl, (1.0 - param, param));
+                    let lbl = VarLabel::new(sym.0);
+                    weight_map.insert(sym, (1.0 - param, param));
                     Compiled {
                         dist: self.mgr.var(lbl, true),
                         accept: BddPtr::PtrTrue,
