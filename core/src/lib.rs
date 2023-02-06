@@ -73,12 +73,16 @@ pub mod semantics {
     fn const_weight() -> (f32, f32) {
         (0.5, 0.5)
     }
-    fn weight_map_to_params(m: &WeightMap) -> WmcParams<f32> {
+    fn weight_map_to_params(m: &WeightMap) -> (WmcParams<f32>, u64) {
         let mut wmc_params = WmcParams::new(0.0, 1.0);
+        let mut max = 0;
         for (lbl, (l, h)) in m {
             wmc_params.set_weight(*lbl, *l, *h);
+            if lbl.value() > max {
+                max = lbl.value()
+            }
         }
-        wmc_params
+        (wmc_params, max)
     }
     type SubstMap = HashMap<VarLabel, BddPtr>;
 
@@ -287,7 +291,9 @@ pub mod semantics {
                 EObserve(a) => {
                     let comp = self.eval_anf(*a, m, p);
                     let dist = self.apply_substitutions(comp.dist, p); // FIXME: I don't think there is a need to apply substitutions here, but doing this doesn't hurt
-                    let w = dist.wmc(&self.var_order, &weight_map_to_params(m));
+                    let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
+                    let var_order = VarOrder::linear_order(max_var as usize);
+                    let w = dist.wmc(&var_order, &wmc_params);
 
                     // let accept = self.apply_substitutions(comp.accept, p); // this is always true
                     // let a = self.mgr.and(dist, accept).wmc(&self.var_order, &weight_map_to_params(m));
@@ -308,10 +314,9 @@ pub mod semantics {
                     if comp.accept != BddPtr::PtrTrue {
                         panic!("sample statement includes observe statement");
                     }
-                    let theta_q = comp
-                        .dist
-                        .wmc(&self.var_order, &weight_map_to_params(&comp.weight_map))
-                        as f64;
+                    let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
+                    let var_order = VarOrder::linear_order(max_var as usize);
+                    let theta_q = comp.dist.wmc(&var_order, &wmc_params) as f64;
                     let bern = Bernoulli::new(theta_q).unwrap();
                     let sample = bern.sample(self.rng);
                     let q = Probability::new(if sample { theta_q } else { 1.0 - theta_q });
