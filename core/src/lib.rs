@@ -161,12 +161,12 @@ pub mod semantics {
 
     #[derive(Debug, Clone)]
     pub struct Compiled {
-        dist: BddPtr,
-        accept: BddPtr,
-        weight_map: WeightMap, // must be a hashmap as sample will collapse variables
-        substitutions: SubstMap,
-        probability: Probability,
-        importance_weight: f64,
+        pub dist: BddPtr,
+        pub accept: BddPtr,
+        pub weight_map: WeightMap, // must be a hashmap as sample will collapse variables
+        pub substitutions: SubstMap,
+        pub probability: Probability,
+        pub importance_weight: f64,
     }
     impl Compiled {
         fn convex_combination(&self, o: &Compiled) -> f64 {
@@ -262,7 +262,7 @@ pub mod semantics {
         fn _fresh(&mut self, ovar: Option<String>) -> UniqueId {
             let sym = self.gensym;
             self.gensym += 1;
-            debug!(ovar = ovar);
+            // debug!(ovar = ovar);
             let var = ovar.unwrap_or(format!("_{sym}"));
             self.names.insert(var, UniqueId(sym));
             UniqueId(sym)
@@ -271,11 +271,11 @@ pub mod semantics {
             self._fresh(None)
         }
         fn get_var(&self, var: String) -> Option<UniqueId> {
-            debug!("get var");
-            let renderp = |ps: &HashMap<String, UniqueId>| {
-                ps.iter().map(|(k, v)| format!("{k}:{v}")).join(", ")
-            };
-            debug!(svar = var, names = renderp(&self.names));
+            // debug!("get var");
+            // let renderp = |ps: &HashMap<String, UniqueId>| {
+            //     ps.iter().map(|(k, v)| format!("{k}:{v}")).join(", ")
+            // };
+            // debug!(svar = var, names = renderp(&self.names));
 
             self.names.get(&var).copied()
         }
@@ -289,16 +289,13 @@ pub mod semantics {
             m: &WeightMap,
             p: &SubstMap,
         ) -> (VarLabel, WeightMap) {
-            debug!("get or create");
             match self.get_var(s.clone()) {
                 None => {
                     let renderp = |ps: &HashMap<String, UniqueId>| {
                         ps.iter().map(|(k, v)| format!("{k}:{v}")).join(", ")
                     };
 
-                    debug!(svar = s, names = renderp(&self.names));
                     let id = self._fresh(Some(s.clone()));
-                    debug!(svar = s, get_var_fresh = id.0, names = renderp(&self.names));
                     let lbl = VarLabel::new(id.0);
                     let mut mm = m.clone();
                     mm.insert(id, const_weight());
@@ -313,7 +310,6 @@ pub mod semantics {
                                     || ((**n).low == BddPtr::PtrFalse
                                         && (**n).high == BddPtr::PtrTrue)
                                 {
-                                    debug!(nxt = Self::print_bdd(BddPtr::Reg(n.clone())));
                                     nxt = p.get(&UniqueId((**n).var.value().clone()));
                                 } else {
                                     break;
@@ -325,11 +321,9 @@ pub mod semantics {
                     match nxt {
                         Some(BddPtr::Reg(n)) => {
                             let mut nn = n.clone();
-                            debug!(nxt = Self::print_bdd(BddPtr::Reg(nn)));
                             ((**n).var.clone(), m.clone())
                         }
                         _ => {
-                            debug!(nxt = None::<u64>);
                             let lbl = VarLabel::new(sym.0);
                             (lbl, m.clone())
                         }
@@ -381,13 +375,13 @@ pub mod semantics {
                 // And(bl, br) => {
                 //     let mut l = self.eval_anf(*bl, m, p);
                 //     let r = self.eval_anf(*br, m, p);
-                //     l.conj_extend(self.mgr, r.clone());
+                //     // l.conj_extend(self.mgr, r.clone());
                 //     let mut weight_map = l.weight_map.clone();
                 //     weight_map.extend(r.weight_map.clone());
                 //     let mut substitutions = l.substitutions.clone();
                 //     substitutions.extend(r.substitutions.clone());
                 //     Compiled {
-                //         dist: self.mgr.or(l.dist, r.dist),
+                //         dist: self.mgr.and(l.dist, r.dist),
                 //         accept: BddPtr::PtrTrue,
                 //         weight_map, substitutions,
                 //         ..Default::default()
@@ -402,12 +396,14 @@ pub mod semantics {
                     weight_map.extend(r.weight_map.clone());
                     let mut substitutions = l.substitutions.clone();
                     substitutions.extend(r.substitutions.clone());
-                    Compiled {
+                    let c = Compiled {
                         dist: self.mgr.or(l.dist, r.dist),
                         weight_map,
                         substitutions,
                         ..Default::default()
-                    }
+                    };
+                    Self::debug_compiled("anf-or", m, p, &c);
+                    c
                 }
                 Neg(bp) => {
                     let mut p = self.eval_anf(*bp, m, p);
@@ -472,13 +468,14 @@ pub mod semantics {
             debug!("      \\||/  {}", renderp(&c.substitutions));
             debug!("      \\||/  {}", c.probability.as_f64());
             debug!("      \\||/  {}", c.importance_weight);
-            debug!("[END: {s}]");
+            debug!("----------------------------------------");
         }
 
         pub fn eval_expr(&mut self, e: Expr, m: &WeightMap, p: &SubstMap) -> Compiled {
             use Expr::*;
             match e {
                 EAnf(a) => {
+                    debug!(">>>anf: {:?}", a);
                     let c = self.eval_anf(*a, m, p);
                     Self::debug_compiled("anf", m, p, &c);
                     c
@@ -487,27 +484,33 @@ pub mod semantics {
                 // ESnd(a) => self.eval_anf(a, m, p),
                 // EProd(al,ar) => self.eval_anf(a, m, p),
                 ELetIn(s, ebound, ebody) => {
-                    let (lbl, wm) = self.get_or_create_varlabel(s, m, p);
+                    debug!(">>>let-in {}", s);
+                    let (lbl, wm) = self.get_or_create_varlabel(s.clone(), m, p);
                     let bound = self.eval_expr(*ebound, &wm, p);
-                    let mut subst = bound.substitutions.clone();
-                    subst.insert(UniqueId(lbl.value()), bound.dist);
-                    let body = self.eval_expr(*ebody, &bound.weight_map, &subst);
+                    let mut bound_substitutions = bound.substitutions.clone();
+                    bound_substitutions.insert(UniqueId(lbl.value()), bound.dist);
+
+                    let body = self.eval_expr(*ebody, &bound.weight_map, &bound_substitutions);
+
                     let mut weight_map = bound.weight_map;
                     weight_map.extend(body.weight_map);
-                    let mut substitutions = bound.substitutions.clone();
-                    substitutions.extend(body.substitutions);
+
+                    let mut substitutions = body.substitutions.clone();
+                    // substitutions.extend(body.substitutions);
+
+                    let dist = self.apply_substitutions(body.dist, &substitutions);
                     let accept = self.mgr.and(bound.accept, body.accept);
                     let accept = self.apply_substitutions(accept, &substitutions);
 
                     let c = Compiled {
-                        dist: self.mgr.compose(body.dist, lbl, bound.dist),
+                        dist, // : self.mgr.compose(body.dist, lbl, bound.dist),
                         accept,
                         weight_map,
                         substitutions,
                         probability: bound.probability * body.probability,
                         importance_weight: bound.importance_weight * body.importance_weight,
                     };
-                    Self::debug_compiled("let-in", m, p, &c);
+                    Self::debug_compiled(&format!("let-in {}", s), m, p, &c);
                     c
                 }
                 EIte(cond, t, f) => {
@@ -541,6 +544,7 @@ pub mod semantics {
                     c
                 }
                 EFlip(param) => {
+                    debug!(">>>flip {param}");
                     let sym = self.fresh();
                     let mut weight_map = m.clone();
                     let lbl = VarLabel::new(sym.0);
@@ -553,10 +557,12 @@ pub mod semantics {
                         probability: Probability::new(1.0),
                         importance_weight: 1.0,
                     };
-                    Self::debug_compiled("flip", m, p, &c);
+                    Self::debug_compiled("flip {param}", m, p, &c);
                     c
                 }
                 EObserve(a) => {
+                    debug!(">>>observe");
+
                     let comp = self.eval_anf(*a, m, p);
                     let dist = self.apply_substitutions(comp.dist, p); // FIXME: I don't think there is a need to apply substitutions here, but doing this doesn't hurt
                     let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
@@ -580,6 +586,7 @@ pub mod semantics {
                     c
                 }
                 ESample(e) => {
+                    debug!(">>>sample");
                     let comp = self.eval_expr(*e, m, p);
                     if comp.accept != BddPtr::PtrTrue {
                         panic!("sample statement includes observe statement");
@@ -627,7 +634,8 @@ pub mod semantics {
         let mut ws: Vec<f64> = vec![];
         let mut ps: Vec<f64> = vec![];
         let mut qs: Vec<f64> = vec![];
-        for _ in 1..=steps {
+        for _step in 1..=steps {
+            // FIXME: change back to step
             env.reset_names();
             let c = compile(env, p.clone());
             let (a, z) = wmc_prob(env, &c);
@@ -694,10 +702,17 @@ mod tests {
     macro_rules! lets {
         ( $( $var:literal := $bound:expr );+ ;... $body:expr ) => {
             {
-                let mut fin = Box::new($body);
+                let mut fin = Box::new($body.clone());
+                let mut bindees = vec![];
                 $(
-                    fin = Box::new(Expr::ELetIn($var.to_string(), Box::new($bound), fin));
+                    debug!("let {} = {:?};", $var.clone(), $bound.clone());
+                    bindees.push(($var, $bound));
                 )+
+                debug!("... {:?}", $body);
+                for (v, e) in bindees.iter().rev() {
+                    fin = Box::new(Expr::ELetIn(v.to_string(), Box::new(e.clone()), fin));
+
+                }
                 *fin
             }
         };
@@ -723,18 +738,61 @@ mod tests {
     fn check_exact(s: &str, f: f32, p: Program) {
         check_inference("exact", &exact_inf, 0.000001, s, f, p);
     }
+    pub fn importance_weighting_inf_test2(
+        enva1: &mut EnvArgs,
+        enva2: &mut EnvArgs,
+        p: Program,
+    ) -> f32 {
+        let (mut exp, mut expw, mut expw2) = (0.0, 0.0, 0.0);
 
+        let mut env = Env::from_args(enva1);
+        let c = compile(&mut env, p.clone());
+        let (a1, z1) = wmc_prob(&mut env, &c);
+        let pr1 = (a1 / z1) as f64;
+        let q1 = c.probability.as_f64() as f64;
+        let w1 = c.importance_weight;
+        let exp1 = w1 * q1 * pr1;
+        let expw1 = w1 * q1;
+        debug!("=========================");
+
+        let mut env = Env::from_args(enva2);
+        let c = compile(&mut env, p.clone());
+        let (a2, z2) = wmc_prob(&mut env, &c);
+        let pr2 = (a2 / z2) as f64;
+        let q2 = c.probability.as_f64() as f64;
+        let w2 = c.importance_weight;
+        let exp2 = w2 * q2 * pr2;
+        let expw2 = w2 * q2;
+        debug!("");
+        debug!(w1 = w1, q1 = q1, a1 = a1, z1 = z1, pr1 = pr1);
+        debug!(w2 = w2, q2 = q2, a2 = a2, z2 = z2, pr2 = pr2);
+        debug!("");
+        debug!("{:.3} + {:.3}", exp1, exp2);
+        debug!("------------------ = {}", (exp1 + exp2) / (expw1 + expw2));
+        debug!("{:.3} + {:.3}", expw1, expw2);
+
+        ((exp1 + exp2) / (expw1 + expw2)) as f32
+    }
     fn check_approx(s: &str, f: f32, p: Program, n: usize) {
-        check_inference(
-            "approx",
-            &|env, p| importance_weighting_inf(env, n, p),
-            0.01,
-            s,
-            f,
-            p,
+        let i = "approx";
+        let precision = 0.01;
+        //     check_inference(
+        //         "approx",
+        //         &|env, p| importance_weighting_inf(env, n, p),
+        //         0.01,
+        //         s,
+        //         f,
+        //         p,
+        //     );
+        let mut enva1 = EnvArgs::default_args(Some(1));
+        let mut enva2 = EnvArgs::default_args(Some(7));
+        let pr = importance_weighting_inf_test2(&mut enva1, &mut enva2, p);
+        let ret = (f - pr).abs() < precision;
+        assert!(
+            ret,
+            "[check_{i}][{s}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"
         );
     }
-
     #[test]
     // #[traced_test]
     fn program00() {
@@ -756,7 +814,7 @@ mod tests {
     #[test]
     // #[traced_test]
     fn program02() {
-        let mk02 = |ret| {
+        let mk02 = |ret: Expr| {
             Program::Body(lets![
                 "x" := EFlip(1.0/3.0);
                 "y" := EFlip(1.0/4.0);
@@ -772,7 +830,7 @@ mod tests {
     #[test]
     // #[traced_test]
     fn program03() {
-        let mk03 = |ret| {
+        let mk03 = |ret: Expr| {
             Program::Body(lets![
                 "x" := EFlip(1.0/3.0);
                 "y" := EFlip(1.0/4.0);
@@ -789,7 +847,7 @@ mod tests {
     #[test]
     #[traced_test]
     fn program04() {
-        let mk03 = |ret| {
+        let mk04 = |ret: Expr| {
             Program::Body(lets![
                 "x" := ESample(Box::new(EFlip(1.0/3.0)));
                 "y" := EFlip(1.0/4.0);
@@ -797,9 +855,9 @@ mod tests {
                 ... ret
             ])
         };
-        check_approx("p04/y  ", 3.0 / 6.0, mk03(var!("y")), 1000);
-        // check_approx("p04/x  ", 4.0 / 6.0, mk03(var!("x")), 2);
-        // check_approx("p04/x|y", 6.0 / 6.0, mk03(anf!(or!("x", "y"))), 2);
-        // check_approx("p04/x&y", 1.0 / 6.0, mk03(anf!(and!("x", "y"))), 2);
+        check_approx("p04/y  ", 3.0 / 6.0, mk04(var!("y")), 2);
+        check_approx("p04/x  ", 4.0 / 6.0, mk04(var!("x")), 1);
+        check_approx("p04/x|y", 6.0 / 6.0, mk04(anf!(or!("x", "y"))), 2);
+        check_approx("p04/x&y", 1.0 / 6.0, mk04(anf!(and!("x", "y"))), 2);
     }
 }
