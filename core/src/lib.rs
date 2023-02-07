@@ -110,8 +110,10 @@ pub mod semantics {
     }
 
     type WeightMap = HashMap<UniqueId, (f32, f32)>;
+
+    type SubstMap = HashMap<UniqueId, BddPtr>;
     fn const_weight() -> (f32, f32) {
-        (1.0, 1.0)
+        (0.5, 0.5)
     }
     fn weight_map_to_params(m: &WeightMap) -> (WmcParams<f32>, u64) {
         let mut wmc_params = WmcParams::new(0.0, 1.0);
@@ -122,9 +124,40 @@ pub mod semantics {
                 max = lbl.0;
             }
         }
+        debug!(max = max);
         (wmc_params, max)
     }
-    type SubstMap = HashMap<UniqueId, BddPtr>;
+    fn wmc(x: &BddPtr, o: &VarOrder, params: &WmcParams<f32>) -> f32 {
+        x.fold(o, |ddnnf| {
+            use DDNNF::*;
+            match ddnnf {
+                Or(l, r, _) => {
+                    debug!(wmc = "or ", l = l, r = r);
+                    l + r
+                }
+                And(l, r) => {
+                    debug!(wmc = "and", l = l, r = r);
+                    l * r
+                }
+                True => params.one,
+                False => params.zero,
+                Lit(lbl, polarity) => {
+                    let (low_w, high_w) = params.get_var_weight(lbl);
+                    debug!(
+                        wmc = "lit",
+                        low_w = low_w,
+                        high_w = high_w,
+                        lbl = lbl.value(),
+                    );
+                    if polarity {
+                        *high_w
+                    } else {
+                        *low_w
+                    }
+                }
+            }
+        })
+    }
 
     #[derive(Debug, Clone)]
     pub struct Compiled {
@@ -152,11 +185,13 @@ pub mod semantics {
         }
         // FIXME: need to think about these semantics again.
         fn disj_extend<T: LruTable<BddPtr>>(&mut self, mgr: &mut BddManager<T>, o: Compiled) {
+            debug!(l = self.probability.as_f64(), r = o.probability.as_f64());
             self.dist = mgr.or(self.dist, o.dist);
             self.accept = mgr.or(self.accept, o.accept);
             self.weight_map.extend(o.weight_map.clone());
             self.substitutions.extend(o.substitutions.clone());
-            self.probability = self.probability + o.probability;
+            self.probability =
+                Probability::new(self.probability.as_f64() * 0.5 + o.probability.as_f64() * 0.5);
             self.importance_weight = self.convex_combination(&o);
         }
     }
@@ -223,6 +258,7 @@ pub mod semantics {
         fn _fresh(&mut self, ovar: Option<String>) -> UniqueId {
             let sym = self.gensym;
             self.gensym += 1;
+            debug!(ovar = ovar);
             let var = ovar.unwrap_or(format!("_{sym}"));
             self.names.insert(var, UniqueId(sym));
             UniqueId(sym)
@@ -231,32 +267,99 @@ pub mod semantics {
             self._fresh(None)
         }
         fn get_var(&self, var: String) -> Option<UniqueId> {
+            debug!("get var");
+            let renderp = |ps: &HashMap<String, UniqueId>| {
+                ps.iter().map(|(k, v)| format!("{k}:{v}")).join(", ")
+            };
+            debug!(svar = var, names = renderp(&self.names));
+
             self.names.get(&var).copied()
         }
         fn get_or_create(&mut self, var: String) -> UniqueId {
             let osym = self.get_var(var.clone());
             osym.unwrap_or_else(|| self._fresh(Some(var)))
         }
-        fn get_or_create_varlabel(&mut self, s: String, m: &WeightMap) -> (VarLabel, WeightMap) {
-            match self.get_var(s) {
+        fn get_or_create_varlabel(
+            &mut self,
+            s: String,
+            m: &WeightMap,
+            p: &SubstMap,
+        ) -> (VarLabel, WeightMap) {
+            debug!("get or create");
+            match self.get_var(s.clone()) {
                 None => {
-                    let id = self.fresh();
+                    let renderp = |ps: &HashMap<String, UniqueId>| {
+                        ps.iter().map(|(k, v)| format!("{k}:{v}")).join(", ")
+                    };
+
+                    debug!(svar = s, names = renderp(&self.names));
+                    let id = self._fresh(Some(s.clone()));
+                    debug!(svar = s, get_var_fresh = id.0, names = renderp(&self.names));
                     let lbl = VarLabel::new(id.0);
                     let mut mm = m.clone();
                     mm.insert(id, const_weight());
                     (lbl, mm)
                 }
-                Some(sym) => {
-                    let lbl = VarLabel::new(sym.0);
-                    (lbl, m.clone())
-                }
+                Some(sym) => unsafe {
+                    let mut nxt = p.get(&sym);
+                    while nxt.is_some() {
+                        match nxt {
+                            Some(BddPtr::Reg(n)) => {
+                                if ((**n).low == BddPtr::PtrTrue && (**n).high == BddPtr::PtrFalse)
+                                    || ((**n).low == BddPtr::PtrFalse
+                                        && (**n).high == BddPtr::PtrTrue)
+                                {
+                                    debug!(nxt = Self::print_bdd(BddPtr::Reg(n.clone())));
+                                    nxt = p.get(&UniqueId((**n).var.value().clone()));
+                                } else {
+                                    break;
+                                }
+                            }
+                            _ => break,
+                        }
+                    }
+                    match nxt {
+                        Some(BddPtr::Reg(n)) => {
+                            let mut nn = n.clone();
+                            debug!(nxt = Self::print_bdd(BddPtr::Reg(nn)));
+                            ((**n).var.clone(), m.clone())
+                        }
+                        _ => {
+                            debug!(nxt = None::<u64>);
+                            let lbl = VarLabel::new(sym.0);
+                            (lbl, m.clone())
+                        }
+                    }
+                },
+            }
+        }
+        pub fn eval_anf_binop(
+            &mut self,
+            bl: ANF,
+            br: ANF,
+            m: &WeightMap,
+            p: &SubstMap,
+            op: &dyn Fn(&mut BddManager<AllTable<BddPtr>>, BddPtr, BddPtr) -> BddPtr,
+        ) -> Compiled {
+            let l = self.eval_anf(bl, m, p);
+            let r = self.eval_anf(br, m, p);
+            let mut weight_map = l.weight_map.clone();
+            weight_map.extend(r.weight_map.clone());
+            let mut substitutions = l.substitutions.clone();
+            substitutions.extend(r.substitutions.clone());
+            let dist = op(self.mgr, l.dist, r.dist);
+            Compiled {
+                dist,
+                weight_map,
+                substitutions,
+                ..Default::default()
             }
         }
         pub fn eval_anf(&mut self, a: ANF, m: &WeightMap, p: &SubstMap) -> Compiled {
             use ANF::*;
             match a {
                 AVar(s) => {
-                    let (lbl, wm) = self.get_or_create_varlabel(s, m);
+                    let (lbl, wm) = self.get_or_create_varlabel(s, m, p);
                     Compiled {
                         substitutions: p.clone(),
                         dist: self.mgr.var(lbl, true),
@@ -270,17 +373,37 @@ pub mod semantics {
                     weight_map: m.clone(),
                     ..Default::default()
                 },
-                And(bl, br) => {
-                    let mut l = self.eval_anf(*bl, m, p);
-                    let r = self.eval_anf(*br, m, p);
-                    l.conj_extend(self.mgr, r);
-                    l
-                }
+                And(bl, br) => self.eval_anf_binop(*bl, *br, m, p, &BddManager::and),
+                // And(bl, br) => {
+                //     let mut l = self.eval_anf(*bl, m, p);
+                //     let r = self.eval_anf(*br, m, p);
+                //     l.conj_extend(self.mgr, r.clone());
+                //     let mut weight_map = l.weight_map.clone();
+                //     weight_map.extend(r.weight_map.clone());
+                //     let mut substitutions = l.substitutions.clone();
+                //     substitutions.extend(r.substitutions.clone());
+                //     Compiled {
+                //         dist: self.mgr.or(l.dist, r.dist),
+                //         accept: BddPtr::PtrTrue,
+                //         weight_map, substitutions,
+                //         ..Default::default()
+                //     }
+                // }
+                // Or(bl, br) => self.eval_anf_binop(*bl, *br, m, p, &BddManager::or),
                 Or(bl, br) => {
                     let mut l = self.eval_anf(*bl, m, p);
                     let r = self.eval_anf(*br, m, p);
-                    l.disj_extend(self.mgr, r);
-                    l
+                    // l.conj_extend(self.mgr, r.clone());
+                    let mut weight_map = l.weight_map.clone();
+                    weight_map.extend(r.weight_map.clone());
+                    let mut substitutions = l.substitutions.clone();
+                    substitutions.extend(r.substitutions.clone());
+                    Compiled {
+                        dist: self.mgr.or(l.dist, r.dist),
+                        weight_map,
+                        substitutions,
+                        ..Default::default()
+                    }
                 }
                 Neg(bp) => {
                     let mut p = self.eval_anf(*bp, m, p);
@@ -360,7 +483,7 @@ pub mod semantics {
                 // ESnd(a) => self.eval_anf(a, m, p),
                 // EProd(al,ar) => self.eval_anf(a, m, p),
                 ELetIn(s, ebound, ebody) => {
-                    let (lbl, wm) = self.get_or_create_varlabel(s, m);
+                    let (lbl, wm) = self.get_or_create_varlabel(s, m, p);
                     let bound = self.eval_expr(*ebound, &wm, p);
                     let mut subst = bound.substitutions.clone();
                     subst.insert(UniqueId(lbl.value()), bound.dist);
@@ -369,10 +492,12 @@ pub mod semantics {
                     weight_map.extend(body.weight_map);
                     let mut substitutions = bound.substitutions.clone();
                     substitutions.extend(body.substitutions);
-                    let body_accept = self.mgr.compose(body.accept, lbl, bound.dist);
+                    let accept = self.mgr.and(bound.accept, body.accept);
+                    let accept = self.apply_substitutions(accept, &substitutions);
+
                     let c = Compiled {
                         dist: self.mgr.compose(body.dist, lbl, bound.dist),
-                        accept: self.mgr.and(bound.accept, body_accept),
+                        accept,
                         weight_map,
                         substitutions,
                         probability: bound.probability * body.probability,
@@ -432,7 +557,7 @@ pub mod semantics {
                     let dist = self.apply_substitutions(comp.dist, p); // FIXME: I don't think there is a need to apply substitutions here, but doing this doesn't hurt
                     let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
                     let var_order = VarOrder::linear_order(max_var as usize);
-                    let w = dist.wmc(&var_order, &wmc_params);
+                    let w = wmc(&dist, &var_order, &wmc_params);
 
                     // let accept = self.apply_substitutions(comp.accept, p); // this is always true
                     // let a = self.mgr.and(dist, accept).wmc(&self.var_order, &weight_map_to_params(m));
@@ -457,7 +582,7 @@ pub mod semantics {
                     }
                     let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
                     let var_order = VarOrder::linear_order(max_var as usize);
-                    let theta_q = comp.dist.wmc(&var_order, &wmc_params) as f64;
+                    let theta_q = wmc(&comp.dist, &var_order, &wmc_params) as f64;
                     let bern = Bernoulli::new(theta_q).unwrap();
                     let sample = bern.sample(self.rng);
                     let q = Probability::new(if sample { theta_q } else { 1.0 - theta_q });
@@ -483,8 +608,8 @@ pub mod semantics {
     pub fn wmc_prob(env: &mut Env, c: Compiled) -> (f32, f32) {
         let (params, mx) = weight_map_to_params(&c.weight_map);
         let var_order = VarOrder::linear_order(mx as usize);
-        let a = env.mgr.and(c.dist, c.accept).wmc(&var_order, &params);
-        let z = c.accept.wmc(&var_order, &params);
+        let a = wmc(&env.mgr.and(c.dist, c.accept), &var_order, &params);
+        let z = wmc(&c.accept, &var_order, &params);
         (a, z)
     }
     pub fn exact_inf(env: &mut Env, p: Program) -> f32 {
@@ -552,8 +677,10 @@ mod tests {
         };
     }
 
-    fn check_exact(s: &str, f: f32, env: &mut Env, p: Program) {
-        let pr = exact_inf(env, p);
+    fn check_exact(s: &str, f: f32, p: Program) {
+        let mut env_args = EnvArgs::default_args(None);
+        let mut env = Env::from_args(&mut env_args);
+        let pr = exact_inf(&mut env, p);
         // print!("[check_exact][{s}]");
         let ret = (pr - f).abs() < 0.000001;
         assert!(ret, "[check_exact][{s}][err][exp: {f}] != {pr}");
@@ -565,102 +692,53 @@ mod tests {
     }
 
     #[test]
-    #[traced_test]
+    // #[traced_test]
     fn program00() {
-        let mut env_args = EnvArgs::default_args(None);
-        let mut env = Env::from_args(&mut env_args);
         let p00 = lets![
             "x" := val!(true);
             ... var!("x")
         ];
-        check_exact("p00", 1.0, &mut env, Program::Body(p00));
+        check_exact("p00", 1.0, Program::Body(p00));
     }
     #[test]
-    #[traced_test]
+    // #[traced_test]
     fn program01() {
-        let mut env_args = EnvArgs::default_args(None);
-        let mut env = Env::from_args(&mut env_args);
-
         let p01 = lets![
             "x" := EFlip(1.0/3.0);
             ... var!("x")
         ];
-        check_exact("p01", 1.0 / 3.0, &mut env, Program::Body(p01));
+        check_exact("p01", 1.0 / 3.0, Program::Body(p01));
     }
     #[test]
+    // #[traced_test]
     fn program02() {
-        let mut env_args = EnvArgs::default_args(None);
-        let mut env = Env::from_args(&mut env_args);
-
         let mk02 = |ret| {
-            lets![
-                "x" := EFlip(0.3333);
+            Program::Body(lets![
+                "x" := EFlip(1.0/3.0);
                 "y" := EFlip(1.0/4.0);
                 ... ret
-            ]
+            ])
         };
-        check_exact(
-            "p02/y  ",
-            3.0 / 12.0,
-            &mut env,
-            Program::Body(mk02(var!("y"))),
-        );
-        check_exact(
-            "p02/x  ",
-            4.0 / 12.0,
-            &mut env,
-            Program::Body(mk02(var!("x"))),
-        );
-        check_exact(
-            "p02/x|y",
-            1.0 / 12.0,
-            &mut env,
-            Program::Body(mk02(anf!(or!("x", "y")))),
-        );
-        check_exact(
-            "p02/x&y",
-            6.0 / 12.0,
-            &mut env,
-            Program::Body(mk02(anf!(and!("x", "y")))),
-        );
+        check_exact("p02/y  ", 3.0 / 12.0, mk02(var!("y")));
+        check_exact("p02/x  ", 4.0 / 12.0, mk02(var!("x")));
+        check_exact("p02/x|y", 6.0 / 12.0, mk02(anf!(or!("x", "y"))));
+        check_exact("p02/x&y", 1.0 / 12.0, mk02(anf!(and!("x", "y"))));
     }
 
     #[test]
+    // #[traced_test]
     fn program03() {
-        let mut env_args = EnvArgs::default_args(None);
-        let mut env = Env::from_args(&mut env_args);
-
         let mk03 = |ret| {
-            lets![
-                "x" := EFlip(0.3333);
+            Program::Body(lets![
+                "x" := EFlip(1.0/3.0);
                 "y" := EFlip(1.0/4.0);
                 "_" := EObserve(Box::new(or!("x", "y")));
                 ... ret
-            ]
+            ])
         };
-        check_exact(
-            "p03/y  ",
-            3.0 / 6.0,
-            &mut env,
-            Program::Body(mk03(var!("y"))),
-        );
-        check_exact(
-            "p03/x  ",
-            4.0 / 6.0,
-            &mut env,
-            Program::Body(mk03(var!("x"))),
-        );
-        check_exact(
-            "p03/x|y",
-            1.0 / 6.0,
-            &mut env,
-            Program::Body(mk03(anf!(or!("x", "y")))),
-        );
-        check_exact(
-            "p03/x&y",
-            6.0 / 6.0,
-            &mut env,
-            Program::Body(mk03(anf!(and!("x", "y")))),
-        );
+        check_exact("p03/y  ", 3.0 / 6.0, mk03(var!("y")));
+        check_exact("p03/x  ", 4.0 / 6.0, mk03(var!("x")));
+        check_exact("p03/x|y", 6.0 / 6.0, mk03(anf!(or!("x", "y"))));
+        check_exact("p03/x&y", 1.0 / 6.0, mk03(anf!(and!("x", "y"))));
     }
 }
