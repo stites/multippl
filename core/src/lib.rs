@@ -247,6 +247,10 @@ pub mod semantics {
                 rng,
             }
         }
+        pub fn reset_names(&mut self) {
+            self.gensym = 0;
+            self.names = HashMap::new();
+        }
         pub fn from_args(x: &'a mut EnvArgs) -> Env<'a> {
             Env {
                 names: x.names.clone(),
@@ -605,7 +609,7 @@ pub mod semantics {
             Program::Body(e) => env.eval_expr(e, &HashMap::new(), &HashMap::new()),
         }
     }
-    pub fn wmc_prob(env: &mut Env, c: Compiled) -> (f32, f32) {
+    pub fn wmc_prob(env: &mut Env, c: &Compiled) -> (f32, f32) {
         let (params, mx) = weight_map_to_params(&c.weight_map);
         let var_order = VarOrder::linear_order(mx as usize);
         let a = wmc(&env.mgr.and(c.dist, c.accept), &var_order, &params);
@@ -614,9 +618,31 @@ pub mod semantics {
     }
     pub fn exact_inf(env: &mut Env, p: Program) -> f32 {
         let c = compile(env, p);
-        let (a, z) = wmc_prob(env, c);
+        let (a, z) = wmc_prob(env, &c);
         debug!(a = a, z = z);
         a / z
+    }
+    pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: Program) -> f32 {
+        let (mut exp, mut expw, mut expw2) = (0.0, 0.0, 0.0);
+        let mut ws: Vec<f64> = vec![];
+        let mut ps: Vec<f64> = vec![];
+        let mut qs: Vec<f64> = vec![];
+        for _ in 1..=steps {
+            env.reset_names();
+            let c = compile(env, p.clone());
+            let (a, z) = wmc_prob(env, &c);
+            let pr = (a / z) as f64;
+            let q = c.probability.as_f64() as f64;
+            let w = c.importance_weight;
+            exp = exp + w * q * pr;
+            expw = expw + w * q;
+            expw2 = expw2 + (q * w * w);
+            ws.push(w);
+            qs.push(q);
+            ps.push(pr);
+        }
+        // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
+        (exp / expw) as f32
     }
 }
 
@@ -677,18 +703,36 @@ mod tests {
         };
     }
 
-    fn check_exact(s: &str, f: f32, p: Program) {
+    fn check_inference(
+        i: &str,
+        inf: &dyn Fn(&mut Env, Program) -> f32,
+        precision: f32,
+        s: &str,
+        f: f32,
+        p: Program,
+    ) {
         let mut env_args = EnvArgs::default_args(None);
         let mut env = Env::from_args(&mut env_args);
-        let pr = exact_inf(&mut env, p);
-        // print!("[check_exact][{s}]");
-        let ret = (pr - f).abs() < 0.000001;
-        assert!(ret, "[check_exact][{s}][err][exp: {f}] != {pr}");
-        // println!(if ret {
-        //     format!("[ok!][exp: {f}] == {pr}")
-        // } else {
-        //     format!("[err][exp: {f}] != {pr}")
-        // });
+        let pr = inf(&mut env, p);
+        let ret = (f - pr).abs() < precision;
+        assert!(
+            ret,
+            "[check_{i}][{s}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"
+        );
+    }
+    fn check_exact(s: &str, f: f32, p: Program) {
+        check_inference("exact", &exact_inf, 0.000001, s, f, p);
+    }
+
+    fn check_approx(s: &str, f: f32, p: Program, n: usize) {
+        check_inference(
+            "approx",
+            &|env, p| importance_weighting_inf(env, n, p),
+            0.01,
+            s,
+            f,
+            p,
+        );
     }
 
     #[test]
@@ -740,5 +784,22 @@ mod tests {
         check_exact("p03/x  ", 4.0 / 6.0, mk03(var!("x")));
         check_exact("p03/x|y", 6.0 / 6.0, mk03(anf!(or!("x", "y"))));
         check_exact("p03/x&y", 1.0 / 6.0, mk03(anf!(and!("x", "y"))));
+    }
+
+    #[test]
+    #[traced_test]
+    fn program04() {
+        let mk03 = |ret| {
+            Program::Body(lets![
+                "x" := ESample(Box::new(EFlip(1.0/3.0)));
+                "y" := EFlip(1.0/4.0);
+                "_" := EObserve(Box::new(or!("x", "y")));
+                ... ret
+            ])
+        };
+        check_approx("p04/y  ", 3.0 / 6.0, mk03(var!("y")), 1000);
+        // check_approx("p04/x  ", 4.0 / 6.0, mk03(var!("x")), 2);
+        // check_approx("p04/x|y", 6.0 / 6.0, mk03(anf!(or!("x", "y"))), 2);
+        // check_approx("p04/x&y", 1.0 / 6.0, mk03(anf!(and!("x", "y"))), 2);
     }
 }
