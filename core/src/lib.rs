@@ -111,7 +111,7 @@ pub mod semantics {
 
     type WeightMap = HashMap<UniqueId, (f32, f32)>;
     fn const_weight() -> (f32, f32) {
-        (0.5, 0.5)
+        (1.0, 1.0)
     }
     fn weight_map_to_params(m: &WeightMap) -> (WmcParams<f32>, u64) {
         let mut wmc_params = WmcParams::new(0.0, 1.0);
@@ -327,40 +327,35 @@ pub mod semantics {
             Self::print_bdd_lbl(ptr, &HashMap::new())
         }
 
-        fn debug_compiled(s: &str, w: &WeightMap, p: &SubstMap, c: Compiled) {
-            debug!("[evalExpr][{s}]");
-            let wmap = w
-                .iter()
-                .map(|(k, (l, h))| format!("{k}: ({l}, {h})"))
-                .join(", ");
-            let subm = p
-                .iter()
-                .map(|(k, v)| format!("{k}: {}", Self::print_bdd(v.clone())))
-                .join(", ");
-            debug!("[evalExpr] _,  [{}], [{}]", wmap, subm);
-            debug!("[evalExpr]      \\||/  {}", Self::print_bdd(c.dist));
-            debug!("[evalExpr]      \\||/  {}", Self::print_bdd(c.accept));
-            let wmap = c
-                .weight_map
-                .iter()
-                .map(|(k, (l, h))| format!("{k}: ({l}, {h})"))
-                .join(", ");
-            let subm = c
-                .substitutions
-                .iter()
-                .map(|(k, v)| format!("{k}: {}", Self::print_bdd(v.clone())))
-                .join(", ");
-            debug!("[evalExpr]      \\||/  {}", wmap);
-            debug!("[evalExpr]      \\||/  {}", subm);
-            debug!("[evalExpr]      \\||/  {}", c.probability.as_f64());
-            debug!("[evalExpr]      \\||/  {}", c.importance_weight);
-            debug!("[evalExpr][{s}]");
+        fn debug_compiled(s: &str, w: &WeightMap, p: &SubstMap, c: &Compiled) {
+            let renderw = |ws: &WeightMap| {
+                ws.iter()
+                    .map(|(k, (l, h))| format!("{k}: ({l}, {h})"))
+                    .join(", ")
+            };
+            let renderp = |ps: &SubstMap| {
+                ps.iter()
+                    .map(|(k, v)| format!("{k}: {}", Self::print_bdd(v.clone())))
+                    .join(", ")
+            };
+            debug!("{s}, [{}], [{}]", renderw(w), renderp(p));
+            debug!("      \\||/  {}", Self::print_bdd(c.dist));
+            debug!("      \\||/  {}", Self::print_bdd(c.accept));
+            debug!("      \\||/  {}", renderw(&c.weight_map));
+            debug!("      \\||/  {}", renderp(&c.substitutions));
+            debug!("      \\||/  {}", c.probability.as_f64());
+            debug!("      \\||/  {}", c.importance_weight);
+            debug!("[END: {s}]");
         }
 
         pub fn eval_expr(&mut self, e: Expr, m: &WeightMap, p: &SubstMap) -> Compiled {
             use Expr::*;
             match e {
-                EAnf(a) => self.eval_anf(*a, m, p),
+                EAnf(a) => {
+                    let c = self.eval_anf(*a, m, p);
+                    Self::debug_compiled("anf", m, p, &c);
+                    c
+                }
                 // EFst(a) => self.eval_anf(a, m, p),
                 // ESnd(a) => self.eval_anf(a, m, p),
                 // EProd(al,ar) => self.eval_anf(a, m, p),
@@ -375,14 +370,16 @@ pub mod semantics {
                     let mut substitutions = bound.substitutions.clone();
                     substitutions.extend(body.substitutions);
                     let body_accept = self.mgr.compose(body.accept, lbl, bound.dist);
-                    Compiled {
+                    let c = Compiled {
                         dist: self.mgr.compose(body.dist, lbl, bound.dist),
                         accept: self.mgr.and(bound.accept, body_accept),
                         weight_map,
                         substitutions,
                         probability: bound.probability * body.probability,
                         importance_weight: bound.importance_weight * body.importance_weight,
-                    }
+                    };
+                    Self::debug_compiled("let-in", m, p, &c);
+                    c
                 }
                 EIte(cond, t, f) => {
                     let pred = self.eval_anf(*cond, &m.clone(), &p.clone());
@@ -403,28 +400,32 @@ pub mod semantics {
                     substitutions.extend(falsey.substitutions.clone());
                     let probability = truthy.probability + falsey.probability;
                     let importance_weight = truthy.convex_combination(&falsey);
-                    Compiled {
+                    let c = Compiled {
                         dist,
                         accept,
                         weight_map,
                         substitutions,
                         probability,
                         importance_weight,
-                    }
+                    };
+                    Self::debug_compiled("ite", m, p, &c);
+                    c
                 }
                 EFlip(param) => {
                     let sym = self.fresh();
                     let mut weight_map = m.clone();
                     let lbl = VarLabel::new(sym.0);
                     weight_map.insert(sym, (1.0 - param, param));
-                    Compiled {
+                    let c = Compiled {
                         dist: self.mgr.var(lbl, true),
                         accept: BddPtr::PtrTrue,
                         weight_map,
                         substitutions: p.clone(),
                         probability: Probability::new(1.0),
                         importance_weight: 1.0,
-                    }
+                    };
+                    Self::debug_compiled("flip", m, p, &c);
+                    c
                 }
                 EObserve(a) => {
                     let comp = self.eval_anf(*a, m, p);
@@ -438,14 +439,16 @@ pub mod semantics {
                     // let z = accept.wmc(&self.var_order, &weight_map_to_params(m));
                     // let w = a / z;
 
-                    Compiled {
+                    let c = Compiled {
                         dist: BddPtr::PtrTrue,
                         accept: dist,
                         weight_map: m.clone(),
                         substitutions: p.clone(),
                         probability: Probability::new(1.0),
                         importance_weight: w as f64,
-                    }
+                    };
+                    Self::debug_compiled("observe", m, p, &c);
+                    c
                 }
                 ESample(e) => {
                     let comp = self.eval_expr(*e, m, p);
@@ -458,14 +461,16 @@ pub mod semantics {
                     let bern = Bernoulli::new(theta_q).unwrap();
                     let sample = bern.sample(self.rng);
                     let q = Probability::new(if sample { theta_q } else { 1.0 - theta_q });
-                    Compiled {
+                    let c = Compiled {
                         dist: BddPtr::from_bool(sample),
                         accept: BddPtr::PtrTrue, // FIXME should be `dist` after resolving the initial example
                         weight_map: m.clone(),
                         substitutions: p.clone(),
                         probability: q,
                         importance_weight: 1.0,
-                    }
+                    };
+                    Self::debug_compiled("sample", m, p, &c);
+                    c
                 }
             }
         }
@@ -485,6 +490,7 @@ pub mod semantics {
     pub fn exact_inf(env: &mut Env, p: Program) -> f32 {
         let c = compile(env, p);
         let (a, z) = wmc_prob(env, c);
+        debug!(a = a, z = z);
         a / z
     }
 }
@@ -494,6 +500,7 @@ mod tests {
     use super::grammar::*;
     use super::semantics::*;
     use super::*;
+    use tracing_test::traced_test;
     use Expr::*;
 
     #[macro_export]
@@ -558,6 +565,7 @@ mod tests {
     }
 
     #[test]
+    #[traced_test]
     fn program00() {
         let mut env_args = EnvArgs::default_args(None);
         let mut env = Env::from_args(&mut env_args);
@@ -568,6 +576,7 @@ mod tests {
         check_exact("p00", 1.0, &mut env, Program::Body(p00));
     }
     #[test]
+    #[traced_test]
     fn program01() {
         let mut env_args = EnvArgs::default_args(None);
         let mut env = Env::from_args(&mut env_args);
