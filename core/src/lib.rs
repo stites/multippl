@@ -402,10 +402,11 @@ pub mod semantics {
                     let bern = Bernoulli::new(theta_q).unwrap();
                     let sample = bern.sample(self.rng);
                     let q = Probability::new(if sample { theta_q } else { 1.0 - theta_q });
+
                     let c = Compiled {
                         dist: BddPtr::from_bool(sample),
-                        accept: BddPtr::PtrTrue, // FIXME should be `dist` after resolving the initial example
-                        weight_map: m.clone(),
+                        accept: comp.dist, // FIXME should be `dist` after resolving the initial example
+                        weight_map: comp.weight_map.clone(),
                         substitutions: p.clone(),
                         probability: q,
                         importance_weight: 1.0,
