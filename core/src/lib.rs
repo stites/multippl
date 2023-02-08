@@ -1,93 +1,18 @@
 #![allow(dead_code)]
+use itertools::*;
 use rsdd::builder::bdd_builder::BddManager;
 use rsdd::builder::cache::all_app::AllTable;
 use std::collections::HashMap;
 use std::string::String;
-use tracing::{debug, error, info, span, warn, Level};
+use tracing::debug;
 
-pub mod grammar {
-    #[derive(Debug, Copy, Clone)]
-    pub enum Ty {
-        Bool,
-        // Prod(Box<Ty>, Box<Ty>), // TODO for now, no tuples
-    }
-    #[derive(Debug, Copy, Clone)]
-    pub enum Val {
-        Bool(bool),
-        // Prod(Box<Val>, Box<Val>), // TODO punt
-    }
-    #[derive(Debug, Clone)]
-    pub enum ANF {
-        AVar(String),
-        AVal(Val),
-        // TODO: not sure this is where I should add booleans, but it makes
-        // the observe statements stay closer to the semantics: ~observe anf~
-        And(Box<ANF>, Box<ANF>),
-        Or(Box<ANF>, Box<ANF>),
-        Neg(Box<ANF>),
-    }
-    #[derive(Debug, Clone)]
-    pub enum Expr {
-        EAnf(Box<ANF>),
-        // TODO Ignore product types for now:
-        // EFst (Box<ANF>),
-        // ESnd (Box<ANF>),
-        // EProd (Box<ANF>, Box<ANF>),
+mod grammar;
+mod inference;
+// use grammar::*;
 
-        // TODO Ignore function calls for now
-        // EApp(String, Box<ANF>),
-        ELetIn(String, Box<Expr>, Box<Expr>),
-        EIte(Box<ANF>, Box<Expr>, Box<Expr>),
-        EFlip(f32),
-        EObserve(Box<ANF>),
-        ESample(Box<Expr>),
-    }
-    // TODO
-    // structure Func where
-    //   name : String
-    //   arg : String × Ty
-    //   ret : Ty
-    //   body : Expr
-    // deriving Repr
-    impl Expr {
-        fn strip_samples(&self) -> Expr {
-            use Expr::*;
-            match self {
-                ESample(e) => *e.clone(),
-                ELetIn(s, x, y) => ELetIn(
-                    s.clone(),
-                    Box::new(x.strip_samples()),
-                    Box::new(y.strip_samples()),
-                ),
-                EIte(p, x, y) => EIte(
-                    p.clone(),
-                    Box::new(x.strip_samples()),
-                    Box::new(y.strip_samples()),
-                ),
-                e => e.clone(),
-            }
-        }
-    }
-
-    #[derive(Debug, Clone)]
-    pub enum Program {
-        Body(Expr),
-        // TODO
-        // | define (f: Func) (rest: Program) : Program
-    }
-    impl Program {
-        fn strip_samples(&self) -> Program {
-            use Program::*;
-            match self {
-                Body(e) => Body(e.strip_samples()),
-            }
-        }
-    }
-}
 pub mod semantics {
     use super::*;
     use grammar::*;
-    use itertools::*;
     use rand::distributions::{Bernoulli, Distribution};
     use rand::rngs::StdRng;
     use rand::SeedableRng;
@@ -115,7 +40,7 @@ pub mod semantics {
     fn const_weight() -> (f32, f32) {
         (0.5, 0.5)
     }
-    fn weight_map_to_params(m: &WeightMap) -> (WmcParams<f32>, u64) {
+    pub fn weight_map_to_params(m: &WeightMap) -> (WmcParams<f32>, u64) {
         let mut wmc_params = WmcParams::new(0.0, 1.0);
         let mut max = 0;
         for (lbl, (l, h)) in m {
@@ -126,37 +51,6 @@ pub mod semantics {
         }
         debug!(max = max);
         (wmc_params, max)
-    }
-    fn wmc(x: &BddPtr, o: &VarOrder, params: &WmcParams<f32>) -> f32 {
-        x.fold(o, |ddnnf| {
-            use DDNNF::*;
-            match ddnnf {
-                Or(l, r, _) => {
-                    debug!(wmc = "or ", l = l, r = r);
-                    l + r
-                }
-                And(l, r) => {
-                    debug!(wmc = "and", l = l, r = r);
-                    l * r
-                }
-                True => params.one,
-                False => params.zero,
-                Lit(lbl, polarity) => {
-                    let (low_w, high_w) = params.get_var_weight(lbl);
-                    debug!(
-                        wmc = "lit",
-                        low_w = low_w,
-                        high_w = high_w,
-                        lbl = lbl.value(),
-                    );
-                    if polarity {
-                        *high_w
-                    } else {
-                        *low_w
-                    }
-                }
-            }
-        })
     }
 
     #[derive(Debug, Clone)]
@@ -211,10 +105,10 @@ pub mod semantics {
 
     pub struct EnvArgs {
         // FIXME: just have env own BddManager and StdRng
-        names: HashMap<String, UniqueId>,
-        gensym: u64,
-        mgr: BddManager<AllTable<BddPtr>>,
-        rng: StdRng,
+        pub names: HashMap<String, UniqueId>,
+        pub gensym: u64,
+        pub mgr: BddManager<AllTable<BddPtr>>,
+        pub rng: StdRng,
     }
     impl EnvArgs {
         pub fn default_args(seed: Option<u64>) -> EnvArgs {
@@ -233,10 +127,10 @@ pub mod semantics {
     }
 
     pub struct Env<'a> {
-        names: HashMap<String, UniqueId>,
-        gensym: u64,
-        mgr: &'a mut BddManager<AllTable<BddPtr>>,
-        rng: &'a mut StdRng,
+        pub names: HashMap<String, UniqueId>,
+        pub gensym: u64,
+        pub mgr: &'a mut BddManager<AllTable<BddPtr>>,
+        pub rng: &'a mut StdRng,
     }
     impl<'a> Env<'a> {
         pub fn new(mgr: &'a mut BddManager<AllTable<BddPtr>>, rng: &'a mut StdRng) -> Env<'a> {
@@ -567,7 +461,7 @@ pub mod semantics {
                     let dist = self.apply_substitutions(comp.dist, p); // FIXME: I don't think there is a need to apply substitutions here, but doing this doesn't hurt
                     let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
                     let var_order = VarOrder::linear_order(max_var as usize);
-                    let w = wmc(&dist, &var_order, &wmc_params);
+                    let w = dist.wmc(&var_order, &wmc_params);
 
                     // let accept = self.apply_substitutions(comp.accept, p); // this is always true
                     // let a = self.mgr.and(dist, accept).wmc(&self.var_order, &weight_map_to_params(m));
@@ -593,7 +487,7 @@ pub mod semantics {
                     }
                     let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
                     let var_order = VarOrder::linear_order(max_var as usize);
-                    let theta_q = wmc(&comp.dist, &var_order, &wmc_params) as f64;
+                    let theta_q = comp.dist.wmc(&var_order, &wmc_params) as f64;
                     let bern = Bernoulli::new(theta_q).unwrap();
                     let sample = bern.sample(self.rng);
                     let q = Probability::new(if sample { theta_q } else { 1.0 - theta_q });
@@ -616,107 +510,16 @@ pub mod semantics {
             Program::Body(e) => env.eval_expr(e, &HashMap::new(), &HashMap::new()),
         }
     }
-    pub fn wmc_prob(env: &mut Env, c: &Compiled) -> (f32, f32) {
-        let (params, mx) = weight_map_to_params(&c.weight_map);
-        let var_order = VarOrder::linear_order(mx as usize);
-        let a = wmc(&env.mgr.and(c.dist, c.accept), &var_order, &params);
-        let z = wmc(&c.accept, &var_order, &params);
-        (a, z)
-    }
-    pub fn exact_inf(env: &mut Env, p: Program) -> f32 {
-        let c = compile(env, p);
-        let (a, z) = wmc_prob(env, &c);
-        debug!(a = a, z = z);
-        a / z
-    }
-    pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: Program) -> f32 {
-        let (mut exp, mut expw, mut expw2) = (0.0, 0.0, 0.0);
-        let mut ws: Vec<f64> = vec![];
-        let mut ps: Vec<f64> = vec![];
-        let mut qs: Vec<f64> = vec![];
-        for _step in 1..=steps {
-            // FIXME: change back to step
-            env.reset_names();
-            let c = compile(env, p.clone());
-            let (a, z) = wmc_prob(env, &c);
-            let pr = (a / z) as f64;
-            let q = c.probability.as_f64() as f64;
-            let w = c.importance_weight;
-            exp = exp + w * q * pr;
-            expw = expw + w * q;
-            expw2 = expw2 + (q * w * w);
-            ws.push(w);
-            qs.push(q);
-            ps.push(pr);
-        }
-        // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
-        (exp / expw) as f32
-    }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::grammar::*;
     use super::semantics::*;
     use super::*;
+    use grammar::*;
+    use inference::*;
     use tracing_test::traced_test;
     use Expr::*;
-
-    #[macro_export]
-    macro_rules! val {
-        ( $x:ident ) => {
-            Expr::EAnf(Box::new(ANF::AVal(Val::Bool($x))))
-        };
-    }
-    #[macro_export]
-    macro_rules! var {
-        ( $x:literal ) => {
-            Expr::EAnf(Box::new(ANF::AVar($x.to_string())))
-        };
-    }
-    #[macro_export]
-    macro_rules! or {
-        ( $x:literal, $y:literal ) => {{
-            ANF::Or(
-                Box::new(ANF::AVar($x.to_string())),
-                Box::new(ANF::AVar($y.to_string())),
-            )
-        }};
-    }
-    #[macro_export]
-    macro_rules! and {
-        ( $x:literal, $y:literal ) => {{
-            ANF::And(
-                Box::new(ANF::AVar($x.to_string())),
-                Box::new(ANF::AVar($y.to_string())),
-            )
-        }};
-    }
-    #[macro_export]
-    macro_rules! anf {
-        ( $x:expr ) => {{
-            Expr::EAnf(Box::new($x))
-        }};
-    }
-    #[macro_export]
-    macro_rules! lets {
-        ( $( $var:literal := $bound:expr );+ ;... $body:expr ) => {
-            {
-                let mut fin = Box::new($body.clone());
-                let mut bindees = vec![];
-                $(
-                    debug!("let {} = {:?};", $var.clone(), $bound.clone());
-                    bindees.push(($var, $bound));
-                )+
-                debug!("... {:?}", $body);
-                for (v, e) in bindees.iter().rev() {
-                    fin = Box::new(Expr::ELetIn(v.to_string(), Box::new(e.clone()), fin));
-
-                }
-                *fin
-            }
-        };
-    }
 
     fn check_inference(
         i: &str,
@@ -738,55 +541,21 @@ mod tests {
     fn check_exact(s: &str, f: f32, p: Program) {
         check_inference("exact", &exact_inf, 0.000001, s, f, p);
     }
-    pub fn importance_weighting_inf_test2(
-        enva1: &mut EnvArgs,
-        enva2: &mut EnvArgs,
-        p: Program,
-    ) -> f32 {
-        let (mut exp, mut expw, mut expw2) = (0.0, 0.0, 0.0);
-
-        let mut env = Env::from_args(enva1);
-        let c = compile(&mut env, p.clone());
-        let (a1, z1) = wmc_prob(&mut env, &c);
-        let pr1 = (a1 / z1) as f64;
-        let q1 = c.probability.as_f64() as f64;
-        let w1 = c.importance_weight;
-        let exp1 = w1 * q1 * pr1;
-        let expw1 = w1 * q1;
-        debug!("=========================");
-
-        let mut env = Env::from_args(enva2);
-        let c = compile(&mut env, p.clone());
-        let (a2, z2) = wmc_prob(&mut env, &c);
-        let pr2 = (a2 / z2) as f64;
-        let q2 = c.probability.as_f64() as f64;
-        let w2 = c.importance_weight;
-        let exp2 = w2 * q2 * pr2;
-        let expw2 = w2 * q2;
-        debug!("");
-        debug!(w1 = w1, q1 = q1, a1 = a1, z1 = z1, pr1 = pr1);
-        debug!(w2 = w2, q2 = q2, a2 = a2, z2 = z2, pr2 = pr2);
-        debug!("");
-        debug!("{:.3} + {:.3}", exp1, exp2);
-        debug!("------------------ = {}", (exp1 + exp2) / (expw1 + expw2));
-        debug!("{:.3} + {:.3}", expw1, expw2);
-
-        ((exp1 + exp2) / (expw1 + expw2)) as f32
-    }
     fn check_approx(s: &str, f: f32, p: Program, n: usize) {
+        check_inference(
+            "approx",
+            &|env, p| importance_weighting_inf(env, n, p),
+            0.01,
+            s,
+            f,
+            p,
+        );
+    }
+    fn check_approx_seeded(s: &str, f: f32, p: Program, n: usize, seeds: &Vec<u64>) {
+        // check "perfect seeds" -- vec![1, 7]
         let i = "approx";
         let precision = 0.01;
-        //     check_inference(
-        //         "approx",
-        //         &|env, p| importance_weighting_inf(env, n, p),
-        //         0.01,
-        //         s,
-        //         f,
-        //         p,
-        //     );
-        let mut enva1 = EnvArgs::default_args(Some(1));
-        let mut enva2 = EnvArgs::default_args(Some(7));
-        let pr = importance_weighting_inf_test2(&mut enva1, &mut enva2, p);
+        let pr = importance_weighting_inf_seeded(seeds.clone(), n, p.clone());
         let ret = (f - pr).abs() < precision;
         assert!(
             ret,
@@ -845,8 +614,8 @@ mod tests {
     }
 
     #[test]
-    #[traced_test]
-    fn program04() {
+    // #[traced_test]
+    fn program04_seeded() {
         let mk04 = |ret: Expr| {
             Program::Body(lets![
                 "x" := ESample(Box::new(EFlip(1.0/3.0)));
@@ -855,9 +624,29 @@ mod tests {
                 ... ret
             ])
         };
-        check_approx("p04/y  ", 3.0 / 6.0, mk04(var!("y")), 2);
-        check_approx("p04/x  ", 4.0 / 6.0, mk04(var!("x")), 1);
-        check_approx("p04/x|y", 6.0 / 6.0, mk04(anf!(or!("x", "y"))), 2);
-        check_approx("p04/x&y", 1.0 / 6.0, mk04(anf!(and!("x", "y"))), 2);
+        // let perfect_seeds = vec![1, 7];
+        let s = vec![1, 7];
+        check_approx_seeded("p04s/y  ", 3.0 / 6.0, mk04(var!("y")), 10000, &s);
+        check_approx_seeded("p04s/x  ", 4.0 / 6.0, mk04(var!("x")), 10000, &s);
+        check_approx_seeded("p04s/x|y", 6.0 / 6.0, mk04(anf!(or!("x", "y"))), 10000, &s);
+        check_approx_seeded("p04s/x&y", 1.0 / 6.0, mk04(anf!(and!("x", "y"))), 10000, &s);
+    }
+
+    #[test]
+    #[ignore]
+    // #[traced_test]
+    fn program04_approx() {
+        let mk04 = |ret: Expr| {
+            Program::Body(lets![
+                "x" := ESample(Box::new(EFlip(1.0/3.0)));
+                "y" := EFlip(1.0/4.0);
+                "_" := EObserve(Box::new(or!("x", "y")));
+                ... ret
+            ])
+        };
+        check_approx("p04/y  ", 3.0 / 6.0, mk04(var!("y")), 10000);
+        check_approx("p04/x  ", 4.0 / 6.0, mk04(var!("x")), 10000);
+        check_approx("p04/x|y", 6.0 / 6.0, mk04(anf!(or!("x", "y"))), 10000);
+        check_approx("p04/x&y", 1.0 / 6.0, mk04(anf!(and!("x", "y"))), 10000);
     }
 }
