@@ -34,13 +34,13 @@ pub mod semantics {
         }
     }
 
-    type WeightMap = HashMap<UniqueId, (f32, f32)>;
+    type WeightMap = HashMap<UniqueId, (f64, f64)>;
     type SubstMap = HashMap<UniqueId, BddPtr>;
 
-    fn const_weight() -> (f32, f32) {
+    fn const_weight() -> (f64, f64) {
         (0.5, 0.5)
     }
-    pub fn weight_map_to_params(m: &WeightMap) -> (WmcParams<f32>, u64) {
+    pub fn weight_map_to_params(m: &WeightMap) -> (WmcParams<f64>, u64) {
         let mut wmc_params = WmcParams::new(0.0, 1.0);
         let mut max = 0;
         for (lbl, (l, h)) in m {
@@ -431,14 +431,13 @@ mod tests {
     use grammar::*;
     use inference::*;
     use tracing_test::traced_test;
-    use Expr::*;
 
     fn check_inference(
         i: &str,
-        inf: &dyn Fn(&mut Env, Program) -> f32,
-        precision: f32,
+        inf: &dyn Fn(&mut Env, Program) -> f64,
+        precision: f64,
         s: &str,
-        f: f32,
+        f: f64,
         p: Program,
     ) {
         let mut env_args = EnvArgs::default_args(None);
@@ -450,10 +449,10 @@ mod tests {
             "[check_{i}][{s}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"
         );
     }
-    fn check_exact(s: &str, f: f32, p: Program) {
+    fn check_exact(s: &str, f: f64, p: Program) {
         check_inference("exact", &exact_inf, 0.000001, s, f, p);
     }
-    fn check_approx(s: &str, f: f32, p: Program, n: usize) {
+    fn check_approx(s: &str, f: f64, p: Program, n: usize) {
         check_inference(
             "approx",
             &|env, p| importance_weighting_inf(env, n, p),
@@ -463,7 +462,7 @@ mod tests {
             p,
         );
     }
-    fn check_approx_seeded(s: &str, f: f32, p: Program, n: usize, seeds: &Vec<u64>) {
+    fn check_approx_seeded(s: &str, f: f64, p: Program, n: usize, seeds: &Vec<u64>) {
         // check "perfect seeds" -- vec![1, 7]
         let i = "approx";
         let precision = 0.01;
@@ -487,7 +486,7 @@ mod tests {
     // #[traced_test]
     fn program01() {
         let p01 = lets![
-            "x" := EFlip(1.0/3.0);
+            "x" := flip!(1.0/3.0);
             ... var!("x")
         ];
         check_exact("p01", 1.0 / 3.0, Program::Body(p01));
@@ -497,8 +496,8 @@ mod tests {
     fn program02() {
         let mk02 = |ret: Expr| {
             Program::Body(lets![
-                "x" := EFlip(1.0/3.0);
-                "y" := EFlip(1.0/4.0);
+                "x" := flip!(1.0/3.0);
+                "y" := flip!(1.0/4.0);
                 ... ret
             ])
         };
@@ -513,8 +512,8 @@ mod tests {
     fn program03() {
         let mk03 = |ret: Expr| {
             Program::Body(lets![
-                "x" := EFlip(1.0/3.0);
-                "y" := EFlip(1.0/4.0);
+                "x" := flip!(1.0/3.0);
+                "y" := flip!(1.0/4.0);
                 "_" := observe!(or!("x", "y"));
                 ... ret
             ])
@@ -526,7 +525,7 @@ mod tests {
     }
 
     #[test]
-    #[traced_test]
+    // #[traced_test]
     fn program04_seeded() {
         let mk04 = |ret: Expr| {
             Program::Body(lets![
@@ -539,6 +538,7 @@ mod tests {
         // let perfect_seeds = vec![1, 7];
         let s = vec![1, 7];
         let n = 2;
+        println!("!!! {:?}", mk04(var!("x")));
         check_approx_seeded("p04s/y  ", 3.0 / 6.0, mk04(var!("y")), n, &s);
         check_approx_seeded("p04s/x  ", 4.0 / 6.0, mk04(var!("x")), n, &s);
         check_approx_seeded("p04s/x|y", 6.0 / 6.0, mk04(or!("x", "y")), n, &s);
@@ -546,26 +546,26 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
+    // #[ignore]
     // #[traced_test]
     fn program04_approx() {
         let mk04 = |ret: Expr| {
             Program::Body(lets![
-                "x" := ESample(Box::new(EFlip(1.0/3.0)));
-                "y" := EFlip(1.0/4.0);
+                "x" := sample!(flip!(1/3));
+                "y" := flip!(1/4);
                 "_" := observe!(or!("x", "y"));
                 ... ret
             ])
         };
-        check_approx("p04/y  ", 3.0 / 6.0, mk04(var!("y")), 10000);
-        check_approx("p04/x  ", 4.0 / 6.0, mk04(var!("x")), 10000);
-        check_approx("p04/x|y", 6.0 / 6.0, mk04(or!("x", "y")), 10000);
-        check_approx("p04/x&y", 1.0 / 6.0, mk04(and!("x", "y")), 10000);
+        check_approx("p04/y  ", 3.0 / 6.0, mk04(var!("y")), 1000);
+        check_approx("p04/x  ", 4.0 / 6.0, mk04(var!("x")), 100);
+        check_approx("p04/x|y", 6.0 / 6.0, mk04(or!("x", "y")), 100);
+        check_approx("p04/x&y", 1.0 / 6.0, mk04(and!("x", "y")), 100);
     }
 
     #[test]
     #[ignore]
-    // #[traced_test]
+    #[traced_test]
     fn shared_free_variable_result() {
         let p = Program::Body(lets![
            "x" := flip!(1/3);

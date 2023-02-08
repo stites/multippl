@@ -33,7 +33,7 @@ pub enum Expr {
     // EApp(String, Box<ANF>),
     ELetIn(String, Box<Expr>, Box<Expr>),
     EIte(Box<ANF>, Box<Expr>, Box<Expr>),
-    EFlip(f32),
+    EFlip(f64),
     EObserve(Box<ANF>),
     ESample(Box<Expr>),
 }
@@ -136,7 +136,7 @@ macro_rules! observe {
 #[macro_export]
 macro_rules! flip {
     ( $num:literal / $denom:literal) => {{
-        Expr::EFlip($num as f32 / $denom as f32)
+        Expr::EFlip($num as f64 / $denom as f64)
     }};
 }
 #[macro_export]
