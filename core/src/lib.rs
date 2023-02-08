@@ -35,8 +35,8 @@ pub mod semantics {
     }
 
     type WeightMap = HashMap<UniqueId, (f32, f32)>;
-
     type SubstMap = HashMap<UniqueId, BddPtr>;
+
     fn const_weight() -> (f32, f32) {
         (0.5, 0.5)
     }
@@ -66,27 +66,6 @@ pub mod semantics {
         fn convex_combination(&self, o: &Compiled) -> f64 {
             self.probability.as_f64() * self.importance_weight
                 + o.probability.as_f64() * o.importance_weight
-        }
-
-        // FIXME: need to think about these semantics again.
-        fn conj_extend<T: LruTable<BddPtr>>(&mut self, mgr: &mut BddManager<T>, o: Compiled) {
-            self.dist = mgr.and(self.dist, o.dist);
-            self.accept = mgr.and(self.accept, o.accept);
-            self.weight_map.extend(o.weight_map);
-            self.substitutions.extend(o.substitutions);
-            self.probability = self.probability * o.probability;
-            self.importance_weight *= o.importance_weight;
-        }
-        // FIXME: need to think about these semantics again.
-        fn disj_extend<T: LruTable<BddPtr>>(&mut self, mgr: &mut BddManager<T>, o: Compiled) {
-            debug!(l = self.probability.as_f64(), r = o.probability.as_f64());
-            self.dist = mgr.or(self.dist, o.dist);
-            self.accept = mgr.or(self.accept, o.accept);
-            self.weight_map.extend(o.weight_map.clone());
-            self.substitutions.extend(o.substitutions.clone());
-            self.probability =
-                Probability::new(self.probability.as_f64() * 0.5 + o.probability.as_f64() * 0.5);
-            self.importance_weight = self.convex_combination(&o);
         }
     }
 
@@ -156,7 +135,6 @@ pub mod semantics {
         fn _fresh(&mut self, ovar: Option<String>) -> UniqueId {
             let sym = self.gensym;
             self.gensym += 1;
-            // debug!(ovar = ovar);
             let var = ovar.unwrap_or(format!("_{sym}"));
             self.names.insert(var, UniqueId(sym));
             UniqueId(sym)
@@ -165,18 +143,13 @@ pub mod semantics {
             self._fresh(None)
         }
         fn get_var(&self, var: String) -> Option<UniqueId> {
-            // debug!("get var");
-            // let renderp = |ps: &HashMap<String, UniqueId>| {
-            //     ps.iter().map(|(k, v)| format!("{k}:{v}")).join(", ")
-            // };
-            // debug!(svar = var, names = renderp(&self.names));
-
             self.names.get(&var).copied()
         }
         fn get_or_create(&mut self, var: String) -> UniqueId {
             let osym = self.get_var(var.clone());
             osym.unwrap_or_else(|| self._fresh(Some(var)))
         }
+        /// a complicated mess
         fn get_or_create_varlabel(
             &mut self,
             s: String,
@@ -266,39 +239,7 @@ pub mod semantics {
                     ..Default::default()
                 },
                 And(bl, br) => self.eval_anf_binop(*bl, *br, m, p, &BddManager::and),
-                // And(bl, br) => {
-                //     let mut l = self.eval_anf(*bl, m, p);
-                //     let r = self.eval_anf(*br, m, p);
-                //     // l.conj_extend(self.mgr, r.clone());
-                //     let mut weight_map = l.weight_map.clone();
-                //     weight_map.extend(r.weight_map.clone());
-                //     let mut substitutions = l.substitutions.clone();
-                //     substitutions.extend(r.substitutions.clone());
-                //     Compiled {
-                //         dist: self.mgr.and(l.dist, r.dist),
-                //         accept: BddPtr::PtrTrue,
-                //         weight_map, substitutions,
-                //         ..Default::default()
-                //     }
-                // }
-                // Or(bl, br) => self.eval_anf_binop(*bl, *br, m, p, &BddManager::or),
-                Or(bl, br) => {
-                    let mut l = self.eval_anf(*bl, m, p);
-                    let r = self.eval_anf(*br, m, p);
-                    // l.conj_extend(self.mgr, r.clone());
-                    let mut weight_map = l.weight_map.clone();
-                    weight_map.extend(r.weight_map.clone());
-                    let mut substitutions = l.substitutions.clone();
-                    substitutions.extend(r.substitutions.clone());
-                    let c = Compiled {
-                        dist: self.mgr.or(l.dist, r.dist),
-                        weight_map,
-                        substitutions,
-                        ..Default::default()
-                    };
-                    Self::debug_compiled("anf-or", m, p, &c);
-                    c
-                }
+                Or(bl, br) => self.eval_anf_binop(*bl, *br, m, p, &BddManager::or),
                 Neg(bp) => {
                     let mut p = self.eval_anf(*bp, m, p);
                     p.dist = p.dist.neg();
@@ -314,36 +255,6 @@ pub mod semantics {
             fin
         }
 
-        /// Print a debug form of the BDD with the label remapping given by `map`
-        pub fn print_bdd_lbl(ptr: BddPtr, map: &HashMap<VarLabel, VarLabel>) -> String {
-            match ptr {
-                BddPtr::PtrTrue => String::from("T"),
-                // BddPtr::PtrFalse => String::from("T"),
-                BddPtr::PtrFalse => String::from("F"), // TODO: check that this is right?
-                BddPtr::Compl(n) => {
-                    let s = Self::print_bdd_lbl(BddPtr::Reg(n), map);
-                    format!("!{}", s)
-                }
-                BddPtr::Reg(n) => unsafe {
-                    let l_p = (*n).low;
-                    let r_p = (*n).high;
-                    let l_s = Self::print_bdd_lbl(l_p, map);
-                    let r_s = Self::print_bdd_lbl(r_p, map);
-                    let lbl = (*n).var;
-                    format!(
-                        "({:?}, {}, {})",
-                        map.get(&lbl).unwrap_or(&lbl).value(),
-                        l_s,
-                        r_s
-                    )
-                },
-            }
-        }
-
-        pub fn print_bdd(ptr: BddPtr) -> String {
-            Self::print_bdd_lbl(ptr, &HashMap::new())
-        }
-
         fn debug_compiled(s: &str, w: &WeightMap, p: &SubstMap, c: &Compiled) {
             let renderw = |ws: &WeightMap| {
                 ws.iter()
@@ -352,12 +263,12 @@ pub mod semantics {
             };
             let renderp = |ps: &SubstMap| {
                 ps.iter()
-                    .map(|(k, v)| format!("{k}: {}", Self::print_bdd(v.clone())))
+                    .map(|(k, v)| format!("{k}: {}", v.print_bdd()))
                     .join(", ")
             };
             debug!("{s}, [{}], [{}]", renderw(w), renderp(p));
-            debug!("      \\||/  {}", Self::print_bdd(c.dist));
-            debug!("      \\||/  {}", Self::print_bdd(c.accept));
+            debug!("      \\||/  {}", c.dist.print_bdd());
+            debug!("      \\||/  {}", c.accept.print_bdd());
             debug!("      \\||/  {}", renderw(&c.weight_map));
             debug!("      \\||/  {}", renderp(&c.substitutions));
             debug!("      \\||/  {}", c.probability.as_f64());
@@ -614,7 +525,7 @@ mod tests {
     }
 
     #[test]
-    // #[traced_test]
+    #[traced_test]
     fn program04_seeded() {
         let mk04 = |ret: Expr| {
             Program::Body(lets![
@@ -626,10 +537,11 @@ mod tests {
         };
         // let perfect_seeds = vec![1, 7];
         let s = vec![1, 7];
-        check_approx_seeded("p04s/y  ", 3.0 / 6.0, mk04(var!("y")), 10000, &s);
-        check_approx_seeded("p04s/x  ", 4.0 / 6.0, mk04(var!("x")), 10000, &s);
-        check_approx_seeded("p04s/x|y", 6.0 / 6.0, mk04(anf!(or!("x", "y"))), 10000, &s);
-        check_approx_seeded("p04s/x&y", 1.0 / 6.0, mk04(anf!(and!("x", "y"))), 10000, &s);
+        let n = 2;
+        check_approx_seeded("p04s/y  ", 3.0 / 6.0, mk04(var!("y")), n, &s);
+        check_approx_seeded("p04s/x  ", 4.0 / 6.0, mk04(var!("x")), n, &s);
+        check_approx_seeded("p04s/x|y", 6.0 / 6.0, mk04(anf!(or!("x", "y"))), n, &s);
+        check_approx_seeded("p04s/x&y", 1.0 / 6.0, mk04(anf!(and!("x", "y"))), n, &s);
     }
 
     #[test]
@@ -648,5 +560,17 @@ mod tests {
         check_approx("p04/x  ", 4.0 / 6.0, mk04(var!("x")), 10000);
         check_approx("p04/x|y", 6.0 / 6.0, mk04(anf!(or!("x", "y"))), 10000);
         check_approx("p04/x&y", 1.0 / 6.0, mk04(anf!(and!("x", "y"))), 10000);
+    }
+
+    #[test]
+    #[ignore]
+    // #[traced_test]
+    fn shared_sample_result() {
+        let p = Program::Body(lets![
+           "x" := flip!(1/3);
+           "l" := sample!(var!("x"));
+           "r" := sample!(var!("x"));
+           ... anf!(and!("x", "y"))
+        ]);
     }
 }

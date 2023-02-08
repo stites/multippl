@@ -118,6 +118,24 @@ macro_rules! anf {
     }};
 }
 #[macro_export]
+macro_rules! sample {
+    ( $x:expr ) => {{
+        Expr::ESample(Box::new($x))
+    }};
+}
+#[macro_export]
+macro_rules! observe {
+    ( $x:expr ) => {{
+        Expr::EObserve(Box::new($x))
+    }};
+}
+#[macro_export]
+macro_rules! flip {
+    ( $num:literal / $denom:literal) => {{
+        Expr::EFlip($num as f32 / $denom as f32)
+    }};
+}
+#[macro_export]
 macro_rules! lets {
     ( $( $var:literal := $bound:expr );+ ;... $body:expr ) => {
         {
