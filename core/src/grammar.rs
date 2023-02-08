@@ -44,8 +44,17 @@ pub enum Expr {
 //   ret : Ty
 //   body : Expr
 // deriving Repr
+
 impl Expr {
-    fn strip_samples(&self) -> Expr {
+    pub fn is_sample(&self) -> bool {
+        use Expr::*;
+        match self {
+            ESample(_) => true,
+            _ => false,
+        }
+    }
+
+    pub fn strip_samples(&self) -> Expr {
         use Expr::*;
         match self {
             ESample(e) => *e.clone(),

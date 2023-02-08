@@ -12,7 +12,7 @@ pub fn wmc_prob(env: &mut Env, c: &Compiled) -> (f64, f64) {
     let z = c.accept.wmc(&var_order, &params);
     (a, z)
 }
-pub fn exact_inf(env: &mut Env, p: Program) -> f64 {
+pub fn exact_inf(env: &mut Env, p: &Program) -> f64 {
     let c = compile(env, p);
     let (a, z) = wmc_prob(env, &c);
     debug!(a = a, z = z);
@@ -61,7 +61,7 @@ fn debug_importance_weighting(
     // debug!("{}{}", " ".repeat((num.len() - denom.len()) / 2), denom);
     debug!("{}{}", " ", denom);
 }
-pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: Program) -> f64 {
+pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: &Program) -> f64 {
     let (mut exp, mut expw, mut expw2) = (0.0, 0.0, 0.0);
     let mut ws: Vec<f64> = vec![];
     let mut ps: Vec<f64> = vec![];
@@ -69,7 +69,7 @@ pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: Program) -> f64 
     for _step in 1..=steps {
         // FIXME: change back to step
         env.reset_names();
-        let c = compile(env, p.clone());
+        let c = compile(env, p);
         let (a, z) = wmc_prob(env, &c);
         let pr = (a / z) as f64;
         let q = c.probability.as_f64() as f64;
@@ -86,7 +86,7 @@ pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: Program) -> f64 
     // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
     (exp / expw) as f64
 }
-pub fn importance_weighting_inf_seeded(seeds: Vec<u64>, steps: usize, p: Program) -> f64 {
+pub fn importance_weighting_inf_seeded(seeds: Vec<u64>, steps: usize, p: &Program) -> f64 {
     let (mut exp, mut expw, mut expw2) = (0.0, 0.0, 0.0);
     let mut ws: Vec<f64> = vec![];
     let mut ps: Vec<f64> = vec![];
@@ -97,7 +97,7 @@ pub fn importance_weighting_inf_seeded(seeds: Vec<u64>, steps: usize, p: Program
         let seed = seeds[step % num_seeds];
         let mut envargs = EnvArgs::default_args(Some(seed));
         let mut env = Env::from_args(&mut envargs);
-        let c = compile(&mut env, p.clone());
+        let c = compile(&mut env, p);
         let (a, z) = wmc_prob(&mut env, &c);
         let pr = (a / z) as f64;
         let q = c.probability.as_f64() as f64;
