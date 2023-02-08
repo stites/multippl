@@ -566,7 +566,7 @@ mod tests {
     #[test]
     #[ignore]
     // #[traced_test]
-    fn shared_sample_result() {
+    fn shared_free_variable() {
         let p = Program::Body(lets![
            "x" := flip!(1/3);
            "l" := sample!(var!("x"));
