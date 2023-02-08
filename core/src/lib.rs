@@ -504,8 +504,8 @@ mod tests {
         };
         check_exact("p02/y  ", 3.0 / 12.0, mk02(var!("y")));
         check_exact("p02/x  ", 4.0 / 12.0, mk02(var!("x")));
-        check_exact("p02/x|y", 6.0 / 12.0, mk02(anf!(or!("x", "y"))));
-        check_exact("p02/x&y", 1.0 / 12.0, mk02(anf!(and!("x", "y"))));
+        check_exact("p02/x|y", 6.0 / 12.0, mk02(or!("x", "y")));
+        check_exact("p02/x&y", 1.0 / 12.0, mk02(and!("x", "y")));
     }
 
     #[test]
@@ -515,14 +515,14 @@ mod tests {
             Program::Body(lets![
                 "x" := EFlip(1.0/3.0);
                 "y" := EFlip(1.0/4.0);
-                "_" := EObserve(Box::new(or!("x", "y")));
+                "_" := observe!(or!("x", "y"));
                 ... ret
             ])
         };
         check_exact("p03/y  ", 3.0 / 6.0, mk03(var!("y")));
         check_exact("p03/x  ", 4.0 / 6.0, mk03(var!("x")));
-        check_exact("p03/x|y", 6.0 / 6.0, mk03(anf!(or!("x", "y"))));
-        check_exact("p03/x&y", 1.0 / 6.0, mk03(anf!(and!("x", "y"))));
+        check_exact("p03/x|y", 6.0 / 6.0, mk03(or!("x", "y")));
+        check_exact("p03/x&y", 1.0 / 6.0, mk03(and!("x", "y")));
     }
 
     #[test]
@@ -530,9 +530,9 @@ mod tests {
     fn program04_seeded() {
         let mk04 = |ret: Expr| {
             Program::Body(lets![
-                "x" := ESample(Box::new(EFlip(1.0/3.0)));
-                "y" := EFlip(1.0/4.0);
-                "_" := EObserve(Box::new(or!("x", "y")));
+                "x" := sample!(flip!(1/3));
+                "y" := flip!(1/4);
+                "_" := observe!(or!("x", "y"));
                 ... ret
             ])
         };
@@ -541,8 +541,8 @@ mod tests {
         let n = 2;
         check_approx_seeded("p04s/y  ", 3.0 / 6.0, mk04(var!("y")), n, &s);
         check_approx_seeded("p04s/x  ", 4.0 / 6.0, mk04(var!("x")), n, &s);
-        check_approx_seeded("p04s/x|y", 6.0 / 6.0, mk04(anf!(or!("x", "y"))), n, &s);
-        check_approx_seeded("p04s/x&y", 1.0 / 6.0, mk04(anf!(and!("x", "y"))), n, &s);
+        check_approx_seeded("p04s/x|y", 6.0 / 6.0, mk04(or!("x", "y")), n, &s);
+        check_approx_seeded("p04s/x&y", 1.0 / 6.0, mk04(and!("x", "y")), n, &s);
     }
 
     #[test]
@@ -553,25 +553,25 @@ mod tests {
             Program::Body(lets![
                 "x" := ESample(Box::new(EFlip(1.0/3.0)));
                 "y" := EFlip(1.0/4.0);
-                "_" := EObserve(Box::new(or!("x", "y")));
+                "_" := observe!(or!("x", "y"));
                 ... ret
             ])
         };
         check_approx("p04/y  ", 3.0 / 6.0, mk04(var!("y")), 10000);
         check_approx("p04/x  ", 4.0 / 6.0, mk04(var!("x")), 10000);
-        check_approx("p04/x|y", 6.0 / 6.0, mk04(anf!(or!("x", "y"))), 10000);
-        check_approx("p04/x&y", 1.0 / 6.0, mk04(anf!(and!("x", "y"))), 10000);
+        check_approx("p04/x|y", 6.0 / 6.0, mk04(or!("x", "y")), 10000);
+        check_approx("p04/x&y", 1.0 / 6.0, mk04(and!("x", "y")), 10000);
     }
 
     #[test]
     #[ignore]
     // #[traced_test]
-    fn shared_free_variable() {
+    fn shared_free_variable_result() {
         let p = Program::Body(lets![
            "x" := flip!(1/3);
            "l" := sample!(var!("x"));
            "r" := sample!(var!("x"));
-           ... anf!(and!("x", "y"))
+           ... and!("x", "y")
         ]);
     }
 }

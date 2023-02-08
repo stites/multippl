@@ -80,43 +80,43 @@ impl Program {
 }
 
 // macros
-
-#[macro_export]
-macro_rules! val {
-    ( $x:ident ) => {
-        Expr::EAnf(Box::new(ANF::AVal(Val::Bool($x))))
-    };
-}
-#[macro_export]
-macro_rules! var {
-    ( $x:literal ) => {
-        Expr::EAnf(Box::new(ANF::AVar($x.to_string())))
-    };
-}
-#[macro_export]
-macro_rules! or {
-    ( $x:literal, $y:literal ) => {{
-        ANF::Or(
-            Box::new(ANF::AVar($x.to_string())),
-            Box::new(ANF::AVar($y.to_string())),
-        )
-    }};
-}
-#[macro_export]
-macro_rules! and {
-    ( $x:literal, $y:literal ) => {{
-        ANF::And(
-            Box::new(ANF::AVar($x.to_string())),
-            Box::new(ANF::AVar($y.to_string())),
-        )
-    }};
-}
 #[macro_export]
 macro_rules! anf {
     ( $x:expr ) => {{
         Expr::EAnf(Box::new($x))
     }};
 }
+#[macro_export]
+macro_rules! val {
+    ( $x:ident ) => {
+        anf!(ANF::AVal(Val::Bool($x)))
+    };
+}
+#[macro_export]
+macro_rules! var {
+    ( $x:literal ) => {
+        anf!(ANF::AVar($x.to_string()))
+    };
+}
+#[macro_export]
+macro_rules! or {
+    ( $x:literal, $y:literal ) => {{
+        anf!(ANF::Or(
+            Box::new(ANF::AVar($x.to_string())),
+            Box::new(ANF::AVar($y.to_string())),
+        ))
+    }};
+}
+#[macro_export]
+macro_rules! and {
+    ( $x:literal, $y:literal ) => {{
+        anf!(ANF::And(
+            Box::new(ANF::AVar($x.to_string())),
+            Box::new(ANF::AVar($y.to_string())),
+        ))
+    }};
+}
+
 #[macro_export]
 macro_rules! sample {
     ( $x:expr ) => {{
@@ -126,7 +126,11 @@ macro_rules! sample {
 #[macro_export]
 macro_rules! observe {
     ( $x:expr ) => {{
-        Expr::EObserve(Box::new($x))
+        if let Expr::EAnf(a) = $x {
+            Expr::EObserve(a)
+        } else {
+            panic!("passed in a non-anf expression!");
+        }
     }};
 }
 #[macro_export]
