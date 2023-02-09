@@ -484,7 +484,7 @@ mod tests {
     fn program00() {
         let p00 = lets![
             "x" := val!(true);
-            ... var!("x")
+            ...? var!("x")
         ];
         check_exact("p00", 1.0, &Program::Body(p00));
     }
@@ -493,7 +493,7 @@ mod tests {
     fn program01() {
         let p01 = lets![
             "x" := flip!(1.0/3.0);
-            ... var!("x")
+            ...? var!("x")
         ];
         check_exact("p01", 1.0 / 3.0, &Program::Body(p01));
     }
@@ -504,7 +504,7 @@ mod tests {
             Program::Body(lets![
                 "x" := flip!(1.0/3.0);
                 "y" := flip!(1.0/4.0);
-                ... ret
+                ...? ret
             ])
         };
         check_exact("p02/y  ", 3.0 / 12.0, &mk02(var!("y")));
@@ -521,7 +521,7 @@ mod tests {
                 "x" := flip!(1.0/3.0);
                 "y" := flip!(1.0/4.0);
                 "_" := observe!(or!("x", "y"));
-                ... ret
+                ...? ret
             ])
         };
         check_exact("p03/y  ", 3.0 / 6.0, &mk03(var!("y")));
@@ -538,13 +538,12 @@ mod tests {
                 "x" := sample!(flip!(1/3));
                 "y" := flip!(1/4);
                 "_" := observe!(or!("x", "y"));
-                ... ret
+                ...? ret
             ])
         };
-        // let perfect_seeds = vec![1, 7];
-        let s = vec![1, 7];
-        let n = 2;
-        println!("!!! {:?}", mk04(var!("x")));
+        // perfect seeds of [F F T]
+        let s = vec![1, 1, 7];
+        let n = 1000;
         check_approx_seeded("p04s/y  ", 3.0 / 6.0, &mk04(var!("y")), n, &s);
         check_approx_seeded("p04s/x  ", 4.0 / 6.0, &mk04(var!("x")), n, &s);
         check_approx_seeded("p04s/x|y", 6.0 / 6.0, &mk04(or!("x", "y")), n, &s);

@@ -152,7 +152,7 @@ macro_rules! flip {
 }
 #[macro_export]
 macro_rules! lets {
-    ( $( $var:literal := $bound:expr );+ ;... $body:expr ) => {
+    ( $( $var:literal := $bound:expr );+ ;...? $body:expr ) => {
         {
             let mut fin = Box::new($body.clone());
             let mut bindees = vec![];
@@ -160,7 +160,7 @@ macro_rules! lets {
                 debug!("let {} = {:?};", $var.clone(), $bound.clone());
                 bindees.push(($var, $bound));
             )+
-            debug!("... {:?}", $body);
+            debug!("...? {:?}", $body);
             for (v, e) in bindees.iter().rev() {
                 fin = Box::new(Expr::ELetIn(v.to_string(), Box::new(e.clone()), fin));
 
