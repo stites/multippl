@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+#![allow(unused_imports)]
 use itertools::*;
 use rsdd::builder::bdd_builder::BddManager;
 use rsdd::builder::cache::all_app::AllTable;
@@ -163,10 +164,6 @@ pub mod semantics {
         ) -> (VarLabel, WeightMap) {
             match self.get_var(s.clone()) {
                 None => {
-                    let renderp = |ps: &HashMap<String, UniqueId>| {
-                        ps.iter().map(|(k, v)| format!("{k}:{v}")).join(", ")
-                    };
-
                     let id = self._fresh(Some(s.clone()));
                     let lbl = VarLabel::new(id.0);
                     let mut mm = m.clone();
@@ -191,10 +188,7 @@ pub mod semantics {
                         }
                     }
                     match nxt {
-                        Some(BddPtr::Reg(n)) => {
-                            let mut nn = n.clone();
-                            ((**n).var.clone(), m.clone())
-                        }
+                        Some(BddPtr::Reg(n)) => ((**n).var.clone(), m.clone()),
                         _ => {
                             let lbl = VarLabel::new(sym.0);
                             (lbl, m.clone())
@@ -432,7 +426,10 @@ pub mod semantics {
     }
     pub fn compile(env: &mut Env, p: &Program) -> Compiled {
         match p {
-            Program::Body(e) => env.eval_expr(e, &HashMap::new(), &HashMap::new()),
+            Program::Body(e) => {
+                debug!("========================================================");
+                env.eval_expr(e, &HashMap::new(), &HashMap::new())
+            }
         }
     }
 }

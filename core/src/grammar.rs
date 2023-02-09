@@ -169,3 +169,33 @@ macro_rules! lets {
         }
     };
 }
+#[macro_export]
+macro_rules! ite {
+    ( if ( $pred:expr ) then { $true:expr } else { $false:expr } ) => {
+        if let Expr::EAnf(a) = $pred {
+            Expr::EIte(a, Box::new($true), Box::new($false))
+        } else {
+            panic!("passed in a non-anf expression as predicate!");
+        }
+    };
+    ( ( $pred:expr ) ? ( $true:expr ) : ( $false:expr ) ) => {
+        if let Expr::EAnf(a) = $pred {
+            Expr::EIte(a, Box::new($true), Box::new($false))
+        } else {
+            panic!("passed in a non-anf expression as predicate!");
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! program {
+    ( $x:expr ) => {
+        Program::Body($x)
+    };
+}
+#[macro_export]
+macro_rules! run {
+    ( $( $var:literal := $bound:expr );+ ;...? $body:expr ) => {
+        program!($( $var:literal := $bound:expr );+ ;...? $body:expr)
+    };
+}
