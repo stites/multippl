@@ -296,22 +296,29 @@ pub mod semantics {
                 ELetIn(s, ebound, ebody) => {
                     debug!(">>>let-in {}", s);
                     let (lbl, wm) = self.get_or_create_varlabel(s.clone(), m, p);
+                    let id = UniqueId(lbl.value());
                     let bound = self.eval_expr(ebound, &wm, p);
                     let mut bound_substitutions = bound.substitutions.clone();
-                    bound_substitutions.insert(UniqueId(lbl.value()), bound.dist);
+                    bound_substitutions.insert(id, bound.dist);
 
                     let body = self.eval_expr(ebody, &bound.weight_map, &bound_substitutions);
 
                     let mut weight_map = bound.weight_map;
                     weight_map.extend(body.weight_map);
 
-                    let mut substitutions = body.substitutions.clone();
+                    let substitutions = body.substitutions.clone();
                     // substitutions.extend(body.substitutions);
 
                     let dist = self.apply_substitutions(body.dist, &substitutions);
                     let accept = self.mgr.and(bound.accept, body.accept);
                     let accept = self.apply_substitutions(accept, &substitutions);
-                    if ebound.is_sample() {}
+                    if ebound.is_sample() {
+                        match bound.dist {
+                            BddPtr::PtrTrue => self.samples.insert(id, true),
+                            BddPtr::PtrFalse => self.samples.insert(id, false),
+                            _ => panic!("impossible"),
+                        };
+                    }
 
                     let c = Compiled {
                         dist, // : self.mgr.compose(body.dist, lbl, bound.dist),

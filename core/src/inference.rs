@@ -3,6 +3,7 @@ use crate::semantics::*;
 use itertools::*;
 use rsdd::repr::ddnnf::DDNNFPtr;
 use rsdd::repr::var_order::VarOrder;
+use std::collections::HashMap;
 use tracing::debug;
 
 pub fn wmc_prob(env: &mut Env, c: &Compiled) -> (f64, f64) {
@@ -24,6 +25,7 @@ fn debug_importance_weighting(
     ws: &Vec<f64>,
     qs: &Vec<f64>,
     ps: &Vec<f64>,
+    ss: &Vec<HashMap<UniqueId, bool>>,
     exp: f64,
     expw: f64,
 ) {
@@ -39,6 +41,10 @@ fn debug_importance_weighting(
         debug!("ws = [{}]", ws.iter().map(fmt_f64).join(", "));
         debug!("qs = [{}]", qs.iter().map(fmt_f64).join(", "));
         debug!("ps = [{}]", ps.iter().map(fmt_f64).join(", "));
+        debug!(
+            "ss = [{}]",
+            ss.iter().map(|x| format!("{:?}", x)).join(", ")
+        );
         if steps < 11 {
             debug!("");
             let num = izip!(ws, qs, ps)
@@ -47,25 +53,31 @@ fn debug_importance_weighting(
             let denom = izip!(ws, qs)
                 .map(|(w, q)| format!("{:.2}*{:.2}", w, q))
                 .join(" + ");
-
+            let num_len: i32 = num.len().try_into().unwrap();
+            let denom_len: i32 = denom.len().try_into().unwrap();
             debug!("{}", num);
             debug!("{} = {:.4}", "-".repeat(num.len()), (exp / expw));
-            debug!("{}{}", " ".repeat((num.len() - denom.len()) / 2), denom);
+            let leftpad: usize = ((num_len - denom_len).abs() / 2).try_into().unwrap();
+            debug!("{}{}", " ".repeat(leftpad), denom);
         }
     }
     let num = format!("{}", exp);
     let denom = format!("{}", expw);
+    let num_len: i32 = num.len().try_into().unwrap();
+    let denom_len: i32 = denom.len().try_into().unwrap();
+
     debug!("computed:");
     debug!("{}", num);
     debug!("{} = {:.4}", "-".repeat(num.len()), (exp / expw));
-    // debug!("{}{}", " ".repeat((num.len() - denom.len()) / 2), denom);
-    debug!("{}{}", " ", denom);
+    let leftpad: usize = ((num_len - denom_len).abs() / 2).try_into().unwrap();
+    debug!("{}{}", " ".repeat(leftpad), denom);
 }
 pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: &Program) -> f64 {
     let (mut exp, mut expw, mut expw2) = (0.0, 0.0, 0.0);
     let mut ws: Vec<f64> = vec![];
     let mut ps: Vec<f64> = vec![];
     let mut qs: Vec<f64> = vec![];
+    let mut ss: Vec<HashMap<UniqueId, bool>> = vec![];
     for _step in 1..=steps {
         // FIXME: change back to step
         env.reset_names();
@@ -80,17 +92,20 @@ pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: &Program) -> f64
         ws.push(w);
         qs.push(q);
         ps.push(pr);
+        ss.push(env.samples.clone());
     }
-    debug_importance_weighting(true, steps, &ws, &qs, &ps, exp, expw);
+    debug_importance_weighting(true, steps, &ws, &qs, &ps, &ss, exp, expw);
     // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
     // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
     (exp / expw) as f64
 }
+
 pub fn importance_weighting_inf_seeded(seeds: Vec<u64>, steps: usize, p: &Program) -> f64 {
     let (mut exp, mut expw, mut expw2) = (0.0, 0.0, 0.0);
     let mut ws: Vec<f64> = vec![];
     let mut ps: Vec<f64> = vec![];
     let mut qs: Vec<f64> = vec![];
+    let mut ss: Vec<HashMap<UniqueId, bool>> = vec![];
     let num_seeds = seeds.len();
 
     for step in 1..=steps {
@@ -108,7 +123,8 @@ pub fn importance_weighting_inf_seeded(seeds: Vec<u64>, steps: usize, p: &Progra
         ws.push(w);
         qs.push(q);
         ps.push(pr);
+        ss.push(env.samples.clone());
     }
-    debug_importance_weighting(true, steps, &ws, &qs, &ps, exp, expw);
+    debug_importance_weighting(true, steps, &ws, &qs, &ps, &ss, exp, expw);
     (exp / expw) as f64
 }
