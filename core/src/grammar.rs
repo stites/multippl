@@ -109,20 +109,22 @@ macro_rules! var {
 }
 #[macro_export]
 macro_rules! or {
-    ( $x:literal, $y:literal ) => {{
-        anf!(ANF::Or(
-            Box::new(ANF::AVar($x.to_string())),
-            Box::new(ANF::AVar($y.to_string())),
-        ))
+    ( $y:literal, $( $x:literal ),+ ) => {{
+        let mut fin = Box::new(ANF::AVar($y.to_string()));
+        $(
+            fin = Box::new(ANF::Or(fin, Box::new(ANF::AVar($x.to_string()))));
+        )+
+        anf!(*fin)
     }};
 }
 #[macro_export]
 macro_rules! and {
-    ( $x:literal, $y:literal ) => {{
-        anf!(ANF::And(
-            Box::new(ANF::AVar($x.to_string())),
-            Box::new(ANF::AVar($y.to_string())),
-        ))
+    ( $y:literal, $( $x:literal ),+ ) => {{
+        let mut fin = Box::new(ANF::AVar($y.to_string()));
+        $(
+            fin = Box::new(ANF::And(fin, Box::new(ANF::AVar($x.to_string()))));
+        )+
+        anf!(*fin)
     }};
 }
 
