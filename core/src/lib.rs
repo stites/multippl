@@ -628,5 +628,122 @@ mod tests {
            "r" := sample!(var!("x"));
            ...? and!("x", "y")
         ]);
+        check_approx("shared ", 1.0 / 3.0, &p, 1000);
+    }
+
+    #[test]
+    // #[traced_test]
+    fn nested_1() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+                "x" := sample!(sample!(flip!(1/3)));
+                "y" := flip!(1/4);
+                "_" := observe!(or!("x", "y"));
+                ...? ret
+            ])
+        };
+        check_approx("nest/y  ", 3.0 / 6.0, &mk(var!("y")), 10000);
+        check_approx("nest/x  ", 4.0 / 6.0, &mk(var!("x")), 10000);
+        check_approx("nest/x|y", 6.0 / 6.0, &mk(or!("x", "y")), 10000);
+        check_approx("nest/x&y", 1.0 / 6.0, &mk(and!("x", "y")), 10000);
+    }
+
+    #[test]
+    // #[traced_test]
+    fn nested_2() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+                "a" := flip!(1/5);
+                "b" := sample!(
+                    lets![
+                        "x" := sample!(flip!(1/3));
+                        "y" := flip!(1/4);
+                        ...? or!("x", "y")
+                    ]);
+                "_" := observe!(or!("a", "b")); // is this a problem?
+                ...? ret
+            ])
+        };
+        check_approx("nest/y  ", 3.0 / 6.0, &mk(var!("y")), 10000);
+        check_approx("nest/x  ", 4.0 / 6.0, &mk(var!("x")), 10000);
+        check_approx("nest/x|y", 6.0 / 6.0, &mk(or!("x", "y")), 10000);
+        check_approx("nest/x&y", 1.0 / 6.0, &mk(and!("x", "y")), 10000);
+    }
+
+    #[test]
+    // #[traced_test]
+    fn ite_1() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+                "a" := flip!(1/3);
+                "b" := ite!(
+                    if ( var!("a") )
+                    then { flip!(1/4) }
+                    else { flip!(1/5) });
+                "_" := observe!(or!("a", "b")); // is this a problem?
+                ...? ret
+            ])
+        };
+        check_approx("ite1/y  ", 6.0 / 6.0, &mk(var!("y")), 10000);
+        check_approx("ite1/x  ", 6.0 / 6.0, &mk(var!("x")), 10000);
+        check_approx("ite1/x|y", 6.0 / 6.0, &mk(or!("x", "y")), 10000);
+        check_approx("ite1/x&y", 6.0 / 6.0, &mk(and!("x", "y")), 10000);
+    }
+
+    #[test]
+    // #[traced_test]
+    fn ite_2_with_one_sample() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+                "a" := flip!(1/3);
+                "b" := ite!(
+                    if ( var!("a") )
+                    then { sample!(flip!(1/4)) }
+                    else {         flip!(1/5)  });
+                "_" := observe!(or!("a", "b")); // is this a problem?
+                ...? ret
+            ])
+        };
+        check_approx("ite2/y  ", 6.0 / 6.0, &mk(var!("y")), 10000);
+        check_approx("ite2/x  ", 6.0 / 6.0, &mk(var!("x")), 10000);
+        check_approx("ite2/x|y", 6.0 / 6.0, &mk(or!("x", "y")), 10000);
+        check_approx("ite2/x&y", 6.0 / 6.0, &mk(and!("x", "y")), 10000);
+    }
+
+    /// a directed 2x2 grid test where we place samples according to various policies
+    ///   (0,0) -> (0,1)
+    ///     v        v
+    ///   (1,0) -> (1,1)
+    #[test]
+    // #[traced_test]
+    fn grid2x2() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+                "0_0" := flip!(1/2);
+                "path" := ite!( ( var!("0_0") ) ?
+                    ( lets![ "0_1" := flip!(1/3); ...? var!("0_1") ] ) :
+                    ( lets![ "1_0" := flip!(1/4); ...? var!("1_0") ] )
+                    );
+                "1_1" := flip!(1/5);
+                "_" := observe!(or!("0_0", "path", "1_1", "x", "x")); // is this a problem?
+                ...? ret
+            ])
+        };
+        check_approx("ite2/y  ", 6.0 / 6.0, &mk(var!("y")), 10000);
+        check_approx("ite2/x  ", 6.0 / 6.0, &mk(var!("x")), 10000);
+        check_approx("ite2/x|y", 6.0 / 6.0, &mk(or!("x", "y")), 10000);
+        check_approx("ite2/x&y", 6.0 / 6.0, &mk(and!("x", "y")), 10000);
+    }
+
+    /// a directed 3x3 grid test where we place samples according to various policies
+    ///   (0,0) -> (0,1) -> (0,2)
+    ///     v        v        v
+    ///   (1,0) -> (1,1) -> (1,2)
+    ///     v        v        v
+    ///   (2,0) -> (2,1) -> (2,2)
+    #[test]
+    // #[traced_test]
+    fn grid3x3() {
+        todo!()
     }
 }
