@@ -84,13 +84,13 @@ pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: &Program) -> f64
         let c = compile(env, p);
         let (a, z) = wmc_prob(env, &c);
         let pr = (a / z) as f64;
-        let q = c.probability.as_f64() as f64;
+        let _q = c.probability.as_f64() as f64;
         let w = c.importance_weight;
-        exp = exp + w * q * pr;
-        expw = expw + w * q;
-        expw2 = expw2 + (q * w * w);
+        exp = exp + w * pr;
+        expw = expw + w;
+        expw2 = expw2 + (w * w);
         ws.push(w);
-        qs.push(q);
+        qs.push(_q);
         ps.push(pr);
         ss.push(env.samples.clone());
     }
@@ -115,13 +115,13 @@ pub fn importance_weighting_inf_seeded(seeds: Vec<u64>, steps: usize, p: &Progra
         let c = compile(&mut env, p);
         let (a, z) = wmc_prob(&mut env, &c);
         let pr = (a / z) as f64;
-        let q = c.probability.as_f64() as f64;
+        let _q = c.probability.as_f64() as f64;
         let w = c.importance_weight;
-        exp = exp + w * q * pr;
-        expw = expw + w * q;
-        expw2 = expw2 + (q * w * w);
+        exp = exp + w * pr;
+        expw = expw + w;
+        expw2 = expw2 + (w * w);
         ws.push(w);
-        qs.push(q);
+        qs.push(_q);
         ps.push(pr);
         ss.push(env.samples.clone());
     }

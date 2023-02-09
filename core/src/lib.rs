@@ -555,32 +555,78 @@ mod tests {
     }
 
     #[test]
-    // #[ignore]
-    #[traced_test]
+    // #[traced_test]
     fn program04_approx() {
         let mk04 = |ret: Expr| {
             Program::Body(lets![
                 "x" := sample!(flip!(1/3));
                 "y" := flip!(1/4);
                 "_" := observe!(or!("x", "y"));
-                ... ret
+                ...? ret
             ])
         };
-        check_approx("p04/y  ", 3.0 / 6.0, &mk04(var!("y")), 10);
-        // check_approx("p04/x  ", 4.0 / 6.0, mk04(var!("x")), 100);
-        // check_approx("p04/x|y", 6.0 / 6.0, mk04(or!("x", "y")), 100);
-        // check_approx("p04/x&y", 1.0 / 6.0, mk04(and!("x", "y")), 100);
+        check_approx("p04/y  ", 3.0 / 6.0, &mk04(var!("y")), 10000);
+        check_approx("p04/x  ", 4.0 / 6.0, &mk04(var!("x")), 10000);
+        check_approx("p04/x|y", 6.0 / 6.0, &mk04(or!("x", "y")), 10000);
+        check_approx("p04/x&y", 1.0 / 6.0, &mk04(and!("x", "y")), 10000);
     }
 
+    // free variable edge case
     #[test]
-    #[ignore]
-    #[traced_test]
-    fn shared_free_variable_result() {
+    // #[traced_test]
+    fn free_variables_0() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+               "x" := flip!(1/3);
+               "y" := sample!(var!("x"));
+               ...? ret
+            ])
+        };
+        check_approx("free/x ", 1.0 / 3.0, &mk(var!("x")), 1000);
+        check_approx("free/y ", 1.0 / 3.0, &mk(var!("y")), 1000);
+    }
+    #[test]
+    // #[traced_test]
+    fn free_variables_1() {
+        // FIXME: This seems like a huge problem!
+        let problem = {
+            Program::Body(lets![
+               "x" := flip!(1/3);
+               "l" := sample!(var!("x"));
+               "_" := observe!(var!("x"));
+               ...? var!("l")
+            ])
+        };
+        check_approx("free/!!", 1.0 / 1.0, &problem, 1000);
+    }
+    #[test]
+    // #[traced_test]
+    fn free_variables_2() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+                "x" := flip!(1/3);
+                "l" := sample!(
+                    lets![
+                        "x0" := flip!(1/5);
+                        ...? or!("x0", "x")
+                    ]);
+               "_" := observe!(var!("x")); // is this a problem?
+               ...? ret
+            ])
+        };
+        check_approx("free/?1", 1.0 / 1.0, &mk(var!("x")), 1000);
+        check_approx("free/?2", 1.0 / 1.0, &mk(var!("l")), 1000);
+    }
+
+    // free variable edge case
+    #[test]
+    // #[traced_test]
+    fn free_variables_shared() {
         let p = Program::Body(lets![
            "x" := flip!(1/3);
            "l" := sample!(var!("x"));
            "r" := sample!(var!("x"));
-           ... and!("x", "y")
+           ...? and!("x", "y")
         ]);
     }
 }
