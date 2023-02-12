@@ -306,8 +306,11 @@ pub mod semantics {
                     // substitutions.extend(body.substitutions);
 
                     let dist = self.apply_substitutions(body.dist, &substitutions);
-                    let accept = self.mgr.and(bound.accept, body.accept);
-                    let accept = self.apply_substitutions(accept, &substitutions);
+                    // NOTE: applying all substituting will normalize distributions in sample too much. This will cause
+                    // samples to normalize in a way where we will fail to drop irrelevant structure
+                    // let accept = self.mgr.and(bound.accept, body.accept);
+                    // let accept = self.apply_substitutions(accept, &substitutions);
+                    let accept = self.mgr.compose(body.accept, lbl, bound.accept);
                     if ebound.is_sample() {
                         match bound.dist {
                             BddPtr::PtrTrue => self.samples.insert(id, true),
@@ -414,7 +417,7 @@ pub mod semantics {
 
                     let c = Compiled {
                         dist: BddPtr::from_bool(sample),
-                        accept: comp.dist, // FIXME should be `dist` after resolving the initial example
+                        accept: self.mgr.iff(comp.dist, BddPtr::PtrTrue),
                         weight_map: comp.weight_map.clone(),
                         substitutions: p.clone(),
                         probability: q,
@@ -456,8 +459,9 @@ mod active_tests {
                ...? ret
             ])
         };
-        check_approx("free/x ", 1.0 / 3.0, &mk(var!("x")), 10);
-        check_approx("free/y ", 1.0 / 3.0, &mk(var!("y")), 10);
+        check_approx("free/x ", 1.0 / 3.0, &mk(var!("x")), 1000);
+        // FIXME: still broken! getting 1/2 instead of 1/3
+        check_approx("free/y ", 1.0 / 3.0, &mk(var!("y")), 1000);
     }
     #[test]
     // #[traced_test]

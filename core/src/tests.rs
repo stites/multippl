@@ -45,6 +45,7 @@ pub fn check_approx_seeded(s: &str, f: f64, p: &Program, n: usize, seeds: &Vec<u
         "[check_{i}][{s}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"
     );
 }
+
 #[test]
 // #[traced_test]
 fn program00() {
