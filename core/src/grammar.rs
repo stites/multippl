@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+use std::collections::HashMap;
 use std::string::String;
 
 #[derive(Debug, Copy, Clone)]
@@ -37,6 +38,10 @@ pub enum Expr {
     EObserve(Box<ANF>),
     ESample(Box<Expr>),
 }
+
+#[derive(Default)]
+pub struct Γ<'a>(HashMap<&'a Expr, &'a Ty>);
+
 // TODO
 // structure Func where
 //   name : String

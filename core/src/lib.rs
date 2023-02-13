@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
+#![allow(mixed_script_confusables)] // for Gamma : )
 use itertools::*;
 use rsdd::builder::bdd_builder::BddManager;
 use rsdd::builder::cache::all_app::AllTable;
@@ -8,6 +9,7 @@ use std::string::String;
 use tracing::debug;
 
 mod grammar;
+
 mod inference;
 #[cfg(test)]
 mod tests;
@@ -201,14 +203,15 @@ pub mod semantics {
         }
         pub fn eval_anf_binop(
             &mut self,
+            ctx: &Γ,
             bl: &ANF,
             br: &ANF,
             m: &WeightMap,
             p: &SubstMap,
             op: &dyn Fn(&mut BddManager<AllTable<BddPtr>>, BddPtr, BddPtr) -> BddPtr,
         ) -> Compiled {
-            let l = self.eval_anf(bl, m, p);
-            let r = self.eval_anf(br, m, p);
+            let l = self.eval_anf(ctx, bl, m, p);
+            let r = self.eval_anf(ctx, br, m, p);
             let mut weight_map = l.weight_map.clone();
             weight_map.extend(r.weight_map.clone());
             let mut substitutions = l.substitutions.clone();
@@ -221,7 +224,7 @@ pub mod semantics {
                 ..Default::default()
             }
         }
-        pub fn eval_anf(&mut self, a: &ANF, m: &WeightMap, p: &SubstMap) -> Compiled {
+        pub fn eval_anf(&mut self, ctx: &Γ, a: &ANF, m: &WeightMap, p: &SubstMap) -> Compiled {
             use ANF::*;
             match a {
                 AVar(s) => {
@@ -239,10 +242,10 @@ pub mod semantics {
                     weight_map: m.clone(),
                     ..Default::default()
                 },
-                And(bl, br) => self.eval_anf_binop(bl, br, m, p, &BddManager::and),
-                Or(bl, br) => self.eval_anf_binop(bl, br, m, p, &BddManager::or),
+                And(bl, br) => self.eval_anf_binop(ctx, bl, br, m, p, &BddManager::and),
+                Or(bl, br) => self.eval_anf_binop(ctx, bl, br, m, p, &BddManager::or),
                 Neg(bp) => {
-                    let mut p = self.eval_anf(bp, m, p);
+                    let mut p = self.eval_anf(ctx, bp, m, p);
                     p.dist = p.dist.neg();
                     p
                 }
@@ -277,12 +280,12 @@ pub mod semantics {
             debug!("----------------------------------------");
         }
 
-        pub fn eval_expr(&mut self, e: &Expr, m: &WeightMap, p: &SubstMap) -> Compiled {
+        pub fn eval_expr(&mut self, ctx: &Γ, e: &Expr, m: &WeightMap, p: &SubstMap) -> Compiled {
             use Expr::*;
             match e {
                 EAnf(a) => {
                     debug!(">>>anf: {:?}", a);
-                    let c = self.eval_anf(a, m, p);
+                    let c = self.eval_anf(ctx, a, m, p);
                     Self::debug_compiled("anf", m, p, &c);
                     c
                 }
@@ -293,11 +296,11 @@ pub mod semantics {
                     debug!(">>>let-in {}", s);
                     let (lbl, wm) = self.get_or_create_varlabel(s.clone(), m, p);
                     let id = UniqueId(lbl.value());
-                    let bound = self.eval_expr(ebound, &wm, p);
+                    let bound = self.eval_expr(ctx, ebound, &wm, p);
                     let mut bound_substitutions = bound.substitutions.clone();
                     bound_substitutions.insert(id, bound.dist);
 
-                    let body = self.eval_expr(ebody, &bound.weight_map, &bound_substitutions);
+                    let body = self.eval_expr(ctx, ebody, &bound.weight_map, &bound_substitutions);
 
                     let mut weight_map = bound.weight_map;
                     weight_map.extend(body.weight_map);
@@ -331,9 +334,9 @@ pub mod semantics {
                     c
                 }
                 EIte(cond, t, f) => {
-                    let pred = self.eval_anf(cond, &m.clone(), &p.clone());
-                    let truthy = self.eval_expr(t, &m.clone(), &p.clone());
-                    let falsey = self.eval_expr(f, &m.clone(), &p.clone());
+                    let pred = self.eval_anf(ctx, cond, &m.clone(), &p.clone());
+                    let truthy = self.eval_expr(ctx, t, &m.clone(), &p.clone());
+                    let falsey = self.eval_expr(ctx, f, &m.clone(), &p.clone());
 
                     let dist_l = self.mgr.and(pred.dist, truthy.dist);
                     let dist_r = self.mgr.and(pred.dist.neg(), falsey.dist);
@@ -380,7 +383,7 @@ pub mod semantics {
                 EObserve(a) => {
                     debug!(">>>observe");
 
-                    let comp = self.eval_anf(a, m, p);
+                    let comp = self.eval_anf(ctx, a, m, p);
                     let dist = self.apply_substitutions(comp.dist, p); // FIXME: I don't think there is a need to apply substitutions here, but doing this doesn't hurt
                     let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
                     let var_order = VarOrder::linear_order(max_var as usize);
@@ -404,7 +407,7 @@ pub mod semantics {
                 }
                 ESample(e) => {
                     debug!(">>>sample");
-                    let comp = self.eval_expr(e, m, p);
+                    let comp = self.eval_expr(ctx, e, m, p);
                     if comp.accept != BddPtr::PtrTrue {
                         panic!("sample statement includes observe statement");
                     }
@@ -433,7 +436,12 @@ pub mod semantics {
         match p {
             Program::Body(e) => {
                 debug!("========================================================");
-                env.eval_expr(e, &HashMap::new(), &HashMap::new())
+                env.eval_expr(
+                    &Default::default(),
+                    e,
+                    &Default::default(),
+                    &Default::default(),
+                )
             }
         }
     }
