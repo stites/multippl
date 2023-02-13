@@ -30,6 +30,37 @@ pub mod semantics {
     use rsdd::sample::probability::Probability;
     use std::fmt;
 
+    fn debug_compiled(s: &str, w: &WeightMap, p: &SubstMap, c: &Compiled) {
+        let renderw = |ws: &WeightMap| {
+            ws.iter()
+                .map(|(k, (l, h))| format!("{k}: ({l}, {h})"))
+                .join(", ")
+        };
+        let renderp = |ps: &SubstMap| {
+            ps.iter()
+                .map(|(k, v)| format!("{k}: {}", v.print_bdd()))
+                .join(", ")
+        };
+        let renderdist = |fs: &Vec<Formulas>| {
+            fs.iter()
+                .map(|f| format!("{}", f.dist.print_bdd()))
+                .join(", ")
+        };
+        let renderaccept = |fs: &Vec<Formulas>| {
+            fs.iter()
+                .map(|f| format!("{}", f.accept.print_bdd()))
+                .join(", ")
+        };
+        debug!("{s}, [{}], [{}]", renderw(w), renderp(p));
+        debug!("      \\||/  {}", renderdist(&c.formulas));
+        debug!("      \\||/  {}", renderaccept(&c.formulas));
+        debug!("      \\||/  {}", renderw(&c.weight_map));
+        debug!("      \\||/  {}", renderp(&c.substitutions));
+        debug!("      \\||/  {}", c.probability.as_f64());
+        debug!("      \\||/  {}", c.importance_weight);
+        debug!("----------------------------------------");
+    }
+
     #[derive(Clone, Eq, Hash, PartialEq, Debug)]
     pub enum CompileError {
         AcceptingNonZeroError(String),
@@ -304,37 +335,6 @@ pub mod semantics {
             fin
         }
 
-        fn debug_compiled(s: &str, w: &WeightMap, p: &SubstMap, c: &Compiled) {
-            let renderw = |ws: &WeightMap| {
-                ws.iter()
-                    .map(|(k, (l, h))| format!("{k}: ({l}, {h})"))
-                    .join(", ")
-            };
-            let renderp = |ps: &SubstMap| {
-                ps.iter()
-                    .map(|(k, v)| format!("{k}: {}", v.print_bdd()))
-                    .join(", ")
-            };
-            let renderdist = |fs: &Vec<Formulas>| {
-                fs.iter()
-                    .map(|f| format!("{}", f.dist.print_bdd()))
-                    .join(", ")
-            };
-            let renderaccept = |fs: &Vec<Formulas>| {
-                fs.iter()
-                    .map(|f| format!("{}", f.accept.print_bdd()))
-                    .join(", ")
-            };
-            debug!("{s}, [{}], [{}]", renderw(w), renderp(p));
-            debug!("      \\||/  {}", renderdist(&c.formulas));
-            debug!("      \\||/  {}", renderaccept(&c.formulas));
-            debug!("      \\||/  {}", renderw(&c.weight_map));
-            debug!("      \\||/  {}", renderp(&c.substitutions));
-            debug!("      \\||/  {}", c.probability.as_f64());
-            debug!("      \\||/  {}", c.importance_weight);
-            debug!("----------------------------------------");
-        }
-
         pub fn eval_expr(
             &mut self,
             ctx: &Γ,
@@ -347,21 +347,21 @@ pub mod semantics {
                 EAnf(a) => {
                     debug!(">>>anf: {:?}", a);
                     let c = self.eval_anf(ctx, a, m, p)?;
-                    Self::debug_compiled("anf", m, p, &c);
+                    debug_compiled("anf", m, p, &c);
                     Ok(c)
                 }
                 EFst(a) => {
                     todo!();
                     debug!(">>>fst: {:?}", a);
                     let c = self.eval_anf(ctx, a, m, p)?;
-                    Self::debug_compiled("fst", m, p, &c);
+                    debug_compiled("fst", m, p, &c);
                     Ok(c)
                 }
                 ESnd(a) => {
                     todo!();
                     debug!(">>>snd: {:?}", a);
                     let c = self.eval_anf(ctx, a, m, p)?;
-                    Self::debug_compiled("snd", m, p, &c);
+                    debug_compiled("snd", m, p, &c);
                     Ok(c)
                 }
                 EProd(al, ar) => {
@@ -369,7 +369,7 @@ pub mod semantics {
                     // let mut left = self.eval_anf(ctx, al, m, p)?;
                     // let right = self.eval_anf(ctx, ar, m, p)?;
 
-                    // Self::debug_compiled("prod", m, p, &c);
+                    // debug_compiled("prod", m, p, &c);
                     // Ok(c)
                     todo!()
                 }
@@ -413,7 +413,7 @@ pub mod semantics {
                     //     probability: bound.probability * body.probability,
                     //     importance_weight: bound.importance_weight * body.importance_weight,
                     // };
-                    // Self::debug_compiled(&format!("let-in {}", s), m, p, &c);
+                    // debug_compiled(&format!("let-in {}", s), m, p, &c);
                     // Ok(c)
                 }
                 EIte(cond, t, f) => {
@@ -444,7 +444,7 @@ pub mod semantics {
                     //     probability,
                     //     importance_weight,
                     // };
-                    // Self::debug_compiled("ite", m, p, &c);
+                    // debug_compiled("ite", m, p, &c);
                     // Ok(c)
                 }
                 EFlip(param) => {
@@ -464,7 +464,7 @@ pub mod semantics {
                         probability: Probability::new(1.0),
                         importance_weight: 1.0,
                     };
-                    Self::debug_compiled("flip {param}", m, p, &c);
+                    debug_compiled("flip {param}", m, p, &c);
                     Ok(c)
                 }
                 EObserve(a) => {
@@ -494,7 +494,7 @@ pub mod semantics {
                     //     probability: Probability::new(1.0),
                     //     importance_weight: w as f64,
                     // };
-                    // Self::debug_compiled("observe", m, p, &c);
+                    // debug_compiled("observe", m, p, &c);
                     // Ok(c)
                 }
                 ESample(e) => {
@@ -524,7 +524,7 @@ pub mod semantics {
                     //     probability: q,
                     //     importance_weight: 1.0,
                     // };
-                    // Self::debug_compiled("sample", m, p, &c);
+                    // debug_compiled("sample", m, p, &c);
                     // Ok(c)
                 }
             }
