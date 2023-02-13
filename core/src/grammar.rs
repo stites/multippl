@@ -14,7 +14,7 @@ pub enum Val {
 }
 #[derive(Debug, Clone, PartialEq)]
 pub enum ANF {
-    AVar(String),
+    AVar(String, Box<Ty>), // FIXME
     AVal(Val),
 
     // TODO: not sure this is where I should add booleans, but it makes
@@ -27,14 +27,14 @@ pub enum ANF {
 pub enum Expr {
     EAnf(Box<ANF>),
 
-    EFst(Box<ANF>),
-    ESnd(Box<ANF>),
-    EProd(Box<ANF>, Box<ANF>),
+    EFst(Box<ANF>, Box<Ty>),
+    ESnd(Box<ANF>, Box<Ty>),
+    EProd(Box<ANF>, Box<ANF>, Box<Ty>),
 
     // TODO Ignore function calls for now
     // EApp(String, Box<ANF>),
-    ELetIn(String, Box<Expr>, Box<Expr>),
-    EIte(Box<ANF>, Box<Expr>, Box<Expr>),
+    ELetIn(String, Box<Ty>, Box<Expr>, Box<Expr>, Box<Ty>),
+    EIte(Box<ANF>, Box<Expr>, Box<Expr>, Box<Ty>),
     EFlip(f64),
     EObserve(Box<ANF>),
     ESample(Box<Expr>),
@@ -76,15 +76,18 @@ impl Expr {
         use Expr::*;
         match self {
             ESample(e) => *e.clone(),
-            ELetIn(s, x, y) => ELetIn(
+            ELetIn(s, tx, x, y, ty) => ELetIn(
                 s.clone(),
+                tx.clone(),
                 Box::new(x.strip_samples()),
                 Box::new(y.strip_samples()),
+                ty.clone(),
             ),
-            EIte(p, x, y) => EIte(
+            EIte(p, x, y, ty) => EIte(
                 p.clone(),
                 Box::new(x.strip_samples()),
                 Box::new(y.strip_samples()),
+                ty.clone(),
             ),
             e => e.clone(),
         }
@@ -106,129 +109,147 @@ impl Program {
     }
 }
 
-// macros
-#[macro_export]
-macro_rules! anf {
-    ( $x:expr ) => {{
-        Expr::EAnf(Box::new($x))
-    }};
-}
-#[macro_export]
-macro_rules! val {
-    ( $x:ident ) => {
-        anf!(ANF::AVal(Val::Bool($x)))
-    };
-    ( $y:literal, $( $x:literal ),+ ) => {{
-        let mut fin = Box::new(Val::Bool($y));
-        $(
-            fin = Box::new(ANF::Prod(fin, Box::new(Val::Bool($x))));
-        )+
-        anf!(ANF::AVal(*fin))
-    }};
-}
-#[macro_export]
-macro_rules! var {
-    ( $x:literal ) => {
-        anf!(ANF::AVar($x.to_string()))
-    };
-    ( $y:literal, $( $x:literal ),+ ) => {{
-        let mut fin = anf!(ANF::AVar($y.to_string()));
-        $(
-            fin = Box::new(Expr::EProd(fin, Box::new(anf!(ANF::AVar($x.to_string())))));
-        )+
-       *fin
-    }};
-}
+// // macros
+// #[macro_export]
+// macro_rules! anf {
+//     ( $x:expr ) => {{
+//         Expr::EAnf(Box::new($x))
+//     }};
+// }
+// #[macro_export]
+// macro_rules! val {
+//     ( $x:ident ) => {
+//         anf!(ANF::AVal(Val::Bool($x)))
+//     };
+//     ( $y:literal, $( $x:literal ),+ ) => {{
+//         let mut fin = Box::new(Val::Bool($y));
+//         $(
+//             fin = Box::new(ANF::Prod(fin, Box::new(Val::Bool($x))));
+//         )+
+//         anf!(ANF::AVal(*fin))
+//     }};
+// }
+// #[macro_export]
+// macro_rules! var {
+//     ( $x:literal ) => {
+//         anf!(ANF::AVar($x.to_string(), Box::new(Ty::Bool)))
+//     };
+//     ( $y:literal, $( $x:literal ),+ ) => {{
+//         let mut fin = anf!(ANF::AVar($y.to_string()));
+//         $(
+//             fin = Box::new(Expr::EProd(fin, Box::new(anf!(ANF::AVar($x.to_string(), Box::new(Ty::Bool))))));
+//         )+
+//        *fin
+//     }};
+// }
 
-#[macro_export]
-macro_rules! or {
-    ( $y:literal, $( $x:literal ),+ ) => {{
-        let mut fin = Box::new(ANF::AVar($y.to_string()));
-        $(
-            fin = Box::new(ANF::Or(fin, Box::new(ANF::AVar($x.to_string()))));
-        )+
-        anf!(*fin)
-    }};
-}
-#[macro_export]
-macro_rules! and {
-    ( $y:literal, $( $x:literal ),+ ) => {{
-        let mut fin = Box::new(ANF::AVar($y.to_string()));
-        $(
-            fin = Box::new(ANF::And(fin, Box::new(ANF::AVar($x.to_string()))));
-        )+
-        anf!(*fin)
-    }};
-}
+// #[macro_export]
+// macro_rules! or {
+//     ( $y:literal, $( $x:literal ),+ ) => {{
+//         let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(Ty::Bool)));
+//         $(
+//             fin = Box::new(ANF::Or(fin, Box::new(ANF::AVar($x.to_string(), Box::new(Ty::Bool)))));
+//         )+
+//         anf!(*fin)
+//     }};
+// }
+// #[macro_export]
+// macro_rules! and {
+//     ( $y:literal, $( $x:literal ),+ ) => {{
+//         let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(Ty::Bool)));
+//         $(
+//             fin = Box::new(ANF::And(fin, Box::new(ANF::AVar($x.to_string(), Box::new(Ty::Bool)))));
+//         )+
+//         anf!(*fin)
+//     }};
+// }
 
-#[macro_export]
-macro_rules! sample {
-    ( $x:expr ) => {{
-        Expr::ESample(Box::new($x))
-    }};
-}
-#[macro_export]
-macro_rules! observe {
-    ( $x:expr ) => {{
-        if let Expr::EAnf(a) = $x {
-            Expr::EObserve(a)
-        } else {
-            panic!("passed in a non-anf expression!");
-        }
-    }};
-}
-#[macro_export]
-macro_rules! flip {
-    ( $num:literal / $denom:literal) => {{
-        Expr::EFlip($num as f64 / $denom as f64)
-    }};
-}
-#[macro_export]
-macro_rules! lets {
-    ( $( $var:literal := $bound:expr );+ ;...? $body:expr ) => {
-        {
-            let mut fin = Box::new($body.clone());
-            let mut bindees = vec![];
-            $(
-                debug!("let {} = {:?};", $var.clone(), $bound.clone());
-                bindees.push(($var, $bound));
-            )+
-            debug!("...? {:?}", $body);
-            for (v, e) in bindees.iter().rev() {
-                fin = Box::new(Expr::ELetIn(v.to_string(), Box::new(e.clone()), fin));
+// #[macro_export]
+// macro_rules! bool {
+//     ( $y:literal && $( $x:literal )&&+ ) => {{
+//         let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(Ty::Bool)));
+//         $(
+//             fin = Box::new(ANF::And(fin, Box::new(ANF::AVar($x.to_string(), Box::new(Ty::Bool)))));
+//         )+
+//         anf!(*fin)
+//     }};
+//     ( $y:literal || $( $x:literal )||+ ) => {{
+//         let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(Ty::Bool)));
+//         $(
+//             fin = Box::new(ANF::Or(fin, Box::new(ANF::AVar($x.to_string(), Box::new(Ty::Bool)))));
+//         )+
+//         anf!(*fin)
+//     }};
+// }
 
-            }
-            *fin
-        }
-    };
-}
-#[macro_export]
-macro_rules! ite {
-    ( if ( $pred:expr ) then { $true:expr } else { $false:expr } ) => {
-        if let Expr::EAnf(a) = $pred {
-            Expr::EIte(a, Box::new($true), Box::new($false))
-        } else {
-            panic!("passed in a non-anf expression as predicate!");
-        }
-    };
-    ( ( $pred:expr ) ? ( $true:expr ) : ( $false:expr ) ) => {
-        if let Expr::EAnf(a) = $pred {
-            Expr::EIte(a, Box::new($true), Box::new($false))
-        } else {
-            panic!("passed in a non-anf expression as predicate!");
-        }
-    };
-}
+// #[macro_export]
+// macro_rules! sample {
+//     ( $x:expr ) => {{
+//         Expr::ESample(Box::new($x))
+//     }};
+// }
+// #[macro_export]
+// macro_rules! observe {
+//     ( $x:expr ) => {{
+//         if let Expr::EAnf(a) = $x {
+//             Expr::EObserve(a)
+//         } else {
+//             panic!("passed in a non-anf expression!");
+//         }
+//     }};
+// }
+// #[macro_export]
+// macro_rules! flip {
+//     ( $num:literal / $denom:literal) => {{
+//         Expr::EFlip($num as f64 / $denom as f64)
+//     }};
+// }
+// #[macro_export]
+// macro_rules! lets {
+//     ( $( $var:literal := $bound:expr );+ ;...? $body:expr ; $ty:expr ) => {
+//         {
+//             let mut fin = Box::new($body.clone());
+//             let mut bindees = vec![];
+//             $(
+//                 debug!("let {} = {:?};", $var.clone(), $bound.clone());
+//                 bindees.push(($var, $bound));
+//             )+
+//             debug!("...? {:?}", $body);
+//             for (v, e) in bindees.iter().rev() {
+//                 fin = Box::new(Expr::ELetIn(v.to_string(), Box::new(e.clone()), fin));
 
-#[macro_export]
-macro_rules! program {
-    ( $x:expr ) => {
-        Program::Body($x)
-    };
-}
-#[macro_export]
-macro_rules! run {
-    ( $( $var:literal := $bound:expr );+ ;...? $body:expr ) => {
-        program!($( $var:literal := $bound:expr );+ ;...? $body:expr)
-    };
-}
+//             }
+//             *fin
+//         }
+//     };
+// }
+// #[macro_export]
+// macro_rules! ite {
+//     ( if ( $pred:expr ) then { $true:expr } else { $false:expr } ) => {
+//         if let Expr::EAnf(a) = $pred {
+//             Expr::EIte(a, Box::new($true), Box::new($false))
+//         } else {
+//             panic!("passed in a non-anf expression as predicate!");
+//         }
+//     };
+//     ( ( $pred:expr ) ? ( $true:expr ) : ( $false:expr ) ) => {
+//         if let Expr::EAnf(a) = $pred {
+//             Expr::EIte(a, Box::new($true), Box::new($false))
+//         } else {
+//             panic!("passed in a non-anf expression as predicate!");
+//         }
+//     };
+// }
+
+// #[macro_export]
+// macro_rules! program {
+//     ( $x:expr ) => {
+//         Program::Body($x)
+//     };
+// }
+// #[macro_export]
+// macro_rules! run {
+//     ( $( $var:literal := $bound:expr );+ ;...? $body:expr ) => {
+//         program!($( $var:literal := $bound:expr );+ ;...? $body:expr)
+//     };
+// }

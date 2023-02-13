@@ -294,7 +294,7 @@ pub mod semantics {
         ) -> Result<Compiled, CompileError> {
             use ANF::*;
             match a {
-                AVar(s) => {
+                AVar(s, ty) => {
                     let (lbl, wm) = self.get_or_create_varlabel(s.to_string(), m, p);
                     Ok(Compiled {
                         substitutions: p.clone(),
@@ -350,21 +350,21 @@ pub mod semantics {
                     debug_compiled("anf", m, p, &c);
                     Ok(c)
                 }
-                EFst(a) => {
-                    todo!();
-                    debug!(">>>fst: {:?}", a);
-                    let c = self.eval_anf(ctx, a, m, p)?;
-                    debug_compiled("fst", m, p, &c);
-                    Ok(c)
+                EFst(a, ty) => {
+                    todo!()
+                    // debug!(">>>fst: {:?}", a);
+                    // let c = self.eval_anf(ctx, a, m, p)?;
+                    // debug_compiled("fst", m, p, &c);
+                    // Ok(c)
                 }
-                ESnd(a) => {
-                    todo!();
-                    debug!(">>>snd: {:?}", a);
-                    let c = self.eval_anf(ctx, a, m, p)?;
-                    debug_compiled("snd", m, p, &c);
-                    Ok(c)
+                ESnd(a, ty) => {
+                    todo!()
+                    // debug!(">>>snd: {:?}", a);
+                    // let c = self.eval_anf(ctx, a, m, p)?;
+                    // debug_compiled("snd", m, p, &c);
+                    // Ok(c)
                 }
-                EProd(al, ar) => {
+                EProd(al, ar, ty) => {
                     // debug!(">>>prod: {:?} {:?}", al, ar);
                     // let mut left = self.eval_anf(ctx, al, m, p)?;
                     // let right = self.eval_anf(ctx, ar, m, p)?;
@@ -373,7 +373,7 @@ pub mod semantics {
                     // Ok(c)
                     todo!()
                 }
-                ELetIn(s, ebound, ebody) => {
+                ELetIn(s, tbound, ebound, ebody, tbody) => {
                     todo!()
                     // debug!(">>>let-in {}", s);
                     // let (lbl, wm) = self.get_or_create_varlabel(s.clone(), m, p);
@@ -416,7 +416,7 @@ pub mod semantics {
                     // debug_compiled(&format!("let-in {}", s), m, p, &c);
                     // Ok(c)
                 }
-                EIte(cond, t, f) => {
+                EIte(cond, t, f, ty) => {
                     todo!()
                     // let pred = self.eval_anf(ctx, cond, &m.clone(), &p.clone())?;
                     // let truthy = self.eval_expr(ctx, t, &m.clone(), &p.clone())?;
