@@ -6,7 +6,7 @@ use tracing_test::traced_test;
 
 fn check_inference(
     i: &str,
-    inf: &dyn Fn(&mut Env, &Program) -> f64,
+    inf: &dyn Fn(&mut Env, &Program) -> Vec<f64>,
     precision: f64,
     s: &str,
     f: f64,
@@ -14,7 +14,9 @@ fn check_inference(
 ) {
     let mut env_args = EnvArgs::default_args(None);
     let mut env = Env::from_args(&mut env_args);
-    let pr = inf(&mut env, p);
+    let prs = inf(&mut env, p);
+    assert!(prs.len() == 1, "check_inference assumes one return value");
+    let pr = prs[0];
     let ret = (f - pr).abs() < precision;
     assert!(
         ret,
@@ -38,7 +40,9 @@ pub fn check_approx_seeded(s: &str, f: f64, p: &Program, n: usize, seeds: &Vec<u
     // check "perfect seeds" -- vec![1, 7]
     let i = "approx";
     let precision = 0.01;
-    let pr = importance_weighting_inf_seeded(seeds.clone(), n, p);
+    let prs = importance_weighting_inf_seeded(seeds.clone(), n, p);
+    assert!(prs.len() == 1, "check_inference assumes one return value");
+    let pr = prs[0];
     let ret = (f - pr).abs() < precision;
     assert!(
         ret,

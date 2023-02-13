@@ -30,6 +30,16 @@ pub mod semantics {
     use rsdd::sample::probability::Probability;
     use std::fmt;
 
+    #[derive(Clone, Eq, Hash, PartialEq, Debug)]
+    pub enum CompileError {
+        AcceptingNonZeroError(String),
+        Todo(),
+        TypeError(String),
+        Generic(String),
+        SemanticsError(String),
+    }
+    use CompileError::*;
+
     #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
     pub struct UniqueId(u64);
 
@@ -39,8 +49,8 @@ pub mod semantics {
         }
     }
 
-    type WeightMap = HashMap<UniqueId, (f64, f64)>;
-    type SubstMap = HashMap<UniqueId, BddPtr>;
+    pub type WeightMap = HashMap<UniqueId, (f64, f64)>;
+    pub type SubstMap = HashMap<UniqueId, BddPtr>;
 
     fn const_weight() -> (f64, f64) {
         (0.5, 0.5)
@@ -59,9 +69,14 @@ pub mod semantics {
     }
 
     #[derive(Debug, Clone)]
-    pub struct Compiled {
+    pub struct Formulas {
         pub dist: BddPtr,
         pub accept: BddPtr,
+    }
+
+    #[derive(Debug, Clone)]
+    pub struct Compiled {
+        pub formulas: Vec<Formulas>,
         pub weight_map: WeightMap, // must be a hashmap as sample will collapse variables
         pub substitutions: SubstMap,
         pub probability: Probability,
@@ -72,13 +87,12 @@ pub mod semantics {
             self.probability.as_f64() * self.importance_weight
                 + o.probability.as_f64() * o.importance_weight
         }
-    }
-
-    impl Default for Compiled {
-        fn default() -> Compiled {
+        fn default(dist: BddPtr, accept: BddPtr) -> Compiled {
+            Compiled::default_vec(vec![Formulas { dist, accept }])
+        }
+        fn default_vec(formulas: Vec<Formulas>) -> Compiled {
             Compiled {
-                dist: BddPtr::PtrTrue,
-                accept: BddPtr::PtrTrue,
+                formulas,
                 weight_map: HashMap::new(),
                 substitutions: HashMap::new(),
                 probability: Probability::new(1.0),
@@ -209,45 +223,76 @@ pub mod semantics {
             m: &WeightMap,
             p: &SubstMap,
             op: &dyn Fn(&mut BddManager<AllTable<BddPtr>>, BddPtr, BddPtr) -> BddPtr,
-        ) -> Compiled {
-            let l = self.eval_anf(ctx, bl, m, p);
-            let r = self.eval_anf(ctx, br, m, p);
+        ) -> Result<Compiled, CompileError> {
+            let l = self.eval_anf(ctx, bl, m, p)?;
+            let r = self.eval_anf(ctx, br, m, p)?;
             let mut weight_map = l.weight_map.clone();
             weight_map.extend(r.weight_map.clone());
             let mut substitutions = l.substitutions.clone();
             substitutions.extend(r.substitutions.clone());
-            let dist = op(self.mgr, l.dist, r.dist);
-            Compiled {
-                dist,
-                weight_map,
-                substitutions,
-                ..Default::default()
+            if l.formulas.len() != r.formulas.len() {
+                return Err(SemanticsError(format!(
+                    "impossible! compiled {} formulas on the left and {} formulas on the right.",
+                    l.formulas.len(),
+                    r.formulas.len()
+                )));
+            } else {
+                let formulas = izip!(l.formulas, r.formulas)
+                    .map(|(l, r)| {
+                        assert!(l.accept == BddPtr::PtrTrue && r.accept == BddPtr::PtrTrue);
+                        Formulas {
+                            dist: op(self.mgr, l.dist, r.dist),
+                            accept: BddPtr::PtrTrue,
+                        }
+                    })
+                    .collect_vec();
+                Ok(Compiled {
+                    weight_map,
+                    substitutions,
+                    ..Compiled::default_vec(formulas)
+                })
             }
         }
-        pub fn eval_anf(&mut self, ctx: &Γ, a: &ANF, m: &WeightMap, p: &SubstMap) -> Compiled {
+
+        pub fn eval_anf(
+            &mut self,
+            ctx: &Γ,
+            a: &ANF,
+            m: &WeightMap,
+            p: &SubstMap,
+        ) -> Result<Compiled, CompileError> {
             use ANF::*;
             match a {
                 AVar(s) => {
                     let (lbl, wm) = self.get_or_create_varlabel(s.to_string(), m, p);
-                    Compiled {
+                    Ok(Compiled {
                         substitutions: p.clone(),
-                        dist: self.mgr.var(lbl, true),
                         weight_map: wm,
-                        ..Default::default()
-                    }
+                        ..Compiled::default(self.mgr.var(lbl, true), BddPtr::PtrTrue)
+                    })
                 }
-                AVal(Val::Bool(b)) => Compiled {
-                    dist: BddPtr::from_bool(*b),
+                AVal(Val::Bool(b)) => Ok(Compiled {
                     substitutions: p.clone(),
                     weight_map: m.clone(),
-                    ..Default::default()
-                },
+                    ..Compiled::default(BddPtr::from_bool(*b), BddPtr::PtrTrue)
+                }),
+                AVal(Val::Prod(pl, pr)) => Err(CompileError::Todo()),
                 And(bl, br) => self.eval_anf_binop(ctx, bl, br, m, p, &BddManager::and),
                 Or(bl, br) => self.eval_anf_binop(ctx, bl, br, m, p, &BddManager::or),
                 Neg(bp) => {
-                    let mut p = self.eval_anf(ctx, bp, m, p);
-                    p.dist = p.dist.neg();
-                    p
+                    let mut p = self.eval_anf(ctx, bp, m, p)?;
+                    // FIXME negating a tuple? seems weird!!!!
+
+                    p.formulas = p
+                        .formulas
+                        .into_iter()
+                        .map(|f| Formulas {
+                            dist: f.dist.neg(),
+                            accept: f.accept,
+                        })
+                        .collect_vec();
+
+                    Ok(p)
                 }
             }
         }
@@ -270,9 +315,19 @@ pub mod semantics {
                     .map(|(k, v)| format!("{k}: {}", v.print_bdd()))
                     .join(", ")
             };
+            let renderdist = |fs: &Vec<Formulas>| {
+                fs.iter()
+                    .map(|f| format!("{}", f.dist.print_bdd()))
+                    .join(", ")
+            };
+            let renderaccept = |fs: &Vec<Formulas>| {
+                fs.iter()
+                    .map(|f| format!("{}", f.accept.print_bdd()))
+                    .join(", ")
+            };
             debug!("{s}, [{}], [{}]", renderw(w), renderp(p));
-            debug!("      \\||/  {}", c.dist.print_bdd());
-            debug!("      \\||/  {}", c.accept.print_bdd());
+            debug!("      \\||/  {}", renderdist(&c.formulas));
+            debug!("      \\||/  {}", renderaccept(&c.formulas));
             debug!("      \\||/  {}", renderw(&c.weight_map));
             debug!("      \\||/  {}", renderp(&c.substitutions));
             debug!("      \\||/  {}", c.probability.as_f64());
@@ -280,159 +335,202 @@ pub mod semantics {
             debug!("----------------------------------------");
         }
 
-        pub fn eval_expr(&mut self, ctx: &Γ, e: &Expr, m: &WeightMap, p: &SubstMap) -> Compiled {
+        pub fn eval_expr(
+            &mut self,
+            ctx: &Γ,
+            e: &Expr,
+            m: &WeightMap,
+            p: &SubstMap,
+        ) -> Result<Compiled, CompileError> {
             use Expr::*;
             match e {
                 EAnf(a) => {
                     debug!(">>>anf: {:?}", a);
-                    let c = self.eval_anf(ctx, a, m, p);
+                    let c = self.eval_anf(ctx, a, m, p)?;
                     Self::debug_compiled("anf", m, p, &c);
-                    c
+                    Ok(c)
                 }
-                // EFst(a) => self.eval_anf(a, m, p),
-                // ESnd(a) => self.eval_anf(a, m, p),
-                // EProd(al,ar) => self.eval_anf(a, m, p),
+                EFst(a) => {
+                    todo!();
+                    debug!(">>>fst: {:?}", a);
+                    let c = self.eval_anf(ctx, a, m, p)?;
+                    Self::debug_compiled("fst", m, p, &c);
+                    Ok(c)
+                }
+                ESnd(a) => {
+                    todo!();
+                    debug!(">>>snd: {:?}", a);
+                    let c = self.eval_anf(ctx, a, m, p)?;
+                    Self::debug_compiled("snd", m, p, &c);
+                    Ok(c)
+                }
+                EProd(al, ar) => {
+                    // debug!(">>>prod: {:?} {:?}", al, ar);
+                    // let mut left = self.eval_anf(ctx, al, m, p)?;
+                    // let right = self.eval_anf(ctx, ar, m, p)?;
+
+                    // Self::debug_compiled("prod", m, p, &c);
+                    // Ok(c)
+                    todo!()
+                }
                 ELetIn(s, ebound, ebody) => {
-                    debug!(">>>let-in {}", s);
-                    let (lbl, wm) = self.get_or_create_varlabel(s.clone(), m, p);
-                    let id = UniqueId(lbl.value());
-                    let bound = self.eval_expr(ctx, ebound, &wm, p);
-                    let mut bound_substitutions = bound.substitutions.clone();
-                    bound_substitutions.insert(id, bound.dist);
+                    todo!()
+                    // debug!(">>>let-in {}", s);
+                    // let (lbl, wm) = self.get_or_create_varlabel(s.clone(), m, p);
+                    // let id = UniqueId(lbl.value());
+                    // let bound = self.eval_expr(ctx, ebound, &wm, p)?;
+                    // let mut bound_substitutions = bound.substitutions.clone();
+                    // bound_substitutions.insert(id, bound.dist);
 
-                    let body = self.eval_expr(ctx, ebody, &bound.weight_map, &bound_substitutions);
+                    // let body =
+                    //     self.eval_expr(ctx, ebody, &bound.weight_map, &bound_substitutions)?;
 
-                    let mut weight_map = bound.weight_map;
-                    weight_map.extend(body.weight_map);
+                    // let mut weight_map = bound.weight_map;
+                    // weight_map.extend(body.weight_map);
 
-                    let substitutions = body.substitutions.clone();
-                    // substitutions.extend(body.substitutions);
+                    // let substitutions = body.substitutions.clone();
+                    // // substitutions.extend(body.substitutions);
 
-                    let dist = self.apply_substitutions(body.dist, &substitutions);
-                    // NOTE: applying all substituting will normalize distributions in sample too much. This will cause
-                    // samples to normalize in a way where we will fail to drop irrelevant structure
-                    // let accept = self.mgr.and(bound.accept, body.accept);
-                    // let accept = self.apply_substitutions(accept, &substitutions);
-                    let accept = self.mgr.compose(body.accept, lbl, bound.accept);
-                    if ebound.is_sample() {
-                        match bound.dist {
-                            BddPtr::PtrTrue => self.samples.insert(id, true),
-                            BddPtr::PtrFalse => self.samples.insert(id, false),
-                            _ => panic!("impossible"),
-                        };
-                    }
+                    // let dist = self.apply_substitutions(body.dist, &substitutions);
+                    // // NOTE: applying all substituting will normalize distributions in sample too much. This will cause
+                    // // samples to normalize in a way where we will fail to drop irrelevant structure
+                    // // let accept = self.mgr.and(bound.accept, body.accept);
+                    // // let accept = self.apply_substitutions(accept, &substitutions);
+                    // let accept = self.mgr.compose(body.accept, lbl, bound.accept);
+                    // if ebound.is_sample() {
+                    //     match bound.dist {
+                    //         BddPtr::PtrTrue => self.samples.insert(id, true),
+                    //         BddPtr::PtrFalse => self.samples.insert(id, false),
+                    //         _ => panic!("impossible"),
+                    //     };
+                    // }
 
-                    let c = Compiled {
-                        dist, // : self.mgr.compose(body.dist, lbl, bound.dist),
-                        accept,
-                        weight_map,
-                        substitutions,
-                        probability: bound.probability * body.probability,
-                        importance_weight: bound.importance_weight * body.importance_weight,
-                    };
-                    Self::debug_compiled(&format!("let-in {}", s), m, p, &c);
-                    c
+                    // let c = Compiled {
+                    //     dist, // : self.mgr.compose(body.dist, lbl, bound.dist),
+                    //     accept,
+                    //     weight_map,
+                    //     substitutions,
+                    //     probability: bound.probability * body.probability,
+                    //     importance_weight: bound.importance_weight * body.importance_weight,
+                    // };
+                    // Self::debug_compiled(&format!("let-in {}", s), m, p, &c);
+                    // Ok(c)
                 }
                 EIte(cond, t, f) => {
-                    let pred = self.eval_anf(ctx, cond, &m.clone(), &p.clone());
-                    let truthy = self.eval_expr(ctx, t, &m.clone(), &p.clone());
-                    let falsey = self.eval_expr(ctx, f, &m.clone(), &p.clone());
+                    todo!()
+                    // let pred = self.eval_anf(ctx, cond, &m.clone(), &p.clone())?;
+                    // let truthy = self.eval_expr(ctx, t, &m.clone(), &p.clone())?;
+                    // let falsey = self.eval_expr(ctx, f, &m.clone(), &p.clone())?;
 
-                    let dist_l = self.mgr.and(pred.dist, truthy.dist);
-                    let dist_r = self.mgr.and(pred.dist.neg(), falsey.dist);
-                    let dist = self.mgr.or(dist_l, dist_r);
+                    // let dist_l = self.mgr.and(pred.dist, truthy.dist);
+                    // let dist_r = self.mgr.and(pred.dist.neg(), falsey.dist);
+                    // let dist = self.mgr.or(dist_l, dist_r);
 
-                    let accept_l = self.mgr.and(pred.accept, truthy.accept);
-                    let accept_r = self.mgr.and(pred.accept.neg(), falsey.accept);
-                    let accept = self.mgr.or(accept_l, accept_r);
+                    // let accept_l = self.mgr.and(pred.accept, truthy.accept);
+                    // let accept_r = self.mgr.and(pred.accept.neg(), falsey.accept);
+                    // let accept = self.mgr.or(accept_l, accept_r);
 
-                    let mut weight_map = truthy.weight_map.clone();
-                    weight_map.extend(falsey.weight_map.clone());
-                    let mut substitutions = truthy.substitutions.clone();
-                    substitutions.extend(falsey.substitutions.clone());
-                    let probability = truthy.probability + falsey.probability;
-                    let importance_weight = truthy.convex_combination(&falsey);
-                    let c = Compiled {
-                        dist,
-                        accept,
-                        weight_map,
-                        substitutions,
-                        probability,
-                        importance_weight,
-                    };
-                    Self::debug_compiled("ite", m, p, &c);
-                    c
+                    // let mut weight_map = truthy.weight_map.clone();
+                    // weight_map.extend(falsey.weight_map.clone());
+                    // let mut substitutions = truthy.substitutions.clone();
+                    // substitutions.extend(falsey.substitutions.clone());
+                    // let probability = truthy.probability + falsey.probability;
+                    // let importance_weight = truthy.convex_combination(&falsey);
+                    // let c = Compiled {
+                    //     dist,
+                    //     accept,
+                    //     weight_map,
+                    //     substitutions,
+                    //     probability,
+                    //     importance_weight,
+                    // };
+                    // Self::debug_compiled("ite", m, p, &c);
+                    // Ok(c)
                 }
                 EFlip(param) => {
                     debug!(">>>flip {param}");
                     let sym = self.fresh();
                     let mut weight_map = m.clone();
                     let lbl = VarLabel::new(sym.0);
+
                     weight_map.insert(sym, (1.0 - *param, *param));
                     let c = Compiled {
-                        dist: self.mgr.var(lbl, true),
-                        accept: BddPtr::PtrTrue,
+                        formulas: vec![Formulas {
+                            dist: self.mgr.var(lbl, true),
+                            accept: BddPtr::PtrTrue,
+                        }],
                         weight_map,
                         substitutions: p.clone(),
                         probability: Probability::new(1.0),
                         importance_weight: 1.0,
                     };
                     Self::debug_compiled("flip {param}", m, p, &c);
-                    c
+                    Ok(c)
                 }
                 EObserve(a) => {
                     debug!(">>>observe");
+                    todo!()
 
-                    let comp = self.eval_anf(ctx, a, m, p);
-                    let dist = self.apply_substitutions(comp.dist, p); // FIXME: I don't think there is a need to apply substitutions here, but doing this doesn't hurt
-                    let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
-                    let var_order = VarOrder::linear_order(max_var as usize);
-                    let w = dist.wmc(&var_order, &wmc_params);
+                    // let comp = self.eval_anf(ctx, a, m, p)?;
+                    // let formulas = comp
+                    //     .formulas
+                    //     .iter()
+                    //     .map(|f| {
+                    //         let dist = self.apply_substitutions(f.dist, p); // FIXME: I don't think there is a need to apply substitutions here, but doing this doesn't hurt
+                    //         let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
+                    //         let var_order = VarOrder::linear_order(max_var as usize);
+                    //         let w = dist.wmc(&var_order, &wmc_params);
+                    //         Formulas {
+                    //             dist: BddPtr::PtrTrue,
+                    //             accept: dist,
+                    //         }
+                    //     })
+                    //     .collect_vec();
 
-                    // let accept = self.apply_substitutions(comp.accept, p); // this is always true
-                    // let a = self.mgr.and(dist, accept).wmc(&self.var_order, &weight_map_to_params(m));
-                    // let z = accept.wmc(&self.var_order, &weight_map_to_params(m));
-                    // let w = a / z;
-
-                    let c = Compiled {
-                        dist: BddPtr::PtrTrue,
-                        accept: dist,
-                        weight_map: m.clone(),
-                        substitutions: p.clone(),
-                        probability: Probability::new(1.0),
-                        importance_weight: w as f64,
-                    };
-                    Self::debug_compiled("observe", m, p, &c);
-                    c
+                    // let c = Compiled {
+                    //     formulas,
+                    //     weight_map: m.clone(),
+                    //     substitutions: p.clone(),
+                    //     probability: Probability::new(1.0),
+                    //     importance_weight: w as f64,
+                    // };
+                    // Self::debug_compiled("observe", m, p, &c);
+                    // Ok(c)
                 }
                 ESample(e) => {
-                    debug!(">>>sample");
-                    let comp = self.eval_expr(ctx, e, m, p);
-                    if comp.accept != BddPtr::PtrTrue {
-                        panic!("sample statement includes observe statement");
-                    }
-                    let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
-                    let var_order = VarOrder::linear_order(max_var as usize);
-                    let theta_q = comp.dist.wmc(&var_order, &wmc_params) as f64;
-                    let bern = Bernoulli::new(theta_q).unwrap();
-                    let sample = bern.sample(self.rng);
-                    let q = Probability::new(if sample { theta_q } else { 1.0 - theta_q });
+                    // debug!(">>>sample");
+                    // let comp = self.eval_expr(ctx, e, m, p)?;
 
-                    let c = Compiled {
-                        dist: BddPtr::from_bool(sample),
-                        accept: self.mgr.iff(comp.dist, BddPtr::PtrTrue),
-                        weight_map: comp.weight_map.clone(),
-                        substitutions: p.clone(),
-                        probability: q,
-                        importance_weight: 1.0,
-                    };
-                    Self::debug_compiled("sample", m, p, &c);
-                    c
+                    // if comp.formulas.iter().any(|f| f.accept != BddPtr::PtrTrue) {
+                    //     return Err(SemanticsError(
+                    //         "impossible! Sample statement includes observe statement.".to_string(),
+                    //     ));
+                    // }
+                    // let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
+                    // let var_order = VarOrder::linear_order(max_var as usize);
+                    // comp.formulas.iter().map(|f| {
+                    //     let theta_q = f.dist.wmc(&var_order, &wmc_params) as f64;
+                    //     let bern = Bernoulli::new(theta_q).unwrap();
+                    //     let sample = bern.sample(self.rng);
+                    //     let q = Probability::new(if sample { theta_q } else { 1.0 - theta_q });
+                    // });
+
+                    todo!()
+                    // let c = Compiled {
+                    //     dist: BddPtr::from_bool(sample),
+                    //     accept: self.mgr.iff(comp.dist, BddPtr::PtrTrue),
+                    //     weight_map: comp.weight_map.clone(),
+                    //     substitutions: p.clone(),
+                    //     probability: q,
+                    //     importance_weight: 1.0,
+                    // };
+                    // Self::debug_compiled("sample", m, p, &c);
+                    // Ok(c)
                 }
             }
         }
     }
-    pub fn compile(env: &mut Env, p: &Program) -> Compiled {
+    pub fn compile(env: &mut Env, p: &Program) -> Result<Compiled, CompileError> {
         match p {
             Program::Body(e) => {
                 debug!("========================================================");

@@ -2,20 +2,21 @@
 use std::collections::HashMap;
 use std::string::String;
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub enum Ty {
     Bool,
-    // Prod(Box<Ty>, Box<Ty>), // TODO for now, no tuples
+    Prod(Box<Ty>, Box<Ty>),
 }
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Clone)]
 pub enum Val {
     Bool(bool),
-    // Prod(Box<Val>, Box<Val>), // TODO punt
+    Prod(Box<Val>, Box<Val>),
 }
 #[derive(Debug, Clone)]
 pub enum ANF {
     AVar(String),
     AVal(Val),
+
     // TODO: not sure this is where I should add booleans, but it makes
     // the observe statements stay closer to the semantics: ~observe anf~
     And(Box<ANF>, Box<ANF>),
@@ -25,10 +26,10 @@ pub enum ANF {
 #[derive(Debug, Clone)]
 pub enum Expr {
     EAnf(Box<ANF>),
-    // TODO Ignore product types for now:
-    // EFst (Box<ANF>),
-    // ESnd (Box<ANF>),
-    // EProd (Box<ANF>, Box<ANF>),
+
+    EFst(Box<ANF>),
+    ESnd(Box<ANF>),
+    EProd(Box<ANF>, Box<ANF>),
 
     // TODO Ignore function calls for now
     // EApp(String, Box<ANF>),
@@ -105,13 +106,28 @@ macro_rules! val {
     ( $x:ident ) => {
         anf!(ANF::AVal(Val::Bool($x)))
     };
+    ( $y:literal, $( $x:literal ),+ ) => {{
+        let mut fin = Box::new(Val::Bool($y));
+        $(
+            fin = Box::new(ANF::Prod(fin, Box::new(Val::Bool($x))));
+        )+
+        anf!(ANF::AVal(*fin))
+    }};
 }
 #[macro_export]
 macro_rules! var {
     ( $x:literal ) => {
         anf!(ANF::AVar($x.to_string()))
     };
+    ( $y:literal, $( $x:literal ),+ ) => {{
+        let mut fin = anf!(ANF::AVar($y.to_string()));
+        $(
+            fin = Box::new(Expr::EProd(fin, Box::new(anf!(ANF::AVar($x.to_string())))));
+        )+
+       *fin
+    }};
 }
+
 #[macro_export]
 macro_rules! or {
     ( $y:literal, $( $x:literal ),+ ) => {{
