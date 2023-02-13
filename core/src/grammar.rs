@@ -2,17 +2,17 @@
 use std::collections::HashMap;
 use std::string::String;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Ty {
     Bool,
     Prod(Box<Ty>, Box<Ty>),
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Val {
     Bool(bool),
     Prod(Box<Val>, Box<Val>),
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ANF {
     AVar(String),
     AVal(Val),
@@ -23,7 +23,7 @@ pub enum ANF {
     Or(Box<ANF>, Box<ANF>),
     Neg(Box<ANF>),
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     EAnf(Box<ANF>),
 
@@ -41,8 +41,20 @@ pub enum Expr {
 }
 
 #[derive(Default)]
-pub struct Γ<'a>(HashMap<&'a Expr, &'a Ty>);
-
+pub struct Γ<'a>(pub Vec<(&'a Expr, &'a Ty)>);
+impl<'a> Γ<'a> {
+    pub fn get(&self, x: &'a Expr) -> Option<&'a Ty> {
+        self.0
+            .iter()
+            .find(|(e, _)| *e == x)
+            .map(|(_, t)| t)
+            .copied()
+    }
+    pub fn typechecks(&self, x: &Expr, ty: &Ty) -> bool {
+        // FIXME this is just a linear scan...
+        self.get(x).map(|t| t == ty).is_some()
+    }
+}
 // TODO
 // structure Func where
 //   name : String
