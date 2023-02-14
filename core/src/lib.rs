@@ -1,6 +1,24 @@
 #![allow(dead_code)]
 #![allow(unused_imports)]
 #![allow(mixed_script_confusables)] // for Gamma : )
+// temporary as I convert to using types
+#![allow(unused_variables)]
+#![allow(clippy::clone_on_copy)]
+#![allow(clippy::type_complexity)]
+#![allow(clippy::redundant_clone)]
+#![allow(clippy::useless_format)]
+#![allow(clippy::needless_return)]
+#![allow(clippy::upper_case_acronyms)]
+#![allow(clippy::single_component_path_imports)]
+#![allow(clippy::enum_variant_names)]
+#![allow(clippy::match_like_matches_macro)]
+#![allow(clippy::let_and_return)]
+#![allow(clippy::len_zero)]
+#![allow(clippy::assign_op_pattern)]
+#![allow(clippy::unnecessary_cast)]
+#![allow(clippy::unnecessary_lazy_evaluations)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::ptr_arg)]
 use itertools::*;
 use rsdd::builder::bdd_builder::BddManager;
 use rsdd::builder::cache::all_app::AllTable;
@@ -30,6 +48,7 @@ pub mod semantics {
     use rsdd::repr::wmc::WmcParams;
     use rsdd::sample::probability::Probability;
     use std::fmt;
+    type Mgr = BddManager<AllTable<BddPtr>>;
 
     fn debug_compiled(s: &str, w: &WeightMap, p: &SubstMap, c: &Compiled) {
         let renderw = |ws: &WeightMap| {
@@ -229,7 +248,7 @@ pub mod semantics {
                                     || ((**n).low == BddPtr::PtrFalse
                                         && (**n).high == BddPtr::PtrTrue)
                                 {
-                                    nxt = p.get(&UniqueId((**n).var.value().clone()));
+                                    nxt = p.get(&UniqueId((**n).var.value()));
                                 } else {
                                     break;
                                 }
@@ -254,7 +273,7 @@ pub mod semantics {
             br: &ANF,
             m: &WeightMap,
             p: &SubstMap,
-            op: &dyn Fn(&mut BddManager<AllTable<BddPtr>>, BddPtr, BddPtr) -> BddPtr,
+            op: &dyn Fn(&mut Mgr, BddPtr, BddPtr) -> BddPtr,
         ) -> Result<Compiled, CompileError> {
             let l = self.eval_anf(ctx, bl, m, p)?;
             let r = self.eval_anf(ctx, br, m, p)?;

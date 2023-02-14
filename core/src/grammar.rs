@@ -186,37 +186,42 @@ macro_rules! var {
 
 #[macro_export]
 macro_rules! b {
+    ( ) => {
+        Ty::Bool
+    };
     ( $x:literal ) => {
-        if $x.type_id() == TypeId::of::<bool>() {
-            anf!(ANF::AVal(Val::Bool($x)))
-        } else {
-            anf!(ANF::AVar($x.to_string(), B!()))
-        }
+        anf!(ANF::AVar($x.to_string(), Box::new(B!())))
+    };
+    ( T ) => {
+        anf!(ANF::AVal(Val::Bool(true)))
+    };
+    ( F ) => {
+        anf!(ANF::AVal(Val::Bool(false)))
     };
     ( $y:literal, $( $x:literal ),+ ) => {{
         let mut fin = b!($y);
         let mut ty = B!();
         $(
             let x = match TryInto<bool>::try_into($x) {
-                None => Box::new(ANF::AVar($x.to_string(), B!()))
+                None => Box::new(ANF::AVar($x.to_string(), Box::new(B!()))),
                 Some(_) => Box::new(ANF::AVal(Val::Bool($x)))
             };
-            ty = Box::new(Ty::Prod(ty, B!()));
+            ty = Box::new(Ty::Prod(ty, Box::new(B!())));
             fin = Box::new(ANF::Prod(fin, x, ty));
         )+
         anf!(*fin)
     }};
     ( $y:literal && $( $x:literal )&&+ ) => {{
-        let mut fin = Box::new(ANF::AVar($y.to_string(), B!()));
+        let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(B!())));
         $(
-            fin = Box::new(ANF::And(fin, Box::new(ANF::AVar($x.to_string(), Box::new(Ty::Bool)))));
+            fin = Box::new(ANF::And(fin, Box::new(ANF::AVar($x.to_string(), Box::new(B!())))));
         )+
         anf!(*fin)
     }};
     ( $y:literal || $( $x:literal )||+ ) => {{
-        let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(Ty::Bool)));
+        let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(B!())));
         $(
-            fin = Box::new(ANF::Or(fin, Box::new(ANF::AVar($x.to_string(), Box::new(Ty::Bool)))));
+            fin = Box::new(ANF::Or(fin, Box::new(ANF::AVar($x.to_string(), Box::new(B!())))));
         )+
         anf!(*fin)
     }};
@@ -247,6 +252,7 @@ macro_rules! flip {
         Expr::EFlip($p)
     }};
 }
+
 #[macro_export]
 macro_rules! lets {
     ( $var:literal : $vty:ty := $bound:expr ; in $body:expr ; $ty:ty ) => {{
@@ -257,22 +263,61 @@ macro_rules! lets {
             Box::new($body.clone()),
             Box::new(typ!(TypeId::of::<$vty>())),
         )
-    }}; // ( $( $var:literal : $fromty:ty := $bound:expr => $toty:ty);+ ;...? $body:expr ; $finty:ty ) => {
-        //     {
-        //         let mut fin = Box::new($body.clone());
-        //         let mut bindees = vec![];
-        //         $(
-        //             debug!("(let {} : {:?} = {:?})", $var.clone(), TypeId::of::<$vty>(), $bound.clone());
-        //             bindees.push(($var, TypeId::of::<$vty>(), $bound));
-        //         )+
-        //         debug!("...? {:?} ; {:?}", $body, TypeId::of::<$ty>());
-        //         for (v, tyid, e) in bindees.iter().rev() {
-        //             fin = Box::new(Expr::ELetIn(v.to_string(), Box::new(typ!(tyid)), Box::new(e.clone()), fin));
+    }};
+    ( $( $var:literal : $fromty:ty := $bound:expr => $toty:ty);+ ;...? $body:expr ; $finty:ty ) => {
+            {
+                let mut fin = Box::new($body.clone());
+                let mut bindees = vec![];
+                $(
+                    debug!("(let {} : {:?} = {:?})", $var.clone(), TypeId::of::<$vty>(), $bound.clone());
+                    bindees.push(($var, TypeId::of::<$vty>(), $bound));
+                )+
+                debug!("...? {:?} ; {:?}", $body, TypeId::of::<$ty>());
+                for (v, tyid, e) in bindees.iter().rev() {
+                    fin = Box::new(Expr::ELetIn(v.to_string(), Box::new(typ!(tyid)), Box::new(e.clone()), fin, Box::new(typ!(tyid))));
+                }
+                *fin
+            }
+        };
+    // ( $( $var:literal : $fromty:ty := $bound:expr);+ ;...? $body:expr ; $finty:ty ) => {
+    //         {
+    //             let mut bindees = vec![];
+    //             let mut types = vec![];
+    //             let fintype = Box::new(typ!($finty));
+    //             $(
+    //                 debug!("(let {} : {:?} = {:?})", $var.clone(), TypeId::of::<$fromty>(), $bound.clone());
+    //                 bindees.push(($var, TypeId::of::<$fromty>(), $bound));
+    //                 types.push(($var, typ!(TypeId::of::<$fromty>())));
+    //             )+
+    //             debug!("...? {:?} ; {:?}", $body, TypeId::of::<$finty>());
+    //             let mut fin = Box::new($body.clone());
 
-        //         }
-        //         *fin
-        //     }
-        // };
+    //             for (v, cotyid, e) in bindees.iter().rev() {
+    //                 fin = Box::new(Expr::ELetIn(v.to_string(), Box::new(typ!(tyid)), Box::new(e.clone()), fin, fintype.clone()));
+    //             }
+    //             *fin
+    //         }
+    //     };
+
+    ( $( $var:literal ; $fromty:expr ;= $bound:expr);+ ;...? $body:expr ; $finty:expr ) => {
+            {
+                let mut bindees = vec![];
+                let fintype = Box::new($finty);
+                $(
+                    debug!("(let {} : {:?} = {:?})", $var.clone(), $fromty, $bound.clone());
+                    bindees.push(($var, $fromty, $bound));
+                )+
+                debug!("...? {:?} ; {:?}", $body, $finty);
+                let mut fin = Box::new($body.clone());
+
+                for (v, tyid, e) in bindees.iter().rev() {
+                    fin = Box::new(Expr::ELetIn(v.to_string(), Box::new(tyid.clone()), Box::new(e.clone()), fin, fintype.clone()));
+                }
+                *fin
+            }
+        };
+
+
 }
 // #[macro_export]
 // macro_rules! ite {

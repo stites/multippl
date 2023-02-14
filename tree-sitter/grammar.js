@@ -15,18 +15,27 @@ module.exports = grammar({
       $.sample,
       // seq($._function_name, '(', $.anf ,')'),
       $.anf,
+      $.ann,
       $.fst,
       $.snd,
       $.prod,
+      seq('(', $._expr, ')')
     ),
+    ty: $ => choice($.tBool, $.tProd),
+    tBool: $ => 'Bool',
+    tProd: $ => seq('(', $.ty, ',', $.ty, ')'),
+
     fst: $ => seq('fst', $.anf),
     snd: $ => seq('snd', $.anf),
     prod: $ => seq('(', $.anf, ',', $.anf, ')'),
+
     let_binding: $ => choice(
-      seq('let', $.identifier, '=', $._expr, 'in', $._expr),
-      prec.left(1, seq('let', $.identifier, '=', $._expr, $._expr)),
+      prec.left(1, seq('let', $.identifier, ':', $.ty, '=', $._expr, 'in', $._expr)),
+      prec.left(1, seq('let', $.identifier, ':', $.ty, '=', $._expr,       $._expr)),
+      prec.left(1, seq('let', $.identifier, ':', $.ty, '=', $._expr,  ';', $._expr)),
     ),
-    ite_binding: $ => seq('if', $.anf, 'then', $._expr, 'else', $._expr),
+    ite_binding: $ =>
+      prec.left(2, seq('if', $.anf, 'then', $._expr, 'else', $._expr)),
     flip: $ => seq('flip', $._float),
     observe: $ => choice(
       seq('observe', $.anf),
@@ -36,7 +45,6 @@ module.exports = grammar({
 
     bool: $ => choice('true', 'false'),
     bool_biop: $ => choice('||', '&&'),
-
 
     bool_unop: $ => '!',
 
@@ -50,7 +58,12 @@ module.exports = grammar({
 
     _value: $ => choice($.bool), // , seq('(', $._value, ',', $._value, ')')),
 
-    anf: $ => choice($.identifier, $._value, prec.left(1, seq($.anf, $.bool_biop, $.anf)), prec.left(2, seq($.bool_unop, $.anf))),
+    ann: $ => prec.right(5, seq($._expr, ':', $.ty)),
+    anf: $ => choice(
+      $._value,
+      prec.left(1, seq($.anf, $.bool_biop, $.anf)),
+      prec.left(2, seq($.bool_unop, $.anf)),
+    ),
 
     identifier: $ => /[a-zA-Z_][_a-zA-Z0-9]*/,
     // _func: $ => seq('fun', $._function_name, '(', $.VAR, ')', ':', $._type, '{', $._expr, '}'),
