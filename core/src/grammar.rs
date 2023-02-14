@@ -50,9 +50,17 @@ impl<'a> Γ<'a> {
             .map(|(_, t)| t)
             .copied()
     }
+    pub fn append(&self, x: &'a Expr, ty: &'a Ty) -> Γ<'a> {
+        let mut ctx = self.0.clone();
+        ctx.push((x, ty));
+        Γ(ctx)
+    }
     pub fn typechecks(&self, x: &Expr, ty: &Ty) -> bool {
         // FIXME this is just a linear scan...
         self.get(x).map(|t| t == ty).is_some()
+    }
+    pub fn typechecks_var(&self, a: &ANF, ty: &Ty) -> bool {
+        self.typechecks(&Expr::EAnf(Box::new(a.clone())), ty)
     }
 }
 // TODO
