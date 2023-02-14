@@ -11,6 +11,7 @@ use tracing::debug;
 mod grammar;
 
 mod inference;
+mod parser;
 #[cfg(test)]
 mod tests;
 // use grammar::*;

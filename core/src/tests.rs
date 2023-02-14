@@ -54,7 +54,7 @@ pub fn check_approx_seeded(s: &str, f: f64, p: &Program, n: usize, seeds: &Vec<u
 #[test]
 // #[traced_test]
 fn program00() {
-    let p00 = r#let!["x" : bool := val!(true); in var!("x") ; bool];
+    let p00 = lets!["x" : bool := val!(true); in var!("x") ; bool];
     check_exact("p00", 1.0, &Program::Body(p00));
 }
 // #[test]

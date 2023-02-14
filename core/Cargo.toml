@@ -12,4 +12,5 @@ tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 tracing-test = "0.2.4"
 
 rsdd = { path = "../rsdd" }
+tree-sitter = "0.20.9"
 tree-sitter-weight4me = { path = "../tree-sitter" }

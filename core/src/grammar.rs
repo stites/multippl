@@ -248,7 +248,7 @@ macro_rules! flip {
     }};
 }
 #[macro_export]
-macro_rules! r#let {
+macro_rules! lets {
     ( $var:literal : $vty:ty := $bound:expr ; in $body:expr ; $ty:ty ) => {{
         Expr::ELetIn(
             $var.to_string(),
@@ -257,32 +257,23 @@ macro_rules! r#let {
             Box::new($body.clone()),
             Box::new(typ!(TypeId::of::<$vty>())),
         )
-    }};
-}
-// #[macro_export]
-// macro_rules! lets {
-//     ( $var:literal : $vty:ty := $bound:expr ; in $body:expr ; $ty:ty ) => {
-//         {
-//             Expr::ELetIn($var.to_string(), Box::new(typ!(TypeId::of::<$vty>())), Box::new($bound.clone()), Box::new($body.clone()), Box::new(typ!(TypeId::of::<$vty>())))
-//         }
-//     };
-//     ( $( $var:literal : $vty:ty := $bound:expr );+ ;...? $body:expr ; $ty:ty ) => {
-//         {
-//             let mut fin = Box::new($body.clone());
-//             let mut bindees = vec![];
-//             $(
-//                 debug!("(let {} : {:?} = {:?})", $var.clone(), TypeId::of::<$vty>(), $bound.clone());
-//                 bindees.push(($var, TypeId::of::<$vty>(), $bound));
-//             )+
-//             debug!("...? {:?} ; {:?}", $body, TypeId::of::<$ty>());
-//             for (v, tyid, e) in bindees.iter().rev() {
-//                 fin = Box::new(Expr::ELetIn(v.to_string(), Box::new(typ!(tyid)), Box::new(e.clone()), fin));
+    }}; // ( $( $var:literal : $fromty:ty := $bound:expr => $toty:ty);+ ;...? $body:expr ; $finty:ty ) => {
+        //     {
+        //         let mut fin = Box::new($body.clone());
+        //         let mut bindees = vec![];
+        //         $(
+        //             debug!("(let {} : {:?} = {:?})", $var.clone(), TypeId::of::<$vty>(), $bound.clone());
+        //             bindees.push(($var, TypeId::of::<$vty>(), $bound));
+        //         )+
+        //         debug!("...? {:?} ; {:?}", $body, TypeId::of::<$ty>());
+        //         for (v, tyid, e) in bindees.iter().rev() {
+        //             fin = Box::new(Expr::ELetIn(v.to_string(), Box::new(typ!(tyid)), Box::new(e.clone()), fin));
 
-//             }
-//             *fin
-//         }
-//     };
-// }
+        //         }
+        //         *fin
+        //     }
+        // };
+}
 // #[macro_export]
 // macro_rules! ite {
 //     ( if ( $pred:expr ) then { $true:expr } else { $false:expr } ) => {
