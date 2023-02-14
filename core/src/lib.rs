@@ -58,9 +58,10 @@ pub mod semantics {
         };
         let renderp = |ps: &SubstMap| {
             ps.iter()
-                .map(|(k, v)| format!("{k}: {}", v.print_bdd()))
+                .map(|(k, v)| format!("{k}: [{}]", v.iter().map(BddPtr::print_bdd).join(",")))
                 .join(", ")
         };
+
         let renderdist = |fs: &Vec<Formulas>| {
             fs.iter()
                 .map(|f| format!("{}", f.dist.print_bdd()))
@@ -101,7 +102,7 @@ pub mod semantics {
     }
 
     pub type WeightMap = HashMap<UniqueId, (f64, f64)>;
-    pub type SubstMap = HashMap<UniqueId, BddPtr>;
+    pub type SubstMap = HashMap<UniqueId, Vec<BddPtr>>;
 
     fn const_weight() -> (f64, f64) {
         (0.5, 0.5)
@@ -123,6 +124,14 @@ pub mod semantics {
     pub struct Formulas {
         pub dist: BddPtr,
         pub accept: BddPtr,
+    }
+    impl Formulas {
+        pub fn dist(&self) -> BddPtr {
+            self.dist
+        }
+        pub fn accept(&self) -> BddPtr {
+            self.accept
+        }
     }
 
     #[derive(Debug, Clone)]
@@ -158,7 +167,7 @@ pub mod semantics {
         pub gensym: u64,
         pub mgr: BddManager<AllTable<BddPtr>>,
         pub rng: StdRng,
-        pub samples: HashMap<UniqueId, bool>,
+        pub samples: HashMap<UniqueId, Vec<bool>>,
     }
     impl EnvArgs {
         pub fn default_args(seed: Option<u64>) -> EnvArgs {
@@ -182,7 +191,7 @@ pub mod semantics {
         pub gensym: u64,
         pub mgr: &'a mut BddManager<AllTable<BddPtr>>,
         pub rng: &'a mut StdRng,
-        pub samples: HashMap<UniqueId, bool>,
+        pub samples: HashMap<UniqueId, Vec<bool>>,
     }
     impl<'a> Env<'a> {
         pub fn new(mgr: &'a mut BddManager<AllTable<BddPtr>>, rng: &'a mut StdRng) -> Env<'a> {
@@ -242,13 +251,13 @@ pub mod semantics {
                 Some(sym) => unsafe {
                     let mut nxt = p.get(&sym);
                     while nxt.is_some() {
-                        match nxt {
-                            Some(BddPtr::Reg(n)) => {
-                                if ((**n).low == BddPtr::PtrTrue && (**n).high == BddPtr::PtrFalse)
-                                    || ((**n).low == BddPtr::PtrFalse
-                                        && (**n).high == BddPtr::PtrTrue)
+                        match nxt.unwrap()[..] {
+                            [BddPtr::Reg(n)] => {
+                                if ((*n).low == BddPtr::PtrTrue && (*n).high == BddPtr::PtrFalse)
+                                    || ((*n).low == BddPtr::PtrFalse
+                                        && (*n).high == BddPtr::PtrTrue)
                                 {
-                                    nxt = p.get(&UniqueId((**n).var.value()));
+                                    nxt = p.get(&UniqueId((*n).var.value()));
                                 } else {
                                     break;
                                 }
@@ -257,7 +266,13 @@ pub mod semantics {
                         }
                     }
                     match nxt {
-                        Some(BddPtr::Reg(n)) => ((**n).var.clone(), m.clone()),
+                        Some(vs) => match vs[..] {
+                            [BddPtr::Reg(n)] => ((*n).var.clone(), m.clone()),
+                            _ => {
+                                let lbl = VarLabel::new(sym.0);
+                                (lbl, m.clone())
+                            }
+                        },
                         _ => {
                             let lbl = VarLabel::new(sym.0);
                             (lbl, m.clone())
@@ -353,8 +368,11 @@ pub mod semantics {
         }
         pub fn apply_substitutions(&mut self, bdd: BddPtr, p: &SubstMap) -> BddPtr {
             let mut fin = bdd;
-            for (lbl, sub) in p.iter() {
-                fin = self.mgr.compose(fin, VarLabel::new(lbl.0), *sub);
+            for (lbl, subs) in p.iter() {
+                match subs[..] {
+                    [sub] => fin = self.mgr.compose(fin, VarLabel::new(lbl.0), sub),
+                    _ => continue,
+                }
             }
             fin
         }
@@ -398,47 +416,59 @@ pub mod semantics {
                     todo!()
                 }
                 ELetIn(s, tbound, ebound, ebody, tbody) => {
-                    todo!()
-                    // debug!(">>>let-in {}", s);
-                    // let (lbl, wm) = self.get_or_create_varlabel(s.clone(), m, p);
-                    // let id = UniqueId(lbl.value());
-                    // let bound = self.eval_expr(ctx, ebound, &wm, p)?;
-                    // let mut bound_substitutions = bound.substitutions.clone();
-                    // bound_substitutions.insert(id, bound.dist);
+                    debug!(">>>let-in {}", s);
+                    let (lbl, wm) = self.get_or_create_varlabel(s.clone(), m, p);
+                    let id = UniqueId(lbl.value());
+                    let bound = self.eval_expr(ctx, ebound, &wm, p)?;
+                    let mut bound_substitutions = bound.substitutions.clone();
+                    bound_substitutions
+                        .insert(id, bound.formulas.iter().map(Formulas::dist).collect_vec());
 
-                    // let body =
-                    //     self.eval_expr(ctx, ebody, &bound.weight_map, &bound_substitutions)?;
+                    let body =
+                        self.eval_expr(ctx, ebody, &bound.weight_map, &bound_substitutions)?;
 
-                    // let mut weight_map = bound.weight_map;
-                    // weight_map.extend(body.weight_map);
+                    let mut weight_map = bound.weight_map;
+                    weight_map.extend(body.weight_map);
 
-                    // let substitutions = body.substitutions.clone();
-                    // // substitutions.extend(body.substitutions);
+                    let substitutions = body.substitutions.clone();
+                    // substitutions.extend(body.substitutions);
 
-                    // let dist = self.apply_substitutions(body.dist, &substitutions);
-                    // // NOTE: applying all substituting will normalize distributions in sample too much. This will cause
-                    // // samples to normalize in a way where we will fail to drop irrelevant structure
-                    // // let accept = self.mgr.and(bound.accept, body.accept);
-                    // // let accept = self.apply_substitutions(accept, &substitutions);
-                    // let accept = self.mgr.compose(body.accept, lbl, bound.accept);
-                    // if ebound.is_sample() {
-                    //     match bound.dist {
-                    //         BddPtr::PtrTrue => self.samples.insert(id, true),
-                    //         BddPtr::PtrFalse => self.samples.insert(id, false),
-                    //         _ => panic!("impossible"),
-                    //     };
-                    // }
+                    let formulas = izip!(body.formulas.clone(), bound.formulas.clone())
+                        .map(|(bodyf, boundf)| Formulas {
+                            dist: self.apply_substitutions(bodyf.dist, &substitutions),
+                            accept: self.mgr.compose(bodyf.accept, lbl, boundf.accept),
+                        })
+                        .collect_vec();
 
-                    // let c = Compiled {
-                    //     dist, // : self.mgr.compose(body.dist, lbl, bound.dist),
-                    //     accept,
-                    //     weight_map,
-                    //     substitutions,
-                    //     probability: bound.probability * body.probability,
-                    //     importance_weight: bound.importance_weight * body.importance_weight,
-                    // };
-                    // debug_compiled(&format!("let-in {}", s), m, p, &c);
-                    // Ok(c)
+                    // NOTE: applying all substituting will normalize distributions in sample too much. This will cause
+                    // samples to normalize in a way where we will fail to drop irrelevant structure
+                    // old-code does this:
+                    //
+                    // let accept = self.mgr.and(bound.accept, body.accept);
+                    // let accept = self.apply_substitutions(accept, &substitutions);
+                    if ebound.is_sample() {
+                        let samples = bound
+                            .formulas
+                            .iter()
+                            .map(Formulas::dist)
+                            .map(|dist| match dist {
+                                BddPtr::PtrTrue => true,
+                                BddPtr::PtrFalse => false,
+                                _ => panic!("impossible"),
+                            })
+                            .collect_vec();
+                        self.samples.insert(id, samples);
+                    }
+
+                    let c = Compiled {
+                        formulas,
+                        weight_map,
+                        substitutions,
+                        probability: bound.probability * body.probability,
+                        importance_weight: bound.importance_weight * body.importance_weight,
+                    };
+                    debug_compiled(&format!("let-in {}", s), m, p, &c);
+                    Ok(c)
                 }
                 EIte(cond, t, f, ty) => {
                     todo!()

@@ -52,7 +52,7 @@ fn debug_importance_weighting(
     ws: &Vec<f64>,
     qs: &Vec<f64>,
     ps: &Vec<Vec<f64>>,
-    ss: &Vec<HashMap<UniqueId, bool>>,
+    ss: &Vec<HashMap<UniqueId, Vec<bool>>>,
     exp: &Vec<f64>,
     expw: &Vec<f64>,
 ) {
@@ -72,7 +72,14 @@ fn debug_importance_weighting(
         });
         debug!(
             "ss = [{}]",
-            ss.iter().map(|x| format!("{:?}", x)).join(", ")
+            ss.iter()
+                .map(|kvs| format!(
+                    "[{}]",
+                    kvs.iter()
+                        .map(|(k, vs)| format!("{:?}:{:?}", k, vs))
+                        .join(",")
+                ))
+                .join(", ")
         );
         if steps < 11 {
             // debug!("");
@@ -113,7 +120,7 @@ pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: &Program) -> Vec
     let mut ws: Vec<f64> = vec![];
     let mut qs: Vec<f64> = vec![];
     let mut ps: Vec<Vec<f64>> = vec![];
-    let mut ss: Vec<HashMap<UniqueId, bool>> = vec![];
+    let mut ss: Vec<HashMap<UniqueId, Vec<bool>>> = vec![];
     for _step in 1..=steps {
         // FIXME: change back to step
         env.reset_names();
@@ -161,7 +168,7 @@ pub fn importance_weighting_inf_seeded(seeds: Vec<u64>, steps: usize, p: &Progra
     let mut ws: Vec<f64> = vec![];
     let mut qs: Vec<f64> = vec![];
     let mut ps: Vec<Vec<f64>> = vec![];
-    let mut ss: Vec<HashMap<UniqueId, bool>> = vec![];
+    let mut ss: Vec<HashMap<UniqueId, Vec<bool>>> = vec![];
     let num_seeds = seeds.len();
 
     for step in 1..=steps {
