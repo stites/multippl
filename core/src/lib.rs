@@ -344,7 +344,7 @@ pub mod semantics {
                     let (lbl, wm) = self.get_or_create_varlabel(s.to_string(), m, p);
                     if !ctx.typechecks_var(a, ty) {
                         Err(TypeError(format!(
-                            "Expected {s} : {ty:?}\nGot:{a:?}\n{ctx:?}",
+                            "Expected {s} : {ty:?}\nGot: {a:?}\n{ctx:?}",
                         )))
                     } else {
                         Ok(Compiled {

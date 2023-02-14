@@ -13,6 +13,16 @@ pub enum Val {
     Bool(bool),
     Prod(Box<Val>, Box<Val>),
 }
+impl Val {
+    pub fn as_type(&self) -> Ty {
+        use Val::*;
+        match self {
+            Bool(_) => Ty::Bool,
+            Prod(l, r) => Ty::Prod(Box::new(l.as_type()), Box::new(r.as_type())),
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum ANF {
     AVar(String, Box<Ty>), // FIXME
@@ -24,6 +34,17 @@ pub enum ANF {
     Or(Box<ANF>, Box<ANF>),
     Neg(Box<ANF>),
 }
+impl ANF {
+    pub fn is_type(&self, ty: &Ty) -> bool {
+        use ANF::*;
+        match self {
+            AVar(_, t) => *t == Box::new(ty.clone()),
+            AVal(v) => v.as_type() == *ty,
+            _ => *ty == Ty::Bool,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     EAnf(Box<ANF>),
@@ -78,6 +99,20 @@ impl Expr {
         match self {
             ESample(_) => true,
             _ => false,
+        }
+    }
+    pub fn is_type(&self, ty: &Ty) -> bool {
+        use Expr::*;
+        match self {
+            EAnf(anf) => anf.is_type(ty),
+            EFst(_, t) => *t == Box::new(ty.clone()),
+            ESnd(_, t) => *t == Box::new(ty.clone()),
+            EProd(_, _, t) => *t == Box::new(ty.clone()),
+            ELetIn(_, _, _, _, t) => *t == Box::new(ty.clone()),
+            EIte(_, _, _, t) => *t == Box::new(ty.clone()),
+            EFlip(_) => *ty == Ty::Bool,
+            EObserve(_) => *ty == Ty::Bool,
+            ESample(_) => *ty == Ty::Bool,
         }
     }
 
