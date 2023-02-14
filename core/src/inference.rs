@@ -43,7 +43,10 @@ pub fn exact_inf(env: &mut Env, p: &Program) -> Vec<f64> {
                 })
                 .collect_vec()
         }
-        Err(e) => panic!("{:?}", e),
+        Err(e) => panic!(
+            "\nCompiler Error!!!\n==============\n{}\n==============\n",
+            e.to_string()
+        ),
     }
 }
 fn debug_importance_weighting(

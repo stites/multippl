@@ -90,6 +90,17 @@ pub mod semantics {
         Generic(String),
         SemanticsError(String),
     }
+    impl CompileError {
+        pub fn to_string(&self) -> String {
+            match self {
+                AcceptingNonZeroError(s) => s.to_string(),
+                Todo() => "todo!".to_string(),
+                TypeError(s) => s.to_string(),
+                Generic(s) => s.to_string(),
+                SemanticsError(s) => s.to_string(),
+            }
+        }
+    }
     use CompileError::*;
 
     #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
@@ -332,7 +343,9 @@ pub mod semantics {
                 AVar(s, ty) => {
                     let (lbl, wm) = self.get_or_create_varlabel(s.to_string(), m, p);
                     if !ctx.typechecks_var(a, ty) {
-                        Err(TypeError(format!("expected {s} : {:?}", ty)))
+                        Err(TypeError(format!(
+                            "Expected {s} : {ty:?}\nGot:{a:?}\n{ctx:?}",
+                        )))
                     } else {
                         Ok(Compiled {
                             substitutions: p.clone(),
