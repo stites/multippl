@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::string::String;
 
@@ -117,114 +118,165 @@ impl Program {
     }
 }
 
-// // macros
-// #[macro_export]
-// macro_rules! anf {
-//     ( $x:expr ) => {{
-//         Expr::EAnf(Box::new($x))
-//     }};
-// }
-// #[macro_export]
-// macro_rules! val {
-//     ( $x:ident ) => {
-//         anf!(ANF::AVal(Val::Bool($x)))
-//     };
-//     ( $y:literal, $( $x:literal ),+ ) => {{
-//         let mut fin = Box::new(Val::Bool($y));
-//         $(
-//             fin = Box::new(ANF::Prod(fin, Box::new(Val::Bool($x))));
-//         )+
-//         anf!(ANF::AVal(*fin))
-//     }};
-// }
-// #[macro_export]
-// macro_rules! var {
-//     ( $x:literal ) => {
-//         anf!(ANF::AVar($x.to_string(), Box::new(Ty::Bool)))
-//     };
-//     ( $y:literal, $( $x:literal ),+ ) => {{
-//         let mut fin = anf!(ANF::AVar($y.to_string()));
-//         $(
-//             fin = Box::new(Expr::EProd(fin, Box::new(anf!(ANF::AVar($x.to_string(), Box::new(Ty::Bool))))));
-//         )+
-//        *fin
-//     }};
-// }
+// macros
+#[macro_export]
+macro_rules! typ {
+    ($ty:ty) => {{
+        if TypeId::of::<$ty>() == TypeId::of::<bool>() {
+            Ty::Bool
+        } else {
+            todo!()
+        }
+    }};
+    ($ty:expr) => {{
+        if $ty == TypeId::of::<bool>() {
+            Ty::Bool
+        } else {
+            todo!()
+        }
+    }};
+}
+#[macro_export]
+macro_rules! B {
+    () => {{
+        Ty::Bool
+    }};
+}
+#[macro_export]
+macro_rules! P {
+    ( $l:expr , $r:expr ) => {{
+        Ty::Prod(Box::new($l), Box::new($r))
+    }};
+}
 
-// #[macro_export]
-// macro_rules! or {
-//     ( $y:literal, $( $x:literal ),+ ) => {{
-//         let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(Ty::Bool)));
-//         $(
-//             fin = Box::new(ANF::Or(fin, Box::new(ANF::AVar($x.to_string(), Box::new(Ty::Bool)))));
-//         )+
-//         anf!(*fin)
-//     }};
-// }
-// #[macro_export]
-// macro_rules! and {
-//     ( $y:literal, $( $x:literal ),+ ) => {{
-//         let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(Ty::Bool)));
-//         $(
-//             fin = Box::new(ANF::And(fin, Box::new(ANF::AVar($x.to_string(), Box::new(Ty::Bool)))));
-//         )+
-//         anf!(*fin)
-//     }};
-// }
+#[macro_export]
+macro_rules! anf {
+    ( $x:expr ) => {{
+        Expr::EAnf(Box::new($x))
+    }};
+}
 
-// #[macro_export]
-// macro_rules! bool {
-//     ( $y:literal && $( $x:literal )&&+ ) => {{
-//         let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(Ty::Bool)));
-//         $(
-//             fin = Box::new(ANF::And(fin, Box::new(ANF::AVar($x.to_string(), Box::new(Ty::Bool)))));
-//         )+
-//         anf!(*fin)
-//     }};
-//     ( $y:literal || $( $x:literal )||+ ) => {{
-//         let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(Ty::Bool)));
-//         $(
-//             fin = Box::new(ANF::Or(fin, Box::new(ANF::AVar($x.to_string(), Box::new(Ty::Bool)))));
-//         )+
-//         anf!(*fin)
-//     }};
-// }
+#[macro_export]
+macro_rules! val {
+    ( $x:ident ) => {
+        anf!(ANF::AVal(Val::Bool($x)))
+    };
+    ( $y:literal, $( $x:literal ),+ ) => {{
+        let mut fin = Box::new(Val::Bool($y));
+        $(
+            fin = Box::new(ANF::Prod(fin, Box::new(Val::Bool($x))));
+        )+
+        anf!(ANF::AVal(*fin))
+    }};
+}
 
-// #[macro_export]
-// macro_rules! sample {
-//     ( $x:expr ) => {{
-//         Expr::ESample(Box::new($x))
-//     }};
-// }
-// #[macro_export]
-// macro_rules! observe {
-//     ( $x:expr ) => {{
-//         if let Expr::EAnf(a) = $x {
-//             Expr::EObserve(a)
-//         } else {
-//             panic!("passed in a non-anf expression!");
-//         }
-//     }};
-// }
-// #[macro_export]
-// macro_rules! flip {
-//     ( $num:literal / $denom:literal) => {{
-//         Expr::EFlip($num as f64 / $denom as f64)
-//     }};
-// }
+#[macro_export]
+macro_rules! var {
+    ( $x:literal ) => {
+        anf!(ANF::AVar($x.to_string(), Box::new(B!())))
+    };
+    ( $y:literal, $( $x:literal ),+ ) => {{
+        let mut fin = anf!(ANF::AVar($y.to_string()));
+        $(
+            fin = Box::new(Expr::EProd(fin, Box::new(anf!(ANF::AVar($x.to_string(), Box::new(B!()))))));
+        )+
+       *fin
+    }};
+}
+
+#[macro_export]
+macro_rules! b {
+    ( $x:literal ) => {
+        if $x.type_id() == TypeId::of::<bool>() {
+            anf!(ANF::AVal(Val::Bool($x)))
+        } else {
+            anf!(ANF::AVar($x.to_string(), B!()))
+        }
+    };
+    ( $y:literal, $( $x:literal ),+ ) => {{
+        let mut fin = b!($y);
+        let mut ty = B!();
+        $(
+            let x = match TryInto<bool>::try_into($x) {
+                None => Box::new(ANF::AVar($x.to_string(), B!()))
+                Some(_) => Box::new(ANF::AVal(Val::Bool($x)))
+            };
+            ty = Box::new(Ty::Prod(ty, B!()));
+            fin = Box::new(ANF::Prod(fin, x, ty));
+        )+
+        anf!(*fin)
+    }};
+    ( $y:literal && $( $x:literal )&&+ ) => {{
+        let mut fin = Box::new(ANF::AVar($y.to_string(), B!()));
+        $(
+            fin = Box::new(ANF::And(fin, Box::new(ANF::AVar($x.to_string(), Box::new(Ty::Bool)))));
+        )+
+        anf!(*fin)
+    }};
+    ( $y:literal || $( $x:literal )||+ ) => {{
+        let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(Ty::Bool)));
+        $(
+            fin = Box::new(ANF::Or(fin, Box::new(ANF::AVar($x.to_string(), Box::new(Ty::Bool)))));
+        )+
+        anf!(*fin)
+    }};
+}
+
+#[macro_export]
+macro_rules! sample {
+    ( $x:expr ) => {{
+        Expr::ESample(Box::new($x))
+    }};
+}
+#[macro_export]
+macro_rules! observe {
+    ( $x:expr ) => {{
+        if let Expr::EAnf(a) = $x {
+            Expr::EObserve(a)
+        } else {
+            panic!("passed in a non-anf expression!");
+        }
+    }};
+}
+#[macro_export]
+macro_rules! flip {
+    ( $num:literal / $denom:literal) => {{
+        Expr::EFlip($num as f64 / $denom as f64)
+    }};
+    ( $p:literal ) => {{
+        Expr::EFlip($p)
+    }};
+}
+#[macro_export]
+macro_rules! r#let {
+    ( $var:literal : $vty:ty := $bound:expr ; in $body:expr ; $ty:ty ) => {{
+        Expr::ELetIn(
+            $var.to_string(),
+            Box::new(typ!(TypeId::of::<$vty>())),
+            Box::new($bound.clone()),
+            Box::new($body.clone()),
+            Box::new(typ!(TypeId::of::<$vty>())),
+        )
+    }};
+}
 // #[macro_export]
 // macro_rules! lets {
-//     ( $( $var:literal := $bound:expr );+ ;...? $body:expr ; $ty:expr ) => {
+//     ( $var:literal : $vty:ty := $bound:expr ; in $body:expr ; $ty:ty ) => {
+//         {
+//             Expr::ELetIn($var.to_string(), Box::new(typ!(TypeId::of::<$vty>())), Box::new($bound.clone()), Box::new($body.clone()), Box::new(typ!(TypeId::of::<$vty>())))
+//         }
+//     };
+//     ( $( $var:literal : $vty:ty := $bound:expr );+ ;...? $body:expr ; $ty:ty ) => {
 //         {
 //             let mut fin = Box::new($body.clone());
 //             let mut bindees = vec![];
 //             $(
-//                 debug!("let {} = {:?};", $var.clone(), $bound.clone());
-//                 bindees.push(($var, $bound));
+//                 debug!("(let {} : {:?} = {:?})", $var.clone(), TypeId::of::<$vty>(), $bound.clone());
+//                 bindees.push(($var, TypeId::of::<$vty>(), $bound));
 //             )+
-//             debug!("...? {:?}", $body);
-//             for (v, e) in bindees.iter().rev() {
-//                 fin = Box::new(Expr::ELetIn(v.to_string(), Box::new(e.clone()), fin));
+//             debug!("...? {:?} ; {:?}", $body, TypeId::of::<$ty>());
+//             for (v, tyid, e) in bindees.iter().rev() {
+//                 fin = Box::new(Expr::ELetIn(v.to_string(), Box::new(typ!(tyid)), Box::new(e.clone()), fin));
 
 //             }
 //             *fin
