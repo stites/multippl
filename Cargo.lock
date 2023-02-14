@@ -1401,6 +1401,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "tracing-test",
+ "tree-sitter-weight4me",
 ]
 
 [[package]]

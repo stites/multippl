@@ -15,11 +15,13 @@ module.exports = grammar({
       $.sample,
       // seq($._function_name, '(', $.anf ,')'),
       $.anf,
-      seq('fst', $.anf),
-      seq('snd', $.anf),
-      seq('(', $.anf, ',', $.anf, ')'),
-
+      $.fst,
+      $.snd,
+      $.prod,
     ),
+    fst: $ => seq('fst', $.anf),
+    snd: $ => seq('snd', $.anf),
+    prod: $ => seq('(', $.anf, ',', $.anf, ')'),
     let_binding: $ => choice(
       seq('let', $.identifier, '=', $._expr, 'in', $._expr),
       prec.left(1, seq('let', $.identifier, '=', $._expr, $._expr)),
