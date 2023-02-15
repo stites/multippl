@@ -499,32 +499,30 @@ pub mod semantics {
                     // substitutions.extend(body.substitutions);
 
                     let formulas = izip!(body.formulas.clone(), bound.formulas.clone())
-                        .map(|(bodyf, boundf)| Formulas {
-                            dist: self.apply_substitutions(bodyf.dist, &substitutions),
-                            accept: self.mgr.compose(bodyf.accept, lbl, boundf.accept),
+                        .map(|(bodyf, boundf)| {
+                            println!(
+                                "{}, {:?}, {}",
+                                bodyf.accept.print_bdd(),
+                                lbl,
+                                boundf.accept.print_bdd()
+                            );
+                            // NOTE: applying all substituting will normalize distributions in sample too much. This will cause
+                            // samples to normalize in a way where we will fail to drop irrelevant structure
+                            // old-code does this:
+                            //
+                            // let accept = self.mgr.and(bound.accept, body.accept);
+                            // let accept = self.apply_substitutions(accept, &substitutions);
+                            let accept = self.mgr.compose(bodyf.accept, lbl, boundf.accept);
+                            let accept = self.mgr.and(boundf.accept, accept);
+                            Formulas {
+                                dist: self.apply_substitutions(bodyf.dist, &substitutions),
+                                accept,
+                            }
                         })
                         .collect_vec();
 
-                    // NOTE: applying all substituting will normalize distributions in sample too much. This will cause
-                    // samples to normalize in a way where we will fail to drop irrelevant structure
-                    // old-code does this:
-                    //
-                    // let accept = self.mgr.and(bound.accept, body.accept);
-                    // let accept = self.apply_substitutions(accept, &substitutions);
-                    if ebound.is_sample() {
-                        let samples = bound
-                            .formulas
-                            .iter()
-                            .map(Formulas::dist)
-                            .map(|dist| match dist {
-                                BddPtr::PtrTrue => true,
-                                BddPtr::PtrFalse => false,
-                                _ => panic!("impossible"),
-                            })
-                            .collect_vec();
-                        self.samples.insert(id, samples);
-                    }
                     self.log_samples(id, ebound, &bound);
+
                     let probabilities = izip!(bound.probabilities, body.probabilities)
                         .map(|(p1, p2)| p1 * p2)
                         .collect_vec();
