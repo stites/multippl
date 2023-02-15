@@ -542,35 +542,42 @@ pub mod semantics {
                     Ok(c)
                 }
                 EIte(cond, t, f, ty) => {
-                    todo!()
-                    // let pred = self.eval_anf(ctx, cond, &m.clone(), &p.clone())?;
-                    // let truthy = self.eval_expr(ctx, t, &m.clone(), &p.clone())?;
-                    // let falsey = self.eval_expr(ctx, f, &m.clone(), &p.clone())?;
+                    let pred = self.eval_anf(ctx, cond, &m.clone(), &p.clone())?;
+                    let truthy = self.eval_expr(ctx, t, &m.clone(), &p.clone())?;
+                    let falsey = self.eval_expr(ctx, f, &m.clone(), &p.clone())?;
 
-                    // let dist_l = self.mgr.and(pred.dist, truthy.dist);
-                    // let dist_r = self.mgr.and(pred.dist.neg(), falsey.dist);
-                    // let dist = self.mgr.or(dist_l, dist_r);
+                    let formulas = izip!(&pred.formulas, &truthy.formulas, &falsey.formulas)
+                        .map(|(p, t, f)| {
+                            let dist_l = self.mgr.and(p.dist, t.dist);
+                            let dist_r = self.mgr.and(p.dist.neg(), f.dist);
+                            let dist = self.mgr.or(dist_l, dist_r);
 
-                    // let accept_l = self.mgr.and(pred.accept, truthy.accept);
-                    // let accept_r = self.mgr.and(pred.accept.neg(), falsey.accept);
-                    // let accept = self.mgr.or(accept_l, accept_r);
+                            let accept_l = self.mgr.and(p.accept, t.accept);
+                            let accept_r = self.mgr.and(p.accept.neg(), f.accept);
+                            let accept = self.mgr.or(accept_l, accept_r);
 
-                    // let mut weight_map = truthy.weight_map.clone();
-                    // weight_map.extend(falsey.weight_map.clone());
-                    // let mut substitutions = truthy.substitutions.clone();
-                    // substitutions.extend(falsey.substitutions.clone());
-                    // let probabilities = truthy.probability + falsey.probability;
-                    // let importance_weights = truthy.convex_combination(&falsey);
-                    // let c = Compiled {
-                    //     dist,
-                    //     accept,
-                    //     weight_map,
-                    //     substitutions,
-                    //     probabilities,
-                    //     importance_weights,
-                    // };
-                    // debug_compiled("ite", m, p, &c);
-                    // Ok(c)
+                            Formulas { dist, accept }
+                        })
+                        .collect_vec();
+
+                    let mut weight_map = truthy.weight_map.clone();
+                    weight_map.extend(falsey.weight_map.clone());
+                    let mut substitutions = truthy.substitutions.clone();
+                    substitutions.extend(falsey.substitutions.clone());
+
+                    let probabilities = izip!(&truthy.probabilities, &falsey.probabilities)
+                        .map(|(t, f)| *t + *f)
+                        .collect_vec();
+                    let importance_weights = truthy.convex_combination(&falsey);
+                    let c = Compiled {
+                        formulas,
+                        weight_map,
+                        substitutions,
+                        probabilities,
+                        importance_weights,
+                    };
+                    debug_compiled("ite", m, p, &c);
+                    Ok(c)
                 }
                 EFlip(param) => {
                     debug!(">>>flip {param}");
