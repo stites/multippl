@@ -163,7 +163,7 @@ pub mod semantics {
     #[derive(Debug, Clone)]
     pub struct Formulas {
         pub dist: BddPtr,
-        pub accept: BddPtr,
+        pub accept: BddPtr, // FIXME: actually this is _global_!
     }
     impl Formulas {
         pub fn dist(&self) -> BddPtr {
@@ -377,7 +377,7 @@ pub mod semantics {
             match a {
                 AVar(s, ty) => {
                     let (lbl, wm) = self.get_or_create_varlabel(s.to_string(), m, p);
-                    if !ctx.typechecks_var(a, ty) {
+                    if !ctx.typechecks_anf(a, ty) {
                         Err(TypeError(format!(
                             "Expected {s} : {ty:?}\nGot: {a:?}\n{ctx:?}",
                         )))
@@ -400,7 +400,6 @@ pub mod semantics {
                 Neg(bp) => {
                     let mut p = self.eval_anf(ctx, bp, m, p)?;
                     // FIXME negating a tuple? seems weird!!!!
-
                     p.formulas = p
                         .formulas
                         .into_iter()
@@ -470,13 +469,32 @@ pub mod semantics {
                     // Ok(c)
                 }
                 EProd(al, ar, ty) => {
-                    // debug!(">>>prod: {:?} {:?}", al, ar);
-                    // let mut left = self.eval_anf(ctx, al, m, p)?;
-                    // let right = self.eval_anf(ctx, ar, m, p)?;
+                    debug!(">>>prod: {:?} {:?}", al, ar);
+                    let left = self.eval_anf(ctx, al, m, p)?;
+                    let tyl = al.as_type();
+                    ctx.typechecks_anf(al, &tyl);
+                    let right = self.eval_anf(ctx, ar, m, p)?;
+                    let tyr = ar.as_type();
+                    ctx.typechecks_anf(ar, &tyr);
+                    // FIXME should probably be handled in gamma
+                    assert!(Ty::Prod(Box::new(tyl), Box::new(tyr)) == **ty);
+                    let formulas = left
+                        .formulas
+                        .iter()
+                        .chain(&right.formulas)
+                        .cloned()
+                        .collect_vec();
+                    let flen = formulas.len();
+                    let c = Compiled {
+                        formulas,
+                        weight_map: m.clone(),
+                        substitutions: p.clone(),
+                        probabilities: vec![Probability::new(1.0); flen],
+                        importance_weights: vec![1.0; flen],
+                    };
 
-                    // debug_compiled("prod", m, p, &c);
-                    // Ok(c)
-                    todo!()
+                    debug_compiled("prod", m, p, &c);
+                    Ok(c)
                 }
                 ELetIn(s, tbound, ebound, ebody, tbody) => {
                     debug!(">>>let-in {}", s);
@@ -649,6 +667,7 @@ pub mod semantics {
                         .formulas
                         .iter()
                         .map(|f| {
+                            // FIXME: okay to unify accepts, should I conjoin them here???
                             let theta_q = f.dist.wmc(&var_order, &wmc_params) as f64;
                             let bern = Bernoulli::new(theta_q).unwrap();
                             let sample = bern.sample(self.rng);

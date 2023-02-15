@@ -35,13 +35,16 @@ pub enum ANF {
     Neg(Box<ANF>),
 }
 impl ANF {
-    pub fn is_type(&self, ty: &Ty) -> bool {
+    pub fn as_type(&self) -> Ty {
         use ANF::*;
         match self {
-            AVar(_, t) => *t == Box::new(ty.clone()),
-            AVal(v) => v.as_type() == *ty,
-            _ => *ty == Ty::Bool,
+            AVar(_, t) => *t.clone(),
+            AVal(v) => v.as_type(),
+            _ => Ty::Bool,
         }
+    }
+    pub fn is_type(&self, ty: &Ty) -> bool {
+        self.as_type() == *ty
     }
 }
 
@@ -77,6 +80,7 @@ impl Γ {
         ctx.push((x.clone(), ty.clone()));
         Γ(ctx)
     }
+
     pub fn append_var(&self, s: String, ty: &Ty) -> Γ {
         let mut ctx = self.0.clone();
         ctx.push((
@@ -87,10 +91,10 @@ impl Γ {
         Γ(ctx)
     }
     pub fn typechecks(&self, x: &Expr, ty: &Ty) -> bool {
-        // FIXME this is just a linear scan...
-        self.get(x.clone()).map(|t| t == *ty).is_some()
+        // FIXME this is just a linear scan, nothing smart
+        x.is_type(ty) || self.get(x.clone()).map(|t| t == *ty).is_some()
     }
-    pub fn typechecks_var(&self, a: &ANF, ty: &Ty) -> bool {
+    pub fn typechecks_anf(&self, a: &ANF, ty: &Ty) -> bool {
         self.typechecks(&Expr::EAnf(Box::new(a.clone())), ty)
     }
 }
@@ -111,17 +115,20 @@ impl Expr {
         }
     }
     pub fn is_type(&self, ty: &Ty) -> bool {
+        self.as_type() == *ty
+    }
+    pub fn as_type(&self) -> Ty {
         use Expr::*;
         match self {
-            EAnf(anf) => anf.is_type(ty),
-            EFst(_, t) => *t == Box::new(ty.clone()),
-            ESnd(_, t) => *t == Box::new(ty.clone()),
-            EProd(_, _, t) => *t == Box::new(ty.clone()),
-            ELetIn(_, _, _, _, t) => *t == Box::new(ty.clone()),
-            EIte(_, _, _, t) => *t == Box::new(ty.clone()),
-            EFlip(_) => *ty == Ty::Bool,
-            EObserve(_) => *ty == Ty::Bool,
-            ESample(_) => *ty == Ty::Bool,
+            EAnf(anf) => anf.as_type(),
+            EFst(_, t) => *t.clone(),
+            ESnd(_, t) => *t.clone(),
+            EProd(_, _, t) => *t.clone(),
+            ELetIn(_, _, _, _, t) => *t.clone(),
+            EIte(_, _, _, t) => *t.clone(),
+            EFlip(_) => Ty::Bool,
+            EObserve(_) => Ty::Bool,
+            ESample(_) => Ty::Bool,
         }
     }
 
