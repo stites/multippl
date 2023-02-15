@@ -698,21 +698,35 @@ mod active_tests {
     use tests::*;
     use tracing_test::traced_test;
 
-    // // free variable edge case
-    // #[test]
+    #[test]
     // #[traced_test]
-    // fn free_variables_0() {
-    //     let mk = |ret: Expr| {
-    //         Program::Body(lets![
-    //            "x" := flip!(1/3);
-    //            "y" := sample!(var!("x"));
-    //            ...? ret
-    //         ])
-    //     };
-    //     check_approx("free/x ", 1.0 / 3.0, &mk(var!("x")), 1000);
-    //     // FIXME: still broken! getting 1/2 instead of 1/3
-    //     check_approx("free/y ", 1.0 / 3.0, &mk(var!("y")), 1000);
-    // }
+    fn tuple0() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+                "x" ; B!() ;= flip!(1.0/3.0);
+                "y" ; B!() ;= flip!(1.0/4.0);
+                ...? ret ; B!()
+            ])
+        };
+        check_exact("p02/y,x", vec![3.0 / 12.0, 4.0 / 12.0], &mk02(b!("y", "x")));
+    }
+
+    // free variable edge case
+    #[test]
+    #[ignore]
+    #[traced_test]
+    fn free_variables_0() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+               "x" ; B!() ;= flip!(1/3);
+               "y" ; B!() ;= sample!(var!("x"));
+               ...? ret ; B!()
+            ])
+        };
+        check_approx("free/x ", 1.0 / 3.0, &mk(var!("x")), 1000);
+        // FIXME: still broken! getting 1/2 instead of 1/3
+        check_approx("free/y ", 1.0 / 3.0, &mk(var!("y")), 1000);
+    }
     // #[test]
     // // #[traced_test]
     // fn free_variables_1() {

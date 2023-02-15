@@ -242,18 +242,17 @@ macro_rules! b {
     ( F ) => {
         anf!(ANF::AVal(Val::Bool(false)))
     };
-    ( $y:literal, $( $x:literal ),+ ) => {{
-        let mut fin = b!($y);
-        let mut ty = B!();
-        $(
-            let x = match TryInto<bool>::try_into($x) {
-                None => Box::new(ANF::AVar($x.to_string(), Box::new(B!()))),
-                Some(_) => Box::new(ANF::AVal(Val::Bool($x)))
-            };
-            ty = Box::new(Ty::Prod(ty, Box::new(B!())));
-            fin = Box::new(ANF::Prod(fin, x, ty));
-        )+
-        anf!(*fin)
+    ( $x:literal, $y:literal ) => {{
+        let l = ANF::AVar($x.to_string(), Box::new(B!()));
+        let r = ANF::AVar($y.to_string(), Box::new(B!()));
+        let ty = Box::new(Ty::Prod(Box::new(B!()), Box::new(B!())));
+        Expr::EProd(Box::new(l), Box::new(r), ty)
+    }};
+    ( $x:literal , $y:literal : B) => {{
+        let l = ANF::AVar($x.to_string(), Box::new(B!()));
+        let r = ANF::AVal(Val::Bool($y));
+        let ty = Box::new(Ty::Prod(Box::new(B!()), Box::new(B!())));
+        Expr::EProd(Box::new(l), Box::new(r), ty)
     }};
     ( $y:literal && $( $x:literal )&&+ ) => {{
         let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(B!())));
