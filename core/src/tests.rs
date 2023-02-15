@@ -100,7 +100,7 @@ fn program03() {
 }
 
 #[test]
-#[traced_test]
+// #[traced_test]
 fn program04_seeded() {
     let mk04 = |ret: Expr| {
         Program::Body(lets![
@@ -120,7 +120,7 @@ fn program04_seeded() {
 }
 
 #[test]
-#[traced_test]
+// #[traced_test]
 fn program04_approx() {
     let mk04 = |ret: Expr| {
         Program::Body(lets![

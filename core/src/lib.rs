@@ -500,12 +500,6 @@ pub mod semantics {
 
                     let formulas = izip!(body.formulas.clone(), bound.formulas.clone())
                         .map(|(bodyf, boundf)| {
-                            println!(
-                                "{}, {:?}, {}",
-                                bodyf.accept.print_bdd(),
-                                lbl,
-                                boundf.accept.print_bdd()
-                            );
                             // NOTE: applying all substituting will normalize distributions in sample too much. This will cause
                             // samples to normalize in a way where we will fail to drop irrelevant structure
                             // old-code does this:
@@ -641,34 +635,41 @@ pub mod semantics {
                     Ok(c)
                 }
                 ESample(e) => {
-                    // debug!(">>>sample");
-                    // let comp = self.eval_expr(ctx, e, m, p)?;
+                    debug!(">>>sample");
+                    let comp = self.eval_expr(ctx, e, m, p)?;
 
-                    // if comp.formulas.iter().any(|f| f.accept != BddPtr::PtrTrue) {
-                    //     return Err(SemanticsError(
-                    //         "impossible! Sample statement includes observe statement.".to_string(),
-                    //     ));
-                    // }
-                    // let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
-                    // let var_order = VarOrder::linear_order(max_var as usize);
-                    // comp.formulas.iter().map(|f| {
-                    //     let theta_q = f.dist.wmc(&var_order, &wmc_params) as f64;
-                    //     let bern = Bernoulli::new(theta_q).unwrap();
-                    //     let sample = bern.sample(self.rng);
-                    //     let q = Probabilities::new(if sample { theta_q } else { 1.0 - theta_q });
-                    // });
+                    if comp.formulas.iter().any(|f| f.accept != BddPtr::PtrTrue) {
+                        return Err(SemanticsError(
+                            "impossible! Sample statement includes observe statement.".to_string(),
+                        ));
+                    }
+                    let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
+                    let var_order = VarOrder::linear_order(max_var as usize);
+                    let (qs, formulas): (Vec<Probability>, Vec<Formulas>) = comp
+                        .formulas
+                        .iter()
+                        .map(|f| {
+                            let theta_q = f.dist.wmc(&var_order, &wmc_params) as f64;
+                            let bern = Bernoulli::new(theta_q).unwrap();
+                            let sample = bern.sample(self.rng);
+                            let q = Probability::new(if sample { theta_q } else { 1.0 - theta_q });
+                            let formulas = Formulas {
+                                dist: BddPtr::from_bool(sample),
+                                accept: self.mgr.iff(f.dist, BddPtr::PtrTrue),
+                            };
+                            (q, formulas)
+                        })
+                        .unzip();
 
-                    todo!()
-                    // let c = Compiled {
-                    //     dist: BddPtr::from_bool(sample),
-                    //     accept: self.mgr.iff(comp.dist, BddPtr::PtrTrue),
-                    //     weight_map: comp.weight_map.clone(),
-                    //     substitutions: p.clone(),
-                    //     probabilities: q,
-                    //     importance_weights: 1.0,
-                    // };
-                    // debug_compiled("sample", m, p, &c);
-                    // Ok(c)
+                    let c = Compiled {
+                        formulas,
+                        weight_map: comp.weight_map.clone(),
+                        substitutions: p.clone(),
+                        probabilities: qs,
+                        importance_weights: vec![1.0; comp.formulas.len()],
+                    };
+                    debug_compiled("sample", m, p, &c);
+                    Ok(c)
                 }
             }
         }
