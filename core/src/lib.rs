@@ -708,7 +708,7 @@ mod active_tests {
                 ...? ret ; B!()
             ])
         };
-        check_exact("p02/y,x", vec![3.0 / 12.0, 4.0 / 12.0], &mk02(b!("y", "x")));
+        check_exact("p02/y,x", vec![3.0 / 12.0, 4.0 / 12.0], &mk(b!("y", "x")));
     }
 
     // free variable edge case
@@ -723,9 +723,9 @@ mod active_tests {
                ...? ret ; B!()
             ])
         };
-        check_approx("free/x ", 1.0 / 3.0, &mk(var!("x")), 1000);
+        check_approx1("free/x ", 1.0 / 3.0, &mk(var!("x")), 1000);
         // FIXME: still broken! getting 1/2 instead of 1/3
-        check_approx("free/y ", 1.0 / 3.0, &mk(var!("y")), 1000);
+        check_approx1("free/y ", 1.0 / 3.0, &mk(var!("y")), 1000);
     }
     // #[test]
     // // #[traced_test]
