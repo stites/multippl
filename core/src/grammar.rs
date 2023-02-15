@@ -63,23 +63,23 @@ pub enum Expr {
 }
 
 #[derive(Default, Debug)]
-pub struct Γ<'a>(pub Vec<(&'a Expr, &'a Ty)>);
-impl<'a> Γ<'a> {
-    pub fn get(&self, x: &'a Expr) -> Option<&'a Ty> {
+pub struct Γ(pub Vec<(Expr, Ty)>);
+impl Γ {
+    pub fn get(&self, x: Expr) -> Option<Ty> {
         self.0
             .iter()
             .find(|(e, _)| *e == x)
             .map(|(_, t)| t)
-            .copied()
+            .cloned()
     }
-    pub fn append(&self, x: &'a Expr, ty: &'a Ty) -> Γ<'a> {
+    pub fn append(&self, x: &Expr, ty: &Ty) -> Γ {
         let mut ctx = self.0.clone();
-        ctx.push((x, ty));
+        ctx.push((x.clone(), ty.clone()));
         Γ(ctx)
     }
     pub fn typechecks(&self, x: &Expr, ty: &Ty) -> bool {
         // FIXME this is just a linear scan...
-        self.get(x).map(|t| t == ty).is_some()
+        self.get(x.clone()).map(|t| t == *ty).is_some()
     }
     pub fn typechecks_var(&self, a: &ANF, ty: &Ty) -> bool {
         self.typechecks(&Expr::EAnf(Box::new(a.clone())), ty)

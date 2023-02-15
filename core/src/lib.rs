@@ -437,8 +437,17 @@ pub mod semantics {
                     bound_substitutions
                         .insert(id, bound.formulas.iter().map(Formulas::dist).collect_vec());
 
+                    let mut newctx = ctx.0.clone();
+                    newctx.push((
+                        Expr::EAnf(Box::new(ANF::AVar(
+                            s.to_string(),
+                            Box::new(*tbound.clone()),
+                        ))),
+                        *tbound.clone(),
+                    ));
+
                     let body =
-                        self.eval_expr(ctx, ebody, &bound.weight_map, &bound_substitutions)?;
+                        self.eval_expr(&Γ(newctx), ebody, &bound.weight_map, &bound_substitutions)?;
 
                     let mut weight_map = bound.weight_map;
                     weight_map.extend(body.weight_map);
