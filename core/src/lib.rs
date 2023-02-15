@@ -50,6 +50,16 @@ pub mod semantics {
     use std::fmt;
     type Mgr = BddManager<AllTable<BddPtr>>;
 
+    fn rendervec(fs: &Vec<String>) -> String {
+        format!("[{}]", fs.join(", "))
+    }
+    fn fmt_f64(high_precision: bool) -> impl Fn(f64) -> String {
+        if high_precision {
+            move |x: f64| format!("{}", x)
+        } else {
+            move |x: f64| format!("{:.2}", x)
+        }
+    }
     fn debug_compiled(s: &str, w: &WeightMap, p: &SubstMap, c: &Compiled) {
         let renderw = |ws: &WeightMap| {
             ws.iter()
@@ -62,23 +72,42 @@ pub mod semantics {
                 .join(", ")
         };
 
-        let renderdist = |fs: &Vec<Formulas>| {
-            fs.iter()
-                .map(|f| format!("{}", f.dist.print_bdd()))
-                .join(", ")
-        };
-        let renderaccept = |fs: &Vec<Formulas>| {
-            fs.iter()
-                .map(|f| format!("{}", f.accept.print_bdd()))
-                .join(", ")
-        };
+        let dists = rendervec(
+            &c.formulas
+                .iter()
+                .map(Formulas::dist)
+                .map(|b: BddPtr| b.print_bdd())
+                .collect_vec(),
+        );
+
+        let accepts = rendervec(
+            &c.formulas
+                .iter()
+                .map(Formulas::accept)
+                .map(|b: BddPtr| b.print_bdd())
+                .collect_vec(),
+        );
+
+        let probs = rendervec(
+            &c.probabilities
+                .iter()
+                .map(Probability::as_f64)
+                .map(|x| fmt_f64(false)(x))
+                .collect_vec(),
+        );
+        let weights = rendervec(
+            &c.importance_weights
+                .iter()
+                .map(|x| fmt_f64(false)(*x))
+                .collect_vec(),
+        );
         debug!("{s}, [{}], [{}]", renderw(w), renderp(p));
-        debug!("      \\||/  {}", renderdist(&c.formulas));
-        debug!("      \\||/  {}", renderaccept(&c.formulas));
+        debug!("      \\||/  {}", dists);
+        debug!("      \\||/  {}", accepts);
         debug!("      \\||/  {}", renderw(&c.weight_map));
         debug!("      \\||/  {}", renderp(&c.substitutions));
-        debug!("      \\||/  {}", c.probability.as_f64());
-        debug!("      \\||/  {}", c.importance_weight);
+        debug!("      \\||/  {}", probs);
+        debug!("      \\||/  {}", weights);
         debug!("----------------------------------------");
     }
 
@@ -150,13 +179,19 @@ pub mod semantics {
         pub formulas: Vec<Formulas>,
         pub weight_map: WeightMap, // must be a hashmap as sample will collapse variables
         pub substitutions: SubstMap,
-        pub probability: Probability,
-        pub importance_weight: f64,
+        pub probabilities: Vec<Probability>, // FIXME, can actually be removed -- just keeping this around for diagnostic purposes
+        pub importance_weights: Vec<f64>,
     }
     impl Compiled {
-        fn convex_combination(&self, o: &Compiled) -> f64 {
-            self.probability.as_f64() * self.importance_weight
-                + o.probability.as_f64() * o.importance_weight
+        fn convex_combination(&self, o: &Compiled) -> Vec<f64> {
+            izip!(
+                &self.probabilities,
+                &self.importance_weights,
+                &o.probabilities,
+                &o.importance_weights
+            )
+            .map(|(selfp, selfiw, op, oiw)| selfp.as_f64() * selfiw + op.as_f64() * oiw)
+            .collect_vec()
         }
         fn default(dist: BddPtr, accept: BddPtr) -> Compiled {
             Compiled::default_vec(vec![Formulas { dist, accept }])
@@ -166,8 +201,8 @@ pub mod semantics {
                 formulas,
                 weight_map: HashMap::new(),
                 substitutions: HashMap::new(),
-                probability: Probability::new(1.0),
-                importance_weight: 1.0,
+                probabilities: vec![Probability::new(1.0)],
+                importance_weights: vec![1.0],
             }
         }
     }
@@ -481,13 +516,20 @@ pub mod semantics {
                             .collect_vec();
                         self.samples.insert(id, samples);
                     }
+                    let probabilities = izip!(bound.probabilities, body.probabilities)
+                        .map(|(p1, p2)| p1 * p2)
+                        .collect_vec();
+                    let importance_weights =
+                        izip!(bound.importance_weights, body.importance_weights)
+                            .map(|(p1, p2)| p1 * p2)
+                            .collect_vec();
 
                     let c = Compiled {
                         formulas,
                         weight_map,
                         substitutions,
-                        probability: bound.probability * body.probability,
-                        importance_weight: bound.importance_weight * body.importance_weight,
+                        probabilities,
+                        importance_weights,
                     };
                     debug_compiled(&format!("let-in {}", s), m, p, &c);
                     Ok(c)
@@ -510,15 +552,15 @@ pub mod semantics {
                     // weight_map.extend(falsey.weight_map.clone());
                     // let mut substitutions = truthy.substitutions.clone();
                     // substitutions.extend(falsey.substitutions.clone());
-                    // let probability = truthy.probability + falsey.probability;
-                    // let importance_weight = truthy.convex_combination(&falsey);
+                    // let probabilities = truthy.probability + falsey.probability;
+                    // let importance_weights = truthy.convex_combination(&falsey);
                     // let c = Compiled {
                     //     dist,
                     //     accept,
                     //     weight_map,
                     //     substitutions,
-                    //     probability,
-                    //     importance_weight,
+                    //     probabilities,
+                    //     importance_weights,
                     // };
                     // debug_compiled("ite", m, p, &c);
                     // Ok(c)
@@ -537,41 +579,52 @@ pub mod semantics {
                         }],
                         weight_map,
                         substitutions: p.clone(),
-                        probability: Probability::new(1.0),
-                        importance_weight: 1.0,
+                        probabilities: vec![Probability::new(1.0)],
+                        importance_weights: vec![1.0],
                     };
                     debug_compiled("flip {param}", m, p, &c);
                     Ok(c)
                 }
                 EObserve(a) => {
                     debug!(">>>observe");
-                    todo!()
+                    let comp = self.eval_anf(ctx, a, m, p)?;
+                    // FIXME: I don't think there is a need to apply substitutions here, but doing this doesn't hurt
+                    let apply_subs = |d| self.apply_substitutions(d, p);
+                    let dists = comp
+                        .formulas
+                        .iter()
+                        .map(Formulas::dist)
+                        .map(apply_subs)
+                        .collect_vec();
 
-                    // let comp = self.eval_anf(ctx, a, m, p)?;
-                    // let formulas = comp
-                    //     .formulas
-                    //     .iter()
-                    //     .map(|f| {
-                    //         let dist = self.apply_substitutions(f.dist, p); // FIXME: I don't think there is a need to apply substitutions here, but doing this doesn't hurt
-                    //         let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
-                    //         let var_order = VarOrder::linear_order(max_var as usize);
-                    //         let w = dist.wmc(&var_order, &wmc_params);
-                    //         Formulas {
-                    //             dist: BddPtr::PtrTrue,
-                    //             accept: dist,
-                    //         }
-                    //     })
-                    //     .collect_vec();
+                    let formulas = dists
+                        .clone()
+                        .into_iter()
+                        .map(|dist| Formulas {
+                            dist: BddPtr::PtrTrue,
+                            accept: dist,
+                        })
+                        .collect_vec();
 
-                    // let c = Compiled {
-                    //     formulas,
-                    //     weight_map: m.clone(),
-                    //     substitutions: p.clone(),
-                    //     probability: Probability::new(1.0),
-                    //     importance_weight: w as f64,
-                    // };
-                    // debug_compiled("observe", m, p, &c);
-                    // Ok(c)
+                    let probabilities = vec![Probability::new(1.0); dists.len()];
+                    let importance_weights = dists
+                        .into_iter()
+                        .map(|dist| {
+                            let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
+                            let var_order = VarOrder::linear_order(max_var as usize);
+                            dist.wmc(&var_order, &wmc_params)
+                        })
+                        .collect_vec();
+
+                    let c = Compiled {
+                        formulas,
+                        weight_map: m.clone(),
+                        substitutions: p.clone(),
+                        probabilities,
+                        importance_weights,
+                    };
+                    debug_compiled("observe", m, p, &c);
+                    Ok(c)
                 }
                 ESample(e) => {
                     // debug!(">>>sample");
@@ -588,7 +641,7 @@ pub mod semantics {
                     //     let theta_q = f.dist.wmc(&var_order, &wmc_params) as f64;
                     //     let bern = Bernoulli::new(theta_q).unwrap();
                     //     let sample = bern.sample(self.rng);
-                    //     let q = Probability::new(if sample { theta_q } else { 1.0 - theta_q });
+                    //     let q = Probabilities::new(if sample { theta_q } else { 1.0 - theta_q });
                     // });
 
                     todo!()
@@ -597,8 +650,8 @@ pub mod semantics {
                     //     accept: self.mgr.iff(comp.dist, BddPtr::PtrTrue),
                     //     weight_map: comp.weight_map.clone(),
                     //     substitutions: p.clone(),
-                    //     probability: q,
-                    //     importance_weight: 1.0,
+                    //     probabilities: q,
+                    //     importance_weights: 1.0,
                     // };
                     // debug_compiled("sample", m, p, &c);
                     // Ok(c)
