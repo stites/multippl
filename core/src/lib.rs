@@ -424,6 +424,21 @@ pub mod semantics {
             }
             fin
         }
+        pub fn log_samples(&mut self, id: UniqueId, ebound: &Expr, bound: &Compiled) {
+            if ebound.is_sample() {
+                let samples = bound
+                    .formulas
+                    .iter()
+                    .map(Formulas::dist)
+                    .map(|dist| match dist {
+                        BddPtr::PtrTrue => true,
+                        BddPtr::PtrFalse => false,
+                        _ => panic!("impossible"),
+                    })
+                    .collect_vec();
+                self.samples.insert(id, samples);
+            }
+        }
 
         pub fn eval_expr(
             &mut self,
@@ -468,23 +483,16 @@ pub mod semantics {
                     let (lbl, wm) = self.get_or_create_varlabel(s.clone(), m, p);
                     let id = UniqueId(lbl.value());
                     let bound = self.eval_expr(ctx, ebound, &wm, p)?;
+
                     let mut bound_substitutions = bound.substitutions.clone();
                     bound_substitutions
                         .insert(id, bound.formulas.iter().map(Formulas::dist).collect_vec());
 
-                    let mut newctx = ctx.0.clone();
-                    newctx.push((
-                        Expr::EAnf(Box::new(ANF::AVar(
-                            s.to_string(),
-                            Box::new(*tbound.clone()),
-                        ))),
-                        *tbound.clone(),
-                    ));
-
+                    let newctx = ctx.append_var(s.to_string(), tbound);
                     let body =
-                        self.eval_expr(&Γ(newctx), ebody, &bound.weight_map, &bound_substitutions)?;
+                        self.eval_expr(&newctx, ebody, &bound.weight_map, &bound_substitutions)?;
 
-                    let mut weight_map = bound.weight_map;
+                    let mut weight_map = bound.weight_map.clone();
                     weight_map.extend(body.weight_map);
 
                     let substitutions = body.substitutions.clone();
@@ -516,6 +524,7 @@ pub mod semantics {
                             .collect_vec();
                         self.samples.insert(id, samples);
                     }
+                    self.log_samples(id, ebound, &bound);
                     let probabilities = izip!(bound.probabilities, body.probabilities)
                         .map(|(p1, p2)| p1 * p2)
                         .collect_vec();

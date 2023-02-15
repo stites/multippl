@@ -77,6 +77,15 @@ impl Γ {
         ctx.push((x.clone(), ty.clone()));
         Γ(ctx)
     }
+    pub fn append_var(&self, s: String, ty: &Ty) -> Γ {
+        let mut ctx = self.0.clone();
+        ctx.push((
+            Expr::EAnf(Box::new(ANF::AVar(s, Box::new(ty.clone())))),
+            ty.clone(),
+        ));
+
+        Γ(ctx)
+    }
     pub fn typechecks(&self, x: &Expr, ty: &Ty) -> bool {
         // FIXME this is just a linear scan...
         self.get(x.clone()).map(|t| t == *ty).is_some()

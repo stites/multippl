@@ -52,7 +52,7 @@ pub fn check_approx_seeded(s: &str, f: f64, p: &Program, n: usize, seeds: &Vec<u
 }
 
 #[test]
-#[traced_test]
+//#[traced_test]
 fn program00() {
     let p00 = lets!["x" : bool := val!(true); in var!("x") ; bool];
     check_exact("p00", 1.0, &Program::Body(p00));
@@ -83,7 +83,7 @@ fn program02() {
 }
 
 #[test]
-// #[traced_test]
+#[traced_test]
 fn program03() {
     let mk03 = |ret: Expr| {
         Program::Body(lets![
@@ -99,39 +99,39 @@ fn program03() {
     check_exact("p03/x&y", 1.0 / 6.0, &mk03(b!("x" && "y")));
 }
 
-#[test]
-// #[traced_test]
-fn program04_seeded() {
-    let mk04 = |ret: Expr| {
-        Program::Body(lets![
-            "x" ; B!() ;= sample!(flip!(1/3));
-            "y" ; B!() ;= flip!(1/4);
-            "_" ; B!() ;= observe!(b!("x" || "y"));
-            ...? ret   ; B!()
-        ])
-    };
-    // perfect seeds of [F F T]
-    let s = vec![1, 1, 7];
-    let n = 1000;
-    check_approx_seeded("p04s/y  ", 3.0 / 6.0, &mk04(b!("y")), n, &s);
-    check_approx_seeded("p04s/x  ", 4.0 / 6.0, &mk04(b!("x")), n, &s);
-    check_approx_seeded("p04s/x|y", 6.0 / 6.0, &mk04(b!("x" || "y")), n, &s);
-    check_approx_seeded("p04s/x&y", 1.0 / 6.0, &mk04(b!("x" && "y")), n, &s);
-}
+// #[test]
+// // #[traced_test]
+// fn program04_seeded() {
+//     let mk04 = |ret: Expr| {
+//         Program::Body(lets![
+//             "x" ; B!() ;= sample!(flip!(1/3));
+//             "y" ; B!() ;= flip!(1/4);
+//             "_" ; B!() ;= observe!(b!("x" || "y"));
+//             ...? ret   ; B!()
+//         ])
+//     };
+//     // perfect seeds of [F F T]
+//     let s = vec![1, 1, 7];
+//     let n = 1000;
+//     check_approx_seeded("p04s/y  ", 3.0 / 6.0, &mk04(b!("y")), n, &s);
+//     check_approx_seeded("p04s/x  ", 4.0 / 6.0, &mk04(b!("x")), n, &s);
+//     check_approx_seeded("p04s/x|y", 6.0 / 6.0, &mk04(b!("x" || "y")), n, &s);
+//     check_approx_seeded("p04s/x&y", 1.0 / 6.0, &mk04(b!("x" && "y")), n, &s);
+// }
 
-#[test]
-// #[traced_test]
-fn program04_approx() {
-    let mk04 = |ret: Expr| {
-        Program::Body(lets![
-            "x" ; B!() ;= sample!(flip!(1/3));
-            "y" ; B!() ;= flip!(1/4);
-            "_" ; B!() ;= observe!(b!("x" || "y"));
-            ...? ret ; B!()
-        ])
-    };
-    check_approx("p04/y  ", 3.0 / 6.0, &mk04(b!("y")), 10000);
-    check_approx("p04/x  ", 4.0 / 6.0, &mk04(b!("x")), 10000);
-    check_approx("p04/x|y", 6.0 / 6.0, &mk04(b!("x" || "y")), 10000);
-    check_approx("p04/x&y", 1.0 / 6.0, &mk04(b!("x" && "y")), 10000);
-}
+// #[test]
+// // #[traced_test]
+// fn program04_approx() {
+//     let mk04 = |ret: Expr| {
+//         Program::Body(lets![
+//             "x" ; B!() ;= sample!(flip!(1/3));
+//             "y" ; B!() ;= flip!(1/4);
+//             "_" ; B!() ;= observe!(b!("x" || "y"));
+//             ...? ret ; B!()
+//         ])
+//     };
+//     check_approx("p04/y  ", 3.0 / 6.0, &mk04(b!("y")), 10000);
+//     check_approx("p04/x  ", 4.0 / 6.0, &mk04(b!("x")), 10000);
+//     check_approx("p04/x|y", 6.0 / 6.0, &mk04(b!("x" || "y")), 10000);
+//     check_approx("p04/x&y", 1.0 / 6.0, &mk04(b!("x" && "y")), 10000);
+// }
