@@ -360,6 +360,7 @@ pub mod semantics {
             }
         }
         pub fn apply_substitutions(&mut self, bdd: BddPtr, p: &SubstMap) -> BddPtr {
+            // put on typed substitution, just assume a nice user
             let mut fin = bdd;
             for (lbl, subs) in p.iter() {
                 match subs[..] {
@@ -403,45 +404,6 @@ pub mod semantics {
             }
         }
         /// apply
-        pub fn apply_typed_substitution(
-            &mut self,
-            ctx: &Γ,
-            bdd: &Vec<BddPtr>,
-            var: String,
-            ty: &Ty,
-            subs: &Vec<BddPtr>,
-            p: &SubstMap,
-        ) -> Vec<BddPtr> {
-            let bdds = bdd
-                .iter()
-                .cloned()
-                .map(|b| self.apply_substitutions(b, p))
-                .collect_vec();
-            todo!()
-        }
-        //     match ty {
-        //         Ty::Bool => {
-        //             assert!(ids.len() == 1 && subs.len() == 1);
-        //             self.mgr.compose(bdd, ids[0], subs[0])
-        //         },
-        //         Ty::Prod(l, Box(Ty::Bool)) => {
-        //             self._typed_substitution(ctx, bdd, lbl,
-        //         },
-        //         Ty::Prod(Box(Ty::Bool), r) =>
-        //             subs.iter().fold(bdd, |fin, sub| {
-        //                 self.mgr.compose(fin, lbl, sub)
-        //             })
-        //         },
-        //         Ty::Prod(l, r) =>
-        //             self._typed_substitution(ctx, bdd, lbl,
-        //             self.mgr.compose(fin, VarLabel::new(lbl.0), sub),
-        //     }
-        //             _ => continue,
-        //         }
-        //     }
-        //     fin
-        // }
-
         pub fn log_samples(&mut self, id: UniqueId, ebound: &Expr, bound: &Compiled) {
             if ebound.is_sample() {
                 let samples = bound
@@ -473,17 +435,20 @@ pub mod semantics {
                     Ok(c)
                 }
                 EFst(a, ty) => {
-                    todo!()
-                    // debug!(">>>fst: {:?}", a);
-                    // let c = self.eval_anf(ctx, a, m, p)?;
-                    // debug_compiled("fst", m, p, &c);
-                    // Ok(c)
+                    debug!(">>>fst: {:?}", a);
+                    let aty = a.as_type();
+                    assert!(aty.left() == Some(*ty.clone()));
+                    let mut c = self.eval_anf(ctx, a, m, p)?;
+                    c.dists = vec![c.dists[0]];
+                    debug_compiled("fst", m, p, &c);
+                    Ok(c)
                 }
                 ESnd(a, ty) => {
                     debug!(">>>snd: {:?}", a);
                     let aty = a.as_type();
                     assert!(aty.left() == Some(*ty.clone()));
-                    let c = self.eval_anf(ctx, a, m, p)?;
+                    let mut c = self.eval_anf(ctx, a, m, p)?;
+                    c.dists = vec![c.dists[1]];
                     debug_compiled("snd", m, p, &c);
                     Ok(c)
                 }
@@ -528,29 +493,24 @@ pub mod semantics {
                     let mut weight_map = bound.weight_map.clone();
                     weight_map.extend(body.weight_map);
 
-                    let substitutions = body.substitutions.clone();
-                    // substitutions.extend(body.substitutions);
+                    let mut substitutions = body.substitutions.clone();
+                    substitutions.extend(bound_substitutions);
 
-                    println!("{:?}", body.dists.clone());
-                    println!("{:?}", bound.dists.clone());
-                    let dists = self.apply_typed_substitution(
-                        ctx,
-                        &body.dists,
-                        s.clone(),
-                        tbound,
-                        &bound.dists,
-                        &substitutions,
-                    );
+                    let dists = body
+                        .dists
+                        .iter()
+                        .map(|d| self.apply_substitutions(*d, &substitutions))
+                        .collect_vec();
 
                     let accept = self.mgr.and(bound.accept, body.accept);
-                    let accept = self.typed_substitution(
-                        ctx,
-                        &vec![accept],
-                        s.clone(),
-                        tbound,
-                        &bound.dists,
-                    );
-                    let accept = accept[0];
+                    // let accept = self.typed_substitution(
+                    //     ctx,
+                    //     &vec![accept],
+                    //     s.clone(),
+                    //     tbound,
+                    //     &bound.dists,
+                    // );
+                    // let accept = accept[0];
 
                     self.log_samples(id, ebound, &bound);
 
@@ -646,7 +606,9 @@ pub mod semantics {
                         .dists
                         .into_iter()
                         // FIXME: I don't think there is a need to apply substitutions here, but doing this doesn't hurt
-                        // .map(|d| self.apply_substitutions(*d, p))
+                        .map(|d| self.apply_substitutions(d, p))
+                        .collect_vec()
+                        .into_iter()
                         .fold(BddPtr::PtrTrue, |global, cur| self.mgr.and(global, cur));
 
                     let accept = dists;
