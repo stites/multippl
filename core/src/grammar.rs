@@ -246,29 +246,32 @@ macro_rules! b {
     ( ) => {
         Ty::Bool
     };
+    (@anf $x:literal ; $ty:expr) => {
+        if $x.to_string() == "true" || $x.to_string() == "false" {
+            ANF::AVal(Val::Bool($x.to_string() == "true"))
+        } else {
+            ANF::AVar($x.to_string(), Box::new($ty))
+        }
+    };
+    (@anf $x:literal) => {
+        b!(@anf $x ; B!())
+    };
+    ( true ) => { anf!(b!(@anf "true")) };
+    ( false ) => { anf!(b!(@anf "false")) };
     ( $x:literal ) => {
-        anf!(ANF::AVar($x.to_string(), Box::new(B!())))
+        anf!(b!(@anf $x))
     };
-    ( true ) => {
-        anf!(ANF::AVal(Val::Bool(true)))
-    };
-    ( false ) => {
-        anf!(ANF::AVal(Val::Bool(false)))
+    ( $x:literal ; $ty:expr ) => {
+        anf!(b!(@anf $x ; $ty))
     };
     ( B , B ) => {{
         Ty::Prod(Box::new(b!()), Box::new(b!()))
     }};
     ( $x:literal, $y:literal ) => {{
-        let l = ANF::AVar($x.to_string(), Box::new(B!()));
-        let r = ANF::AVar($y.to_string(), Box::new(B!()));
-        let ty = Box::new(Ty::Prod(Box::new(B!()), Box::new(B!())));
-        Expr::EProd(Box::new(l), Box::new(r), ty)
-    }};
-    ( $x:literal, true) => {{
-        let l = ANF::AVar($x.to_string(), Box::new(B!()));
-        let r = ANF::AVal(Val::Bool(true));
-        let ty = Box::new(Ty::Prod(Box::new(B!()), Box::new(B!())));
-        Expr::EProd(Box::new(l), Box::new(r), ty)
+        let l = b!(@anf $x);
+        let r = b!(@anf $y);
+        let ty = Ty::Prod(Box::new(B!()), Box::new(B!()));
+        Expr::EProd(Box::new(l), Box::new(r), Box::new(ty))
     }};
     ( $y:literal && $( $x:literal )&&+ ) => {{
         let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(B!())));
@@ -286,6 +289,19 @@ macro_rules! b {
     }};
 }
 
+#[macro_export]
+macro_rules! snd {
+    ( $x:expr ) => {{
+        Expr::ESnd(Box::new($x), Box::new(b!()))
+    }};
+}
+
+#[macro_export]
+macro_rules! fst {
+    ( $x:expr ) => {{
+        Expr::EFst(Box::new($x), Box::new(b!()))
+    }};
+}
 #[macro_export]
 macro_rules! sample {
     ( $x:expr ) => {{

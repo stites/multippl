@@ -80,7 +80,7 @@ fn program01() {
     check_exact1("p01", 1.0 / 3.0, &Program::Body(p01));
 }
 #[test]
-// #[traced_test]
+#[traced_test]
 fn program02() {
     let mk02 = |ret: Expr| {
         Program::Body(lets![

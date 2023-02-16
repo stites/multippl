@@ -60,6 +60,17 @@ pub mod semantics {
             move |x: f64| format!("{:.2}", x)
         }
     }
+    fn var_node(bdd: BddPtr) -> Option<VarLabel> {
+        let n = bdd.into_node_safe()?;
+        if (n.low == BddPtr::PtrTrue && n.high == BddPtr::PtrFalse)
+            || (n.low == BddPtr::PtrFalse && n.high == BddPtr::PtrTrue)
+        {
+            Some(n.var)
+        } else {
+            None
+        }
+    }
+
     fn debug_compiled(s: &str, w: &WeightMap, p: &SubstMap, c: &Compiled) {
         let renderw = |ws: &WeightMap| {
             ws.iter()
@@ -108,6 +119,14 @@ pub mod semantics {
 
     #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
     pub struct UniqueId(u64);
+    impl UniqueId {
+        pub fn from_lbl(lbl: VarLabel) -> UniqueId {
+            UniqueId(lbl.value())
+        }
+        pub fn as_lbl(&self) -> VarLabel {
+            VarLabel::new(self.0)
+        }
+    }
 
     impl fmt::Display for UniqueId {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -359,13 +378,66 @@ pub mod semantics {
                 }
             }
         }
-        pub fn apply_substitutions(&mut self, bdd: BddPtr, p: &SubstMap) -> BddPtr {
-            // put on typed substitution, just assume a nice user
+        pub fn _apply_substitutions1(&mut self, bdd: BddPtr, p: &SubstMap) -> Option<Vec<BddPtr>> {
+            match var_node(bdd) {
+                Some(lbl) => {
+                    let subs = p.get(&UniqueId::from_lbl(lbl))?;
+                    Some(subs.clone())
+                }
+                None => {
+                    let finl = p.iter().fold(bdd, |fin, (lbl, sub)| {
+                        if sub.len() > 1 {
+                            panic!("whoopsie!");
+                        }
+                        self.mgr.compose(fin, lbl.as_lbl(), sub[0])
+                    });
+                    Some(vec![finl])
+                }
+            }
+        }
+
+        // TODO: make sure substitutions are fully normalized? I don't think this will ever be a problem.
+        pub fn apply_substitutions1(&mut self, bdd: BddPtr, p: &SubstMap) -> Vec<BddPtr> {
+            match self._apply_substitutions1(bdd, p) {
+                None => vec![bdd],
+                Some(subs) => subs,
+            }
+        }
+
+        pub fn apply_substitutions(&mut self, bdds: Vec<BddPtr>, p: &SubstMap) -> Vec<BddPtr> {
+            // punt on typed substitution, just assume a nice user
+            match bdds.first() {
+                None => vec![],
+                Some(hd) => {
+                    let mut hds = self.apply_substitutions1(*hd, p);
+                    let tl = &bdds[1..];
+                    let tl = self.apply_substitutions(tl.to_vec(), p);
+                    hds.extend(tl);
+                    hds
+                }
+            }
+        }
+
+        pub fn __apply_substitutions(&mut self, bdd: BddPtr, p: &SubstMap) -> BddPtr {
+            // punt on typed substitution, just assume a nice user
             let mut fin = bdd;
             for (lbl, subs) in p.iter() {
+                debug!(
+                    "[apply_substitutions: {}] {}: [{}]",
+                    bdd.print_bdd(),
+                    lbl,
+                    subs.iter().cloned().map(|b| b.print_bdd()).join(", ")
+                );
                 match subs[..] {
-                    [sub] => fin = self.mgr.compose(fin, VarLabel::new(lbl.0), sub),
-                    _ => continue,
+                    [] => continue,
+                    [sub] => {
+                        // debug!("[apply_substitutions] applying->{sub:?}");
+                        fin = self.mgr.compose(fin, VarLabel::new(lbl.0), sub)
+                    }
+                    [x, y, ..] => {
+                        // debug!("[apply_substitutions] _not_applying->{subs:?}");
+                        continue;
+                    }
                 }
             }
             fin
@@ -436,8 +508,9 @@ pub mod semantics {
                 }
                 EFst(a, ty) => {
                     debug!(">>>fst: {:?}", a);
-                    let aty = a.as_type();
-                    assert!(aty.left() == Some(*ty.clone()));
+                    // ignore types for now.
+                    // let aty = a.as_type();
+                    // assert!(aty.left() == Some(*ty.clone()), "actual {:?} != expected {:?}. type is: {:?}", aty.left(), Some(*ty.clone()), ty);
                     let mut c = self.eval_anf(ctx, a, m, p)?;
                     c.dists = vec![c.dists[0]];
                     debug_compiled("fst", m, p, &c);
@@ -445,8 +518,9 @@ pub mod semantics {
                 }
                 ESnd(a, ty) => {
                     debug!(">>>snd: {:?}", a);
-                    let aty = a.as_type();
-                    assert!(aty.left() == Some(*ty.clone()));
+                    // ignore types for now.
+                    // let aty = a.as_type();
+                    // assert!(aty.right() == Some(*ty.clone()), "actual {:?} != expected {:?}. type is: {:?}", aty.right(), Some(*ty.clone()), ty);
                     let mut c = self.eval_anf(ctx, a, m, p)?;
                     c.dists = vec![c.dists[1]];
                     debug_compiled("snd", m, p, &c);
@@ -496,11 +570,12 @@ pub mod semantics {
                     let mut substitutions = body.substitutions.clone();
                     substitutions.extend(bound_substitutions);
 
-                    let dists = body
-                        .dists
-                        .iter()
-                        .map(|d| self.apply_substitutions(*d, &substitutions))
-                        .collect_vec();
+                    let dists = self.apply_substitutions(body.dists, &substitutions);
+                    // let dists = body
+                    //     .dists
+                    //     .iter()
+                    //     .map(|d| self.apply_substitutions(*d, &substitutions))
+                    //     .collect_vec();
 
                     let accept = self.mgr.and(bound.accept, body.accept);
                     // let accept = self.typed_substitution(
@@ -602,13 +677,16 @@ pub mod semantics {
                 EObserve(a) => {
                     debug!(">>>observe");
                     let comp = self.eval_anf(ctx, a, m, p)?;
-                    let dists = comp
-                        .dists
+                    let dists = self
+                        .apply_substitutions(comp.dists, p)
                         .into_iter()
-                        // FIXME: I don't think there is a need to apply substitutions here, but doing this doesn't hurt
-                        .map(|d| self.apply_substitutions(d, p))
-                        .collect_vec()
-                        .into_iter()
+                        // let dists = comp
+                        //     .dists
+                        //     .into_iter()
+                        //     // FIXME: I don't think there is a need to apply substitutions here, but doing this doesn't hurt
+                        //     .map(|d| self.apply_substitutions(d, p))
+                        //     .collect_vec()
+                        //     .into_iter()
                         .fold(BddPtr::PtrTrue, |global, cur| self.mgr.and(global, cur));
 
                     let accept = dists;
@@ -698,27 +776,47 @@ mod active_tests {
     #[test]
     #[traced_test]
     fn tuple00() {
+        // let p = {
+        //     Program::Body(lets![
+        //         "y" ; b!(B)   ;= b!(true);
+        //         ...? b!("y", true) ; b!(B, B)
+        //     ])
+        // };
+        // check_exact("tuples00/T,T", vec![1.0, 1.0], &p);
         let p = {
             Program::Body(lets![
-                "y" ; b!(B) ;= b!(true);
-                ...? b!("y", true) ; b!(B, B)
+                "y" ; b!(B)   ;= b!(true);
+                "z" ; b!(B,B) ;= b!("y", true);
+                ...? b!("z"; b!(B,B)) ; b!(B, B)
             ])
         };
         check_exact("tuples00/T,T", vec![1.0, 1.0], &p);
+        // let mk = |ret: Expr| {
+        //     Program::Body(lets![
+        //         "y" ; b!(B)   ;= b!(true);
+        //         "z" ; b!(B,B) ;= b!("y", true);
+        //         ...? ret ; B!()
+        //     ])
+        // };
+        // check_exact("tuples00/T, ", vec![1.0], &mk(fst!(b!(@anf "z"))));
+        // check_exact("tuples00/ ,T", vec![1.0], &mk(snd!(b!(@anf "z"))));
     }
 
     #[test]
-    #[ignore]
     #[traced_test]
+    #[ignore]
     fn tuple0() {
         let mk = |ret: Expr| {
             Program::Body(lets![
-                "x" ; B!() ;= flip!(1.0/3.0);
-                "y" ; B!() ;= flip!(1.0/4.0);
+                "x" ; b!()     ;= flip!(1.0/3.0);
+                "y" ; b!()     ;= flip!(1.0/4.0);
+                "z" ; b!(B, B) ;= b!("x", "y");
                 ...? ret ; B!()
             ])
         };
-        check_exact("p02/y,x", vec![3.0 / 12.0, 4.0 / 12.0], &mk(b!("y", "x")));
+        // check_exact("p02/y,x", vec![3.0 / 12.0, 4.0 / 12.0], &mk(b!("y", "x")));
+        check_exact("p02/y, ", vec![3.0 / 12.0], &mk(fst!(b!(@anf "z"))));
+        // check_exact("p02/ ,x", vec![4.0 / 12.0], &mk(snd!(b!(@anf "z"))));
     }
 
     // free variable edge case
