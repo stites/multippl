@@ -8,6 +8,20 @@ pub enum Ty {
     Bool,
     Prod(Box<Ty>, Box<Ty>),
 }
+impl Ty {
+    pub fn right(&self) -> Option<Ty> {
+        match self {
+            Ty::Bool => None,
+            Ty::Prod(l, r) => Some(*r.clone()),
+        }
+    }
+    pub fn left(&self) -> Option<Ty> {
+        match self {
+            Ty::Bool => None,
+            Ty::Prod(l, r) => Some(*l.clone()),
+        }
+    }
+}
 #[derive(Debug, Clone, PartialEq)]
 pub enum Val {
     Bool(bool),
