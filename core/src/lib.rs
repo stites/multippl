@@ -330,7 +330,7 @@ pub mod semantics {
             match a {
                 AVar(s, ty) => {
                     let (lbl, wm) = self.get_or_create_varlabel(s.to_string(), m, p);
-                    if !ctx.typechecks_anf(a, ty) {
+                    if !ctx.typechecks(s.clone(), ty) {
                         Err(TypeError(format!(
                             "Expected {s} : {ty:?}\nGot: {a:?}\n{ctx:?}",
                         )))
@@ -462,10 +462,10 @@ pub mod semantics {
                     debug!(">>>prod: {:?} {:?}", al, ar);
                     let left = self.eval_anf(ctx, al, m, p)?;
                     let tyl = al.as_type();
-                    ctx.typechecks_anf(al, &tyl);
+
                     let right = self.eval_anf(ctx, ar, m, p)?;
                     let tyr = ar.as_type();
-                    ctx.typechecks_anf(ar, &tyr);
+
                     // FIXME should probably be handled in gamma: I think
                     // ctx.typechecks(e, ty) will do all of this, actually
                     assert!(Ty::Prod(Box::new(tyl), Box::new(tyr)) == **ty);
@@ -492,7 +492,7 @@ pub mod semantics {
                     let mut bound_substitutions = bound.substitutions.clone();
                     bound_substitutions.insert(id, bound.dists.clone());
 
-                    let newctx = ctx.append_var(s.to_string(), tbound);
+                    let newctx = ctx.append(s.clone(), tbound);
                     let body =
                         self.eval_expr(&newctx, ebody, &bound.weight_map, &bound_substitutions)?;
 
@@ -538,7 +538,7 @@ pub mod semantics {
                 }
                 EIte(cond, t, f, ty) => {
                     let pred = self.eval_anf(ctx, cond, &m.clone(), &p.clone())?;
-                    if !ctx.typechecks_anf(&**cond, &Ty::Bool) && pred.dists.len() == 1 {
+                    if !pred.dists.len() == 1 {
                         return Err(TypeError(format!(
                             "Expected Bool for ITE condition\nGot: {cond:?}\n{ctx:?}",
                         )));

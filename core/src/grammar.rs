@@ -66,36 +66,25 @@ pub enum Expr {
 }
 
 #[derive(Default, Debug)]
-pub struct Γ(pub Vec<(Expr, Ty)>);
+pub struct Γ(pub Vec<(String, Ty)>);
 impl Γ {
-    pub fn get(&self, x: Expr) -> Option<Ty> {
+    pub fn get(&self, x: String) -> Option<Ty> {
         self.0
             .iter()
             .find(|(e, _)| *e == x)
             .map(|(_, t)| t)
             .cloned()
     }
-    pub fn append(&self, x: &Expr, ty: &Ty) -> Γ {
+    pub fn push(&mut self, x: String, ty: &Ty) {
+        self.0.push((x.clone(), ty.clone()));
+    }
+    pub fn append(&self, x: String, ty: &Ty) -> Γ {
         let mut ctx = self.0.clone();
         ctx.push((x.clone(), ty.clone()));
         Γ(ctx)
     }
-
-    pub fn append_var(&self, s: String, ty: &Ty) -> Γ {
-        let mut ctx = self.0.clone();
-        ctx.push((
-            Expr::EAnf(Box::new(ANF::AVar(s, Box::new(ty.clone())))),
-            ty.clone(),
-        ));
-
-        Γ(ctx)
-    }
-    pub fn typechecks(&self, x: &Expr, ty: &Ty) -> bool {
-        // FIXME this is just a linear scan, nothing smart
-        x.is_type(ty) || self.get(x.clone()).map(|t| t == *ty).is_some()
-    }
-    pub fn typechecks_anf(&self, a: &ANF, ty: &Ty) -> bool {
-        self.typechecks(&Expr::EAnf(Box::new(a.clone())), ty)
+    pub fn typechecks(&self, x: String, ty: &Ty) -> bool {
+        self.get(x).map(|t| t == *ty).is_some()
     }
 }
 // TODO
