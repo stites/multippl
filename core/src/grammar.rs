@@ -1,4 +1,5 @@
 #![allow(dead_code)]
+use itertools::Itertools;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::string::String;
@@ -6,33 +7,46 @@ use std::string::String;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Ty {
     Bool,
-    Prod(Box<Ty>, Box<Ty>),
+    Prod(Vec<Ty>),
 }
 impl Ty {
     pub fn right(&self) -> Option<Ty> {
         match self {
             Ty::Bool => None,
-            Ty::Prod(l, r) => Some(*r.clone()),
+            Ty::Prod(tys) => match &tys[..] {
+                [_, r] => Some(r.clone()),
+                _ => None,
+            },
         }
     }
     pub fn left(&self) -> Option<Ty> {
         match self {
             Ty::Bool => None,
-            Ty::Prod(l, r) => Some(*l.clone()),
+            Ty::Prod(tys) => match &tys[..] {
+                [l, _] => Some(l.clone()),
+                _ => None,
+            },
         }
     }
 }
 #[derive(Debug, Clone, PartialEq)]
 pub enum Val {
     Bool(bool),
-    Prod(Box<Val>, Box<Val>),
+    Prod(Vec<Val>),
 }
 impl Val {
+    pub fn is_prod(&self) -> bool {
+        use Val::*;
+        match self {
+            Bool(_) => false,
+            Prod(_) => true,
+        }
+    }
     pub fn as_type(&self) -> Ty {
         use Val::*;
         match self {
             Bool(_) => Ty::Bool,
-            Prod(l, r) => Ty::Prod(Box::new(l.as_type()), Box::new(r.as_type())),
+            Prod(vs) => Ty::Prod(vs.iter().map(|x| x.as_type()).collect_vec()),
         }
     }
 }
@@ -68,7 +82,8 @@ pub enum Expr {
 
     EFst(Box<ANF>, Box<Ty>),
     ESnd(Box<ANF>, Box<Ty>),
-    EProd(Box<ANF>, Box<ANF>, Box<Ty>),
+    EPrj(usize, Box<ANF>, Box<Ty>),
+    EProd(Vec<ANF>, Box<Ty>),
 
     // TODO Ignore function calls for now
     // EApp(String, Box<ANF>),
@@ -126,7 +141,8 @@ impl Expr {
             EAnf(anf) => anf.as_type(),
             EFst(_, t) => *t.clone(),
             ESnd(_, t) => *t.clone(),
-            EProd(_, _, t) => *t.clone(),
+            EPrj(_, _, t) => *t.clone(),
+            EProd(_, t) => *t.clone(),
             ELetIn(_, _, _, _, t) => *t.clone(),
             EIte(_, _, _, t) => *t.clone(),
             EFlip(_) => Ty::Bool,
@@ -265,13 +281,13 @@ macro_rules! b {
         anf!(b!(@anf $x ; $ty))
     };
     ( B , B ) => {{
-        Ty::Prod(Box::new(b!()), Box::new(b!()))
+        Ty::Prod(vec![b!(), b!()])
     }};
     ( $x:literal, $y:literal ) => {{
         let l = b!(@anf $x);
         let r = b!(@anf $y);
-        let ty = Ty::Prod(Box::new(B!()), Box::new(B!()));
-        Expr::EProd(Box::new(l), Box::new(r), Box::new(ty))
+        let ty = Ty::Prod(vec![b!(), b!()]);
+        Expr::EProd(vec![l, r], Box::new(ty))
     }};
     ( $y:literal && $( $x:literal )&&+ ) => {{
         let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(B!())));

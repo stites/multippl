@@ -64,11 +64,12 @@ fn transmogrify(c: &mut TreeCursor, n: &Node) -> Expr {
             let (r, tyr) = transmogrify_anf(c, r);
 
             assert!(cs.next().is_none(), "{k}");
-            Expr::EProd(
-                Box::new(l),
-                Box::new(r),
-                Box::new(Ty::Prod(Box::new(tyl), Box::new(tyr))),
-            )
+            // Expr::EProd(
+            //     Box::new(l),
+            //     Box::new(r),
+            //     Box::new(Ty::Prod(Box::new(tyl), Box::new(tyr))),
+            // )
+            todo!()
         }
         "let_binding" => {
             // assert!(n.named_child_count() == 4, "{k} #named_children: {}\nsexp: {}", n.named_child_count(), n.to_sexp());

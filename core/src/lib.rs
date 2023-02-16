@@ -370,7 +370,7 @@ pub mod semantics {
                     weight_map: m.clone(),
                     ..Compiled::default(BddPtr::from_bool(*b))
                 }),
-                AVal(Val::Prod(pl, pr)) => Err(CompileError::Todo()),
+                AVal(Val::Prod(vs)) => Err(CompileError::Todo()),
                 And(bl, br) => self.eval_anf_binop(ctx, bl, br, m, p, &BddManager::and),
                 Or(bl, br) => self.eval_anf_binop(ctx, bl, br, m, p, &BddManager::or),
                 Neg(bp) => {
@@ -417,39 +417,39 @@ pub mod semantics {
             }
         }
 
-        pub fn typed_substitution(
-            &mut self,
-            ctx: &Γ,
-            bdds: &Vec<BddPtr>,
-            var: String,
-            ty: &Ty,
-            subs: &Vec<BddPtr>,
-        ) -> Vec<BddPtr> {
-            match bdds[..] {
-                [bdd] => match ty {
-                    Ty::Bool => {
-                        assert!(subs.len() == 1);
-                        let uid = self.get_var(var).unwrap();
-                        let lbl = VarLabel::new(uid.0);
-                        let fin = self.mgr.compose(bdd, lbl, subs[0]);
-                        vec![fin]
-                    }
-                    Ty::Prod(l, r) => {
-                        if l == r && l == &Box::new(Ty::Bool) && subs.len() == 2 {
-                            let uid = self.get_var(var).unwrap();
-                            let lbl = VarLabel::new(uid.0);
-                            todo!();
-                            // let fin = self.mgr.compose(bdd, lbl, subs[0]);
-                            // let fin = self.mgr.compose(fin, lbl, subs[1]);
-                            // vec![fin]
-                        } else {
-                            todo!();
-                        }
-                    }
-                },
-                [] | [_, _, ..] => todo!(),
-            }
-        }
+        // pub fn typed_substitution(
+        //     &mut self,
+        //     ctx: &Γ,
+        //     bdds: &Vec<BddPtr>,
+        //     var: String,
+        //     ty: &Ty,
+        //     subs: &Vec<BddPtr>,
+        // ) -> Vec<BddPtr> {
+        //     match bdds[..] {
+        //         [bdd] => match ty {
+        //             Ty::Bool => {
+        //                 assert!(subs.len() == 1);
+        //                 let uid = self.get_var(var).unwrap();
+        //                 let lbl = VarLabel::new(uid.0);
+        //                 let fin = self.mgr.compose(bdd, lbl, subs[0]);
+        //                 vec![fin]
+        //             }
+        //             Ty::Prod(vs) => {
+        //                 if l == r && l == &Box::new(Ty::Bool) && subs.len() == 2 {
+        //                     let uid = self.get_var(var).unwrap();
+        //                     let lbl = VarLabel::new(uid.0);
+        //                     todo!();
+        //                     // let fin = self.mgr.compose(bdd, lbl, subs[0]);
+        //                     // let fin = self.mgr.compose(fin, lbl, subs[1]);
+        //                     // vec![fin]
+        //                 } else {
+        //                     todo!();
+        //                 }
+        //             }
+        //         },
+        //         [] | [_, _, ..] => todo!(),
+        //     }
+        // }
         /// apply
         pub fn log_samples(&mut self, id: UniqueId, ebound: &Expr, bound: &Compiled) {
             if ebound.is_sample() {
@@ -481,40 +481,40 @@ pub mod semantics {
                     debug_compiled("anf", m, p, &c);
                     Ok(c)
                 }
-                EFst(a, ty) => {
-                    debug!(">>>fst: {:?}", a);
+                EPrj(i, a, ty) => {
+                    if i > &1 {
+                        debug!(">>>prj@{}: {:?}", i, a);
+                    }
                     // ignore types for now.
                     // let aty = a.as_type();
                     // assert!(aty.left() == Some(*ty.clone()), "actual {:?} != expected {:?}. type is: {:?}", aty.left(), Some(*ty.clone()), ty);
                     let mut c = self.eval_anf(ctx, a, m, p)?;
                     let dists = self.apply_substitutions(c.dists, p);
-                    c.dists = vec![dists[0]];
+                    c.dists = vec![dists[*i]];
+                    if i > &1 {
+                        debug_compiled(&format!("prj@{}", i).to_string(), m, p, &c);
+                    }
+                    Ok(c)
+                }
+                EFst(a, ty) => {
+                    debug!(">>>fst: {:?}", a);
+                    let c = self.eval_expr(ctx, &EPrj(0, a.clone(), ty.clone()), m, p)?;
                     debug_compiled("fst", m, p, &c);
                     Ok(c)
                 }
                 ESnd(a, ty) => {
                     debug!(">>>snd: {:?}", a);
-                    // ignore types for now.
-                    // let aty = a.as_type();
-                    // assert!(aty.right() == Some(*ty.clone()), "actual {:?} != expected {:?}. type is: {:?}", aty.right(), Some(*ty.clone()), ty);
-                    let mut c = self.eval_anf(ctx, a, m, p)?;
-                    let dists = self.apply_substitutions(c.dists, p);
-                    c.dists = vec![dists[1]];
+                    let c = self.eval_expr(ctx, &EPrj(1, a.clone(), ty.clone()), m, p)?;
                     debug_compiled("snd", m, p, &c);
                     Ok(c)
                 }
-                EProd(al, ar, ty) => {
-                    debug!(">>>prod: {:?} {:?}", al, ar);
-                    let left = self.eval_anf(ctx, al, m, p)?;
-                    let tyl = al.as_type();
-
-                    let right = self.eval_anf(ctx, ar, m, p)?;
-                    let tyr = ar.as_type();
-
-                    // FIXME should probably be handled in gamma: I think
-                    // ctx.typechecks(e, ty) will do all of this, actually
-                    assert!(Ty::Prod(Box::new(tyl), Box::new(tyr)) == **ty);
-                    let dists = left.dists.iter().chain(&right.dists).cloned().collect_vec();
+                EProd(anfs, ty) => {
+                    debug!(">>>prod: {:?} {:?}", anfs, ty);
+                    let dists = anfs.iter().fold(Ok(vec![]), |res, a| {
+                        let fin = res?;
+                        let c = self.eval_anf(ctx, a, m, p)?;
+                        Ok(fin.iter().chain(&c.dists).cloned().collect_vec())
+                    })?;
                     let flen = dists.len();
                     let c = Compiled {
                         dists,
