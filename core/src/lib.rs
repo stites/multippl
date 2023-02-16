@@ -378,29 +378,24 @@ pub mod semantics {
                 }
             }
         }
-        pub fn _apply_substitutions1(&mut self, bdd: BddPtr, p: &SubstMap) -> Option<Vec<BddPtr>> {
-            match var_node(bdd) {
-                Some(lbl) => {
-                    let subs = p.get(&UniqueId::from_lbl(lbl))?;
-                    Some(subs.clone())
-                }
-                None => {
-                    let finl = p.iter().fold(bdd, |fin, (lbl, sub)| {
-                        if sub.len() > 1 {
-                            panic!("whoopsie!");
-                        }
-                        self.mgr.compose(fin, lbl.as_lbl(), sub[0])
-                    });
-                    Some(vec![finl])
-                }
-            }
-        }
 
         // TODO: make sure substitutions are fully normalized? I don't think this will ever be a problem.
         pub fn apply_substitutions1(&mut self, bdd: BddPtr, p: &SubstMap) -> Vec<BddPtr> {
-            match self._apply_substitutions1(bdd, p) {
-                None => vec![bdd],
-                Some(subs) => subs,
+            match var_node(bdd) {
+                Some(lbl) => match p.get(&UniqueId::from_lbl(lbl)) {
+                    None => vec![bdd],
+                    Some(subs) => subs.clone(),
+                },
+                None => {
+                    let finl = p.iter().fold(bdd, |fin, (lbl, sub)| {
+                        if sub.len() > 1 {
+                            fin // subs are intended to be a product and should be replacing a variable.
+                        } else {
+                            self.mgr.compose(fin, lbl.as_lbl(), sub[0])
+                        }
+                    });
+                    vec![finl]
+                }
             }
         }
 
