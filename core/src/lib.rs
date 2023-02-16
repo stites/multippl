@@ -50,10 +50,10 @@ pub mod semantics {
     use std::fmt;
     type Mgr = BddManager<AllTable<BddPtr>>;
 
-    fn rendervec(fs: &Vec<String>) -> String {
+    pub fn rendervec(fs: &Vec<String>) -> String {
         format!("[{}]", fs.join(", "))
     }
-    fn fmt_f64(high_precision: bool) -> impl Fn(f64) -> String {
+    pub fn fmt_f64(high_precision: bool) -> impl Fn(f64) -> String {
         if high_precision {
             move |x: f64| format!("{}", x)
         } else {
@@ -72,42 +72,16 @@ pub mod semantics {
                 .join(", ")
         };
 
-        let dists = rendervec(
-            &c.formulas
-                .iter()
-                .map(Formulas::dist)
-                .map(|b: BddPtr| b.print_bdd())
-                .collect_vec(),
-        );
+        let dists = rendervec(&c.dists.iter().map(|b| b.print_bdd()).collect_vec());
 
-        let accepts = rendervec(
-            &c.formulas
-                .iter()
-                .map(Formulas::accept)
-                .map(|b: BddPtr| b.print_bdd())
-                .collect_vec(),
-        );
+        let accepts = format!("{}", c.accept.print_bdd());
 
-        let probs = rendervec(
-            &c.probabilities
-                .iter()
-                .map(Probability::as_f64)
-                .map(|x| fmt_f64(false)(x))
-                .collect_vec(),
-        );
-        let weights = rendervec(
-            &c.importance_weights
-                .iter()
-                .map(|x| fmt_f64(false)(*x))
-                .collect_vec(),
-        );
         debug!("{s}, [{}], [{}]", renderw(w), renderp(p));
         debug!("      \\||/  {}", dists);
         debug!("      \\||/  {}", accepts);
         debug!("      \\||/  {}", renderw(&c.weight_map));
         debug!("      \\||/  {}", renderp(&c.substitutions));
-        debug!("      \\||/  {}", probs);
-        debug!("      \\||/  {}", weights);
+        debug!("      \\||/  {}", fmt_f64(false)(c.importance_weight));
         debug!("----------------------------------------");
     }
 
@@ -161,48 +135,32 @@ pub mod semantics {
     }
 
     #[derive(Debug, Clone)]
-    pub struct Formulas {
-        pub dist: BddPtr,
-        pub accept: BddPtr, // FIXME: actually this is _global_!
-    }
-    impl Formulas {
-        pub fn dist(&self) -> BddPtr {
-            self.dist
-        }
-        pub fn accept(&self) -> BddPtr {
-            self.accept
-        }
-    }
-
-    #[derive(Debug, Clone)]
     pub struct Compiled {
-        pub formulas: Vec<Formulas>,
+        pub dists: Vec<BddPtr>,
+        pub accept: BddPtr,
         pub weight_map: WeightMap, // must be a hashmap as sample will collapse variables
+        pub probabilities: Vec<Probability>,
         pub substitutions: SubstMap,
-        pub probabilities: Vec<Probability>, // FIXME, can actually be removed -- just keeping this around for diagnostic purposes
-        pub importance_weights: Vec<f64>,
+        pub importance_weight: f64,
     }
     impl Compiled {
-        fn convex_combination(&self, o: &Compiled) -> Vec<f64> {
-            izip!(
-                &self.probabilities,
-                &self.importance_weights,
-                &o.probabilities,
-                &o.importance_weights
-            )
-            .map(|(selfp, selfiw, op, oiw)| selfp.as_f64() * selfiw + op.as_f64() * oiw)
-            .collect_vec()
+        fn convex_combination(&self, o: &Compiled) -> f64 {
+            izip!(&self.probabilities, &o.probabilities,).fold(0.0, |res, (selfp, op)| {
+                selfp.as_f64() * self.importance_weight + op.as_f64() * o.importance_weight
+            })
         }
-        fn default(dist: BddPtr, accept: BddPtr) -> Compiled {
-            Compiled::default_vec(vec![Formulas { dist, accept }])
+        fn default(dist: BddPtr) -> Compiled {
+            Compiled::default_vec(vec![dist])
         }
-        fn default_vec(formulas: Vec<Formulas>) -> Compiled {
+        fn default_vec(dists: Vec<BddPtr>) -> Compiled {
+            let probabilities = vec![Probability::new(1.0); dists.len()];
             Compiled {
-                formulas,
+                dists,
+                probabilities,
+                accept: BddPtr::PtrTrue,
                 weight_map: HashMap::new(),
                 substitutions: HashMap::new(),
-                probabilities: vec![Probability::new(1.0)],
-                importance_weights: vec![1.0],
+                importance_weight: 1.0,
             }
         }
     }
@@ -342,26 +300,21 @@ pub mod semantics {
             weight_map.extend(r.weight_map.clone());
             let mut substitutions = l.substitutions.clone();
             substitutions.extend(r.substitutions.clone());
-            if l.formulas.len() != r.formulas.len() {
+            if l.dists.len() != r.dists.len() {
                 return Err(SemanticsError(format!(
-                    "impossible! compiled {} formulas on the left and {} formulas on the right.",
-                    l.formulas.len(),
-                    r.formulas.len()
+                    "impossible! compiled {} dists on the left and {} formulas on the right.",
+                    l.dists.len(),
+                    r.dists.len()
                 )));
             } else {
-                let formulas = izip!(l.formulas, r.formulas)
-                    .map(|(l, r)| {
-                        assert!(l.accept == BddPtr::PtrTrue && r.accept == BddPtr::PtrTrue);
-                        Formulas {
-                            dist: op(self.mgr, l.dist, r.dist),
-                            accept: BddPtr::PtrTrue,
-                        }
-                    })
+                let dists = izip!(l.dists, r.dists)
+                    .map(|(l, r)| op(self.mgr, l, r))
                     .collect_vec();
                 Ok(Compiled {
+                    accept: BddPtr::PtrTrue,
                     weight_map,
                     substitutions,
-                    ..Compiled::default_vec(formulas)
+                    ..Compiled::default_vec(dists)
                 })
             }
         }
@@ -385,14 +338,14 @@ pub mod semantics {
                         Ok(Compiled {
                             substitutions: p.clone(),
                             weight_map: wm,
-                            ..Compiled::default(self.mgr.var(lbl, true), BddPtr::PtrTrue)
+                            ..Compiled::default(self.mgr.var(lbl, true))
                         })
                     }
                 }
                 AVal(Val::Bool(b)) => Ok(Compiled {
                     substitutions: p.clone(),
                     weight_map: m.clone(),
-                    ..Compiled::default(BddPtr::from_bool(*b), BddPtr::PtrTrue)
+                    ..Compiled::default(BddPtr::from_bool(*b))
                 }),
                 AVal(Val::Prod(pl, pr)) => Err(CompileError::Todo()),
                 And(bl, br) => self.eval_anf_binop(ctx, bl, br, m, p, &BddManager::and),
@@ -400,14 +353,7 @@ pub mod semantics {
                 Neg(bp) => {
                     let mut p = self.eval_anf(ctx, bp, m, p)?;
                     // FIXME negating a tuple? seems weird!!!!
-                    p.formulas = p
-                        .formulas
-                        .into_iter()
-                        .map(|f| Formulas {
-                            dist: f.dist.neg(),
-                            accept: f.accept,
-                        })
-                        .collect_vec();
+                    p.dists = p.dists.iter().map(BddPtr::neg).collect_vec();
 
                     Ok(p)
                 }
@@ -423,12 +369,56 @@ pub mod semantics {
             }
             fin
         }
+        pub fn typed_substitution(
+            &mut self,
+            ctx: &Γ,
+            bdd: &Vec<BddPtr>,
+            id: UniqueId,
+            ty: &Ty,
+            subs: &Vec<BddPtr>,
+        ) -> Vec<BddPtr> {
+            todo!()
+        }
+        /// apply
+        pub fn apply_typed_substitution(
+            &mut self,
+            ctx: &Γ,
+            bdd: &Vec<BddPtr>,
+            id: UniqueId,
+            ty: &Ty,
+            subs: &Vec<BddPtr>,
+            p: &SubstMap,
+        ) -> Vec<BddPtr> {
+            todo!()
+        }
+        //     match ty {
+        //         Ty::Bool => {
+        //             assert!(ids.len() == 1 && subs.len() == 1);
+        //             self.mgr.compose(bdd, ids[0], subs[0])
+        //         },
+        //         Ty::Prod(l, Box(Ty::Bool)) => {
+        //             self._typed_substitution(ctx, bdd, lbl,
+        //         },
+        //         Ty::Prod(Box(Ty::Bool), r) =>
+        //             subs.iter().fold(bdd, |fin, sub| {
+        //                 self.mgr.compose(fin, lbl, sub)
+        //             })
+        //         },
+        //         Ty::Prod(l, r) =>
+        //             self._typed_substitution(ctx, bdd, lbl,
+        //             self.mgr.compose(fin, VarLabel::new(lbl.0), sub),
+        //     }
+        //             _ => continue,
+        //         }
+        //     }
+        //     fin
+        // }
+
         pub fn log_samples(&mut self, id: UniqueId, ebound: &Expr, bound: &Compiled) {
             if ebound.is_sample() {
                 let samples = bound
-                    .formulas
+                    .dists
                     .iter()
-                    .map(Formulas::dist)
                     .map(|dist| match dist {
                         BddPtr::PtrTrue => true,
                         BddPtr::PtrFalse => false,
@@ -476,21 +466,18 @@ pub mod semantics {
                     let right = self.eval_anf(ctx, ar, m, p)?;
                     let tyr = ar.as_type();
                     ctx.typechecks_anf(ar, &tyr);
-                    // FIXME should probably be handled in gamma
+                    // FIXME should probably be handled in gamma: I think
+                    // ctx.typechecks(e, ty) will do all of this, actually
                     assert!(Ty::Prod(Box::new(tyl), Box::new(tyr)) == **ty);
-                    let formulas = left
-                        .formulas
-                        .iter()
-                        .chain(&right.formulas)
-                        .cloned()
-                        .collect_vec();
-                    let flen = formulas.len();
+                    let dists = left.dists.iter().chain(&right.dists).cloned().collect_vec();
+                    let flen = dists.len();
                     let c = Compiled {
-                        formulas,
+                        dists,
+                        accept: BddPtr::PtrTrue,
                         weight_map: m.clone(),
                         substitutions: p.clone(),
                         probabilities: vec![Probability::new(1.0); flen],
-                        importance_weights: vec![1.0; flen],
+                        importance_weight: 1.0,
                     };
 
                     debug_compiled("prod", m, p, &c);
@@ -503,8 +490,7 @@ pub mod semantics {
                     let bound = self.eval_expr(ctx, ebound, &wm, p)?;
 
                     let mut bound_substitutions = bound.substitutions.clone();
-                    bound_substitutions
-                        .insert(id, bound.formulas.iter().map(Formulas::dist).collect_vec());
+                    bound_substitutions.insert(id, bound.dists.clone());
 
                     let newctx = ctx.append_var(s.to_string(), tbound);
                     let body =
@@ -516,61 +502,70 @@ pub mod semantics {
                     let substitutions = body.substitutions.clone();
                     // substitutions.extend(body.substitutions);
 
-                    let formulas = izip!(body.formulas.clone(), bound.formulas.clone())
-                        .map(|(bodyf, boundf)| {
-                            // NOTE: applying all substituting will normalize distributions in sample too much. This will cause
-                            // samples to normalize in a way where we will fail to drop irrelevant structure
-                            // old-code does this:
-                            //
-                            // let accept = self.mgr.and(bound.accept, body.accept);
-                            // let accept = self.apply_substitutions(accept, &substitutions);
-                            let accept = self.mgr.compose(bodyf.accept, lbl, boundf.accept);
-                            let accept = self.mgr.and(boundf.accept, accept);
-                            Formulas {
-                                dist: self.apply_substitutions(bodyf.dist, &substitutions),
-                                accept,
-                            }
-                        })
-                        .collect_vec();
+                    println!("{:?}", body.dists.clone());
+                    println!("{:?}", bound.dists.clone());
+                    let dists = self.apply_typed_substitution(
+                        ctx,
+                        &body.dists,
+                        id,
+                        tbound,
+                        &bound.dists,
+                        &substitutions,
+                    );
+
+                    let accept = self.mgr.and(bound.accept, body.accept);
+                    let accept =
+                        self.typed_substitution(ctx, &vec![accept], id, tbound, &bound.dists);
+                    let accept = accept[0];
 
                     self.log_samples(id, ebound, &bound);
 
                     let probabilities = izip!(bound.probabilities, body.probabilities)
                         .map(|(p1, p2)| p1 * p2)
                         .collect_vec();
-                    let importance_weights =
-                        izip!(bound.importance_weights, body.importance_weights)
-                            .map(|(p1, p2)| p1 * p2)
-                            .collect_vec();
+                    let importance_weight = bound.importance_weight * body.importance_weight;
 
                     let c = Compiled {
-                        formulas,
+                        dists,
+                        accept,
                         weight_map,
                         substitutions,
                         probabilities,
-                        importance_weights,
+                        importance_weight,
                     };
                     debug_compiled(&format!("let-in {}", s), m, p, &c);
                     Ok(c)
                 }
                 EIte(cond, t, f, ty) => {
                     let pred = self.eval_anf(ctx, cond, &m.clone(), &p.clone())?;
+                    if !ctx.typechecks_anf(&**cond, &Ty::Bool) && pred.dists.len() == 1 {
+                        return Err(TypeError(format!(
+                            "Expected Bool for ITE condition\nGot: {cond:?}\n{ctx:?}",
+                        )));
+                    }
+                    let pred_dist = pred.dists[0];
+
                     let truthy = self.eval_expr(ctx, t, &m.clone(), &p.clone())?;
                     let falsey = self.eval_expr(ctx, f, &m.clone(), &p.clone())?;
+                    if truthy.dists.len() != falsey.dists.len() {
+                        return Err(TypeError(format!(
+                            "Expected both branches of ITE to return same type\nGot (left): {:?}\nGot (right):{:?}",
+                            t.as_type(),
+                            f.as_type()
+                        )));
+                    }
 
-                    let formulas = izip!(&pred.formulas, &truthy.formulas, &falsey.formulas)
-                        .map(|(p, t, f)| {
-                            let dist_l = self.mgr.and(p.dist, t.dist);
-                            let dist_r = self.mgr.and(p.dist.neg(), f.dist);
-                            let dist = self.mgr.or(dist_l, dist_r);
-
-                            let accept_l = self.mgr.and(p.accept, t.accept);
-                            let accept_r = self.mgr.and(p.accept.neg(), f.accept);
-                            let accept = self.mgr.or(accept_l, accept_r);
-
-                            Formulas { dist, accept }
+                    let dists = izip!(&truthy.dists, &falsey.dists)
+                        .map(|(tdist, fdist)| {
+                            let dist_l = self.mgr.and(pred_dist, *tdist);
+                            let dist_r = self.mgr.and(pred_dist.neg(), *fdist);
+                            self.mgr.or(dist_l, dist_r)
                         })
                         .collect_vec();
+
+                    let accept_l = self.mgr.and(pred_dist, truthy.accept);
+                    let accept_r = self.mgr.and(pred_dist.neg(), falsey.accept);
+                    let accept = self.mgr.or(accept_l, accept_r);
 
                     let mut weight_map = truthy.weight_map.clone();
                     weight_map.extend(falsey.weight_map.clone());
@@ -580,13 +575,14 @@ pub mod semantics {
                     let probabilities = izip!(&truthy.probabilities, &falsey.probabilities)
                         .map(|(t, f)| *t + *f)
                         .collect_vec();
-                    let importance_weights = truthy.convex_combination(&falsey);
+                    let importance_weight = truthy.convex_combination(&falsey);
                     let c = Compiled {
-                        formulas,
+                        dists,
+                        accept,
                         weight_map,
                         substitutions,
                         probabilities,
-                        importance_weights,
+                        importance_weight,
                     };
                     debug_compiled("ite", m, p, &c);
                     Ok(c)
@@ -599,14 +595,12 @@ pub mod semantics {
 
                     weight_map.insert(sym, (1.0 - *param, *param));
                     let c = Compiled {
-                        formulas: vec![Formulas {
-                            dist: self.mgr.var(lbl, true),
-                            accept: BddPtr::PtrTrue,
-                        }],
+                        dists: vec![self.mgr.var(lbl, true)],
+                        accept: BddPtr::PtrTrue,
                         weight_map,
                         substitutions: p.clone(),
                         probabilities: vec![Probability::new(1.0)],
-                        importance_weights: vec![1.0],
+                        importance_weight: 1.0,
                     };
                     debug_compiled("flip {param}", m, p, &c);
                     Ok(c)
@@ -614,40 +608,26 @@ pub mod semantics {
                 EObserve(a) => {
                     debug!(">>>observe");
                     let comp = self.eval_anf(ctx, a, m, p)?;
-                    // FIXME: I don't think there is a need to apply substitutions here, but doing this doesn't hurt
-                    let apply_subs = |d| self.apply_substitutions(d, p);
                     let dists = comp
-                        .formulas
-                        .iter()
-                        .map(Formulas::dist)
-                        .map(apply_subs)
-                        .collect_vec();
-
-                    let formulas = dists
-                        .clone()
+                        .dists
                         .into_iter()
-                        .map(|dist| Formulas {
-                            dist: BddPtr::PtrTrue,
-                            accept: dist,
-                        })
-                        .collect_vec();
+                        // FIXME: I don't think there is a need to apply substitutions here, but doing this doesn't hurt
+                        // .map(|d| self.apply_substitutions(*d, p))
+                        .fold(BddPtr::PtrTrue, |global, cur| self.mgr.and(global, cur));
 
-                    let probabilities = vec![Probability::new(1.0); dists.len()];
-                    let importance_weights = dists
-                        .into_iter()
-                        .map(|dist| {
-                            let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
-                            let var_order = VarOrder::linear_order(max_var as usize);
-                            dist.wmc(&var_order, &wmc_params)
-                        })
-                        .collect_vec();
+                    let accept = dists;
+
+                    let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
+                    let var_order = VarOrder::linear_order(max_var as usize);
+                    let importance_weight = accept.wmc(&var_order, &wmc_params);
 
                     let c = Compiled {
-                        formulas,
+                        dists: vec![BddPtr::PtrTrue],
+                        accept: dists,
                         weight_map: m.clone(),
                         substitutions: p.clone(),
-                        probabilities,
-                        importance_weights,
+                        probabilities: vec![Probability::new(1.0)],
+                        importance_weight,
                     };
                     debug_compiled("observe", m, p, &c);
                     Ok(c)
@@ -656,36 +636,38 @@ pub mod semantics {
                     debug!(">>>sample");
                     let comp = self.eval_expr(ctx, e, m, p)?;
 
-                    if comp.formulas.iter().any(|f| f.accept != BddPtr::PtrTrue) {
+                    if comp.accept != BddPtr::PtrTrue {
                         return Err(SemanticsError(
                             "impossible! Sample statement includes observe statement.".to_string(),
                         ));
                     }
                     let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
                     let var_order = VarOrder::linear_order(max_var as usize);
-                    let (qs, formulas): (Vec<Probability>, Vec<Formulas>) = comp
-                        .formulas
+                    let (qs, dists): (Vec<Probability>, Vec<BddPtr>) = comp
+                        .dists
                         .iter()
-                        .map(|f| {
+                        .map(|dist| {
                             // FIXME: okay to unify accepts, should I conjoin them here???
-                            let theta_q = f.dist.wmc(&var_order, &wmc_params) as f64;
+                            let theta_q = dist.wmc(&var_order, &wmc_params) as f64;
                             let bern = Bernoulli::new(theta_q).unwrap();
                             let sample = bern.sample(self.rng);
                             let q = Probability::new(if sample { theta_q } else { 1.0 - theta_q });
-                            let formulas = Formulas {
-                                dist: BddPtr::from_bool(sample),
-                                accept: self.mgr.iff(f.dist, BddPtr::PtrTrue),
-                            };
-                            (q, formulas)
+                            let dists = BddPtr::from_bool(sample);
+                            (q, dists)
                         })
                         .unzip();
+                    let accept = comp.dists.iter().fold(comp.accept.clone(), |global, dist| {
+                        let dist_holds = self.mgr.iff(*dist, BddPtr::PtrTrue);
+                        self.mgr.and(global, dist_holds)
+                    });
 
                     let c = Compiled {
-                        formulas,
+                        dists,
+                        accept,
                         weight_map: comp.weight_map.clone(),
                         substitutions: p.clone(),
                         probabilities: qs,
-                        importance_weights: vec![1.0; comp.formulas.len()],
+                        importance_weight: 1.0,
                     };
                     debug_compiled("sample", m, p, &c);
                     Ok(c)
@@ -718,7 +700,20 @@ mod active_tests {
     use tracing_test::traced_test;
 
     #[test]
-    // #[traced_test]
+    #[traced_test]
+    fn tuple00() {
+        let p = {
+            Program::Body(lets![
+                "y" ; b!(B) ;= b!(true);
+                ...? b!("y", true) ; b!(B, B)
+            ])
+        };
+        check_exact("tuples00/T,T", vec![1.0, 1.0], &p);
+    }
+
+    #[test]
+    #[ignore]
+    #[traced_test]
     fn tuple0() {
         let mk = |ret: Expr| {
             Program::Body(lets![

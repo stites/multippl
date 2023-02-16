@@ -237,27 +237,33 @@ macro_rules! var {
 
 #[macro_export]
 macro_rules! b {
+    (B) => {
+        Ty::Bool
+    };
     ( ) => {
         Ty::Bool
     };
     ( $x:literal ) => {
         anf!(ANF::AVar($x.to_string(), Box::new(B!())))
     };
-    ( T ) => {
+    ( true ) => {
         anf!(ANF::AVal(Val::Bool(true)))
     };
-    ( F ) => {
+    ( false ) => {
         anf!(ANF::AVal(Val::Bool(false)))
     };
+    ( B , B ) => {{
+        Ty::Prod(Box::new(b!()), Box::new(b!()))
+    }};
     ( $x:literal, $y:literal ) => {{
         let l = ANF::AVar($x.to_string(), Box::new(B!()));
         let r = ANF::AVar($y.to_string(), Box::new(B!()));
         let ty = Box::new(Ty::Prod(Box::new(B!()), Box::new(B!())));
         Expr::EProd(Box::new(l), Box::new(r), ty)
     }};
-    ( $x:literal , $y:literal : B) => {{
+    ( $x:literal, true) => {{
         let l = ANF::AVar($x.to_string(), Box::new(B!()));
-        let r = ANF::AVal(Val::Bool($y));
+        let r = ANF::AVal(Val::Bool(true));
         let ty = Box::new(Ty::Prod(Box::new(B!()), Box::new(B!())));
         Expr::EProd(Box::new(l), Box::new(r), ty)
     }};
