@@ -289,6 +289,10 @@ macro_rules! b {
         let ty = Ty::Prod(vec![b!(), b!()]);
         Expr::EProd(vec![l, r], Box::new(ty))
     }};
+    ( $x:expr, $y:expr ) => {{
+        let ty = Ty::Prod(vec![b!(), b!()]);
+        Expr::EProd(vec![$x, $y], Box::new(ty))
+    }};
     ( $y:literal && $( $x:literal )&&+ ) => {{
         let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(B!())));
         $(

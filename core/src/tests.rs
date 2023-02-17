@@ -5,7 +5,7 @@ use inference::*;
 use std::any::{Any, TypeId};
 use tracing_test::traced_test;
 
-fn check_inference(
+pub fn check_inference(
     i: &str,
     inf: &dyn Fn(&mut Env, &Program) -> Vec<f64>,
     precision: f64,
@@ -23,11 +23,11 @@ fn check_inference(
         prs.len(),
         fs.len(),
     );
-    izip!(prs, fs).for_each(|(pr, f)| {
+    izip!(prs, fs).enumerate().for_each(|(i, (pr, f))| {
         let ret = (f - pr).abs() < precision;
         assert!(
             ret,
-            "[check_{i}][{s}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"
+            "[check_{i}][{s}#{i}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"
         );
     });
 }
@@ -51,14 +51,6 @@ pub fn check_approx1(s: &str, f: f64, p: &Program, n: usize) {
     check_approx(s, vec![f], p, n)
 }
 pub fn check_approx_conc(s: &str, f: Vec<f64>, p: &Program, n: usize) {
-    // check_inference(
-    //     "approx",
-    //     &|env, p| importance_weighting_inf_conc(env, n, p),
-    //     0.01,
-    //     s,
-    //     f,
-    //     p,
-    // );
     let mut env_args = EnvArgs::default_args(None);
     // let mut env = Env::from_args(&mut env_args);
     let precision = 0.01;

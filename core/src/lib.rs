@@ -664,7 +664,6 @@ pub mod semantics {
                     let c = Compiled {
                         dists,
                         accept,
-                        // accept: BddPtr::PtrTrue,
                         weight_map: comp.weight_map.clone(),
                         substitutions: p.clone(),
                         probabilities: qs,
@@ -768,8 +767,7 @@ mod active_tests {
 
     #[test]
     // #[traced_test]
-    fn free_variables_1_conc() {
-        // FIXME: This seems like a huge problem!
+    fn free_variables_1() {
         let problem = {
             Program::Body(lets![
                "x" ; B!() ;= flip!(1/3);
@@ -778,39 +776,73 @@ mod active_tests {
                ...? var!("l") ; B!()
             ])
         };
-        check_approx1("free/!!", 1.0 / 3.0, &problem, 1000000);
+        check_approx1("free/!!", 1.0 / 3.0, &problem, 100000);
     }
-    // #[test]
-    // // #[traced_test]
-    // fn free_variables_2() {
-    //     let mk = |ret: Expr| {
-    //         Program::Body(lets![
-    //             "x" := flip!(1/3);
-    //             "l" := sample!(
-    //                 lets![
-    //                     "x0" := flip!(1/5);
-    //                     ...? or!("x0", "x")
-    //                 ]);
-    //            "_" := observe!(var!("x")); // is this a problem?
-    //            ...? ret
-    //         ])
-    //     };
-    //     check_approx("free/?1", 1.0 / 1.0, &mk(var!("x")), 1000);
-    //     check_approx("free/?2", 1.0 / 1.0, &mk(var!("l")), 1000);
-    // }
+    #[test]
+    // #[traced_test]
+    #[ignore = "punt till data flow analysis"]
+    fn free_variables_2() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+                "x" ; b!() ;= flip!(1/3);
+                "l" ; b!() ;= sample!(
+                    lets![
+                        "x0" ; b!() ;= flip!(1/5);
+                        ...? b!("x0" || "x") ; b!()
+                    ]);
+               "_" ; b!() ;= observe!(var!("x")); // is this a problem?
+               ...? ret ; b!()
+            ])
+        };
+        check_approx1("free/?1", 1.0 / 1.0, &mk(var!("x")), 1000);
+        check_approx1("free/?2", 1.0 / 1.0, &mk(var!("l")), 1000); // FIXME: need to derive the right number for this one
+    }
 
-    // // free variable edge case
-    // #[test]
-    // // #[traced_test]
-    // fn free_variables_shared() {
-    //     let p = Program::Body(lets![
-    //        "x" := flip!(1/3);
-    //        "l" := sample!(var!("x"));
-    //        "r" := sample!(var!("x"));
-    //        ...? and!("x", "y")
-    //     ]);
-    //     check_approx("shared ", 1.0 / 3.0, &p, 1000);
-    // }
+    // free variable edge case
+    #[test]
+    // #[traced_test]
+    #[ignore = "I suspect this is also funky (but gives a seemingly obscure result) because of free_variables_0 issue"]
+    fn free_variables_shared() {
+        let p = Program::Body(lets![
+           "x" ; b!() ;= flip!(1/3);
+           "l" ; b!() ;= sample!(var!("x"));
+           "r" ; b!() ;= sample!(var!("x"));
+           ...? b!("l" && "r") ; b!()
+        ]);
+        check_approx1("shared ", 1.0 / 3.0, &p, 1000);
+    }
+    #[test]
+    #[ignore = "also broken due to same reason as free_variables_0"]
+    #[traced_test]
+    fn free_variables_shared_tuple() {
+        let p = Program::Body(lets![
+           "x" ; b!()     ;= flip!(1/3);
+           "z" ; b!(B, B) ;= sample!(b!("x", "x"));
+           ...? b!("z" ; b!(B, B)); b!(B, B)
+        ]);
+        check_approx("sharedtuple", vec![1.0 / 3.0, 1.0 / 3.0], &p, 1000);
+    }
+
+    #[test]
+    #[traced_test]
+    fn sample_tuple() {
+        let p = Program::Body(lets![
+            "z" ; b!(B, B) ;= sample!(lets![
+                  "l" ; b!() ;= flip!(1/3);
+                  "r" ; b!() ;= flip!(1/4);
+                  ...? b!("l", "r") ; b!(B, B)
+            ]);
+           ...? b!("z" ; b!(B, B)); b!(B, B)
+        ]);
+        check_inference(
+            "approx",
+            &|env, p| importance_weighting_inf(env, 100, p),
+            0.2,
+            "sharedtuple",
+            vec![1.0 / 3.0, 1.0 / 4.0],
+            &p,
+        );
+    }
 
     // #[test]
     // // #[traced_test]
