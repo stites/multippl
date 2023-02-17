@@ -417,40 +417,6 @@ pub mod semantics {
             }
         }
 
-        // pub fn typed_substitution(
-        //     &mut self,
-        //     ctx: &Γ,
-        //     bdds: &Vec<BddPtr>,
-        //     var: String,
-        //     ty: &Ty,
-        //     subs: &Vec<BddPtr>,
-        // ) -> Vec<BddPtr> {
-        //     match bdds[..] {
-        //         [bdd] => match ty {
-        //             Ty::Bool => {
-        //                 assert!(subs.len() == 1);
-        //                 let uid = self.get_var(var).unwrap();
-        //                 let lbl = VarLabel::new(uid.0);
-        //                 let fin = self.mgr.compose(bdd, lbl, subs[0]);
-        //                 vec![fin]
-        //             }
-        //             Ty::Prod(vs) => {
-        //                 if l == r && l == &Box::new(Ty::Bool) && subs.len() == 2 {
-        //                     let uid = self.get_var(var).unwrap();
-        //                     let lbl = VarLabel::new(uid.0);
-        //                     todo!();
-        //                     // let fin = self.mgr.compose(bdd, lbl, subs[0]);
-        //                     // let fin = self.mgr.compose(fin, lbl, subs[1]);
-        //                     // vec![fin]
-        //                 } else {
-        //                     todo!();
-        //                 }
-        //             }
-        //         },
-        //         [] | [_, _, ..] => todo!(),
-        //     }
-        // }
-        /// apply
         pub fn log_samples(&mut self, id: UniqueId, ebound: &Expr, bound: &Compiled) {
             if ebound.is_sample() {
                 let samples = bound
@@ -673,8 +639,9 @@ pub mod semantics {
                     }
                     let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
                     let var_order = VarOrder::linear_order(max_var as usize);
-                    let (qs, dists): (Vec<Probability>, Vec<BddPtr>) = comp
-                        .dists
+                    let comp_dists = self.apply_substitutions(comp.dists, p);
+                    // debug!(dists = renderbdds(&dists));
+                    let (qs, dists): (Vec<Probability>, Vec<BddPtr>) = comp_dists
                         .iter()
                         .map(|dist| {
                             // FIXME: okay to unify accepts, should I conjoin them here???
@@ -686,14 +653,18 @@ pub mod semantics {
                             (q, dists)
                         })
                         .unzip();
-                    let accept = comp.dists.iter().fold(comp.accept.clone(), |global, dist| {
+
+                    // debug!(dists = renderbdds(&dists));
+                    let accept = comp_dists.iter().fold(comp.accept.clone(), |global, dist| {
                         let dist_holds = self.mgr.iff(*dist, BddPtr::PtrTrue);
                         self.mgr.and(global, dist_holds)
                     });
+                    debug!(accept = accept.print_bdd());
 
                     let c = Compiled {
                         dists,
                         accept,
+                        // accept: BddPtr::PtrTrue,
                         weight_map: comp.weight_map.clone(),
                         substitutions: p.clone(),
                         probabilities: qs,
@@ -730,15 +701,15 @@ mod active_tests {
     use tracing_test::traced_test;
 
     #[test]
-    #[traced_test]
-    fn tuple00() {
+    // #[traced_test]
+    fn tuple0() {
         let p = {
             Program::Body(lets![
                 "y" ; b!(B)   ;= b!(true);
                 ...? b!("y", true) ; b!(B, B)
             ])
         };
-        check_exact("tuples00/T,T", vec![1.0, 1.0], &p);
+        check_exact("tuples0/T,T", vec![1.0, 1.0], &p);
         let p = {
             Program::Body(lets![
                 "y" ; b!(B)   ;= b!(true);
@@ -746,7 +717,7 @@ mod active_tests {
                 ...? b!("z"; b!(B,B)) ; b!(B, B)
             ])
         };
-        check_exact("tuples00/T,T", vec![1.0, 1.0], &p);
+        check_exact("tuples0/T,T", vec![1.0, 1.0], &p);
         let mk = |ret: Expr| {
             Program::Body(lets![
                 "y" ; b!(B)   ;= b!(true);
@@ -754,14 +725,13 @@ mod active_tests {
                 ...? ret ; B!()
             ])
         };
-        check_exact("tuples00/T, ", vec![1.0], &mk(fst!(b!(@anf "z"))));
-        check_exact("tuples00/ ,T", vec![1.0], &mk(snd!(b!(@anf "z"))));
+        check_exact("tuples0/T, ", vec![1.0], &mk(fst!(b!(@anf "z"))));
+        check_exact("tuples0/ ,T", vec![1.0], &mk(snd!(b!(@anf "z"))));
     }
 
     #[test]
-    #[traced_test]
-    #[ignore]
-    fn tuple0() {
+    // #[traced_test]
+    fn tuple1() {
         let mk = |ret: Expr| {
             Program::Body(lets![
                 "x" ; b!()     ;= flip!(1.0/3.0);
@@ -770,14 +740,16 @@ mod active_tests {
                 ...? ret ; B!()
             ])
         };
-        // check_exact("p02/y,x", vec![3.0 / 12.0, 4.0 / 12.0], &mk(b!("y", "x")));
-        check_exact("p02/y, ", vec![3.0 / 12.0], &mk(fst!(b!(@anf "z"))));
-        // check_exact("p02/ ,x", vec![4.0 / 12.0], &mk(snd!(b!(@anf "z"))));
+        check_exact("tuple1/x,y", vec![1.0 / 3.0, 1.0 / 4.0], &mk(b!("x", "y")));
+        check_exact("tuple1/y,x", vec![1.0 / 4.0, 1.0 / 3.0], &mk(b!("y", "x")));
+
+        check_exact("tuple1/x, ", vec![1.0 / 3.0], &mk(fst!(b!(@anf "z"))));
+        check_exact("tuple1/ ,y", vec![1.0 / 4.0], &mk(snd!(b!(@anf "z"))));
     }
 
     // free variable edge case
     #[test]
-    #[ignore]
+    #[ignore = "this test will always break until we are doing data flow analysis"]
     #[traced_test]
     fn free_variables_0() {
         let mk = |ret: Expr| {
@@ -787,24 +759,27 @@ mod active_tests {
                ...? ret ; B!()
             ])
         };
-        check_approx1("free/x ", 1.0 / 3.0, &mk(var!("x")), 1000);
+        let n = 10;
+
+        check_approx1("free/x ", 1.0 / 3.0, &mk(var!("x")), n);
         // FIXME: still broken! getting 1/2 instead of 1/3
-        check_approx1("free/y ", 1.0 / 3.0, &mk(var!("y")), 1000);
+        check_approx1("free/y ", 1.0 / 3.0, &mk(var!("y")), n);
     }
-    // #[test]
-    // // #[traced_test]
-    // fn free_variables_1() {
-    //     // FIXME: This seems like a huge problem!
-    //     let problem = {
-    //         Program::Body(lets![
-    //            "x" := flip!(1/3);
-    //            "l" := sample!(var!("x"));
-    //            "_" := observe!(var!("x"));
-    //            ...? var!("l")
-    //         ])
-    //     };
-    //     check_approx("free/!!", 1.0 / 1.0, &problem, 1000);
-    // }
+
+    #[test]
+    // #[traced_test]
+    fn free_variables_1() {
+        // FIXME: This seems like a huge problem!
+        let problem = {
+            Program::Body(lets![
+               "x" ; B!() ;= flip!(1/3);
+               "l" ; B!() ;= sample!(var!("x"));
+               "_" ; B!() ;= observe!(var!("x"));
+               ...? var!("l") ; B!()
+            ])
+        };
+        check_approx1("free/!!", 1.0 / 3.0, &problem, 10000);
+    }
     // #[test]
     // // #[traced_test]
     // fn free_variables_2() {

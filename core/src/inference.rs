@@ -139,11 +139,21 @@ pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: &Program) -> Vec
         match compile(env, p) {
             Ok(c) => {
                 let azs = wmc_prob(env, &c);
+
                 let prs = azs
                     .into_iter()
                     .map(|(a, z)| {
-                        debug!(a = a, z = z);
-                        (a / z) as f64
+                        debug!(
+                            a = a,
+                            z = z,
+                            accept = c.accept.print_bdd(),
+                            dists = renderbdds(&c.dists)
+                        );
+                        if a == z && a == 0.0 {
+                            0.0
+                        } else {
+                            (a / z) as f64
+                        }
                     })
                     .collect_vec();
                 let _qs = c
