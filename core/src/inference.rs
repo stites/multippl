@@ -16,6 +16,8 @@ pub fn _wmc_prob(env: &mut Env, m: &WeightMap, dist: BddPtr, accept: BddPtr) -> 
     let var_order = VarOrder::linear_order(mx as usize);
     let a = env.mgr.and(dist, accept).wmc(&var_order, &params);
     let z = accept.wmc(&var_order, &params);
+    debug!(dist = dist.print_bdd());
+    debug!(accept = dist.print_bdd());
     (a, z)
 }
 pub fn wmc_prob(env: &mut Env, c: &Compiled) -> Vec<(f64, f64)> {
@@ -115,6 +117,13 @@ fn debug_importance_weighting(
             // debug!("{}{}", " ".repeat(leftpad), denom);
         }
     }
+    debug!(
+        "ps[1] = {}",
+        renderfloats(&pss.iter().map(|xs| xs[1]).collect_vec(), false)
+    );
+    debug!("ps[0] = {}", pss.iter().map(|xs| xs[0]).sum::<f64>());
+    debug!("ps[1] = {}", pss.iter().map(|xs| xs[1]).sum::<f64>());
+    debug!("ws    = {}", ws.iter().sum::<f64>());
     debug!(exp = renderfloats(exp, false));
     debug!(expw = renderfloats(expw, false));
     izip!(exp, expw).enumerate().for_each(|(i, (exp, expw))| {
@@ -132,7 +141,7 @@ fn debug_importance_weighting(
     });
 }
 pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: &Program) -> Vec<f64> {
-    let (mut exp, mut expw, mut expw2) = (vec![], vec![], vec![]);
+    let mut e = Expectations::empty();
     let mut ws: Vec<f64> = vec![];
     let mut qss: Vec<Vec<f64>> = vec![];
     let mut pss: Vec<Vec<f64>> = vec![];
@@ -161,37 +170,31 @@ pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: &Program) -> Vec
                         }
                     })
                     .collect_vec();
-                let _qs = c
-                    .probabilities
-                    .iter()
-                    .map(Probability::as_f64)
-                    .collect_vec();
+
                 let w = c.importance_weight;
 
-                if exp.len() == 0 {
-                    exp = vec![0.0; prs.len()];
-                    expw = vec![0.0; prs.len()];
-                    expw2 = vec![0.0; prs.len()];
-                }
-                debug!("{}, {}", w, renderfloats(&prs, false));
-                izip!(prs.clone(), _qs.clone())
-                    .enumerate()
-                    .for_each(|(i, (pr, _q))| {
-                        exp[i] = exp[i] + w * pr;
-                        expw[i] = expw[i] + w;
-                        expw2[i] = expw2[i] + (w * w);
-                    });
+                debug!("{}", c.accept.print_bdd());
+                debug!("{}", renderbdds(&c.dists));
+                debug!("{}, {}, {}", w, renderfloats(&prs, false), prs.len());
+                let exp_cur = Expectations::new(w, prs.clone());
+                e = Expectations::add(e, exp_cur);
                 ws.push(w);
-                qss.push(_qs);
+                // qss.push(_qs);
                 pss.push(prs);
                 sss.push(env.samples.clone());
             }
             Err(e) => panic!("{:?}", e),
         }
     }
+    let exp = e.exp;
+    let expw = e.expw;
     debug_importance_weighting(true, steps, &ws, &qss, &pss, &sss, &exp, &expw);
     // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
     // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
+    debug!(
+        exp = renderfloats(&exp, false),
+        expw = renderfloats(&expw, false)
+    );
     izip!(exp, expw)
         .map(|(exp, expw)| (exp / expw) as f64)
         .collect_vec()
@@ -240,12 +243,12 @@ fn conc_prelude(env: &mut Env, p: &Program) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
     }
 }
 
-pub struct SyncSummand {
+pub struct Expectations {
     pub exp: Vec<f64>,
     pub expw: Vec<f64>,
     // pub expw2: Vec<f64>,
 }
-impl SyncSummand {
+impl Expectations {
     pub fn empty() -> Self {
         Self {
             exp: vec![],
@@ -281,19 +284,19 @@ impl SyncSummand {
 //         I: Iterator<Item = A>;
 // }
 
-impl Sum for SyncSummand {
+impl Sum for Expectations {
     fn sum<I>(iter: I) -> Self
     where
-        I: Iterator<Item = SyncSummand>,
+        I: Iterator<Item = Expectations>,
     {
-        iter.fold(SyncSummand::empty(), SyncSummand::add)
+        iter.fold(Expectations::empty(), Expectations::add)
     }
 }
 
 pub fn importance_weighting_inf_conc(_envargs: &EnvArgs, steps: usize, p: &Program) -> Vec<f64> {
     // let mut exp = vec![];
     // let mut expw = vec![];
-    let fin: SyncSummand = (1..=steps)
+    let fin: Expectations = (1..=steps)
         .into_par_iter()
         .map(|_step| {
             let mut enva = EnvArgs::default_args(None);
@@ -324,7 +327,7 @@ pub fn importance_weighting_inf_conc(_envargs: &EnvArgs, steps: usize, p: &Progr
                         .collect_vec();
                     let w = c.importance_weight;
 
-                    return Ok(SyncSummand::new(w, prs));
+                    return Ok(Expectations::new(w, prs));
                     // let mut exp = vec![0.0; prs.len()];
                     // let mut expw = vec![0.0; prs.len()];
                     // let mut expw2 = vec![0.0; prs.len()];

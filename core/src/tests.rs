@@ -52,7 +52,7 @@ pub fn check_approx1(s: &str, f: f64, p: &Program, n: usize) {
     check_approx(s, vec![f], p, n)
 }
 pub fn check_approx_conc(s: &str, f: Vec<f64>, p: &Program, n: usize) {
-    let mut env_args = EnvArgs::default_args(None);
+    let env_args = EnvArgs::default_args(None);
     // let mut env = Env::from_args(&mut env_args);
     let precision = 0.01;
     let fs = f;

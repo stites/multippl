@@ -355,7 +355,7 @@ pub mod semantics {
                     .map(|(l, r)| op(self.mgr, l, r))
                     .collect_vec();
                 Ok(Compiled {
-                    accept: BddPtr::PtrTrue,
+                    accept: ctx.accept.clone(),
                     weight_map: ctx.weight_map.clone(),
                     substitutions: ctx.substitutions.clone(),
                     ..Compiled::default_vec(dists)
@@ -378,6 +378,7 @@ pub mod semantics {
                         )))
                     } else {
                         Ok(Compiled {
+                            accept: ctx.accept.clone(),
                             substitutions: ctx.substitutions.clone(),
                             weight_map: wm,
                             ..Compiled::default(self.mgr.var(lbl, true))
@@ -385,6 +386,7 @@ pub mod semantics {
                     }
                 }
                 AVal(Val::Bool(b)) => Ok(Compiled {
+                    accept: ctx.accept.clone(),
                     substitutions: ctx.substitutions.clone(),
                     weight_map: ctx.weight_map.clone(),
                     ..Compiled::default(BddPtr::from_bool(*b))
@@ -497,7 +499,7 @@ pub mod semantics {
                     let flen = dists.len();
                     let c = Compiled {
                         dists,
-                        accept: BddPtr::PtrTrue,
+                        accept: ctx.accept.clone(),
                         weight_map: ctx.weight_map.clone(),
                         substitutions: ctx.substitutions.clone(),
                         probabilities: vec![Probability::new(1.0); flen],
@@ -531,6 +533,7 @@ pub mod semantics {
 
                     let dists = self.apply_substitutions(body.dists, &substitutions);
                     let accept = self.mgr.and(bound.accept, body.accept);
+                    let accept = self.mgr.and(accept, ctx.accept);
 
                     self.log_samples(id, ebound, &bound);
 
@@ -580,6 +583,7 @@ pub mod semantics {
                     let accept_l = self.mgr.and(pred_dist, truthy.accept);
                     let accept_r = self.mgr.and(pred_dist.neg(), falsey.accept);
                     let accept = self.mgr.or(accept_l, accept_r);
+                    let accept = self.mgr.and(accept, ctx.accept);
 
                     let mut weight_map = truthy.weight_map.clone();
                     weight_map.extend(falsey.weight_map.clone());
@@ -610,7 +614,7 @@ pub mod semantics {
                     weight_map.insert(sym, (1.0 - *param, *param));
                     let c = Compiled {
                         dists: vec![self.mgr.var(lbl, true)],
-                        accept: BddPtr::PtrTrue,
+                        accept: ctx.accept.clone(),
                         weight_map,
                         substitutions: ctx.substitutions.clone(),
                         probabilities: vec![Probability::new(1.0)],
@@ -628,6 +632,7 @@ pub mod semantics {
                         .fold(BddPtr::PtrTrue, |global, cur| self.mgr.and(global, cur));
 
                     let accept = dists;
+                    let accept = self.mgr.and(accept, ctx.accept);
 
                     let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
                     let var_order = VarOrder::linear_order(max_var as usize);
@@ -671,10 +676,12 @@ pub mod semantics {
                         .unzip();
 
                     // debug!(dists = renderbdds(&dists));
-                    let accept = comp_dists.iter().fold(comp.accept.clone(), |global, dist| {
-                        let dist_holds = self.mgr.iff(*dist, BddPtr::PtrTrue);
-                        self.mgr.and(global, dist_holds)
-                    });
+                    // let accept = comp_dists.iter().fold(comp.accept.clone(), |global, dist| {
+                    //     let dist_holds = self.mgr.iff(*dist, BddPtr::PtrTrue);
+                    //     self.mgr.and(global, dist_holds)
+                    // });
+                    // let accept = self.mgr.and(accept, ctx.accept);
+                    let accept = ctx.accept;
                     debug!(accept = accept.print_bdd());
 
                     let c = Compiled {
