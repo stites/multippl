@@ -50,6 +50,39 @@ pub fn check_approx(s: &str, f: Vec<f64>, p: &Program, n: usize) {
 pub fn check_approx1(s: &str, f: f64, p: &Program, n: usize) {
     check_approx(s, vec![f], p, n)
 }
+pub fn check_approx_conc(s: &str, f: Vec<f64>, p: &Program, n: usize) {
+    // check_inference(
+    //     "approx",
+    //     &|env, p| importance_weighting_inf_conc(env, n, p),
+    //     0.01,
+    //     s,
+    //     f,
+    //     p,
+    // );
+    let mut env_args = EnvArgs::default_args(None);
+    // let mut env = Env::from_args(&mut env_args);
+    let precision = 0.01;
+    let fs = f;
+    let i = "approx";
+    let prs = importance_weighting_inf_conc(&env_args, n, p);
+    assert_eq!(
+        prs.len(),
+        fs.len(),
+        "check_inference compiled {} queries, tests expect {} results",
+        prs.len(),
+        fs.len(),
+    );
+    izip!(prs, fs).for_each(|(pr, f)| {
+        let ret = (f - pr).abs() < precision;
+        assert!(
+            ret,
+            "[check_{i}][{s}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"
+        );
+    });
+}
+pub fn check_approx1_conc(s: &str, f: f64, p: &Program, n: usize) {
+    check_approx_conc(s, vec![f], p, n)
+}
 pub fn check_approx_seeded(s: &str, f: Vec<f64>, p: &Program, n: usize, seeds: &Vec<u64>) {
     check_inference(
         "approx",

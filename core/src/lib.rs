@@ -768,7 +768,7 @@ mod active_tests {
 
     #[test]
     // #[traced_test]
-    fn free_variables_1() {
+    fn free_variables_1_conc() {
         // FIXME: This seems like a huge problem!
         let problem = {
             Program::Body(lets![
@@ -778,7 +778,7 @@ mod active_tests {
                ...? var!("l") ; B!()
             ])
         };
-        check_approx1("free/!!", 1.0 / 3.0, &problem, 10000);
+        check_approx1("free/!!", 1.0 / 3.0, &problem, 1000000);
     }
     // #[test]
     // // #[traced_test]

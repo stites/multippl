@@ -1,11 +1,14 @@
 use crate::grammar::*;
 use crate::semantics::*;
 use itertools::*;
+use rayon::iter::*;
+use rayon::prelude::*;
 use rsdd::repr::bdd::*;
 use rsdd::repr::ddnnf::DDNNFPtr;
 use rsdd::repr::var_order::VarOrder;
 use rsdd::sample::probability::Probability;
 use std::collections::HashMap;
+use std::iter::Sum;
 use tracing::debug;
 
 pub fn _wmc_prob(env: &mut Env, m: &WeightMap, dist: BddPtr, accept: BddPtr) -> (f64, f64) {
@@ -191,6 +194,163 @@ pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: &Program) -> Vec
         .collect_vec()
 }
 
+fn conc_prelude(env: &mut Env, p: &Program) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
+    match compile(env, p) {
+        Ok(c) => {
+            let azs = wmc_prob(env, &c);
+            let prs = azs
+                .into_iter()
+                .map(|(a, z)| {
+                    debug!(
+                        a = a,
+                        z = z,
+                        accept = c.accept.print_bdd(),
+                        dists = renderbdds(&c.dists)
+                    );
+                    if a == z && a == 0.0 {
+                        0.0
+                    } else {
+                        (a / z) as f64
+                    }
+                })
+                .collect_vec();
+            let _qs = c
+                .probabilities
+                .iter()
+                .map(Probability::as_f64)
+                .collect_vec();
+            let w = c.importance_weight;
+
+            let mut exp = vec![0.0; prs.len()];
+            let mut expw = vec![0.0; prs.len()];
+            let mut expw2 = vec![0.0; prs.len()];
+            izip!(prs.clone(), _qs.clone())
+                .enumerate()
+                .for_each(|(i, (pr, _q))| {
+                    exp[i] = exp[i] + w * pr;
+                    expw[i] = expw[i] + w;
+                    expw2[i] = expw2[i] + (w * w);
+                });
+            return (exp, expw, expw2);
+        }
+        Err(e) => panic!("{:?}", e),
+    }
+}
+
+pub struct TestStruct {
+    pub exp: Vec<f64>,
+    pub expw: Vec<f64>,
+    // pub expw2: Vec<f64>,
+}
+impl TestStruct {
+    pub fn empty() -> Self {
+        Self {
+            exp: vec![],
+            expw: vec![],
+        }
+    }
+    pub fn new(w: f64, prs: Vec<f64>) -> Self {
+        let (exp, expw) = prs
+            .into_iter()
+            .map(|pr| {
+                let exp = w * pr;
+                let expw = w;
+                let expw2 = w * w;
+                (exp, expw) // , expw2)
+            })
+            .unzip();
+        Self { exp, expw }
+    }
+    pub fn add(l: Self, o: Self) -> Self {
+        if l.exp.len() == 0 {
+            o
+        } else {
+            Self {
+                exp: izip!(l.exp, o.exp).map(|(l, r)| l + r).collect_vec(),
+                expw: izip!(l.expw, o.expw).map(|(l, r)| l + r).collect_vec(),
+            }
+        }
+    }
+}
+// pub trait Sum<A = Self> {
+//     fn sum<I>(iter: I) -> Self
+//     where
+//         I: Iterator<Item = A>;
+// }
+
+impl Sum for TestStruct {
+    fn sum<I>(iter: I) -> Self
+    where
+        I: Iterator<Item = TestStruct>,
+    {
+        iter.fold(TestStruct::empty(), TestStruct::add)
+    }
+}
+
+pub fn importance_weighting_inf_conc(_envargs: &EnvArgs, steps: usize, p: &Program) -> Vec<f64> {
+    // let mut exp = vec![];
+    // let mut expw = vec![];
+    let fin: TestStruct = (1..=steps)
+        .into_par_iter()
+        .map(|_step| {
+            let mut enva = EnvArgs::default_args(None);
+            let mut env = Env::from_args(&mut enva);
+            match compile(&mut env, p) {
+                Ok(c) => {
+                    let azs = wmc_prob(&mut env, &c);
+                    let prs = azs
+                        .into_iter()
+                        .map(|(a, z)| {
+                            debug!(
+                                a = a,
+                                z = z,
+                                accept = c.accept.print_bdd(),
+                                dists = renderbdds(&c.dists)
+                            );
+                            if a == z && a == 0.0 {
+                                0.0
+                            } else {
+                                (a / z) as f64
+                            }
+                        })
+                        .collect_vec();
+                    let _qs = c
+                        .probabilities
+                        .iter()
+                        .map(Probability::as_f64)
+                        .collect_vec();
+                    let w = c.importance_weight;
+
+                    return Ok(TestStruct::new(w, prs));
+                    // let mut exp = vec![0.0; prs.len()];
+                    // let mut expw = vec![0.0; prs.len()];
+                    // let mut expw2 = vec![0.0; prs.len()];
+                    // izip!(prs.clone(), _qs.clone())
+                    //     .enumerate()
+                    //     .for_each(|(i, (pr, _q))| {
+                    //         exp[i] = exp[i] + w * pr;
+                    //         expw[i] = expw[i] + w;
+                    //         expw2[i] = expw2[i] + (w * w);
+                    //     });
+                    // return Ok((exp, expw)); // , expw2)
+                }
+                Err(e) => Err(e),
+            }
+        })
+        .filter_map(|x| x.ok())
+        .sum()
+        // .map(|(l, r)| (l[0], r[0]))
+        // .unzip_into_vecs(&mut exp, &mut expw)
+        ;
+    // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
+    // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
+    let exp = fin.exp;
+    let expw = fin.expw;
+    izip!(exp, expw)
+        .map(|(exp, expw)| (exp / expw) as f64)
+        .collect_vec()
+}
+
 pub fn importance_weighting_inf_seeded(seeds: Vec<u64>, steps: usize, p: &Program) -> Vec<f64> {
     let (mut exp, mut expw, mut expw2) = (vec![], vec![], vec![]);
     let mut ws: Vec<f64> = vec![];
@@ -202,6 +362,7 @@ pub fn importance_weighting_inf_seeded(seeds: Vec<u64>, steps: usize, p: &Progra
     for step in 1..=steps {
         let seed = seeds[step % num_seeds];
         let mut envargs = EnvArgs::default_args(Some(seed));
+
         let mut env = Env::from_args(&mut envargs);
         match compile(&mut env, p) {
             Ok(c) => {
