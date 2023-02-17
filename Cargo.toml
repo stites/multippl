@@ -7,3 +7,19 @@ members = [
 version = "0.0.0"
 edition = "2021"
 
+# start with the release profile (which cannot be inherited for dev), as
+# documented in: https://doc.rust-lang.org/cargo/reference/profiles.html
+[profile.dev]
+opt-level = 3
+debug = true            # +++ provide debug information
+# split-debuginfo = '...' # listed as part of the dev profile, but fails on osx
+debug-assertions = false
+overflow-checks = false
+lto = false
+panic = 'unwind'
+incremental = true      # ++ save more compile-time information to disk for faster rebuilds
+codegen-units = 16
+rpath = false
+
+[profile.release]
+lto = true              # +++ whole-program optimization: true for a "fat" LTO program, "thin" for a less agressive form
