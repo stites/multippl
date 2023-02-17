@@ -94,7 +94,7 @@ pub enum Expr {
     ESample(Box<Expr>),
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Γ(pub Vec<(String, Ty)>);
 impl Γ {
     pub fn get(&self, x: String) -> Option<Ty> {

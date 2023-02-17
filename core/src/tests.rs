@@ -25,6 +25,7 @@ pub fn check_inference(
     );
     izip!(prs, fs).enumerate().for_each(|(i, (pr, f))| {
         let ret = (f - pr).abs() < precision;
+        let i = i + 1;
         assert!(
             ret,
             "[check_{i}][{s}#{i}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"

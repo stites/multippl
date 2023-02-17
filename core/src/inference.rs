@@ -115,6 +115,8 @@ fn debug_importance_weighting(
             // debug!("{}{}", " ".repeat(leftpad), denom);
         }
     }
+    debug!(exp = renderfloats(exp, false));
+    debug!(expw = renderfloats(expw, false));
     izip!(exp, expw).enumerate().for_each(|(i, (exp, expw))| {
         let num = format!("{}", exp);
         let denom = format!("{}", expw);
@@ -171,6 +173,7 @@ pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: &Program) -> Vec
                     expw = vec![0.0; prs.len()];
                     expw2 = vec![0.0; prs.len()];
                 }
+                debug!("{}, {}", w, renderfloats(&prs, false));
                 izip!(prs.clone(), _qs.clone())
                     .enumerate()
                     .for_each(|(i, (pr, _q))| {
@@ -237,12 +240,12 @@ fn conc_prelude(env: &mut Env, p: &Program) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
     }
 }
 
-pub struct TestStruct {
+pub struct SyncSummand {
     pub exp: Vec<f64>,
     pub expw: Vec<f64>,
     // pub expw2: Vec<f64>,
 }
-impl TestStruct {
+impl SyncSummand {
     pub fn empty() -> Self {
         Self {
             exp: vec![],
@@ -278,19 +281,19 @@ impl TestStruct {
 //         I: Iterator<Item = A>;
 // }
 
-impl Sum for TestStruct {
+impl Sum for SyncSummand {
     fn sum<I>(iter: I) -> Self
     where
-        I: Iterator<Item = TestStruct>,
+        I: Iterator<Item = SyncSummand>,
     {
-        iter.fold(TestStruct::empty(), TestStruct::add)
+        iter.fold(SyncSummand::empty(), SyncSummand::add)
     }
 }
 
 pub fn importance_weighting_inf_conc(_envargs: &EnvArgs, steps: usize, p: &Program) -> Vec<f64> {
     // let mut exp = vec![];
     // let mut expw = vec![];
-    let fin: TestStruct = (1..=steps)
+    let fin: SyncSummand = (1..=steps)
         .into_par_iter()
         .map(|_step| {
             let mut enva = EnvArgs::default_args(None);
@@ -321,7 +324,7 @@ pub fn importance_weighting_inf_conc(_envargs: &EnvArgs, steps: usize, p: &Progr
                         .collect_vec();
                     let w = c.importance_weight;
 
-                    return Ok(TestStruct::new(w, prs));
+                    return Ok(SyncSummand::new(w, prs));
                     // let mut exp = vec![0.0; prs.len()];
                     // let mut expw = vec![0.0; prs.len()];
                     // let mut expw2 = vec![0.0; prs.len()];

@@ -54,6 +54,10 @@ pub mod semantics {
         format!("[{}]", fs.join(", "))
     }
 
+    pub fn renderfloats(fs: &Vec<f64>, high_prec: bool) -> String {
+        rendervec(&fs.iter().map(|x| fmt_f64(high_prec)(*x)).collect_vec())
+    }
+
     pub fn renderbdds(fs: &Vec<BddPtr>) -> String {
         rendervec(&fs.iter().map(|b| b.print_bdd()).collect_vec())
     }
@@ -75,7 +79,9 @@ pub mod semantics {
         }
     }
 
-    fn debug_compiled(s: &str, w: &WeightMap, p: &SubstMap, c: &Compiled) {
+    fn debug_compiled(s: &str, ctx: &Context, c: &Compiled) {
+        let w = &ctx.weight_map;
+        let p = &ctx.substitutions;
         let renderw = |ws: &WeightMap| {
             ws.iter()
                 .map(|(k, (l, h))| format!("{k}: ({l}, {h})"))
@@ -157,6 +163,23 @@ pub mod semantics {
         (wmc_params, max)
     }
 
+    #[derive(Debug, Clone)]
+    pub struct Context {
+        pub gamma: Γ,
+        pub accept: BddPtr,
+        pub weight_map: WeightMap,
+        pub substitutions: SubstMap,
+    }
+    impl Default for Context {
+        fn default() -> Self {
+            Context {
+                gamma: Γ(Default::default()),
+                accept: BddPtr::PtrTrue,
+                weight_map: Default::default(),
+                substitutions: Default::default(),
+            }
+        }
+    }
     #[derive(Debug, Clone)]
     pub struct Compiled {
         pub dists: Vec<BddPtr>,
@@ -310,15 +333,13 @@ pub mod semantics {
         }
         pub fn eval_anf_binop(
             &mut self,
-            ctx: &Γ,
+            ctx: &Context,
             bl: &ANF,
             br: &ANF,
-            m: &WeightMap,
-            p: &SubstMap,
             op: &dyn Fn(&mut Mgr, BddPtr, BddPtr) -> BddPtr,
         ) -> Result<Compiled, CompileError> {
-            let l = self.eval_anf(ctx, bl, m, p)?;
-            let r = self.eval_anf(ctx, br, m, p)?;
+            let l = self.eval_anf(ctx, bl)?;
+            let r = self.eval_anf(ctx, br)?;
             let mut weight_map = l.weight_map.clone();
             weight_map.extend(r.weight_map.clone());
             let mut substitutions = l.substitutions.clone();
@@ -335,46 +356,44 @@ pub mod semantics {
                     .collect_vec();
                 Ok(Compiled {
                     accept: BddPtr::PtrTrue,
-                    weight_map,
-                    substitutions,
+                    weight_map: ctx.weight_map.clone(),
+                    substitutions: ctx.substitutions.clone(),
                     ..Compiled::default_vec(dists)
                 })
             }
         }
 
-        pub fn eval_anf(
-            &mut self,
-            ctx: &Γ,
-            a: &ANF,
-            m: &WeightMap,
-            p: &SubstMap,
-        ) -> Result<Compiled, CompileError> {
+        pub fn eval_anf(&mut self, ctx: &Context, a: &ANF) -> Result<Compiled, CompileError> {
             use ANF::*;
             match a {
                 AVar(s, ty) => {
-                    let (lbl, wm) = self.get_or_create_varlabel(s.to_string(), m, p);
-                    if !ctx.typechecks(s.clone(), ty) {
+                    let (lbl, wm) = self.get_or_create_varlabel(
+                        s.to_string(),
+                        &ctx.weight_map,
+                        &ctx.substitutions,
+                    );
+                    if !ctx.gamma.typechecks(s.clone(), ty) {
                         Err(TypeError(format!(
                             "Expected {s} : {ty:?}\nGot: {a:?}\n{ctx:?}",
                         )))
                     } else {
                         Ok(Compiled {
-                            substitutions: p.clone(),
+                            substitutions: ctx.substitutions.clone(),
                             weight_map: wm,
                             ..Compiled::default(self.mgr.var(lbl, true))
                         })
                     }
                 }
                 AVal(Val::Bool(b)) => Ok(Compiled {
-                    substitutions: p.clone(),
-                    weight_map: m.clone(),
+                    substitutions: ctx.substitutions.clone(),
+                    weight_map: ctx.weight_map.clone(),
                     ..Compiled::default(BddPtr::from_bool(*b))
                 }),
                 AVal(Val::Prod(vs)) => Err(CompileError::Todo()),
-                And(bl, br) => self.eval_anf_binop(ctx, bl, br, m, p, &BddManager::and),
-                Or(bl, br) => self.eval_anf_binop(ctx, bl, br, m, p, &BddManager::or),
+                And(bl, br) => self.eval_anf_binop(ctx, bl, br, &BddManager::and),
+                Or(bl, br) => self.eval_anf_binop(ctx, bl, br, &BddManager::or),
                 Neg(bp) => {
-                    let mut p = self.eval_anf(ctx, bp, m, p)?;
+                    let mut p = self.eval_anf(ctx, bp)?;
                     // FIXME negating a tuple? seems weird!!!!
                     p.dists = p.dists.iter().map(BddPtr::neg).collect_vec();
 
@@ -432,19 +451,13 @@ pub mod semantics {
             }
         }
 
-        pub fn eval_expr(
-            &mut self,
-            ctx: &Γ,
-            e: &Expr,
-            m: &WeightMap,
-            p: &SubstMap,
-        ) -> Result<Compiled, CompileError> {
+        pub fn eval_expr(&mut self, ctx: &Context, e: &Expr) -> Result<Compiled, CompileError> {
             use Expr::*;
             match e {
                 EAnf(a) => {
                     debug!(">>>anf: {:?}", a);
-                    let c = self.eval_anf(ctx, a, m, p)?;
-                    debug_compiled("anf", m, p, &c);
+                    let c = self.eval_anf(ctx, a)?;
+                    debug_compiled("anf", ctx, &c);
                     Ok(c)
                 }
                 EPrj(i, a, ty) => {
@@ -454,58 +467,61 @@ pub mod semantics {
                     // ignore types for now.
                     // let aty = a.as_type();
                     // assert!(aty.left() == Some(*ty.clone()), "actual {:?} != expected {:?}. type is: {:?}", aty.left(), Some(*ty.clone()), ty);
-                    let mut c = self.eval_anf(ctx, a, m, p)?;
-                    let dists = self.apply_substitutions(c.dists, p);
+                    let mut c = self.eval_anf(ctx, a)?;
+                    let dists = self.apply_substitutions(c.dists, &ctx.substitutions);
                     c.dists = vec![dists[*i]];
                     if i > &1 {
-                        debug_compiled(&format!("prj@{}", i).to_string(), m, p, &c);
+                        debug_compiled(&format!("prj@{}", i).to_string(), ctx, &c);
                     }
                     Ok(c)
                 }
                 EFst(a, ty) => {
                     debug!(">>>fst: {:?}", a);
-                    let c = self.eval_expr(ctx, &EPrj(0, a.clone(), ty.clone()), m, p)?;
-                    debug_compiled("fst", m, p, &c);
+                    let c = self.eval_expr(ctx, &EPrj(0, a.clone(), ty.clone()))?;
+                    debug_compiled("fst", ctx, &c);
                     Ok(c)
                 }
                 ESnd(a, ty) => {
                     debug!(">>>snd: {:?}", a);
-                    let c = self.eval_expr(ctx, &EPrj(1, a.clone(), ty.clone()), m, p)?;
-                    debug_compiled("snd", m, p, &c);
+                    let c = self.eval_expr(ctx, &EPrj(1, a.clone(), ty.clone()))?;
+                    debug_compiled("snd", ctx, &c);
                     Ok(c)
                 }
                 EProd(anfs, ty) => {
                     debug!(">>>prod: {:?} {:?}", anfs, ty);
                     let dists = anfs.iter().fold(Ok(vec![]), |res, a| {
                         let fin = res?;
-                        let c = self.eval_anf(ctx, a, m, p)?;
+                        let c = self.eval_anf(ctx, a)?;
                         Ok(fin.iter().chain(&c.dists).cloned().collect_vec())
                     })?;
                     let flen = dists.len();
                     let c = Compiled {
                         dists,
                         accept: BddPtr::PtrTrue,
-                        weight_map: m.clone(),
-                        substitutions: p.clone(),
+                        weight_map: ctx.weight_map.clone(),
+                        substitutions: ctx.substitutions.clone(),
                         probabilities: vec![Probability::new(1.0); flen],
                         importance_weight: 1.0,
                     };
 
-                    debug_compiled("prod", m, p, &c);
+                    debug_compiled("prod", ctx, &c);
                     Ok(c)
                 }
                 ELetIn(s, tbound, ebound, ebody, tbody) => {
                     debug!(">>>let-in {}", s);
-                    let (lbl, wm) = self.get_or_create_varlabel(s.clone(), m, p);
+                    let (lbl, wm) =
+                        self.get_or_create_varlabel(s.clone(), &ctx.weight_map, &ctx.substitutions);
                     let id = UniqueId(lbl.value());
-                    let bound = self.eval_expr(ctx, ebound, &wm, p)?;
+                    let mut newctx = ctx.clone();
+                    newctx.weight_map = wm;
+                    let bound = self.eval_expr(&newctx, ebound)?;
 
                     let mut bound_substitutions = bound.substitutions.clone();
                     bound_substitutions.insert(id, bound.dists.clone());
 
-                    let newctx = ctx.append(s.clone(), tbound);
-                    let body =
-                        self.eval_expr(&newctx, ebody, &bound.weight_map, &bound_substitutions)?;
+                    let mut newctx = newctx.clone();
+                    newctx.gamma = ctx.gamma.append(s.clone(), tbound);
+                    let body = self.eval_expr(&newctx, ebody)?;
 
                     let mut weight_map = bound.weight_map.clone();
                     weight_map.extend(body.weight_map);
@@ -531,11 +547,11 @@ pub mod semantics {
                         probabilities,
                         importance_weight,
                     };
-                    debug_compiled(&format!("let-in {}", s), m, p, &c);
+                    debug_compiled(&format!("let-in {}", s), ctx, &c);
                     Ok(c)
                 }
                 EIte(cond, t, f, ty) => {
-                    let pred = self.eval_anf(ctx, cond, &m.clone(), &p.clone())?;
+                    let pred = self.eval_anf(ctx, cond)?;
                     if !pred.dists.len() == 1 {
                         return Err(TypeError(format!(
                             "Expected Bool for ITE condition\nGot: {cond:?}\n{ctx:?}",
@@ -543,8 +559,8 @@ pub mod semantics {
                     }
                     let pred_dist = pred.dists[0];
 
-                    let truthy = self.eval_expr(ctx, t, &m.clone(), &p.clone())?;
-                    let falsey = self.eval_expr(ctx, f, &m.clone(), &p.clone())?;
+                    let truthy = self.eval_expr(ctx, t)?;
+                    let falsey = self.eval_expr(ctx, f)?;
                     if truthy.dists.len() != falsey.dists.len() {
                         return Err(TypeError(format!(
                             "Expected both branches of ITE to return same type\nGot (left): {:?}\nGot (right):{:?}",
@@ -582,13 +598,13 @@ pub mod semantics {
                         probabilities,
                         importance_weight,
                     };
-                    debug_compiled("ite", m, p, &c);
+                    debug_compiled("ite", ctx, &c);
                     Ok(c)
                 }
                 EFlip(param) => {
                     debug!(">>>flip {param}");
                     let sym = self.fresh();
-                    let mut weight_map = m.clone();
+                    let mut weight_map = ctx.weight_map.clone();
                     let lbl = VarLabel::new(sym.0);
 
                     weight_map.insert(sym, (1.0 - *param, *param));
@@ -596,18 +612,18 @@ pub mod semantics {
                         dists: vec![self.mgr.var(lbl, true)],
                         accept: BddPtr::PtrTrue,
                         weight_map,
-                        substitutions: p.clone(),
+                        substitutions: ctx.substitutions.clone(),
                         probabilities: vec![Probability::new(1.0)],
                         importance_weight: 1.0,
                     };
-                    debug_compiled("flip {param}", m, p, &c);
+                    debug_compiled("flip {param}", ctx, &c);
                     Ok(c)
                 }
                 EObserve(a) => {
                     debug!(">>>observe");
-                    let comp = self.eval_anf(ctx, a, m, p)?;
+                    let comp = self.eval_anf(ctx, a)?;
                     let dists = self
-                        .apply_substitutions(comp.dists, p)
+                        .apply_substitutions(comp.dists, &ctx.substitutions)
                         .into_iter()
                         .fold(BddPtr::PtrTrue, |global, cur| self.mgr.and(global, cur));
 
@@ -620,17 +636,17 @@ pub mod semantics {
                     let c = Compiled {
                         dists: vec![BddPtr::PtrTrue],
                         accept: dists,
-                        weight_map: m.clone(),
-                        substitutions: p.clone(),
+                        weight_map: ctx.weight_map.clone(),
+                        substitutions: ctx.substitutions.clone(),
                         probabilities: vec![Probability::new(1.0)],
                         importance_weight,
                     };
-                    debug_compiled("observe", m, p, &c);
+                    debug_compiled("observe", ctx, &c);
                     Ok(c)
                 }
                 ESample(e) => {
                     debug!(">>>sample");
-                    let comp = self.eval_expr(ctx, e, m, p)?;
+                    let comp = self.eval_expr(ctx, e)?;
 
                     if comp.accept != BddPtr::PtrTrue {
                         return Err(SemanticsError(
@@ -639,7 +655,7 @@ pub mod semantics {
                     }
                     let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
                     let var_order = VarOrder::linear_order(max_var as usize);
-                    let comp_dists = self.apply_substitutions(comp.dists, p);
+                    let comp_dists = self.apply_substitutions(comp.dists, &ctx.substitutions);
                     // debug!(dists = renderbdds(&dists));
                     let (qs, dists): (Vec<Probability>, Vec<BddPtr>) = comp_dists
                         .iter()
@@ -665,11 +681,11 @@ pub mod semantics {
                         dists,
                         accept,
                         weight_map: comp.weight_map.clone(),
-                        substitutions: p.clone(),
+                        substitutions: ctx.substitutions.clone(),
                         probabilities: qs,
                         importance_weight: 1.0,
                     };
-                    debug_compiled("sample", m, p, &c);
+                    debug_compiled("sample", ctx, &c);
                     Ok(c)
                 }
             }
@@ -679,12 +695,7 @@ pub mod semantics {
         match p {
             Program::Body(e) => {
                 debug!("========================================================");
-                env.eval_expr(
-                    &Default::default(),
-                    e,
-                    &Default::default(),
-                    &Default::default(),
-                )
+                env.eval_expr(&Default::default(), e)
             }
         }
     }
