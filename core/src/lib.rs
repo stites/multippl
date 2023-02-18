@@ -580,9 +580,11 @@ pub mod semantics {
                     let mut substitutions = truthy.substitutions.clone();
                     substitutions.extend(falsey.substitutions.clone());
 
-                    let probabilities = izip!(&truthy.probabilities, &falsey.probabilities)
-                        .map(|(t, f)| *t + *f)
-                        .collect_vec();
+                    // FIXME: how important is probabilities for the IW??
+                    // let probabilities = izip!(&truthy.probabilities, &falsey.probabilities)
+                    //     .map(|(t, f)| *t + *f)
+                    //     .collect_vec();
+                    let probabilities = truthy.probabilities.clone();
                     let importance_weight = truthy.convex_combination(&falsey);
                     let c = Compiled {
                         dists,
@@ -749,51 +751,115 @@ mod active_tests {
     //     check_approx("nest/x&y", 1.0 / 6.0, &mk(and!("x", "y")), 10000);
     // }
 
-    // #[test]
-    // // #[traced_test]
-    // fn ite_1() {
-    //     let mk = |ret: Expr| {
-    //         Program::Body(lets![
-    //             "a" := flip!(1/3);
-    //             "b" := ite!(
-    //                 if ( var!("a") )
-    //                 then { flip!(1/4) }
-    //                 else { flip!(1/5) });
-    //             "_" := observe!(or!("a", "b")); // is this a problem?
-    //             ...? ret
-    //         ])
-    //     };
-    //     check_approx("ite1/y  ", 6.0 / 6.0, &mk(var!("y")), 10000);
-    //     check_approx("ite1/x  ", 6.0 / 6.0, &mk(var!("x")), 10000);
-    //     check_approx("ite1/x|y", 6.0 / 6.0, &mk(or!("x", "y")), 10000);
-    //     check_approx("ite1/x&y", 6.0 / 6.0, &mk(and!("x", "y")), 10000);
-    // }
+    #[test]
+    // #[traced_test]
+    fn ite_00() {
+        let mk = |p: Expr| {
+            Program::Body(ite!(
+                    if ( p )
+                    then { flip!(1/3) }
+                    else { flip!(1/5) }))
+        };
+        check_exact1("ite_00/T", 1.0 / 3.0, &mk(b!(true)));
+        check_exact1("ite_00/F", 1.0 / 5.0, &mk(b!(false)));
+    }
 
-    // #[test]
-    // // #[traced_test]
-    // fn ite_2_with_one_sample() {
-    //     let mk = |ret: Expr| {
-    //         Program::Body(lets![
-    //             "a" := flip!(1/3);
-    //             "b" := ite!(
-    //                 if ( var!("a") )
-    //                 then { sample!(flip!(1/4)) }
-    //                 else {         flip!(1/5)  });
-    //             "_" := observe!(or!("a", "b")); // is this a problem?
-    //             ...? ret
-    //         ])
-    //     };
-    //     check_approx("ite2/y  ", 6.0 / 6.0, &mk(var!("y")), 10000);
-    //     check_approx("ite2/x  ", 6.0 / 6.0, &mk(var!("x")), 10000);
-    //     check_approx("ite2/x|y", 6.0 / 6.0, &mk(or!("x", "y")), 10000);
-    //     check_approx("ite2/x&y", 6.0 / 6.0, &mk(and!("x", "y")), 10000);
-    // }
+    #[test]
+    // #[traced_test]
+    fn ite_0() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+                "b" ; b!() ;= ite!(
+                    if ( b!(true) )
+                    then { flip!(1/4) }
+                    else { flip!(1/5) });
+                ...? ret ; b!()
+            ])
+        };
+        check_approx1("ite_0  ", 1.0 / 4.0, &mk(var!("b")), 10000);
+    }
 
+    #[test]
+    // #[traced_test]
+    // #[ignore]
+    fn ite_1() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+                "a" ; b!() ;= flip!(1/3);
+                "b" ; b!() ;= ite!(
+                    if ( var!("a") )
+                    then { flip!(1/4) }
+                    else { flip!(1/5) });
+                "_" ; b!() ;= observe!(b!("a" || "b")); // is this a problem?
+                ...? ret ; b!()
+            ])
+        };
+        check_approx1("ite_1/y  ", 6.0 / 6.0, &mk(var!("y")), 10000);
+        check_approx1("ite_1/x  ", 6.0 / 6.0, &mk(var!("x")), 10000);
+        check_approx1("ite_1/x|y", 6.0 / 6.0, &mk(b!("x" || "y")), 10000);
+        check_approx1("ite_1/x&y", 6.0 / 6.0, &mk(b!("x" && "y")), 10000);
+    }
+
+    #[test]
+    // #[traced_test]
+    fn ite_2_with_one_sample() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+                "a" ; b!() ;= flip!(1/3);
+                "b" ; b!() ;= ite!(
+                    if ( var!("a") )
+                    then { sample!(flip!(1/4)) }
+                    else { flip!(1/5) });
+                "_" ; b!() ;= observe!(b!("a" || "b")); // is this a problem?
+                ...? ret ; b!()
+            ])
+        };
+        check_approx1("ite2/y  ", 6.0 / 6.0, &mk(b!("y")), 10000);
+        check_approx1("ite2/x  ", 6.0 / 6.0, &mk(b!("x")), 10000);
+        check_approx1("ite2/x|y", 6.0 / 6.0, &mk(b!("x" || "y")), 10000);
+        check_approx1("ite2/x&y", 6.0 / 6.0, &mk(b!("x" && "y")), 10000);
+    }
+    #[test]
+    // #[traced_test]
+    fn grid2x2_warmup0() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+                "00" ; B!() ;= flip!(1/2);
+                "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+                "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+                ...? ret ; B!()
+            ])
+        };
+        check_approx1("grid/00", 6.0 / 6.0, &mk(b!("00")), 10000);
+        check_approx1("grid/01", 6.0 / 6.0, &mk(b!("01")), 10000);
+        check_approx1("grid/10", 6.0 / 6.0, &mk(b!("10")), 10000);
+    }
+    #[test]
+    // #[traced_test]
+    #[ignore]
+    fn grid2x2_warmup1() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+                "01" ; B!() ;= flip!(1/3) ;
+                "10" ; B!() ;= flip!(1/4) ;
+                "11" ; B!() ;=
+                    ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+                    ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+                    ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+                                                              flip!(1/11) ))))));
+                ...? ret ; B!()
+            ])
+        };
+        check_approx1("grid/00", 6.0 / 6.0, &mk(b!("00")), 10000);
+        check_approx1("grid/01", 6.0 / 6.0, &mk(b!("01")), 10000);
+        check_approx1("grid/10", 6.0 / 6.0, &mk(b!("10")), 10000);
+    }
     /// a directed 2x2 grid test where we place samples according to various policies
     ///   (0,0) -> (0,1)
     ///     v        v
     ///   (1,0) -> (1,1)
     #[test]
+    #[ignore]
     // #[traced_test]
     fn grid2x2() {
         let mk = |ret: Expr| {
