@@ -318,6 +318,9 @@ macro_rules! b {
 
 #[macro_export]
 macro_rules! snd {
+    ( $x:literal ) => {{
+        snd!(b!(@anf $x))
+    }};
     ( $x:expr ) => {{
         Expr::ESnd(Box::new($x), Box::new(b!()))
     }};
@@ -332,6 +335,9 @@ macro_rules! not {
 
 #[macro_export]
 macro_rules! fst {
+    ( $x:literal ) => {{
+        fst!(b!(@anf $x))
+    }};
     ( $x:expr ) => {{
         Expr::EFst(Box::new($x), Box::new(b!()))
     }};

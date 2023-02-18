@@ -815,6 +815,35 @@ mod active_tests {
         check_approx1("grid/11", 6.0 / 6.0, &mk(b!("11")), 10000);
     }
 
+    #[test]
+    #[ignore]
+    // #[traced_test]
+    fn grid2x2_sampled() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+                "00" ; B!() ;= flip!(1/2);
+                "01_10" ; b!(B, B) ;= sample!(
+                    lets![
+                        "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+                        "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+                        ...? b!("01", "10") ; b!(B, B)
+                    ]);
+                "01" ; B!() ;= fst!("01_10");
+                "10" ; B!() ;= snd!("01_10");
+                "11" ; B!() ;=
+                    ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+                    ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+                    ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+                                                              flip!(1/11) ))))));
+                ...? ret ; B!()
+            ])
+        };
+        check_approx1("grid/00", 6.0 / 6.0, &mk(b!("00")), 10000);
+        check_approx1("grid/01", 6.0 / 6.0, &mk(b!("01")), 10000);
+        check_approx1("grid/10", 6.0 / 6.0, &mk(b!("10")), 10000);
+        check_approx1("grid/11", 6.0 / 6.0, &mk(b!("11")), 10000);
+    }
+
     // /// a directed 3x3 grid test where we place samples according to various policies
     // ///   (0,0) -> (0,1) -> (0,2)
     // ///     v        v        v
