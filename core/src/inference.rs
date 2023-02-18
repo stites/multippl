@@ -117,12 +117,6 @@ fn debug_importance_weighting(
             // debug!("{}{}", " ".repeat(leftpad), denom);
         }
     }
-    debug!(
-        "ps[1] = {}",
-        renderfloats(&pss.iter().map(|xs| xs[1]).collect_vec(), false)
-    );
-    debug!("ps[0] = {}", pss.iter().map(|xs| xs[0]).sum::<f64>());
-    debug!("ps[1] = {}", pss.iter().map(|xs| xs[1]).sum::<f64>());
     debug!("ws    = {}", ws.iter().sum::<f64>());
     debug!(exp = renderfloats(exp, false));
     debug!(expw = renderfloats(expw, false));

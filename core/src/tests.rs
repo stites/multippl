@@ -19,9 +19,9 @@ pub fn check_inference(
     assert_eq!(
         prs.len(),
         fs.len(),
-        "check_inference compiled {} queries, tests expect {} results",
-        prs.len(),
-        fs.len(),
+        "[check_{i}][{s}] check_inference compiled queries {}, tests expect results {}",
+        renderfloats(&prs, false),
+        renderfloats(&fs, false),
     );
     izip!(prs, fs).enumerate().for_each(|(i, (pr, f))| {
         let ret = (f - pr).abs() < precision;
@@ -122,7 +122,7 @@ fn program02() {
 }
 
 #[test]
-// #[traced_test]
+#[traced_test]
 fn program03() {
     let mk03 = |ret: Expr| {
         Program::Body(lets![
