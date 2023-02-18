@@ -1,10 +1,93 @@
-use super::semantics::*;
-use super::*;
+use crate::grammar::*;
+use crate::inference::*;
 use crate::render::*;
-use grammar::*;
-use inference::*;
+use crate::semantics::*;
+use crate::*;
+use itertools::*;
+use quickcheck::*;
+use rsdd::sample::probability::*;
 use std::any::{Any, TypeId};
-use tracing_test::traced_test;
+use std::ops::Range;
+use tracing_test::*;
+
+impl Arbitrary for Val {
+    fn arbitrary(g: &mut Gen) -> Self {
+        let x = g.choose(&[None, Some(true), Some(false), Some(true), Some(false)]);
+        match x {
+            None => panic!("impossible: choose vec has len > 0"),
+            Some(Some(b)) => Val::Bool(*b),
+            Some(None) => {
+                // let arb = u8::arbitrary(g);
+                // let len = (arb % 3) + 2; // only generate between 2-4 tuples
+                // Val::Prod((0..len).map(|_i| Self::arbitrary(g)).collect_vec())
+                // ...actually, just work with 2-tuples for now.
+                Val::Prod((0..2).map(|_i| Self::arbitrary(g)).collect_vec())
+            }
+        }
+    }
+}
+
+impl Arbitrary for ANF {
+    fn arbitrary(g: &mut Gen) -> Self {
+        let x = g.choose(&[0, 1, 2_u8]).copied();
+        match x {
+            None => panic!("impossible: choose vec has len > 0"),
+            Some(0) => ANF::AVar(String::arbitrary(g), Box::new(Ty::Bool)),
+            Some(1) => ANF::AVal(Val::arbitrary(g)),
+            Some(2) => {
+                let x = g.choose(&[0, 1, 2_u8]);
+                match x {
+                    None => panic!("impossible: choose vec has len > 0"),
+                    Some(0) => ANF::And(Box::<ANF>::arbitrary(g), Box::<ANF>::arbitrary(g)),
+                    Some(1) => ANF::Or(Box::<ANF>::arbitrary(g), Box::<ANF>::arbitrary(g)),
+                    Some(2) => ANF::Neg(Box::<ANF>::arbitrary(g)),
+                    _ => panic!("impossible"),
+                }
+            }
+            _ => panic!("impossible"),
+        }
+    }
+}
+
+impl Arbitrary for Expr {
+    fn arbitrary(g: &mut Gen) -> Self {
+        let x = g.choose(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).copied();
+        match x {
+            None => panic!("impossible: choose vec has len > 0"),
+            Some(0) => Expr::EAnf(Box::<ANF>::arbitrary(g)),
+            Some(1) => Expr::EFst(Box::<ANF>::arbitrary(g), Box::new(Ty::Bool)),
+            Some(2) => Expr::ESnd(Box::<ANF>::arbitrary(g), Box::new(Ty::Bool)),
+            Some(3) => Expr::EProd(
+                (0..2).map(|_i| ANF::arbitrary(g)).collect_vec(),
+                Box::new(Ty::Bool),
+            ),
+            Some(4) => {
+                let var = String::arbitrary(g);
+                let bind = Box::<Expr>::arbitrary(g);
+                let body = Box::<Expr>::arbitrary(g);
+                Expr::ELetIn(var, Box::new(Ty::Bool), bind, body, Box::new(Ty::Bool))
+            }
+            Some(5) => {
+                let p = Box::<ANF>::arbitrary(g);
+                let t = Box::<Expr>::arbitrary(g);
+                let f = Box::<Expr>::arbitrary(g);
+                Expr::EIte(p, t, f, Box::new(Ty::Bool))
+            }
+            Some(6) => {
+                let r = u8::arbitrary(g); // 256
+                Expr::EFlip(<u8 as Into<f64>>::into(r) / <u8 as Into<f64>>::into(u8::MAX))
+            }
+            Some(7) => Expr::EObserve(Box::<ANF>::arbitrary(g)),
+            Some(8) => Expr::ESample(Box::<Expr>::arbitrary(g)),
+            _ => panic!("impossible"),
+        }
+    }
+}
+impl Arbitrary for Program {
+    fn arbitrary(g: &mut Gen) -> Self {
+        Program::Body(Expr::arbitrary(g))
+    }
+}
 
 pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &Program) {
     let precision = precision.unwrap_or_else(|| 0.01);

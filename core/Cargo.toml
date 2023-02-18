@@ -15,3 +15,7 @@ rsdd = { path = "../rsdd" }
 tree-sitter = "0.20.9"
 tree-sitter-weight4me = { path = "../tree-sitter" }
 rayon = "1.6.1"
+
+[dev-dependencies]
+quickcheck = "1"
+quickcheck_macros = "1"
