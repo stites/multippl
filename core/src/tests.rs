@@ -106,7 +106,7 @@ fn program01() {
     check_exact1("p01", 1.0 / 3.0, &Program::Body(p01));
 }
 #[test]
-#[traced_test]
+// #[traced_test]
 fn program02() {
     let mk02 = |ret: Expr| {
         Program::Body(lets![
@@ -122,7 +122,7 @@ fn program02() {
 }
 
 #[test]
-#[traced_test]
+// #[traced_test]
 fn program03() {
     let mk03 = |ret: Expr| {
         Program::Body(lets![
@@ -174,3 +174,148 @@ fn program04_approx() {
     check_approx1("p04/x|y", 6.0 / 6.0, &mk04(b!("x" || "y")), 10000);
     check_approx1("p04/x&y", 1.0 / 6.0, &mk04(b!("x" && "y")), 10000);
 }
+
+#[test]
+// #[traced_test]
+fn tuple0() {
+    let p = {
+        Program::Body(lets![
+            "y" ; b!(B)   ;= b!(true);
+            ...? b!("y", true) ; b!(B, B)
+        ])
+    };
+    check_exact("tuples0/T,T", vec![1.0, 1.0], &p);
+    let p = {
+        Program::Body(lets![
+            "y" ; b!(B)   ;= b!(true);
+            "z" ; b!(B,B) ;= b!("y", true);
+            ...? b!("z"; b!(B,B)) ; b!(B, B)
+        ])
+    };
+    check_exact("tuples0/T,T", vec![1.0, 1.0], &p);
+    let mk = |ret: Expr| {
+        Program::Body(lets![
+            "y" ; b!(B)   ;= b!(true);
+            "z" ; b!(B,B) ;= b!("y", true);
+            ...? ret ; B!()
+        ])
+    };
+    check_exact("tuples0/T, ", vec![1.0], &mk(fst!(b!(@anf "z"))));
+    check_exact("tuples0/ ,T", vec![1.0], &mk(snd!(b!(@anf "z"))));
+}
+
+#[test]
+// #[traced_test]
+fn tuple1() {
+    let mk = |ret: Expr| {
+        Program::Body(lets![
+            "x" ; b!()     ;= flip!(1.0/3.0);
+            "y" ; b!()     ;= flip!(1.0/4.0);
+            "z" ; b!(B, B) ;= b!("x", "y");
+            ...? ret ; B!()
+        ])
+    };
+    check_exact("tuple1/x,y", vec![1.0 / 3.0, 1.0 / 4.0], &mk(b!("x", "y")));
+    check_exact("tuple1/y,x", vec![1.0 / 4.0, 1.0 / 3.0], &mk(b!("y", "x")));
+
+    check_exact("tuple1/x, ", vec![1.0 / 3.0], &mk(fst!(b!(@anf "z"))));
+    check_exact("tuple1/ ,y", vec![1.0 / 4.0], &mk(snd!(b!(@anf "z"))));
+}
+#[test]
+// #[traced_test]
+fn sample_tuple() {
+    let p = Program::Body(lets![
+        "z" ; b!(B, B) ;= sample!(lets![
+              "l" ; b!() ;= flip!(1/3);
+              "r" ; b!() ;= flip!(1/4);
+              ...? b!("l", "r") ; b!(B, B)
+        ]);
+       ...? b!("z" ; b!(B, B)); b!(B, B)
+    ]);
+    check_approx("sharedtuple", vec![1.0 / 3.0, 1.0 / 4.0], &p, 10000);
+}
+
+// ===================================================================== //
+//                   BEGIN: ignored free variable tests                  //
+// ===================================================================== //
+
+#[test]
+#[ignore = "this test will always break until we are doing data flow analysis"]
+#[traced_test]
+fn free_variables_0() {
+    let mk = |ret: Expr| {
+        Program::Body(lets![
+           "x" ; B!() ;= flip!(1/3);
+           "y" ; B!() ;= sample!(var!("x"));
+           ...? ret ; B!()
+        ])
+    };
+    let n = 10;
+
+    check_approx1("free/x ", 1.0 / 3.0, &mk(var!("x")), n);
+    // FIXME: still broken! getting 1/2 instead of 1/3
+    check_approx1("free/y ", 1.0 / 3.0, &mk(var!("y")), n);
+}
+
+#[test]
+#[ignore = "This will be broken until we reintroduce code at FIXME(#1)."]
+// #[traced_test]
+fn free_variables_1() {
+    let problem = {
+        Program::Body(lets![
+           "x" ; B!() ;= flip!(1/3);
+           "l" ; B!() ;= sample!(var!("x"));
+           "_" ; B!() ;= observe!(var!("x"));
+           ...? var!("l") ; B!()
+        ])
+    };
+    check_approx1("free/!!", 1.0 / 3.0, &problem, 10);
+}
+#[test]
+// #[traced_test]
+#[ignore = "punt till data flow analysis"]
+fn free_variables_2() {
+    let mk = |ret: Expr| {
+        Program::Body(lets![
+            "x" ; b!() ;= flip!(1/3);
+            "l" ; b!() ;= sample!(
+                lets![
+                    "x0" ; b!() ;= flip!(1/5);
+                    ...? b!("x0" || "x") ; b!()
+                ]);
+           "_" ; b!() ;= observe!(var!("x")); // is this a problem?
+           ...? ret ; b!()
+        ])
+    };
+    check_approx1("free/?1", 1.0 / 1.0, &mk(var!("x")), 1000);
+    check_approx1("free/?2", 1.0 / 1.0, &mk(var!("l")), 1000); // FIXME: need to derive the right number for this one
+}
+
+// free variable edge case
+#[test]
+// #[traced_test]
+#[ignore = "I suspect this is also funky (but gives a seemingly obscure result) because of free_variables_0 issue"]
+fn free_variables_shared() {
+    let p = Program::Body(lets![
+       "x" ; b!() ;= flip!(1/3);
+       "l" ; b!() ;= sample!(var!("x"));
+       "r" ; b!() ;= sample!(var!("x"));
+       ...? b!("l" && "r") ; b!()
+    ]);
+    check_approx1("shared ", 1.0 / 3.0, &p, 1000);
+}
+
+#[test]
+#[ignore = "also broken due to same reason as free_variables_0"]
+#[traced_test]
+fn free_variables_shared_tuple() {
+    let p = Program::Body(lets![
+       "x" ; b!()     ;= flip!(1/3);
+       "z" ; b!(B, B) ;= sample!(b!("x", "x"));
+       ...? b!("z" ; b!(B, B)); b!(B, B)
+    ]);
+    check_approx("sharedtuple", vec![1.0 / 3.0, 1.0 / 3.0], &p, 1000);
+}
+// ===================================================================== //
+//                    END: ignored free variable tests                   //
+// ===================================================================== //
