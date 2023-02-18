@@ -580,11 +580,10 @@ pub mod semantics {
                     let mut substitutions = truthy.substitutions.clone();
                     substitutions.extend(falsey.substitutions.clone());
 
-                    // FIXME: how important is probabilities for the IW??
-                    // let probabilities = izip!(&truthy.probabilities, &falsey.probabilities)
-                    //     .map(|(t, f)| *t + *f)
-                    //     .collect_vec();
-                    let probabilities = truthy.probabilities.clone();
+                    let probabilities = izip!(&truthy.probabilities, &falsey.probabilities)
+                        // dancing with the numerically unstable devil
+                        .map(|(t, f)| (*t * Probability::new(0.5) + *f * Probability::new(0.5)))
+                        .collect_vec();
                     let importance_weight = truthy.convex_combination(&falsey);
                     let c = Compiled {
                         dists,
