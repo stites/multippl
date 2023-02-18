@@ -30,12 +30,14 @@ mod grammar;
 
 mod inference;
 mod parser;
+mod render;
 #[cfg(test)]
 mod tests;
 // use grammar::*;
 
 pub mod semantics {
     use super::*;
+    use crate::render::*;
     use grammar::*;
     use rand::distributions::{Bernoulli, Distribution};
     use rand::rngs::StdRng;
@@ -50,24 +52,6 @@ pub mod semantics {
     use std::fmt;
     type Mgr = BddManager<AllTable<BddPtr>>;
 
-    pub fn rendervec(fs: &Vec<String>) -> String {
-        format!("[{}]", fs.join(", "))
-    }
-
-    pub fn renderfloats(fs: &Vec<f64>, high_prec: bool) -> String {
-        rendervec(&fs.iter().map(|x| fmt_f64(high_prec)(*x)).collect_vec())
-    }
-
-    pub fn renderbdds(fs: &Vec<BddPtr>) -> String {
-        rendervec(&fs.iter().map(|b| b.print_bdd()).collect_vec())
-    }
-    pub fn fmt_f64(high_precision: bool) -> impl Fn(f64) -> String {
-        if high_precision {
-            move |x: f64| format!("{}", x)
-        } else {
-            move |x: f64| format!("{:.2}", x)
-        }
-    }
     fn var_node(bdd: BddPtr) -> Option<VarLabel> {
         let n = bdd.into_node_safe()?;
         if (n.low == BddPtr::PtrTrue && n.high == BddPtr::PtrFalse)
@@ -814,7 +798,8 @@ mod active_tests {
     // fn grid2x2() {
     //     let mk = |ret: Expr| {
     //         Program::Body(lets![
-    //             "0_0" := flip!(1/2);
+    //             "00" := flip!(1/2);
+    //             // "01" := it;
     //             "path" := ite!( ( var!("0_0") ) ?
     //                 ( lets![ "0_1" := flip!(1/3); ...? var!("0_1") ] ) :
     //                 ( lets![ "1_0" := flip!(1/4); ...? var!("1_0") ] )

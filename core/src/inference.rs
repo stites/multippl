@@ -1,4 +1,5 @@
 use crate::grammar::*;
+use crate::render::*;
 use crate::semantics::*;
 use itertools::*;
 use rayon::iter::*;
@@ -55,20 +56,6 @@ pub fn exact_inf(env: &mut Env, p: &Program) -> Vec<f64> {
             e.to_string()
         ),
     }
-}
-
-fn render_weights(ws: &Vec<f64>, high_precision: bool) -> String {
-    ws.iter()
-        .cloned()
-        .map(|w| format!("[{}]", fmt_f64(high_precision)(w)))
-        .join(", ")
-}
-
-fn render_history(xss: &Vec<Vec<f64>>, high_precision: bool) -> String {
-    xss.iter()
-        .map(|ws| ws.iter().cloned().map(fmt_f64(high_precision)).join(", "))
-        .map(|ws| format!("[{}]", ws))
-        .join(", ")
 }
 
 fn debug_importance_weighting(
