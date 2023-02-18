@@ -6,6 +6,31 @@ use inference::*;
 use std::any::{Any, TypeId};
 use tracing_test::traced_test;
 
+pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &Program) {
+    let precision = precision.unwrap_or_else(|| 0.01);
+    let n = n.unwrap_or_else(|| 10000);
+    let mut env_args = EnvArgs::default_args(None);
+    let mut env = Env::from_args(&mut env_args);
+    let exact = exact_inf(&mut env, &p.strip_samples());
+    let approx = importance_weighting_inf(&mut env, n, p);
+    assert_eq!(
+        exact.len(),
+        approx.len(),
+        "[check_inv][{s}][mismatch shape] compiled exact queries {}, but approx returned results {}",
+        renderfloats(&exact, false),
+        renderfloats(&approx, false),
+    );
+    izip!(exact, approx)
+        .enumerate()
+        .for_each(|(i, (ext, apx))| {
+            let ret = (ext - apx).abs() < precision;
+            let i = i + 1;
+            assert!(
+                ret,
+                "[check_inv][{s}#{i}][err]((exact: {ext}) - (approx: {apx})).abs < {precision}"
+            );
+        });
+}
 pub fn check_inference(
     i: &str,
     inf: &dyn Fn(&mut Env, &Program) -> Vec<f64>,
@@ -174,6 +199,11 @@ fn program04_approx() {
     check_approx1("p04/x  ", 4.0 / 6.0, &mk04(b!("x")), 10000);
     check_approx1("p04/x|y", 6.0 / 6.0, &mk04(b!("x" || "y")), 10000);
     check_approx1("p04/x&y", 1.0 / 6.0, &mk04(b!("x" && "y")), 10000);
+
+    check_invariant("p04/y  ", None, None, &mk04(b!("y")));
+    check_invariant("p04/x  ", None, None, &mk04(b!("x")));
+    check_invariant("p04/x|y", None, None, &mk04(b!("x" || "y")));
+    check_invariant("p04/x&y", None, None, &mk04(b!("x" && "y")));
 }
 
 #[test]
@@ -234,6 +264,7 @@ fn sample_tuple() {
        ...? b!("z" ; b!(B, B)); b!(B, B)
     ]);
     check_approx("sharedtuple", vec![1.0 / 3.0, 1.0 / 4.0], &p, 10000);
+    check_invariant("sharedtuple ", None, None, &p);
 }
 
 // ===================================================================== //
@@ -256,6 +287,9 @@ fn free_variables_0() {
     check_approx1("free/x ", 1.0 / 3.0, &mk(var!("x")), n);
     // FIXME: still broken! getting 1/2 instead of 1/3
     check_approx1("free/y ", 1.0 / 3.0, &mk(var!("y")), n);
+
+    check_invariant("free/y ", None, None, &mk(var!("y")));
+    check_invariant("free/y ", None, None, &mk(var!("x")));
 }
 
 #[test]

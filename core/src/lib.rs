@@ -356,18 +356,18 @@ pub mod semantics {
                         &ctx.weight_map,
                         &ctx.substitutions,
                     );
-                    if !ctx.gamma.typechecks(s.clone(), ty) {
-                        Err(TypeError(format!(
-                            "Expected {s} : {ty:?}\nGot: {a:?}\n{ctx:?}",
-                        )))
-                    } else {
-                        Ok(Compiled {
-                            accept: ctx.accept.clone(),
-                            substitutions: ctx.substitutions.clone(),
-                            weight_map: wm,
-                            ..Compiled::default(self.mgr.var(lbl, true))
-                        })
-                    }
+                    // if !ctx.gamma.typechecks(s.clone(), ty) {
+                    //     Err(TypeError(format!(
+                    //         "Expected {s} : {ty:?}\nGot: {a:?}\n{ctx:?}",
+                    //     )))
+                    // } else {
+                    Ok(Compiled {
+                        accept: ctx.accept.clone(),
+                        substitutions: ctx.substitutions.clone(),
+                        weight_map: wm,
+                        ..Compiled::default(self.mgr.var(lbl, true))
+                    })
+                    // }
                 }
                 AVal(Val::Bool(b)) => Ok(Compiled {
                     accept: ctx.accept.clone(),
@@ -784,12 +784,12 @@ mod active_tests {
     fn ite_1() {
         let mk = |ret: Expr| {
             Program::Body(lets![
-                "a" ; b!() ;= flip!(1/3);
-                "b" ; b!() ;= ite!(
-                    if ( var!("a") )
+                "x" ; b!() ;= flip!(1/3);
+                "y" ; b!() ;= ite!(
+                    if ( var!("y") )
                     then { flip!(1/4) }
                     else { flip!(1/5) });
-                "_" ; b!() ;= observe!(b!("a" || "b")); // is this a problem?
+                "_" ; b!() ;= observe!(b!("x" || "y")); // is this a problem?
                 ...? ret ; b!()
             ])
         };

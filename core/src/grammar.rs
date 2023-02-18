@@ -180,7 +180,7 @@ pub enum Program {
     // | define (f: Func) (rest: Program) : Program
 }
 impl Program {
-    fn strip_samples(&self) -> Program {
+    pub fn strip_samples(&self) -> Program {
         use Program::*;
         match self {
             Body(e) => Body(e.strip_samples()),
