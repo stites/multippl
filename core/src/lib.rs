@@ -789,31 +789,31 @@ mod active_tests {
     //     check_approx("ite2/x&y", 6.0 / 6.0, &mk(and!("x", "y")), 10000);
     // }
 
-    // /// a directed 2x2 grid test where we place samples according to various policies
-    // ///   (0,0) -> (0,1)
-    // ///     v        v
-    // ///   (1,0) -> (1,1)
-    // #[test]
-    // // #[traced_test]
-    // fn grid2x2() {
-    //     let mk = |ret: Expr| {
-    //         Program::Body(lets![
-    //             "00" := flip!(1/2);
-    //             // "01" := it;
-    //             "path" := ite!( ( var!("0_0") ) ?
-    //                 ( lets![ "0_1" := flip!(1/3); ...? var!("0_1") ] ) :
-    //                 ( lets![ "1_0" := flip!(1/4); ...? var!("1_0") ] )
-    //                 );
-    //             "1_1" := flip!(1/5);
-    //             "_" := observe!(or!("0_0", "path", "1_1", "x", "x")); // is this a problem?
-    //             ...? ret
-    //         ])
-    //     };
-    //     check_approx("ite2/y  ", 6.0 / 6.0, &mk(var!("y")), 10000);
-    //     check_approx("ite2/x  ", 6.0 / 6.0, &mk(var!("x")), 10000);
-    //     check_approx("ite2/x|y", 6.0 / 6.0, &mk(or!("x", "y")), 10000);
-    //     check_approx("ite2/x&y", 6.0 / 6.0, &mk(and!("x", "y")), 10000);
-    // }
+    /// a directed 2x2 grid test where we place samples according to various policies
+    ///   (0,0) -> (0,1)
+    ///     v        v
+    ///   (1,0) -> (1,1)
+    #[test]
+    // #[traced_test]
+    fn grid2x2() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+                "00" ; B!() ;= flip!(1/2);
+                "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+                "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+                "11" ; B!() ;=
+                    ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+                    ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+                    ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+                                                              flip!(1/11) ))))));
+                ...? ret ; B!()
+            ])
+        };
+        check_approx1("grid/00", 6.0 / 6.0, &mk(b!("00")), 10000);
+        check_approx1("grid/01", 6.0 / 6.0, &mk(b!("01")), 10000);
+        check_approx1("grid/10", 6.0 / 6.0, &mk(b!("10")), 10000);
+        check_approx1("grid/11", 6.0 / 6.0, &mk(b!("11")), 10000);
+    }
 
     // /// a directed 3x3 grid test where we place samples according to various policies
     // ///   (0,0) -> (0,1) -> (0,2)

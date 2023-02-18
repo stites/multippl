@@ -300,6 +300,13 @@ macro_rules! b {
         )+
         anf!(*fin)
     }};
+    ( ($y:expr) && $( ($x:expr) )&&+ ) => {{
+        let mut fin = Box::new($y);
+        $(
+            fin = Box::new(ANF::And(fin, Box::new($x)));
+        )+
+        *fin
+    }};
     ( $y:literal || $( $x:literal )||+ ) => {{
         let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(B!())));
         $(
@@ -313,6 +320,13 @@ macro_rules! b {
 macro_rules! snd {
     ( $x:expr ) => {{
         Expr::ESnd(Box::new($x), Box::new(b!()))
+    }};
+}
+
+#[macro_export]
+macro_rules! not {
+    ( $x:literal ) => {{
+        ANF::Neg(Box::new(b!(@anf $x)))
     }};
 }
 
@@ -414,30 +428,36 @@ macro_rules! lets {
 
 
 }
-// #[macro_export]
-// macro_rules! ite {
-//     ( if ( $pred:expr ) then { $true:expr } else { $false:expr } ) => {
-//         if let Expr::EAnf(a) = $pred {
-//             Expr::EIte(a, Box::new($true), Box::new($false))
-//         } else {
-//             panic!("passed in a non-anf expression as predicate!");
-//         }
-//     };
-//     ( ( $pred:expr ) ? ( $true:expr ) : ( $false:expr ) ) => {
-//         if let Expr::EAnf(a) = $pred {
-//             Expr::EIte(a, Box::new($true), Box::new($false))
-//         } else {
-//             panic!("passed in a non-anf expression as predicate!");
-//         }
-//     };
-// }
+#[macro_export]
+macro_rules! ite {
+    ( if ( $pred:expr ) then { $true:expr } else { $false:expr } ) => {
+        if let Expr::EAnf(a) = $pred {
+            Expr::EIte(a, Box::new($true), Box::new($false), Box::new(b!()))
+        } else {
+            panic!("passed in a non-anf expression as predicate!");
+        }
+    };
+    ( ( $pred:expr ) ? ( $true:expr ) : ( $false:expr ) ) => {
+        Expr::EIte(
+            Box::new($pred),
+            Box::new($true),
+            Box::new($false),
+            Box::new(b!()),
+        )
+        // if let Expr::EAnf(a) = $pred {
+        //     Expr::EIte($pred, Box::new($true), Box::new($false), Box::new(b!()))
+        // } else {
+        //     panic!("passed in a non-anf expression as predicate!");
+        // }
+    };
+}
 
-// #[macro_export]
-// macro_rules! program {
-//     ( $x:expr ) => {
-//         Program::Body($x)
-//     };
-// }
+#[macro_export]
+macro_rules! program {
+    ( $x:expr ) => {
+        Program::Body($x)
+    };
+}
 // #[macro_export]
 // macro_rules! run {
 //     ( $( $var:literal := $bound:expr );+ ;...? $body:expr ) => {
