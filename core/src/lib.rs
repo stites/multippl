@@ -785,14 +785,14 @@ mod active_tests {
                 "y" ; b!() ;= ite!(
                     if ( var!("x") )
                     then { flip!(1/4) }
-                    else { flip!(1/5) });
+                    else { flip!(2/5) });
                 ...? ret ; b!()
             ])
         };
-        let yres = 1.0 / 3.0 * 0.25 + 2.0 / 3.0 * 0.2;
+        let yres = (1.0 / 3.0 * 0.25) + (2.0 / 3.0 * 0.4);
         check_exact1("ite_1/x  ", 1.0 / 3.0, &mk(var!("x")));
         check_exact1("ite_1/y  ", yres, &mk(var!("y")));
-        check_exact1("ite_1/x|y", 0.466666667, &mk(b!("x" || "y")));
+        check_exact1("ite_1/x|y", 0.6, &mk(b!("x" || "y")));
         check_exact1("ite_1/x&y", 0.083333333, &mk(b!("x" && "y")));
     }
 
