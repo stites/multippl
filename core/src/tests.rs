@@ -115,7 +115,7 @@ pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &Pr
         });
 }
 pub fn check_inference(
-    i: &str,
+    infname: &str,
     inf: &dyn Fn(&mut Env, &Program) -> Vec<f64>,
     precision: f64,
     s: &str,
@@ -128,7 +128,7 @@ pub fn check_inference(
     assert_eq!(
         prs.len(),
         fs.len(),
-        "[check_{i}][{s}] check_inference compiled queries {}, tests expect results {}",
+        "[check_{infname}][{s}] check_inference compiled queries {}, tests expect results {}",
         renderfloats(&prs, false),
         renderfloats(&fs, false),
     );
@@ -137,7 +137,7 @@ pub fn check_inference(
         let i = i + 1;
         assert!(
             ret,
-            "[check_{i}][{s}#{i}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"
+            "[check_{infname}][{s}#{i}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"
         );
     });
 }
