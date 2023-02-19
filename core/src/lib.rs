@@ -52,7 +52,7 @@ pub mod semantics {
     use std::fmt;
     type Mgr = BddManager<AllTable<BddPtr>>;
 
-    fn var_node(bdd: BddPtr) -> Option<VarLabel> {
+    fn leaf_variable(bdd: BddPtr) -> Option<VarLabel> {
         let n = bdd.into_node_safe()?;
         if (n.low == BddPtr::PtrTrue && n.high == BddPtr::PtrFalse)
             || (n.low == BddPtr::PtrFalse && n.high == BddPtr::PtrTrue)
@@ -286,15 +286,20 @@ pub mod semantics {
                     let mut nxt = p.get(&sym);
                     while nxt.is_some() {
                         match nxt.unwrap()[..] {
-                            [BddPtr::Reg(n)] => {
-                                if ((*n).low == BddPtr::PtrTrue && (*n).high == BddPtr::PtrFalse)
-                                    || ((*n).low == BddPtr::PtrFalse
-                                        && (*n).high == BddPtr::PtrTrue)
-                                {
-                                    nxt = p.get(&UniqueId((*n).var.value()));
-                                } else {
-                                    break;
+                            [n] => {
+                                match leaf_variable(n) {
+                                    None => break,
+                                    Some(lbl) => nxt = p.get(&UniqueId(lbl.value())),
                                 }
+                                // if ((*n).low == BddPtr::PtrTrue && (*n).high == BddPtr::PtrFalse)
+                                //     || ((*n).low == BddPtr::PtrFalse
+                                //         && (*n).high == BddPtr::PtrTrue)
+                                // {
+                                //     nxt = p.get(&UniqueId((*n).var.value()));
+                                //     debug!(found = true);
+                                // } else {
+                                //     break;
+                                // }
                             }
                             _ => break,
                         }
@@ -390,7 +395,7 @@ pub mod semantics {
 
         // TODO: make sure substitutions are fully normalized? I don't think this will ever be a problem.
         pub fn apply_substitutions1(&mut self, bdd: BddPtr, p: &SubstMap) -> Vec<BddPtr> {
-            match var_node(bdd) {
+            match leaf_variable(bdd) {
                 Some(lbl) => match p.get(&UniqueId::from_lbl(lbl)) {
                     None => vec![bdd],
                     Some(subs) => subs.clone(),
