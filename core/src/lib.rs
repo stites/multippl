@@ -176,7 +176,7 @@ pub mod semantics {
     impl Compiled {
         fn convex_combination(&self, o: &Compiled) -> f64 {
             izip!(&self.probabilities, &o.probabilities,).fold(0.0, |res, (selfp, op)| {
-                selfp.as_f64() * self.importance_weight + op.as_f64() * o.importance_weight
+                (selfp.as_f64() * self.importance_weight + op.as_f64() * o.importance_weight) / 2.0
             })
         }
         fn default(dist: BddPtr) -> Compiled {
