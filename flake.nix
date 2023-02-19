@@ -6,6 +6,7 @@
     crane.url = "github:ipetkov/crane";
     crane.inputs.nixpkgs.follows = "nixpkgs";
     flake-utils.url = "github:numtide/flake-utils";
+    dice.url = "github:stites/dice.nix";
   };
 
   outputs = {
@@ -90,6 +91,9 @@
           {
             # tree-sitter specific block
             packages = with pkgs; [tree-sitter];
+          }
+          {
+            packages = [inputs.dice.packages.${system}.default];
           }
           {
             # shell block
