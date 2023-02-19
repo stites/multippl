@@ -295,10 +295,10 @@ pub mod semantics {
                     }
                     match nxt {
                         Some(vs) => match vs[..] {
-                            [BddPtr::Reg(n)] => {
-                                let lbl = vs[0].var().clone();
-                                (lbl, m.clone())
-                            }
+                            [BddPtr::Reg(n)] => match leaf_variable(vs[0]) {
+                                None => (VarLabel::new(sym.0), m.clone()),
+                                Some(lbl) => (lbl, m.clone()),
+                            },
                             _ => {
                                 let lbl = VarLabel::new(sym.0);
                                 (lbl, m.clone())
