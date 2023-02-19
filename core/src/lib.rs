@@ -282,31 +282,23 @@ pub mod semantics {
                     mm.insert(id, const_weight());
                     (lbl, mm)
                 }
-                Some(sym) => unsafe {
+                Some(sym) => {
                     let mut nxt = p.get(&sym);
                     while nxt.is_some() {
                         match nxt.unwrap()[..] {
-                            [n] => {
-                                match leaf_variable(n) {
-                                    None => break,
-                                    Some(lbl) => nxt = p.get(&UniqueId(lbl.value())),
-                                }
-                                // if ((*n).low == BddPtr::PtrTrue && (*n).high == BddPtr::PtrFalse)
-                                //     || ((*n).low == BddPtr::PtrFalse
-                                //         && (*n).high == BddPtr::PtrTrue)
-                                // {
-                                //     nxt = p.get(&UniqueId((*n).var.value()));
-                                //     debug!(found = true);
-                                // } else {
-                                //     break;
-                                // }
-                            }
+                            [n] => match leaf_variable(n) {
+                                None => break,
+                                Some(lbl) => nxt = p.get(&UniqueId(lbl.value())),
+                            },
                             _ => break,
                         }
                     }
                     match nxt {
                         Some(vs) => match vs[..] {
-                            [BddPtr::Reg(n)] => ((*n).var.clone(), m.clone()),
+                            [BddPtr::Reg(n)] => {
+                                let lbl = vs[0].var().clone();
+                                (lbl, m.clone())
+                            }
                             _ => {
                                 let lbl = VarLabel::new(sym.0);
                                 (lbl, m.clone())
@@ -317,7 +309,7 @@ pub mod semantics {
                             (lbl, m.clone())
                         }
                     }
-                },
+                }
             }
         }
         pub fn eval_anf_binop(
