@@ -2,6 +2,7 @@
 members = [
   "tree-sitter",
   "core",
+  "rsdd",
 ]
 [workspace.package]
 version = "0.0.0"
