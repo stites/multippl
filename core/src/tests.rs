@@ -142,7 +142,7 @@ pub fn check_inference(
     });
 }
 pub fn check_exact(s: &str, f: Vec<f64>, p: &Program) {
-    check_inference("exact", &exact_inf, 0.000001, s, f, p);
+    check_inference("exact", &exact_inf, 0.000001, s, f, &p.strip_samples());
 }
 pub fn check_exact1(s: &str, f: f64, p: &Program) {
     check_exact(s, vec![f], p)
