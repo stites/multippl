@@ -274,16 +274,23 @@ pub mod semantics {
             m: &WeightMap,
             p: &SubstMap,
         ) -> (VarLabel, WeightMap) {
+            debug!(
+                s = s,
+                p = rendersubs(p),
+                names = format!("{:?}", self.names)
+            );
             match self.get_var(s.clone()) {
                 None => {
                     let id = self._fresh(Some(s.clone()));
                     let lbl = VarLabel::new(id.0);
                     let mut mm = m.clone();
                     mm.insert(id, const_weight());
+                    debug!(to = format!("{:?}", lbl));
                     (lbl, mm)
                 }
                 Some(sym) => {
                     let mut nxt = p.get(&sym);
+                    debug!(get_var = format!("{:?}", sym), nxt = nxt.map(renderbdds));
                     while nxt.is_some() {
                         match nxt.unwrap()[..] {
                             [n] => match leaf_variable(n) {
@@ -301,11 +308,13 @@ pub mod semantics {
                             },
                             _ => {
                                 let lbl = VarLabel::new(sym.0);
+                                debug!(path = 2, to = format!("{:?}", lbl));
                                 (lbl, m.clone())
                             }
                         },
                         _ => {
                             let lbl = VarLabel::new(sym.0);
+                            debug!(path = 3, to = format!("{:?}", lbl));
                             (lbl, m.clone())
                         }
                     }
@@ -385,7 +394,6 @@ pub mod semantics {
             }
         }
 
-        // TODO: make sure substitutions are fully normalized? I don't think this will ever be a problem.
         pub fn apply_substitutions1(&mut self, bdd: BddPtr, p: &SubstMap) -> Vec<BddPtr> {
             match leaf_variable(bdd) {
                 Some(lbl) => match p.get(&UniqueId::from_lbl(lbl)) {
@@ -393,14 +401,23 @@ pub mod semantics {
                     Some(subs) => subs.clone(),
                 },
                 None => {
-                    let finl = p.iter().fold(bdd, |fin, (lbl, sub)| {
-                        if sub.len() > 1 {
-                            fin // subs are intended to be a product and should be replacing a variable.
+                    let mut cur = bdd.clone();
+                    // doing this stupid looping to make sure substitutions are fully normalized.
+                    // this is a problem, for instance, when you have ITE and observe statements interacting.
+                    loop {
+                        let finl = p.iter().fold(cur, |fin, (lbl, sub)| {
+                            if sub.len() > 1 {
+                                fin // subs are intended to be a product and should be replacing a variable.
+                            } else {
+                                self.mgr.compose(fin, lbl.as_lbl(), sub[0])
+                            }
+                        });
+                        if cur == finl {
+                            return vec![finl];
                         } else {
-                            self.mgr.compose(fin, lbl.as_lbl(), sub[0])
+                            cur = finl.clone();
                         }
-                    });
-                    vec![finl]
+                    }
                 }
             }
         }
@@ -514,10 +531,6 @@ pub mod semantics {
 
                     let mut substitutions = body.substitutions.clone();
                     substitutions.extend(bound_substitutions); // FIXME: almost certainly redundant
-                                                               // println!("{:?}", &comp.weight_map);
-                                                               // println!("{:?}", wmc_params);
-                                                               // println!("accept: {}", accept.print_bdd());
-
                     let dists = self.apply_substitutions(body.dists, &substitutions);
                     let accept = self.mgr.and(bound.accept, body.accept);
                     let accept = self.mgr.and(accept, ctx.accept);
@@ -614,13 +627,10 @@ pub mod semantics {
                 EObserve(a) => {
                     debug!(">>>observe");
                     let comp = self.eval_anf(ctx, a)?;
-                    let dists = self
+                    let accept = self
                         .apply_substitutions(comp.dists, &ctx.substitutions)
                         .into_iter()
-                        .fold(BddPtr::PtrTrue, |global, cur| self.mgr.and(global, cur));
-
-                    let accept = dists;
-                    let accept = self.mgr.and(accept, ctx.accept);
+                        .fold(ctx.accept.clone(), |global, cur| self.mgr.and(global, cur));
 
                     let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
                     let var_order = VarOrder::linear_order(max_var as usize);
@@ -797,14 +807,14 @@ mod active_tests {
     }
 
     #[test]
-    // #[traced_test]
-    #[ignore]
+    #[traced_test]
+    // #[ignore]
     fn ite_2() {
         let mk = |ret: Expr| {
             Program::Body(lets![
                 "x" ; b!() ;= flip!(1/3);
                 "y" ; b!() ;= ite!(
-                    if ( var!("y") )
+                    if ( var!("x") )
                     then { flip!(1/4) }
                     else { flip!(1/5) });
                 "_" ; b!() ;= observe!(b!("x" || "y"));
@@ -854,7 +864,7 @@ mod active_tests {
     }
     #[test]
     // #[traced_test]
-    #[ignore]
+    // #[ignore]
     fn grid2x2_warmup1() {
         let mk = |ret: Expr| {
             Program::Body(lets![
@@ -875,7 +885,7 @@ mod active_tests {
     ///     v        v
     ///   (1,0) -> (1,1)
     #[test]
-    #[ignore]
+    // #[ignore]
     // #[traced_test]
     fn grid2x2() {
         let mk = |ret: Expr| {
@@ -926,58 +936,58 @@ mod active_tests {
         check_approx1("grid2x2/approx_diag/11", 0.102927589, &mk(b!("11")), 10000);
     }
 
-    /// a directed 3x3 grid test where we place samples according to various policies
-    ///   (0,0) -> (0,1) -> (0,2)
-    ///     v        v        v
-    ///   (1,0) -> (1,1) -> (1,2)
-    ///     v        v        v
-    ///   (2,0) -> (2,1) -> (2,2)
-    #[test]
-    #[ignore]
-    // #[traced_test]
-    fn grid3x3() {
-        let mk = |ret: Expr| {
-            Program::Body(lets![
-                "00" ; B!() ;= flip!(1/2);
-                "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-                "02" ; B!() ;= ite!( ( b!(@anf "01")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-                "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-                "20" ; B!() ;= ite!( ( not!("10") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+    // /// a directed 3x3 grid test where we place samples according to various policies
+    // ///   (0,0) -> (0,1) -> (0,2)
+    // ///     v        v        v
+    // ///   (1,0) -> (1,1) -> (1,2)
+    // ///     v        v        v
+    // ///   (2,0) -> (2,1) -> (2,2)
+    // #[test]
+    // // #[ignore]
+    // // #[traced_test]
+    // fn grid3x3() {
+    //     let mk = |ret: Expr| {
+    //         Program::Body(lets![
+    //             "00" ; B!() ;= flip!(1/2);
+    //             "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+    //             "02" ; B!() ;= ite!( ( b!(@anf "01")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+    //             "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+    //             "20" ; B!() ;= ite!( ( not!("10") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
 
-                "11" ; B!() ;=
-                    ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
-                    ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
-                    ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
-                                                              flip!(1/11) ))))));
+    //             "11" ; B!() ;=
+    //                 ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+    //                 ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+    //                 ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+    //                                                           flip!(1/11) ))))));
 
-                "21" ; B!() ;=
-                    ite!(( b!((  b!(@anf "20")) && (  b!(@anf "11"))) ) ? ( flip!(2/7) ) : (
-                    ite!(( b!((  b!(@anf "20")) && (not!("11"))) ) ? ( flip!(2/8) ) : (
-                    ite!(( b!((  not!("20")) && (  b!(@anf "11"))) ) ? ( flip!(2/9) ) : (
-                                                              flip!(2/11) ))))));
+    //             "21" ; B!() ;=
+    //                 ite!(( b!((  b!(@anf "20")) && (  b!(@anf "11"))) ) ? ( flip!(2/7) ) : (
+    //                 ite!(( b!((  b!(@anf "20")) && (not!("11"))) ) ? ( flip!(2/8) ) : (
+    //                 ite!(( b!((  not!("20")) && (  b!(@anf "11"))) ) ? ( flip!(2/9) ) : (
+    //                                                           flip!(2/11) ))))));
 
-                "12" ; B!() ;=
-                    ite!(( b!((  b!(@anf "11")) && (  b!(@anf "02"))) ) ? ( flip!(6/7) ) : (
-                    ite!(( b!((  b!(@anf "11")) && (not!("02"))) ) ? ( flip!(6/8) ) : (
-                    ite!(( b!((  not!("11")) && (  b!(@anf "02"))) ) ? ( flip!(6/9) ) : (
-                                                              flip!(6/11) ))))));
+    //             "12" ; B!() ;=
+    //                 ite!(( b!((  b!(@anf "11")) && (  b!(@anf "02"))) ) ? ( flip!(6/7) ) : (
+    //                 ite!(( b!((  b!(@anf "11")) && (not!("02"))) ) ? ( flip!(6/8) ) : (
+    //                 ite!(( b!((  not!("11")) && (  b!(@anf "02"))) ) ? ( flip!(6/9) ) : (
+    //                                                           flip!(6/11) ))))));
 
-                "22" ; B!() ;=
-                    ite!(( b!((  b!(@anf "21")) && (  b!(@anf "12"))) ) ? ( flip!(3/7) ) : (
-                    ite!(( b!((  b!(@anf "21")) && (not!("12"))) ) ? ( flip!(3/8) ) : (
-                    ite!(( b!((  not!("21")) && (  b!(@anf "12"))) ) ? ( flip!(8/9) ) : (
-                                                              flip!(9/11) ))))));
-                ...? ret ; B!()
-            ])
-        };
-        check_exact1("grid3x3/exact/00", 0.500000000, &mk(b!("00")));
-        check_exact1("grid3x3/exact/01", 0.291666667, &mk(b!("01")));
-        check_exact1("grid3x3/exact/10", 0.183333333, &mk(b!("10")));
-        check_exact1("grid3x3/exact/02", 0.274305556, &mk(b!("02")));
-        check_exact1("grid3x3/exact/20", 0.183333333, &mk(b!("20")));
-        check_exact1("grid3x3/exact/11", 0.102924333, &mk(b!("11")));
-        check_exact1("grid3x3/exact/12", 0.599354379, &mk(b!("12")));
-        check_exact1("grid3x3/exact/21", 0.198388355, &mk(b!("21")));
-        check_exact1("grid3x3/exact/22", 0.770588218, &mk(b!("22")));
-    }
+    //             "22" ; B!() ;=
+    //                 ite!(( b!((  b!(@anf "21")) && (  b!(@anf "12"))) ) ? ( flip!(3/7) ) : (
+    //                 ite!(( b!((  b!(@anf "21")) && (not!("12"))) ) ? ( flip!(3/8) ) : (
+    //                 ite!(( b!((  not!("21")) && (  b!(@anf "12"))) ) ? ( flip!(8/9) ) : (
+    //                                                           flip!(9/11) ))))));
+    //             ...? ret ; B!()
+    //         ])
+    //     };
+    //     check_exact1("grid3x3/exact/00", 0.500000000, &mk(b!("00")));
+    //     check_exact1("grid3x3/exact/01", 0.291666667, &mk(b!("01")));
+    //     check_exact1("grid3x3/exact/10", 0.183333333, &mk(b!("10")));
+    //     check_exact1("grid3x3/exact/02", 0.274305556, &mk(b!("02")));
+    //     check_exact1("grid3x3/exact/20", 0.183333333, &mk(b!("20")));
+    //     check_exact1("grid3x3/exact/11", 0.102924333, &mk(b!("11")));
+    //     check_exact1("grid3x3/exact/12", 0.599354379, &mk(b!("12")));
+    //     check_exact1("grid3x3/exact/21", 0.198388355, &mk(b!("21")));
+    //     check_exact1("grid3x3/exact/22", 0.770588218, &mk(b!("22")));
+    // }
 }
