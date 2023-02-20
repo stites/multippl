@@ -832,58 +832,136 @@ mod active_tests {
         check_approx1("grid2x2/approx_diag/11", 0.102927589, &mk(b!("11")), 10000);
     }
 
-    // /// a directed 3x3 grid test where we place samples according to various policies
-    // ///   (0,0) -> (0,1) -> (0,2)
-    // ///     v        v        v
-    // ///   (1,0) -> (1,1) -> (1,2)
-    // ///     v        v        v
-    // ///   (2,0) -> (2,1) -> (2,2)
-    // #[test]
-    // // #[ignore]
-    // // #[traced_test]
-    // fn grid3x3() {
-    //     let mk = |ret: Expr| {
-    //         Program::Body(lets![
-    //             "00" ; B!() ;= flip!(1/2);
-    //             "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-    //             "02" ; B!() ;= ite!( ( b!(@anf "01")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-    //             "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-    //             "20" ; B!() ;= ite!( ( not!("10") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+    /// a directed 3x3 grid test where we place samples according to various policies
+    ///   (0,0) -> (0,1) -> (0,2)
+    ///     v        v        v
+    ///   (1,0) -> (1,1) -> (1,2)
+    ///     v        v        v
+    ///   (2,0) -> (2,1) -> (2,2)
+    #[test]
+    // #[ignore]
+    // #[traced_test]
+    fn grid3x3_sampled_diag() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+                "00" ; B!() ;= flip!(1/2);
+                "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+                "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
 
-    //             "11" ; B!() ;=
-    //                 ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
-    //                 ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
-    //                 ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
-    //                                                           flip!(1/11) ))))));
+                "20_11_02" ; b!(B, B) ;= sample!(
+                    lets![
+                      "20" ; B!() ;= ite!( ( not!("10") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+                      "11" ; B!() ;=
+                          ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+                          ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+                          ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+                                                                    flip!(1/11) ))))));
+                      "02" ; B!() ;= ite!( ( b!(@anf "01")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+                              ...? b!("20", "11", "02") ; b!(B, B, B)
+                    ]);
+                "20" ; B!() ;= fst!("20_11_02");
+                "11" ; B!() ;= snd!("20_11_02");
+                "02" ; B!() ;= thd!("20_11_02");
 
-    //             "21" ; B!() ;=
-    //                 ite!(( b!((  b!(@anf "20")) && (  b!(@anf "11"))) ) ? ( flip!(2/7) ) : (
-    //                 ite!(( b!((  b!(@anf "20")) && (not!("11"))) ) ? ( flip!(2/8) ) : (
-    //                 ite!(( b!((  not!("20")) && (  b!(@anf "11"))) ) ? ( flip!(2/9) ) : (
-    //                                                           flip!(2/11) ))))));
+                "21" ; B!() ;=
+                    ite!(( b!((  b!(@anf "20")) && (  b!(@anf "11"))) ) ? ( flip!(2/7) ) : (
+                    ite!(( b!((  b!(@anf "20")) && (not!("11"))) ) ? ( flip!(2/8) ) : (
+                    ite!(( b!((  not!("20")) && (  b!(@anf "11"))) ) ? ( flip!(2/9) ) : (
+                                                              flip!(2/11) ))))));
 
-    //             "12" ; B!() ;=
-    //                 ite!(( b!((  b!(@anf "11")) && (  b!(@anf "02"))) ) ? ( flip!(6/7) ) : (
-    //                 ite!(( b!((  b!(@anf "11")) && (not!("02"))) ) ? ( flip!(6/8) ) : (
-    //                 ite!(( b!((  not!("11")) && (  b!(@anf "02"))) ) ? ( flip!(6/9) ) : (
-    //                                                           flip!(6/11) ))))));
+                "12" ; B!() ;=
+                    ite!(( b!((  b!(@anf "11")) && (  b!(@anf "02"))) ) ? ( flip!(6/7) ) : (
+                    ite!(( b!((  b!(@anf "11")) && (not!("02"))) ) ? ( flip!(6/8) ) : (
+                    ite!(( b!((  not!("11")) && (  b!(@anf "02"))) ) ? ( flip!(6/9) ) : (
+                                                              flip!(6/11) ))))));
 
-    //             "22" ; B!() ;=
-    //                 ite!(( b!((  b!(@anf "21")) && (  b!(@anf "12"))) ) ? ( flip!(3/7) ) : (
-    //                 ite!(( b!((  b!(@anf "21")) && (not!("12"))) ) ? ( flip!(3/8) ) : (
-    //                 ite!(( b!((  not!("21")) && (  b!(@anf "12"))) ) ? ( flip!(8/9) ) : (
-    //                                                           flip!(9/11) ))))));
-    //             ...? ret ; B!()
-    //         ])
-    //     };
-    //     check_exact1("grid3x3/exact/00", 0.500000000, &mk(b!("00")));
-    //     check_exact1("grid3x3/exact/01", 0.291666667, &mk(b!("01")));
-    //     check_exact1("grid3x3/exact/10", 0.183333333, &mk(b!("10")));
-    //     check_exact1("grid3x3/exact/02", 0.274305556, &mk(b!("02")));
-    //     check_exact1("grid3x3/exact/20", 0.183333333, &mk(b!("20")));
-    //     check_exact1("grid3x3/exact/11", 0.102924333, &mk(b!("11")));
-    //     check_exact1("grid3x3/exact/12", 0.599354379, &mk(b!("12")));
-    //     check_exact1("grid3x3/exact/21", 0.198388355, &mk(b!("21")));
-    //     check_exact1("grid3x3/exact/22", 0.770588218, &mk(b!("22")));
-    // }
+                "22" ; B!() ;=
+                    ite!(( b!((  b!(@anf "21")) && (  b!(@anf "12"))) ) ? ( flip!(3/7) ) : (
+                    ite!(( b!((  b!(@anf "21")) && (not!("12"))) ) ? ( flip!(3/8) ) : (
+                    ite!(( b!((  not!("21")) && (  b!(@anf "12"))) ) ? ( flip!(8/9) ) : (
+                                                              flip!(9/11) ))))));
+                ...? ret ; B!()
+            ])
+        };
+        // check_approx1("grid3x3/approx/00", 0.500000000, &mk(b!("00")), 10000);
+        // check_approx1("grid3x3/approx/01", 0.291666667, &mk(b!("01")), 10000);
+        // check_approx1("grid3x3/approx/10", 0.183333333, &mk(b!("10")), 10000);
+        // check_approx1("grid3x3/approx/02", 0.274305556, &mk(b!("02")), 10000);
+        // check_approx1("grid3x3/approx/20", 0.193888889, &mk(b!("20")), 10000);
+        // check_approx1("grid3x3/approx/11", 0.102927589, &mk(b!("11")), 10000);
+        // check_approx1("grid3x3/approx/12", 0.599355085, &mk(b!("12")), 10000);
+        // check_approx1("grid3x3/approx/21", 0.199103758, &mk(b!("21")), 10000);
+        // check_approx1("grid3x3/approx/22", 0.770263904, &mk(b!("22")), 10000);
+        check_approx(
+            "grid3x3/approx/[00,01,10,02,20,11,12,21,22]",
+            vec![
+                0.500000000,
+                0.291666667,
+                0.183333333,
+                0.274305556,
+                0.193888889,
+                0.102927589,
+                0.599355085,
+                0.199103758,
+                0.770263904,
+            ],
+            &mk(b!("00", "01", "10", "02", "20", "11", "12", "21", "22")),
+            10000,
+        );
+    }
+
+    /// a directed 3x3 grid test where we place samples according to various policies
+    ///   (0,0) -> (0,1) -> (0,2)
+    ///     v        v        v
+    ///   (1,0) -> (1,1) -> (1,2)
+    ///     v        v        v
+    ///   (2,0) -> (2,1) -> (2,2)
+    #[test]
+    // #[ignore]
+    // #[traced_test]
+    fn grid3x3() {
+        let mk = |ret: Expr| {
+            Program::Body(lets![
+                "00" ; B!() ;= flip!(1/2);
+                "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+                "02" ; B!() ;= ite!( ( b!(@anf "01")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+                "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+                "20" ; B!() ;= ite!( ( not!("10") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+
+                "11" ; B!() ;=
+                    ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+                    ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+                    ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+                                                              flip!(1/11) ))))));
+
+                "21" ; B!() ;=
+                    ite!(( b!((  b!(@anf "20")) && (  b!(@anf "11"))) ) ? ( flip!(2/7) ) : (
+                    ite!(( b!((  b!(@anf "20")) && (not!("11"))) ) ? ( flip!(2/8) ) : (
+                    ite!(( b!((  not!("20")) && (  b!(@anf "11"))) ) ? ( flip!(2/9) ) : (
+                                                              flip!(2/11) ))))));
+
+                "12" ; B!() ;=
+                    ite!(( b!((  b!(@anf "11")) && (  b!(@anf "02"))) ) ? ( flip!(6/7) ) : (
+                    ite!(( b!((  b!(@anf "11")) && (not!("02"))) ) ? ( flip!(6/8) ) : (
+                    ite!(( b!((  not!("11")) && (  b!(@anf "02"))) ) ? ( flip!(6/9) ) : (
+                                                              flip!(6/11) ))))));
+
+                "22" ; B!() ;=
+                    ite!(( b!((  b!(@anf "21")) && (  b!(@anf "12"))) ) ? ( flip!(3/7) ) : (
+                    ite!(( b!((  b!(@anf "21")) && (not!("12"))) ) ? ( flip!(3/8) ) : (
+                    ite!(( b!((  not!("21")) && (  b!(@anf "12"))) ) ? ( flip!(8/9) ) : (
+                                                              flip!(9/11) ))))));
+                ...? ret ; B!()
+            ])
+        };
+        check_exact1("grid3x3/exact/00", 0.500000000, &mk(b!("00")));
+        check_exact1("grid3x3/exact/01", 0.291666667, &mk(b!("01")));
+        check_exact1("grid3x3/exact/10", 0.183333333, &mk(b!("10")));
+        check_exact1("grid3x3/exact/02", 0.274305556, &mk(b!("02")));
+        check_exact1("grid3x3/exact/20", 0.193888889, &mk(b!("20")));
+        check_exact1("grid3x3/exact/11", 0.102927589, &mk(b!("11")));
+        check_exact1("grid3x3/exact/12", 0.599355085, &mk(b!("12")));
+        check_exact1("grid3x3/exact/21", 0.199103758, &mk(b!("21")));
+        check_exact1("grid3x3/exact/22", 0.770263904, &mk(b!("22")));
+    }
 }

@@ -1,0 +1,28 @@
+let v00 = flip 1/2 in
+let v01 = if  v00 then flip 1/3 else flip 1/4 in
+let v02 = if  v01 then flip 1/3 else flip 1/4 in
+let v10 = if !v00 then flip 1/5 else flip 1/6 in
+let v20 = if !v10 then flip 1/5 else flip 1/6 in
+let v11 =
+  if  v10  && v01 then flip 1/7 else
+  if  v10 && !v01 then flip 1/8 else
+  if !v10  && v01 then flip 1/9 else
+                       flip 1/11 in
+let v21 =
+  if  v20 &&  v11 then flip 2/7 else
+  if  v20 && !v11 then flip 2/8 else
+  if !v20 &&  v11 then flip 2/9 else
+                       flip 2/11 in
+
+let v12 =
+  if  v11 &&  v02 then flip 6/7 else
+  if  v11 && !v02 then flip 6/8 else
+  if !v11 &&  v02 then flip 6/9 else
+                       flip 6/11 in
+
+let v22 =
+  if  v21 &&  v12 then flip 3/7 else
+  if  v21 && !v12 then flip 3/8 else
+  if !v21 &&  v12 then flip 8/9 else
+                       flip 9/11 in
+v22
