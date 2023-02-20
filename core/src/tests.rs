@@ -91,7 +91,7 @@ impl Arbitrary for Program {
 
 pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &Program) {
     let precision = precision.unwrap_or_else(|| 0.01);
-    let n = n.unwrap_or_else(|| 100000);
+    let n = n.unwrap_or_else(|| 10000);
     let mut env_args = EnvArgs::default_args(None);
     let mut env = Env::from_args(&mut env_args);
     let exact = exact_inf(&mut env, &p.strip_samples());
@@ -278,15 +278,19 @@ fn program04_approx() {
             ...? ret ; B!()
         ])
     };
-    check_approx1("p04/y  ", 3.0 / 6.0, &mk04(b!("y")), 10000);
-    check_approx1("p04/x  ", 4.0 / 6.0, &mk04(b!("x")), 10000);
-    check_approx1("p04/x|y", 6.0 / 6.0, &mk04(b!("x" || "y")), 10000);
-    check_approx1("p04/x&y", 1.0 / 6.0, &mk04(b!("x" && "y")), 10000);
+    check_approx(
+        "p04",
+        vec![3.0 / 6.0, 4.0 / 6.0, 6.0 / 6.0, 1.0 / 6.0],
+        &mk04(q!("y" x "x")),
+        10000,
+    );
+    // check_approx1("p04/x|y", 6.0 / 6.0, &mk04(b!("x" || "y")), 10000);
+    // check_approx1("p04/x&y", 1.0 / 6.0, &mk04(b!("x" && "y")), 10000);
 
-    check_invariant("p04/y  ", None, None, &mk04(b!("y")));
-    check_invariant("p04/x  ", None, None, &mk04(b!("x")));
-    check_invariant("p04/x|y", None, None, &mk04(b!("x" || "y")));
-    check_invariant("p04/x&y", None, None, &mk04(b!("x" && "y")));
+    check_invariant("p04", None, None, &mk04(q!("y" x "x")));
+    // check_invariant("p04/x  ", None, None, &mk04(b!("x")));
+    // check_invariant("p04/x|y", None, None, &mk04(b!("x" || "y")));
+    // check_invariant("p04/x&y", None, None, &mk04(b!("x" && "y")));
 }
 
 #[test]

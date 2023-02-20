@@ -331,6 +331,29 @@ macro_rules! b {
         )+
         anf!(*fin)
     }};
+    (@anf $y:literal && $( $x:literal )&&+ ) => {{
+        let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(B!())));
+        $(
+            fin = Box::new(ANF::And(fin, Box::new(ANF::AVar($x.to_string(), Box::new(B!())))));
+        )+
+        *fin
+    }};
+    (@anf $y:literal || $( $x:literal )||+ ) => {{
+        let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(B!())));
+        $(
+            fin = Box::new(ANF::Or(fin, Box::new(ANF::AVar($x.to_string(), Box::new(B!())))));
+        )+
+        *fin
+    }};
+}
+
+#[macro_export]
+macro_rules! q {
+    ( $x:literal x $y:literal ) => {{
+        let typ = vec![b!(); 4];
+        let prod = vec![b!(@anf $x), b!(@anf $y), b!(@anf $x || $y), b!(@anf $x && $y)];
+        Expr::EProd(prod, Box::new(Ty::Prod(typ)))
+    }};
 }
 
 #[macro_export]
