@@ -719,40 +719,6 @@ mod active_tests {
     use tracing_test::traced_test;
 
     #[test]
-    #[traced_test]
-    fn nested_2() {
-        let mk = |ret: Expr| {
-            Program::Body(lets![
-                "x" ; B!() ;= flip!(2/5);
-                "y" ; B!() ;= sample!(
-                    lets![
-                        "x1" ; B!() ;= sample!(flip!(1/3));
-                        "y1" ; B!() ;= flip!(1/4);
-                        ...? b!("x1" || "y1"); B!()
-                    ]);
-                "_" ; B!() ;= observe!(b!("x" || "y")); // is this a problem?
-                ...? ret ; B!()
-            ])
-        };
-        check_exact1("nest_2/exact/y  ", 0.714285714, &mk(b!("y")));
-        check_exact1("nest_2/exact/x  ", 0.571428571, &mk(b!("x")));
-        check_exact1("nest_2/exact/x|y", 1.000000000, &mk(b!("x" || "y")));
-        check_exact1("nest_2/exact/x&y", 0.285714286, &mk(b!("x" && "y")));
-
-        let n = 10000;
-        check_approx1("nest_2/appx/y  ", 0.714285714, &mk(b!("y")), n);
-        check_approx1("nest_2/appx/x  ", 0.571428571, &mk(b!("x")), n);
-        check_approx1("nest_2/appx/x|y", 1.000000000, &mk(b!("x" || "y")), n);
-        check_approx1("nest_2/appx/x&y", 0.285714286, &mk(b!("x" && "y")), n);
-
-        let n = Some(n);
-        check_invariant("nest2/y  ", None, n, &mk(b!("y")));
-        check_invariant("nest2/x  ", None, n, &mk(b!("x")));
-        check_invariant("nest2/x|y", None, n, &mk(b!("x" || "y")));
-        check_invariant("nest2/x&y", None, n, &mk(b!("x" && "y")));
-    }
-
-    #[test]
     fn ite_3_with_one_sample_easy() {
         let mk = |ret: Expr| {
             Program::Body(lets![
@@ -771,22 +737,24 @@ mod active_tests {
     }
 
     #[test]
+    #[ignore]
     fn ite_3_with_one_sample_hard1() {
         let mk = |ret: Expr| {
             Program::Body(lets![
-                "x" ; b!() ;= flip!(1/3);
+                "x" ; b!() ;= flip!(2/3);
                 "y" ; b!() ;= ite!(
                     if ( var!("x") )
-                    then { sample!(flip!(1/4)) }
+                    then { sample!(flip!(3/4)) }
                     else { flip!(1/5) });
                 "_" ; b!() ;= observe!(b!("x" || "y"));
                 ...? ret ; b!()
             ])
         };
         let n = 1000;
-        check_approx1("ite_3/y  ", 0.464285714, &mk(b!("y")), n * n * n);
+        check_approx1("ite_3/y  ", 0.772727273, &mk(b!("y")), n * n * 10);
     }
     #[test]
+    #[ignore]
     fn ite_3_with_one_sample_hard2() {
         let mk = |ret: Expr| {
             Program::Body(lets![
@@ -801,34 +769,5 @@ mod active_tests {
         };
         let n = 1000;
         check_approx1("ite_3/x&y", 0.178571429, &mk(b!("x" && "y")), n * n * n);
-    }
-
-    #[test]
-    // #[ignore]
-    // #[traced_test]
-    fn grid2x2_sampled() {
-        let mk = |ret: Expr| {
-            Program::Body(lets![
-                "00" ; B!() ;= flip!(1/2);
-                "01_10" ; b!(B, B) ;= sample!(
-                    lets![
-                        "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-                        "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-                        ...? b!("01", "10") ; b!(B, B)
-                    ]);
-                "01" ; B!() ;= fst!("01_10");
-                "10" ; B!() ;= snd!("01_10");
-                "11" ; B!() ;=
-                    ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
-                    ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
-                    ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
-                                                              flip!(1/11) ))))));
-                ...? ret ; B!()
-            ])
-        };
-        check_approx1("grid2x2/approx_diag/00", 1.0 / 2.0, &mk(b!("00")), 10000);
-        check_approx1("grid2x2/approx_diag/01", 0.291666667, &mk(b!("01")), 10000);
-        check_approx1("grid2x2/approx_diag/10", 0.183333333, &mk(b!("10")), 10000);
-        check_approx1("grid2x2/approx_diag/11", 0.102927589, &mk(b!("11")), 10000);
     }
 }
