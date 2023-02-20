@@ -151,21 +151,21 @@ impl Expr {
         }
     }
 
-    pub fn strip_samples(&self) -> Expr {
+    pub fn strip_samples1(&self) -> Expr {
         use Expr::*;
         match self {
             ESample(e) => *e.clone(),
             ELetIn(s, tx, x, y, ty) => ELetIn(
                 s.clone(),
                 tx.clone(),
-                Box::new(x.strip_samples()),
-                Box::new(y.strip_samples()),
+                Box::new(x.strip_samples1()),
+                Box::new(y.strip_samples1()),
                 ty.clone(),
             ),
             EIte(p, x, y, ty) => EIte(
                 p.clone(),
-                Box::new(x.strip_samples()),
-                Box::new(y.strip_samples()),
+                Box::new(x.strip_samples1()),
+                Box::new(y.strip_samples1()),
                 ty.clone(),
             ),
             e => e.clone(),
@@ -183,7 +183,18 @@ impl Program {
     pub fn strip_samples(&self) -> Program {
         use Program::*;
         match self {
-            Body(e) => Body(e.strip_samples()),
+            Body(e) => {
+                let mut cur = e.strip_samples1();
+                loop {
+                    let nxt = cur.strip_samples1();
+
+                    if nxt == cur {
+                        return Body(nxt);
+                    } else {
+                        cur = nxt;
+                    }
+                }
+            }
         }
     }
 }

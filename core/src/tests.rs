@@ -528,6 +528,7 @@ fn nested_1() {
     check_approx1("nest_1/x  ", 4.0 / 6.0, &mk(b!("x")), 10000);
     check_approx1("nest_1/x|y", 6.0 / 6.0, &mk(b!("x" || "y")), 10000);
     check_approx1("nest_1/x&y", 1.0 / 6.0, &mk(b!("x" && "y")), 10000);
+    check_invariant("nest_1/x&y", None, None, &mk(b!("x" && "y")));
 }
 
 // ============================================================ //
