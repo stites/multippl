@@ -283,11 +283,17 @@ macro_rules! b {
     ( B , B ) => {{
         Ty::Prod(vec![b!(), b!()])
     }};
-    ( $x:literal, $y:literal ) => {{
-        let l = b!(@anf $x);
-        let r = b!(@anf $y);
-        let ty = Ty::Prod(vec![b!(), b!()]);
-        Expr::EProd(vec![l, r], Box::new(ty))
+    ( B , B, B ) => {{
+        Ty::Prod(vec![b!(), b!(), b!()])
+    }};
+    ( $x:literal, $( $xs:literal ),+  ) => {{
+        let mut prod = vec![b!(@anf $x)];
+        let mut typ = vec![b!()];
+        $(
+            prod.push(b!(@anf $xs));
+            typ.push(b!());
+        )+
+        Expr::EProd(prod, Box::new(Ty::Prod(typ)))
     }};
     ( $x:expr, $y:expr ) => {{
         let ty = Ty::Prod(vec![b!(), b!()]);
@@ -340,6 +346,15 @@ macro_rules! fst {
     }};
     ( $x:expr ) => {{
         Expr::EFst(Box::new($x), Box::new(b!()))
+    }};
+}
+#[macro_export]
+macro_rules! thd {
+    ( $x:literal ) => {{
+        thd!(b!(@anf $x))
+    }};
+    ( $x:expr ) => {{
+        Expr::EPrj(2, Box::new($x), Box::new(b!()))
     }};
 }
 #[macro_export]
