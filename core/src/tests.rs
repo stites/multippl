@@ -515,6 +515,24 @@ fn ite_2() {
     check_exact1("ite_2/x&y", 0.178571429, &mk(b!("x" && "y")));
 }
 
+#[test]
+fn ite_3_with_one_sample_easy() {
+    let mk = |ret: Expr| {
+        Program::Body(lets![
+            "x" ; b!() ;= flip!(1/3);
+            "y" ; b!() ;= ite!(
+                if ( var!("x") )
+                then { sample!(flip!(1/4)) }
+                else { flip!(1/5) });
+            "_" ; b!() ;= observe!(b!("x" || "y"));
+            ...? ret ; b!()
+        ])
+    };
+    let n = 1000;
+    check_approx1("ite_3/x  ", 0.714285714, &mk(b!("x")), n);
+    check_approx1("ite_3/x|y", 1.000000000, &mk(b!("x" || "y")), n);
+}
+
 // ============================================================ //
 // nested tests
 // ============================================================ //
