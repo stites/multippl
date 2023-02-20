@@ -17,7 +17,7 @@
   } @ inputs: let
     flklib = inputs.flake-utils.lib;
   in
-    flklib.eachSystem (with flklib.system; [x86_64-linux aarch64-darwin]) (system: let
+    flklib.eachSystem (with flklib.system; [x86_64-linux]) (system: let
       pkgs = import nixpkgs {
         inherit system;
       };
