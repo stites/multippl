@@ -91,7 +91,7 @@ impl Arbitrary for Program {
 
 pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &Program) {
     let precision = precision.unwrap_or_else(|| 0.01);
-    let n = n.unwrap_or_else(|| 10000);
+    let n = n.unwrap_or_else(|| 100000);
     let mut env_args = EnvArgs::default_args(None);
     let mut env = Env::from_args(&mut env_args);
     let exact = exact_inf(&mut env, &p.strip_samples());
