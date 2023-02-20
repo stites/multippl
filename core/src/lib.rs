@@ -717,40 +717,4 @@ mod active_tests {
     use inference::*;
     use tests::*;
     use tracing_test::traced_test;
-
-    #[test]
-    // #[ignore]
-    #[traced_test]
-    fn ite_3_with_one_sample_hard1() {
-        let mk = |ret: Expr| {
-            Program::Body(lets![
-                "x" ; b!() ;= flip!(2/3);
-                "y" ; b!() ;= ite!(
-                    if ( var!("x") )
-                    then { sample!(flip!(3/4)) }
-                    else { flip!(1/5) });
-                "_" ; b!() ;= observe!(b!("x" || "y"));
-                ...? ret ; b!()
-            ])
-        };
-        let n = 10;
-        check_approx1("ite_3/y  ", 0.772727273, &mk(b!("y")), n);
-    }
-    #[test]
-    #[ignore]
-    fn ite_3_with_one_sample_hard2() {
-        let mk = |ret: Expr| {
-            Program::Body(lets![
-                "x" ; b!() ;= flip!(1/3);
-                "y" ; b!() ;= ite!(
-                    if ( var!("x") )
-                    then { sample!(flip!(1/4)) }
-                    else { flip!(1/5) });
-                "_" ; b!() ;= observe!(b!("x" || "y"));
-                ...? ret ; b!()
-            ])
-        };
-        let n = 1000;
-        check_approx1("ite_3/x&y", 0.178571429, &mk(b!("x" && "y")), n * n * n);
-    }
 }

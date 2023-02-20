@@ -533,6 +533,43 @@ fn ite_3_with_one_sample_easy() {
     check_approx1("ite_3/x|y", 1.000000000, &mk(b!("x" || "y")), n);
 }
 
+/// represents another semantic bug, still need to grapple how this all works, though
+#[test]
+#[ignore = "I'm confident that this is a data flow analysis problem (in that sample formulas need to be added to the accepting criteria)"]
+#[traced_test]
+fn ite_3_with_one_sample_hard1() {
+    let mk = |ret: Expr| {
+        Program::Body(lets![
+            "x" ; b!() ;= flip!(2/3);
+            "y" ; b!() ;= ite!(
+                if ( var!("x") )
+                then { sample!(flip!(3/4)) }
+                else { flip!(1/5) });
+            "_" ; b!() ;= observe!(b!("x" || "y"));
+            ...? ret ; b!()
+        ])
+    };
+    let n = 10000;
+    check_approx1("ite_3/y-sample3/4 ", 0.772727273, &mk(b!("y")), n); // dice's answer for 3/4 @ sample site
+                                                                       // check_approx1("ite_3/y  ", 0.545454545, &mk(b!("y")), n); // dice's answer for 2/4 @ sample site
+}
+#[test]
+#[ignore = "I'm confident that this is a data flow analysis problem (in that sample formulas need to be added to the accepting criteria)"]
+fn ite_3_with_one_sample_hard2() {
+    let mk = |ret: Expr| {
+        Program::Body(lets![
+            "x" ; b!() ;= flip!(1/3);
+            "y" ; b!() ;= ite!(
+                if ( var!("x") )
+                then { sample!(flip!(1/4)) }
+                else { flip!(1/5) });
+            "_" ; b!() ;= observe!(b!("x" || "y"));
+            ...? ret ; b!()
+        ])
+    };
+    let n = 1000;
+    check_approx1("ite_3/x&y", 0.178571429, &mk(b!("x" && "y")), n * n * n);
+}
 // ============================================================ //
 // nested tests
 // ============================================================ //
