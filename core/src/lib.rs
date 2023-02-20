@@ -720,23 +720,6 @@ mod active_tests {
 
     // #[test]
     // // #[traced_test]
-    // fn nested_1() {
-    //     let mk = |ret: Expr| {
-    //         Program::Body(lets![
-    //             "x" := sample!(sample!(flip!(1/3)));
-    //             "y" := flip!(1/4);
-    //             "_" := observe!(or!("x", "y"));
-    //             ...? ret
-    //         ])
-    //     };
-    //     check_approx("nest/y  ", 3.0 / 6.0, &mk(var!("y")), 10000);
-    //     check_approx("nest/x  ", 4.0 / 6.0, &mk(var!("x")), 10000);
-    //     check_approx("nest/x|y", 6.0 / 6.0, &mk(or!("x", "y")), 10000);
-    //     check_approx("nest/x&y", 1.0 / 6.0, &mk(and!("x", "y")), 10000);
-    // }
-
-    // #[test]
-    // // #[traced_test]
     // fn nested_2() {
     //     let mk = |ret: Expr| {
     //         Program::Body(lets![
@@ -758,7 +741,7 @@ mod active_tests {
     // }
 
     #[test]
-    #[ignore]
+    // #[ignore]
     // #[traced_test]
     fn grid2x2_sampled() {
         let mk = |ret: Expr| {

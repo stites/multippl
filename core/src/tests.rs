@@ -570,3 +570,22 @@ fn grid2x2() {
     check_exact1("grid2x2/3/10", 0.183333333, &mk(b!("10")));
     check_exact1("grid2x2/3/11", 0.102927589, &mk(b!("11")));
 }
+
+// ============================================================ //
+// nested tests
+// ============================================================ //
+#[test]
+fn nested_1() {
+    let mk = |ret: Expr| {
+        Program::Body(lets![
+            "x" ; B!() ;= sample!(sample!(flip!(1/3)));
+            "y" ; B!() ;= flip!(1/4);
+            "_" ; B!() ;= observe!(b!("x" || "y"));
+            ...? ret ; B!()
+        ])
+    };
+    check_approx1("nest_1/y  ", 3.0 / 6.0, &mk(b!("y")), 10000);
+    check_approx1("nest_1/x  ", 4.0 / 6.0, &mk(b!("x")), 10000);
+    check_approx1("nest_1/x|y", 6.0 / 6.0, &mk(b!("x" || "y")), 10000);
+    check_approx1("nest_1/x&y", 1.0 / 6.0, &mk(b!("x" && "y")), 10000);
+}
