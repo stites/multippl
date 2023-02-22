@@ -133,7 +133,7 @@ pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: &ProgramTyped) -
 
     for _step in 1..=steps {
         // FIXME: change back to step
-        env.reset_names();
+        // env.reset_names();
         match run(env, p) {
             Ok(c) => {
                 let azs = wmc_prob(env, &c);

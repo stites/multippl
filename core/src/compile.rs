@@ -150,7 +150,6 @@ impl Compiled {
 pub struct EnvArgs {
     // FIXME: just have env own BddManager and StdRng
     pub names: HashMap<String, UniqueId>,
-    pub gensym: u64,
     pub mgr: BddManager<AllTable<BddPtr>>,
     pub rng: StdRng,
     pub samples: HashMap<UniqueId, Vec<bool>>,
@@ -164,7 +163,6 @@ impl EnvArgs {
         };
         EnvArgs {
             names: HashMap::new(),
-            gensym: 0,
             mgr,
             rng,
             samples: HashMap::new(),
@@ -174,7 +172,6 @@ impl EnvArgs {
 
 pub struct Env<'a> {
     pub names: HashMap<String, UniqueId>,
-    pub gensym: u64,
     pub mgr: &'a mut BddManager<AllTable<BddPtr>>,
     pub rng: &'a mut StdRng,
     pub samples: HashMap<UniqueId, Vec<bool>>,
@@ -183,45 +180,24 @@ impl<'a> Env<'a> {
     pub fn new(mgr: &'a mut BddManager<AllTable<BddPtr>>, rng: &'a mut StdRng) -> Env<'a> {
         Env {
             names: HashMap::new(),
-            gensym: 0,
             mgr,
             rng,
             samples: HashMap::new(),
         }
     }
-    pub fn reset_names(&mut self) {
-        self.gensym = 0;
-        self.names = HashMap::new();
-    }
     pub fn from_args(x: &'a mut EnvArgs) -> Env<'a> {
         Env {
             names: x.names.clone(),
-            gensym: x.gensym.clone(),
             mgr: &mut x.mgr,
             rng: &mut x.rng,
             samples: HashMap::new(),
         }
     }
-    fn _fresh(&mut self, ovar: Option<String>) -> UniqueId {
-        let sym = self.gensym;
-        self.gensym += 1;
-        let var = ovar.unwrap_or(format!("_{sym}"));
-        self.names.insert(var, UniqueId(sym));
-        UniqueId(sym)
-    }
-    fn fresh(&mut self) -> UniqueId {
-        self._fresh(None)
-    }
-    fn get_var(&self, var: String) -> Option<UniqueId> {
-        self.names.get(&var).copied()
-    }
-    fn get_or_create(&mut self, var: String) -> UniqueId {
-        let osym = self.get_var(var.clone());
-        osym.unwrap_or_else(|| self._fresh(Some(var)))
-    }
+
     /// a complicated mess
     fn get_or_create_varlabel(
         &mut self,
+        sym: UniqueId,
         s: String,
         m: &WeightMap,
         p: &SubstMap,
@@ -231,45 +207,33 @@ impl<'a> Env<'a> {
             p = rendersubs(p),
             names = format!("{:?}", self.names)
         );
-        match self.get_var(s.clone()) {
-            None => {
-                let id = self._fresh(Some(s.clone()));
-                let lbl = VarLabel::new(id.0);
-                let mut mm = m.clone();
-                mm.insert(id, const_weight());
-                debug!(to = format!("{:?}", lbl));
-                (lbl, mm)
+        let mut nxt = p.get(&sym);
+        debug!(get_var = format!("{:?}", sym), nxt = nxt.map(renderbdds));
+        while nxt.is_some() {
+            match nxt.unwrap()[..] {
+                [n] => match leaf_variable(n) {
+                    None => break,
+                    Some(lbl) => nxt = p.get(&UniqueId(lbl.value())),
+                },
+                _ => break,
             }
-            Some(sym) => {
-                let mut nxt = p.get(&sym);
-                debug!(get_var = format!("{:?}", sym), nxt = nxt.map(renderbdds));
-                while nxt.is_some() {
-                    match nxt.unwrap()[..] {
-                        [n] => match leaf_variable(n) {
-                            None => break,
-                            Some(lbl) => nxt = p.get(&UniqueId(lbl.value())),
-                        },
-                        _ => break,
-                    }
+        }
+        match nxt {
+            Some(vs) => match vs[..] {
+                [BddPtr::Reg(n)] => match leaf_variable(vs[0]) {
+                    None => (VarLabel::new(sym.0), m.clone()),
+                    Some(lbl) => (lbl, m.clone()),
+                },
+                _ => {
+                    let lbl = VarLabel::new(sym.0);
+                    debug!(path = 2, to = format!("{:?}", lbl));
+                    (lbl, m.clone())
                 }
-                match nxt {
-                    Some(vs) => match vs[..] {
-                        [BddPtr::Reg(n)] => match leaf_variable(vs[0]) {
-                            None => (VarLabel::new(sym.0), m.clone()),
-                            Some(lbl) => (lbl, m.clone()),
-                        },
-                        _ => {
-                            let lbl = VarLabel::new(sym.0);
-                            debug!(path = 2, to = format!("{:?}", lbl));
-                            (lbl, m.clone())
-                        }
-                    },
-                    _ => {
-                        let lbl = VarLabel::new(sym.0);
-                        debug!(path = 3, to = format!("{:?}", lbl));
-                        (lbl, m.clone())
-                    }
-                }
+            },
+            _ => {
+                let lbl = VarLabel::new(sym.0);
+                debug!(path = 3, to = format!("{:?}", lbl));
+                (lbl, m.clone())
             }
         }
     }
@@ -308,14 +272,15 @@ impl<'a> Env<'a> {
     pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnn) -> Result<Compiled, CompileError> {
         use ANF::*;
         match a {
-            AVar(vs, s) => {
-                let (lbl, wm) =
-                    self.get_or_create_varlabel(s.to_string(), &ctx.weight_map, &ctx.substitutions);
-                assert_eq!(vs.0, lbl.value());
+            AVar(v, s) => {
+                let lbl = v.as_lbl();
+                // let (lbl, wm) =
+                //     self.get_or_create_varlabel(s.to_string(), &ctx.weight_map, &ctx.substitutions);
+                // assert_eq!(vs.0, lbl.value());
                 Ok(Compiled {
                     accept: ctx.accept.clone(),
                     substitutions: ctx.substitutions.clone(),
-                    weight_map: wm,
+                    weight_map: ctx.weight_map.clone(),
                     ..Compiled::default(self.mgr.var(lbl, true))
                 })
                 // }
@@ -452,24 +417,22 @@ impl<'a> Env<'a> {
                 debug_compiled("prod", ctx, &c);
                 Ok(c)
             }
-            ELetIn(vs, s, ebound, ebody) => {
+            ELetIn(id, s, ebound, ebody) => {
                 debug!(">>>let-in {}", s);
-                let (lbl, wm) =
-                    self.get_or_create_varlabel(s.clone(), &ctx.weight_map, &ctx.substitutions);
-                assert_eq!(vs.0, lbl.value());
-                let id = UniqueId(lbl.value());
+                let lbl = id.as_lbl();
+                let mut wm = ctx.weight_map.clone();
+                wm.insert(*id, const_weight());
 
                 let mut newctx = ctx.clone();
                 newctx.weight_map = wm;
 
                 let bound = self.eval_expr(&newctx, ebound)?;
                 let mut bound_substitutions = bound.substitutions.clone();
-                bound_substitutions.insert(id, bound.dists.clone());
+                bound_substitutions.insert(*id, bound.dists.clone());
 
                 let mut newctx = newctx.clone();
                 newctx.weight_map = bound.weight_map.clone();
                 newctx.substitutions = bound_substitutions.clone();
-                // newctx.gamma = ctx.gamma.append(s.clone(), tbound); // FIXME, move to typechecking
 
                 let body = self.eval_expr(&newctx, ebody)?;
                 let mut weight_map = bound.weight_map.clone();
@@ -481,7 +444,7 @@ impl<'a> Env<'a> {
                 let accept = self.mgr.and(bound.accept, body.accept);
                 let accept = self.mgr.and(accept, ctx.accept);
 
-                self.log_samples(id, ebound, &bound);
+                self.log_samples(*id, ebound, &bound);
 
                 let probabilities = izip!(bound.probabilities, body.probabilities)
                     .map(|(p1, p2)| p1 * p2)
@@ -551,13 +514,13 @@ impl<'a> Env<'a> {
                 debug_compiled("ite", ctx, &c);
                 Ok(c)
             }
-            EFlip(vs, param) => {
-                debug!(">>>flip {param}");
-                let sym = self.fresh();
-                assert_eq!(*vs, sym);
+            EFlip(sym, param) => {
+                debug!(">>>flip {}", param);
+                // let sym = self.fresh();
+                // assert_eq!(*vs, sym);
                 let mut weight_map = ctx.weight_map.clone();
-                let lbl = VarLabel::new(sym.0);
-                weight_map.insert(sym, (1.0 - *param, *param));
+                let lbl = sym.as_lbl();
+                weight_map.insert(*sym, (1.0 - *param, *param));
 
                 let c = Compiled {
                     dists: vec![self.mgr.var(lbl, true)],

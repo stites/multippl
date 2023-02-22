@@ -43,7 +43,6 @@ pub mod grammar {
     //         }
     //     }
     // }
-
     impl ξ<Annotated> for AVarExt {
         // vars up/down
         // Vars are "sample-able"

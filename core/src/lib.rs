@@ -44,8 +44,11 @@ use crate::typecheck::grammar::{ExprTyped, ProgramTyped};
 use crate::typecheck::typecheck;
 
 pub fn run(env: &mut Env, p: &ProgramTyped) -> Result<Compiled, CompileError> {
+    let p = typecheck(p)?;
     let mut senv = SymEnv::default();
-    compile(env, &senv.annotate(&typecheck(p)?)?)
+    let p = senv.annotate(&p)?;
+    env.names = senv.names; // just for debugging, really.
+    compile(env, &p)
 }
 
 #[cfg(test)]
