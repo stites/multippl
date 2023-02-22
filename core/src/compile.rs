@@ -575,14 +575,22 @@ impl<'a> Env<'a> {
             EObserve(_, a) => {
                 debug!(">>>observe");
                 let comp = self.eval_anf(ctx, a)?;
+                debug!("[observe] In. Accept {}", &ctx.accept.print_bdd());
+                debug!("[observe] Comp. dist {}", renderbdds(&comp.dists));
                 let accept = self
                     .apply_substitutions(comp.dists, &ctx.substitutions)
                     .into_iter()
                     .fold(ctx.accept.clone(), |global, cur| self.mgr.and(global, cur));
 
                 let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
-                let var_order = VarOrder::linear_order(max_var as usize);
+                let var_order = VarOrder::linear_order((max_var + 1) as usize);
+                debug!("[observe] weight_map {:?}", &comp.weight_map);
+                debug!("[observe] max_var    {}", max_var);
+                debug!("[observe] WMCParams  {:?}", wmc_params);
+                debug!("[observe] VarOrder   {:?}", var_order);
+                debug!("[observe] Accept     {}", accept.print_bdd());
                 let importance_weight = accept.wmc(&var_order, &wmc_params);
+                debug!("[observe] IWeight    {}", importance_weight);
 
                 let c = Compiled {
                     dists: vec![BddPtr::PtrTrue],
@@ -600,7 +608,11 @@ impl<'a> Env<'a> {
                 let comp = self.eval_expr(ctx, e)?;
 
                 let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
-                let var_order = VarOrder::linear_order(max_var as usize);
+                let var_order = VarOrder::linear_order((max_var + 1) as usize);
+                debug!("[sample] weight_map {:?}", &comp.weight_map);
+                debug!("[sample] max_var    {}", max_var);
+                debug!("[sample] WMCParams  {:?}", wmc_params);
+                debug!("[sample] VarOrder   {:?}", var_order);
                 let comp_dists = self.apply_substitutions(comp.dists, &ctx.substitutions);
 
                 let (qs, dists): (Vec<Probability>, Vec<BddPtr>) = comp_dists

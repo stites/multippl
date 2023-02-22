@@ -38,13 +38,14 @@ mod render;
 mod tests;
 mod typecheck;
 
-use crate::annotate::annotate;
+use crate::annotate::SymEnv;
 use crate::compile::{compile, CompileError, Compiled, Env};
 use crate::typecheck::grammar::{ExprTyped, ProgramTyped};
 use crate::typecheck::typecheck;
 
 pub fn run(env: &mut Env, p: &ProgramTyped) -> Result<Compiled, CompileError> {
-    compile(env, &annotate(&typecheck(p)?)?)
+    let mut senv = SymEnv::default();
+    compile(env, &senv.annotate(&typecheck(p)?)?)
 }
 
 #[cfg(test)]
@@ -57,58 +58,36 @@ mod active_tests {
     use tests::*;
     use tracing_test::traced_test;
     #[test]
-    #[ignore = "this test will always break until we are doing data flow analysis"]
-    // #[traced_test]
-    fn free_variables_0() {
-        let mk = |ret: ExprTyped| {
-            Program::Body(lets![
-               "x" ; B!() ;= flip!(1/3);
-               "y" ; B!() ;= sample!(var!("x"));
-               ...? ret ; B!()
-            ])
-        };
-        let n = 10000;
-
-        check_approx1("free/x ", 1.0 / 3.0, &mk(var!("x")), n);
-        // FIXME: still broken! getting 1/2 instead of 1/3
-        check_approx1("free/y ", 1.0 / 3.0, &mk(var!("y")), n);
-
-        check_invariant("free/y ", None, None, &mk(var!("y")));
-        check_invariant("free/y ", None, None, &mk(var!("x")));
-    }
-
-    #[test]
-    #[ignore = "This will be broken until we reintroduce code at FIXME(#1)."]
-    // #[traced_test]
-    fn free_variables_1() {
-        let problem = {
-            Program::Body(lets![
-               "x" ; B!() ;= flip!(1/3);
-               "l" ; B!() ;= sample!(var!("x"));
-               "_" ; B!() ;= observe!(var!("x"));
-               ...? var!("l") ; B!()
-            ])
-        };
-        check_approx1("free/!!", 1.0 / 3.0, &problem, 10000);
-    }
-    #[test]
-    // #[traced_test]
+    #[traced_test]
     #[ignore = "punt till data flow analysis"]
     fn free_variables_2() {
         let mk = |ret: ExprTyped| {
             Program::Body(lets![
                 "x" ; b!() ;= flip!(1/3);
-                "l" ; b!() ;= sample!(
+                "y" ; b!() ;= sample!(
                     lets![
                         "x0" ; b!() ;= flip!(1/5);
                         ...? b!("x0" || "x") ; b!()
                     ]);
-               "_" ; b!() ;= observe!(var!("x")); // is this a problem?
+               "_" ; b!() ;= observe!(b!("x" || "y")); // is this a problem?
+
                ...? ret ; b!()
             ])
         };
-        check_approx1("free/?1", 1.0 / 1.0, &mk(var!("x")), 1000);
-        check_approx1("free/?2", 1.0 / 1.0, &mk(var!("l")), 1000); // FIXME: need to derive the right number for this one
+        let n = 1000;
+        check_exact(
+            "free2/x,l",
+            vec![0.714285714, 1.0, 1.0, 0.714285714],
+            &mk(q!("x" x "l")),
+        );
+        println!("===============================================================================");
+        check_approx(
+            "free2/x,l",
+            vec![0.714285714, 1.0, 1.0, 0.714285714],
+            &mk(q!("x" x "l")),
+            n,
+        );
+        // check_invariant("free2/x,l ", None, None, &mk(q!("x" x "l")));
     }
 
     // free variable edge case

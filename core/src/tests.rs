@@ -276,12 +276,38 @@ fn sample_tuple() {
 }
 
 // ===================================================================== //
-//                   BEGIN: ignored free variable tests                  //
+//                          free variable tests                          //
 // ===================================================================== //
+#[test]
+fn free_variables_0() {
+    let mk = |ret: ExprTyped| {
+        Program::Body(lets![
+           "x" ; B!() ;= flip!(1/3);
+           "y" ; B!() ;= sample!(var!("x"));
+           ...? ret ; B!()
+        ])
+    };
+    let n = 1000;
 
-// ===================================================================== //
-//                    END: ignored free variable tests                   //
-// ===================================================================== //
+    check_approx1("free/x ", 1.0 / 3.0, &mk(var!("x")), n);
+    check_approx1("free/y ", 1.0 / 3.0, &mk(var!("y")), n);
+
+    check_invariant("free/y ", None, None, &mk(var!("y")));
+    check_invariant("free/x ", None, None, &mk(var!("x")));
+}
+#[test]
+fn free_variables_1() {
+    let problem = {
+        Program::Body(lets![
+           "x" ; B!() ;= flip!(1/3);
+           "l" ; B!() ;= sample!(var!("x"));
+           "_" ; B!() ;= observe!(var!("x"));
+           ...? var!("l") ; B!()
+        ])
+    };
+    check_approx1("free/!!", 1.0 / 3.0, &problem, 10000);
+}
+
 // ===================================================================== //
 //                   START: deterministic if-then-else                   //
 // ===================================================================== //
