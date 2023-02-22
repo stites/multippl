@@ -34,7 +34,7 @@ macro_rules! P {
 #[macro_export]
 macro_rules! anf {
     ( $x:expr ) => {{
-        Expr::EAnf((), Box::new($x))
+        Expr::<Typed>::EAnf((), Box::new($x))
     }};
 }
 
@@ -60,7 +60,7 @@ macro_rules! var {
     ( $y:literal, $( $x:literal ),+ ) => {{
         let mut fin = anf!(ANF::AVar($y.to_string()));
         $(
-            fin = Box::new(Expr::EProd((), fin, Box::new(anf!(ANF::AVar($x.to_string(), Box::new(B!()))))));
+            fin = Box::new(Expr::<Typed>::EProd((), fin, Box::new(anf!(ANF::AVar($x.to_string(), Box::new(B!()))))));
         )+
        *fin
     }};
@@ -105,11 +105,11 @@ macro_rules! b {
             prod.push(b!(@anf $xs));
             typ.push(b!());
         )+
-        Expr::EProd((), prod, Box::new(Ty::Prod(typ)))
+        Expr::<Typed>::EProd(Ty::Prod(typ), prod)
     }};
     ( $x:expr, $y:expr ) => {{
         let ty = Ty::Prod(vec![b!(), b!()]);
-        Expr::EProd(vec![$x, $y], Box::new(ty))
+        Expr::<Typed>::EProd(vec![$x, $y], Box::new(ty))
     }};
     ( $y:literal && $( $x:literal )&&+ ) => {{
         let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(B!())));
@@ -153,7 +153,7 @@ macro_rules! q {
     ( $x:literal x $y:literal ) => {{
         let typ = vec![b!(); 4];
         let prod = vec![b!(@anf $x), b!(@anf $y), b!(@anf $x || $y), b!(@anf $x && $y)];
-        Expr::EProd((), prod, Box::new(Ty::Prod(typ)))
+        Expr::<Typed>::EProd(Ty::Prod(typ), prod)
     }};
 }
 
@@ -163,7 +163,7 @@ macro_rules! snd {
         snd!(b!(@anf $x))
     }};
     ( $x:expr ) => {{
-        Expr::ESnd((), Box::new($x), Box::new(b!()))
+        Expr::<Typed>::ESnd(b!(), Box::new($x))
     }};
 }
 
@@ -180,7 +180,7 @@ macro_rules! fst {
         fst!(b!(@anf $x))
     }};
     ( $x:expr ) => {{
-        Expr::EFst((), Box::new($x), Box::new(b!()))
+        Expr::<Typed>::EFst(b!(), Box::new($x))
     }};
 }
 #[macro_export]
@@ -189,20 +189,20 @@ macro_rules! thd {
         thd!(b!(@anf $x))
     }};
     ( $x:expr ) => {{
-        Expr::EPrj((), 2, Box::new($x), Box::new(b!()))
+        Expr::<Typed>::EPrj(b!(), 2, Box::new($x))
     }};
 }
 #[macro_export]
 macro_rules! sample {
     ( $x:expr ) => {{
-        Expr::ESample((), Box::new($x))
+        Expr::<Typed>::ESample((), Box::new($x))
     }};
 }
 #[macro_export]
 macro_rules! observe {
     ( $x:expr ) => {{
-        if let Expr::EAnf(_, a) = $x {
-            Expr::EObserve((), a)
+        if let Expr::<Typed>::EAnf(_, a) = $x {
+            Expr::<Typed>::EObserve((), a)
         } else {
             panic!("passed in a non-anf expression!");
         }
@@ -211,22 +211,23 @@ macro_rules! observe {
 #[macro_export]
 macro_rules! flip {
     ( $num:literal / $denom:literal) => {{
-        Expr::EFlip((), $num as f64 / $denom as f64)
+        Expr::<Typed>::EFlip((), $num as f64 / $denom as f64)
     }};
     ( $p:literal ) => {{
-        Expr::EFlip($p)
+        Expr::<Typed>::EFlip($p)
     }};
 }
 
 #[macro_export]
 macro_rules! lets {
     ( $var:literal : $vty:ty := $bound:expr ; in $body:expr ; $ty:ty ) => {{
-        Expr::ELetIn((),
+        Expr::<Typed>::ELetIn(crate::typecheck::grammar::LetInTypes {
+            bindee: typ!(TypeId::of::<$vty>()),
+            body: typ!(TypeId::of::<$vty>()),
+        },
             $var.to_string(),
-            Box::new(typ!(TypeId::of::<$vty>())),
             Box::new($bound.clone()),
             Box::new($body.clone()),
-            Box::new(typ!(TypeId::of::<$vty>())),
         )
     }};
     ( $( $var:literal : $fromty:ty := $bound:expr => $toty:ty);+ ;...? $body:expr ; $finty:ty ) => {
@@ -239,7 +240,8 @@ macro_rules! lets {
                 )+
                 tracing::debug!("...? {:?} ; {:?}", $body, TypeId::of::<$ty>());
                 for (v, tyid, e) in bindees.iter().rev() {
-                    fin = Box::new(Expr::ELetIn((), v.to_string(), Box::new(typ!(tyid)), Box::new(e.clone()), fin, Box::new(typ!(tyid))));
+                     let types = LetInTypes { bindee: typ!(tyid), body: typ!(tyid)};
+                    fin = Box::new(Expr::<Typed>::ELetIn(types, v.to_string(), Box::new(e.clone()), fin));
                 }
                 *fin
             }
@@ -258,7 +260,7 @@ macro_rules! lets {
     //             let mut fin = Box::new($body.clone());
 
     //             for (v, cotyid, e) in bindees.iter().rev() {
-    //                 fin = Box::new(Expr::ELetIn(v.to_string(), Box::new(typ!(tyid)), Box::new(e.clone()), fin, fintype.clone()));
+    //                 fin = Box::new(Expr::<Typed>::ELetIn(v.to_string(), Box::new(typ!(tyid)), Box::new(e.clone()), fin, fintype.clone()));
     //             }
     //             *fin
     //         }
@@ -276,7 +278,8 @@ macro_rules! lets {
                 let mut fin = Box::new($body.clone());
 
                 for (v, tyid, e) in bindees.iter().rev() {
-                    fin = Box::new(Expr::ELetIn((), v.to_string(), Box::new(tyid.clone()), Box::new(e.clone()), fin, fintype.clone()));
+                     let types = LetInTypes { bindee: tyid.clone(), body: *fintype.clone()};
+                    fin = Box::new(Expr::<Typed>::ELetIn(types, v.to_string(), Box::new(e.clone()), fin));
                 }
                 *fin
             }
@@ -286,22 +289,16 @@ macro_rules! lets {
 #[macro_export]
 macro_rules! ite {
     ( if ( $pred:expr ) then { $true:expr } else { $false:expr } ) => {
-        if let Expr::EAnf((), a) = $pred {
-            Expr::EIte((), a, Box::new($true), Box::new($false), Box::new(b!()))
+        if let Expr::<Typed>::EAnf((), a) = $pred {
+            Expr::<Typed>::EIte(b!(), a, Box::new($true), Box::new($false))
         } else {
             panic!("passed in a non-anf expression as predicate!");
         }
     };
     ( ( $pred:expr ) ? ( $true:expr ) : ( $false:expr ) ) => {
-        Expr::EIte(
-            (),
-            Box::new($pred),
-            Box::new($true),
-            Box::new($false),
-            Box::new(b!()),
-        )
-        // if let Expr::EAnf(a) = $pred {
-        //     Expr::EIte($pred, Box::new($true), Box::new($false), Box::new(b!()))
+        Expr::<Typed>::EIte(b!(), Box::new($pred), Box::new($true), Box::new($false))
+        // if let Expr::<Typed>::EAnf(a) = $pred {
+        //     Expr::<Typed>::EIte($pred, Box::new($true), Box::new($false), Box::new(b!()))
         // } else {
         //     panic!("passed in a non-anf expression as predicate!");
         // }

@@ -113,28 +113,15 @@ where
 {
     EAnf(<EAnfExt as ξ<X>>::Ext, Box<ANF>),
 
-    EFst(<EFstExt as ξ<X>>::Ext, Box<ANF>, Box<Ty>),
-    ESnd(<ESndExt as ξ<X>>::Ext, Box<ANF>, Box<Ty>),
-    EPrj(<EPrjExt as ξ<X>>::Ext, usize, Box<ANF>, Box<Ty>),
-    EProd(<EProdExt as ξ<X>>::Ext, Vec<ANF>, Box<Ty>),
+    EFst(<EFstExt as ξ<X>>::Ext, Box<ANF>),
+    ESnd(<ESndExt as ξ<X>>::Ext, Box<ANF>),
+    EPrj(<EPrjExt as ξ<X>>::Ext, usize, Box<ANF>),
+    EProd(<EProdExt as ξ<X>>::Ext, Vec<ANF>),
 
     // TODO Ignore function calls for now
     // EApp(String, Box<ANF>),
-    ELetIn(
-        <ELetInExt as ξ<X>>::Ext,
-        String,
-        Box<Ty>,
-        Box<Expr<X>>,
-        Box<Expr<X>>,
-        Box<Ty>,
-    ),
-    EIte(
-        <EIteExt as ξ<X>>::Ext,
-        Box<ANF>,
-        Box<Expr<X>>,
-        Box<Expr<X>>,
-        Box<Ty>,
-    ),
+    ELetIn(<ELetInExt as ξ<X>>::Ext, String, Box<Expr<X>>, Box<Expr<X>>),
+    EIte(<EIteExt as ξ<X>>::Ext, Box<ANF>, Box<Expr<X>>, Box<Expr<X>>),
     EFlip(<EFlipExt as ξ<X>>::Ext, f64),
     EObserve(<EObserveExt as ξ<X>>::Ext, Box<ANF>),
     ESample(<ESampleExt as ξ<X>>::Ext, Box<Expr<X>>),
@@ -170,47 +157,40 @@ where
                 .field("ext", &ext)
                 .field("anf", a)
                 .finish(),
-            EFst(ext, a, t) => f
+            EFst(ext, a) => f
                 .debug_struct("Fst")
                 .field("ext", &ext)
                 .field("anf", a)
-                .field("type", t)
                 .finish(),
-            ESnd(ext, a, t) => f
+            ESnd(ext, a) => f
                 .debug_struct("Snd")
                 .field("ext", &ext)
                 .field("anf", a)
-                .field("type", t)
                 .finish(),
-            EPrj(ext, i, a, t) => f
+            EPrj(ext, i, a) => f
                 .debug_struct("Prj")
                 .field("ext", &ext)
                 .field("ix", i)
                 .field("anf", a)
-                .field("type", t)
                 .finish(),
-            EProd(ext, anfs, t) => f
+            EProd(ext, anfs) => f
                 .debug_struct("Prod")
                 .field("ext", &ext)
                 .field("prod", anfs)
-                .field("type", t)
                 .finish(),
-            ELetIn(ext, s, ty1, bindee, body, ty2) => f
+            ELetIn(ext, s, bindee, body) => f
                 .debug_struct("LetIn")
                 .field("ext", &ext)
                 .field("var", s)
-                .field("var-type", ty1)
                 .field("bindee", bindee)
                 .field("body", body)
-                .field("body-type", ty2)
                 .finish(),
-            EIte(ext, p, tru, fls, ty) => f
+            EIte(ext, p, tru, fls) => f
                 .debug_struct("Ite")
                 .field("ext", &ext)
                 .field("predicate", p)
                 .field("truthy", tru)
                 .field("falsey", fls)
-                .field("type", ty)
                 .finish(),
             EFlip(ext, p) => f
                 .debug_struct("Flip")
@@ -257,21 +237,14 @@ where
         use Expr::*;
         match self {
             EAnf(ext, a) => EAnf(ext.clone(), a.clone()),
-            EFst(ext, a, t) => EFst(ext.clone(), a.clone(), t.clone()),
-            ESnd(ext, a, t) => ESnd(ext.clone(), a.clone(), t.clone()),
-            EPrj(ext, i, a, t) => EPrj(ext.clone(), i.clone(), a.clone(), t.clone()),
-            EProd(ext, anfs, t) => EProd(ext.clone(), anfs.clone(), t.clone()),
-            ELetIn(ext, s, ty1, bindee, body, ty2) => ELetIn(
-                ext.clone(),
-                s.clone(),
-                ty1.clone(),
-                bindee.clone(),
-                body.clone(),
-                ty2.clone(),
-            ),
-            EIte(ext, p, tru, fls, ty) => {
-                EIte(ext.clone(), p.clone(), tru.clone(), fls.clone(), ty.clone())
+            EFst(ext, a) => EFst(ext.clone(), a.clone()),
+            ESnd(ext, a) => ESnd(ext.clone(), a.clone()),
+            EPrj(ext, i, a) => EPrj(ext.clone(), i.clone(), a.clone()),
+            EProd(ext, anfs) => EProd(ext.clone(), anfs.clone()),
+            ELetIn(ext, s, bindee, body) => {
+                ELetIn(ext.clone(), s.clone(), bindee.clone(), body.clone())
             }
+            EIte(ext, p, tru, fls) => EIte(ext.clone(), p.clone(), tru.clone(), fls.clone()),
             EFlip(ext, p) => EFlip(ext.clone(), p.clone()),
             EObserve(ext, a) => EObserve(ext.clone(), a.clone()),
             ESample(ext, e) => ESample(ext.clone(), e.clone()),
@@ -305,27 +278,15 @@ where
         use Expr::*;
         match (self, o) {
             (EAnf(ext0, a0), EAnf(ext1, a1)) => ext0 == ext1 && a0 == a1,
-            (EFst(ext0, a0, t0), EFst(ext1, a1, t1)) => ext0 == ext1 && a0 == a1 && t0 == t1,
-            (ESnd(ext0, a0, t0), ESnd(ext1, a1, t1)) => ext0 == ext1 && a0 == a1 && t0 == t1,
-            (EPrj(ext0, i0, a0, t0), EPrj(ext1, i1, a1, t1)) => {
-                ext0 == ext1 && i0 == i1 && a0 == a1 && t0 == t1
+            (EFst(ext0, a0), EFst(ext1, a1)) => ext0 == ext1 && a0 == a1,
+            (ESnd(ext0, a0), ESnd(ext1, a1)) => ext0 == ext1 && a0 == a1,
+            (EPrj(ext0, i0, a0), EPrj(ext1, i1, a1)) => ext0 == ext1 && i0 == i1 && a0 == a1,
+            (EProd(ext0, anfs0), EProd(ext1, anfs1)) => ext0 == ext1 && anfs0 == anfs1,
+            (ELetIn(ext0, s0, bindee0, body0), ELetIn(ext1, s1, bindee1, body1)) => {
+                ext0 == ext1 && s0 == s1 && bindee0 == bindee1 && body0 == body1
             }
-            (EProd(ext0, anfs0, t0), EProd(ext1, anfs1, t1)) => {
-                ext0 == ext1 && anfs0 == anfs1 && t0 == t1
-            }
-            (
-                ELetIn(ext0, s0, ty10, bindee0, body0, ty20),
-                ELetIn(ext1, s1, ty11, bindee1, body1, ty21),
-            ) => {
-                ext0 == ext1
-                    && s0 == s1
-                    && ty10 == ty11
-                    && bindee0 == bindee1
-                    && body0 == body1
-                    && ty20 == ty21
-            }
-            (EIte(ext0, p0, tru0, fls0, ty0), EIte(ext1, p1, tru1, fls1, ty1)) => {
-                ext0 == ext1 && p0 == p1 && tru0 == tru1 && fls0 == fls1 && ty0 == ty1
+            (EIte(ext0, p0, tru0, fls0), EIte(ext1, p1, tru1, fls1)) => {
+                ext0 == ext1 && p0 == p1 && tru0 == tru1 && fls0 == fls1
             }
             (EFlip(ext0, p0), EFlip(ext1, p1)) => ext0 == ext1 && p0 == p1,
             (EObserve(ext0, a0), EObserve(ext1, a1)) => ext0 == ext1 && a0 == a1,
@@ -402,39 +363,23 @@ where
         match x {
             None => panic!("impossible: choose vec has len > 0"),
             Some(0) => Expr::EAnf(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            Some(1) => Expr::EFst(
-                Arbitrary::arbitrary(g),
-                Arbitrary::arbitrary(g),
-                Box::new(Ty::Bool),
-            ),
-            Some(2) => Expr::ESnd(
-                Arbitrary::arbitrary(g),
-                Arbitrary::arbitrary(g),
-                Box::new(Ty::Bool),
-            ),
+            Some(1) => Expr::EFst(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
+            Some(2) => Expr::ESnd(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
             Some(3) => Expr::EProd(
                 Arbitrary::arbitrary(g),
                 (0..2).map(|_i| ANF::arbitrary(g)).collect_vec(),
-                Box::new(Ty::Bool),
             ),
             Some(4) => {
                 let var = String::arbitrary(g);
                 let bind = Arbitrary::arbitrary(g);
                 let body = Arbitrary::arbitrary(g);
-                Expr::ELetIn(
-                    Arbitrary::arbitrary(g),
-                    var,
-                    Box::new(Ty::Bool),
-                    bind,
-                    body,
-                    Box::new(Ty::Bool),
-                )
+                Expr::ELetIn(Arbitrary::arbitrary(g), var, bind, body)
             }
             Some(5) => {
                 let p = Arbitrary::arbitrary(g);
                 let t = Arbitrary::arbitrary(g);
                 let f = Arbitrary::arbitrary(g);
-                Expr::EIte(Arbitrary::arbitrary(g), p, t, f, Box::new(Ty::Bool))
+                Expr::EIte(Arbitrary::arbitrary(g), p, t, f)
             }
             Some(6) => {
                 let r = u8::arbitrary(g); // 256
@@ -538,43 +483,21 @@ where
             _ => false,
         }
     }
-    pub fn is_type(&self, ty: &Ty) -> bool {
-        self.as_type() == *ty
-    }
-    pub fn as_type(&self) -> Ty {
-        use Expr::*;
-        match self {
-            EAnf(_, anf) => anf.as_type(),
-            EFst(_, _, t) => *t.clone(),
-            ESnd(_, _, t) => *t.clone(),
-            EPrj(_, _, _, t) => *t.clone(),
-            EProd(_, _, t) => *t.clone(),
-            ELetIn(_, _, _, _, _, t) => *t.clone(),
-            EIte(_, _, _, _, t) => *t.clone(),
-            EFlip(_, _) => Ty::Bool,
-            EObserve(_, _) => Ty::Bool,
-            ESample(_, _) => Ty::Bool,
-        }
-    }
-
     pub fn strip_samples1(&self) -> Expr<X> {
         use Expr::*;
         match self {
             ESample(_, e) => e.strip_samples1(),
-            ELetIn(ex, s, tx, x, y, ty) => ELetIn(
+            ELetIn(ex, s, x, y) => ELetIn(
                 ex.clone(),
                 s.clone(),
-                tx.clone(),
                 Box::new(x.strip_samples1()),
                 Box::new(y.strip_samples1()),
-                ty.clone(),
             ),
-            EIte(ex, p, x, y, ty) => EIte(
+            EIte(ex, p, x, y) => EIte(
                 ex.clone(),
                 p.clone(),
                 Box::new(x.strip_samples1()),
                 Box::new(y.strip_samples1()),
-                ty.clone(),
             ),
             e => e.clone(),
         }
@@ -636,6 +559,7 @@ where
         use Program::*;
         match self {
             Body(e) => {
+                // FIXME: this shouldn't be neccesary and I think I already fixed the bug that causes this.
                 let mut cur = e.strip_samples1();
                 loop {
                     let nxt = cur.strip_samples1();
