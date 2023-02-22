@@ -1,5 +1,5 @@
+use crate::compile::semantics::UniqueId;
 use crate::grammar::*;
-use crate::semantics::UniqueId;
 use itertools::*;
 /// helper functions for rendering
 use rsdd::repr::bdd::*;

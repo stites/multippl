@@ -1,6 +1,7 @@
+use crate::compile::grammar::*;
+use crate::compile::semantics::*;
 use crate::grammar::*;
 use crate::render::*;
-use crate::semantics::*;
 use itertools::*;
 use rayon::iter::*;
 use rayon::prelude::*;

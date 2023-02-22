@@ -1,7 +1,9 @@
+use crate::compile::grammar::*;
+use crate::compile::semantics::*;
+use crate::grammar::*;
 use crate::grammar::*;
 use crate::inference::*;
 use crate::render::*;
-use crate::semantics::*;
 use crate::*;
 use itertools::*;
 use rsdd::sample::probability::*;
