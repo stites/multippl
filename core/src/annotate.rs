@@ -32,14 +32,14 @@ pub mod grammar {
     pub struct Variables {
         pub above: Vec<UniqueId>,
         pub below: Vec<UniqueId>,
-        pub id: Option<UniqueId>,
+        pub id: UniqueId,
     }
-    impl Default for Variables {
-        fn default() -> Self {
+    impl Variables {
+        pub fn new(id: UniqueId) -> Variables {
             Variables {
+                id,
                 above: Default::default(),
                 below: Default::default(),
-                id: Default::default(),
             }
         }
     }
@@ -76,8 +76,7 @@ pub mod grammar {
         type Ext = Variables;
     }
     impl ξ<Annotated> for EIteExt {
-        // branches are "sample-able"
-        type Ext = Variables;
+        type Ext = ();
     }
     impl ξ<Annotated> for EFlipExt {
         // vars up/down
@@ -98,12 +97,14 @@ pub mod grammar {
 pub struct SymEnv {
     pub names: HashMap<String, UniqueId>,
     pub gensym: u64,
+    read_only: bool,
 }
 impl Default for SymEnv {
     fn default() -> Self {
         Self {
             names: Default::default(),
             gensym: 0,
+            read_only: true,
         }
     }
 }
@@ -122,15 +123,30 @@ impl SymEnv {
     fn get_var(&self, var: String) -> Option<UniqueId> {
         self.names.get(&var).copied()
     }
-    fn get_or_create(&mut self, var: String) -> UniqueId {
+    fn get_or_create(&mut self, var: String) -> Result<UniqueId, CompileError> {
         let osym = self.get_var(var.clone());
-        osym.unwrap_or_else(|| self._fresh(Some(var)))
+        match osym {
+            None => {
+                if self.read_only {
+                    Err(CompileError::Generic(format!(
+                        "error: encountered unbound variable \"{}\"",
+                        var
+                    )))
+                } else {
+                    Ok(self._fresh(Some(var)))
+                }
+            }
+            Some(sym) => Ok(sym),
+        }
     }
     pub fn annotate_anf(&mut self, a: &AnfUD) -> Result<AnfAnn, CompileError> {
         use crate::grammar::ANF::*;
         match a {
-            AVar(_, s) => Ok(AVar(Default::default(), s.clone())),
-            AVal(_, v) => Ok(AVal((), v.clone())),
+            AVar(_, s) => {
+                let uid = self.get_or_create(s.to_string())?;
+                Ok(AVar(Variables::new(uid), s.to_string()))
+            }
+            AVal(_, b) => Ok(AVal((), b.clone())),
             And(bl, br) => Ok(And(
                 Box::new(self.annotate_anf(bl)?),
                 Box::new(self.annotate_anf(br)?),
@@ -154,27 +170,39 @@ impl SymEnv {
             EFst(_ty, a) => Ok(EFst((), Box::new(self.annotate_anf(a)?))),
             ESnd(_ty, a) => Ok(ESnd((), Box::new(self.annotate_anf(a)?))),
             EProd(_ty, anfs) => Ok(EProd((), self.annotate_anfs(anfs)?)),
-            ELetIn(_ty, s, ebound, ebody) => Ok(ELetIn(
-                Default::default(),
-                s.clone(),
-                Box::new(self.annotate_expr(ebound)?),
-                Box::new(self.annotate_expr(ebody)?),
-            )),
+            ELetIn(_ty, s, ebound, ebody) => {
+                // too lazy to do something smarter
+                self.read_only = false;
+                let v = self.get_or_create(s.to_string())?;
+                self.read_only = true;
+                Ok(ELetIn(
+                    Variables::new(v),
+                    s.clone(),
+                    Box::new(self.annotate_expr(ebound)?),
+                    Box::new(self.annotate_expr(ebody)?),
+                ))
+            }
             EIte(_ty, cond, t, f) => Ok(EIte(
-                Default::default(),
+                (),
                 Box::new(self.annotate_anf(cond)?),
                 Box::new(self.annotate_expr(t)?),
                 Box::new(self.annotate_expr(f)?),
             )),
-            EFlip(_, param) => Ok(EFlip(Default::default(), param.clone())),
-            EObserve(_, a) => Ok(EObserve((), Box::new(self.annotate_anf(a)?))),
+            EFlip(_, param) => Ok(EFlip(Variables::new(self.fresh()), param.clone())),
+            EObserve(_, a) => {
+                let anf = self.annotate_anf(a)?;
+                Ok(EObserve((), Box::new(anf)))
+            }
             ESample(_, e) => Ok(ESample((), Box::new(self.annotate_expr(e)?))),
         }
     }
 
     pub fn annotate(&mut self, p: &ProgramUD) -> Result<ProgramAnn, CompileError> {
         match p {
-            Program::Body(e) => Ok(Program::Body(self.annotate_expr(e)?)),
+            Program::Body(e) => {
+                let eann = self.annotate_expr(e)?;
+                Ok(Program::Body(eann))
+            }
         }
     }
 }
@@ -191,8 +219,9 @@ mod active_tests {
     use tracing_test::traced_test;
 
     #[test]
-    #[traced_test]
-    fn free_variables_ids() {
+    fn invalid_observe() {
+        let res = SymEnv::default().annotate(&typecheck(&program!(observe!(b!("x")))).unwrap());
+        assert!(res.is_err());
         let mk = |ret: ExprTyped| {
             Program::Body(lets![
                 "x" ; b!() ;= flip!(1/3);
@@ -206,12 +235,11 @@ mod active_tests {
                ...? ret ; b!()
             ])
         };
+        let res = SymEnv::default().annotate(&typecheck(&mk(b!("l"))).unwrap());
+        assert!(res.is_err());
         let mut senv = SymEnv::default();
-        let res = senv
-            .annotate(&typecheck(&mk(q!("x" x "l"))).unwrap())
-            .unwrap();
-        debug!("{:?}", res);
-
-        // check_invariant("free2/x,l ", None, None, &mk(q!("x" x "l")));
+        let res = senv.annotate(&typecheck(&mk(b!("x"))).unwrap());
+        assert!(res.is_ok());
+        assert!(senv.gensym == 6);
     }
 }
