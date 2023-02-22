@@ -40,7 +40,7 @@ pub fn get_vec<T: Copy>(v: Vec<T>, i: usize) -> Option<T> {
 pub fn get_or_else<T: Copy>(v: Vec<T>, i: usize, d: T) -> T {
     get_vec(v, i).unwrap_or_else(|| d)
 }
-pub fn exact_inf(env: &mut Env, p: &Program) -> Vec<f64> {
+pub fn exact_inf(env: &mut Env, p: &ProgramUD) -> Vec<f64> {
     match compile(env, p) {
         Ok(c) => {
             let azs = wmc_prob(env, &c);
@@ -121,7 +121,7 @@ fn debug_importance_weighting(
         debug!("");
     });
 }
-pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: &Program) -> Vec<f64> {
+pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: &ProgramUD) -> Vec<f64> {
     let mut e = Expectations::empty();
     let mut ws: Vec<f64> = vec![];
     let mut qss: Vec<Vec<f64>> = vec![];
@@ -181,7 +181,7 @@ pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: &Program) -> Vec
         .collect_vec()
 }
 
-fn conc_prelude(env: &mut Env, p: &Program) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
+fn conc_prelude(env: &mut Env, p: &ProgramUD) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
     match compile(env, p) {
         Ok(c) => {
             let azs = wmc_prob(env, &c);
@@ -274,7 +274,7 @@ impl Sum for Expectations {
     }
 }
 
-pub fn importance_weighting_inf_conc(_envargs: &EnvArgs, steps: usize, p: &Program) -> Vec<f64> {
+pub fn importance_weighting_inf_conc(_envargs: &EnvArgs, steps: usize, p: &ProgramUD) -> Vec<f64> {
     // let mut exp = vec![];
     // let mut expw = vec![];
     let fin: Expectations = (1..=steps)
@@ -338,7 +338,7 @@ pub fn importance_weighting_inf_conc(_envargs: &EnvArgs, steps: usize, p: &Progr
         .collect_vec()
 }
 
-pub fn importance_weighting_inf_seeded(seeds: Vec<u64>, steps: usize, p: &Program) -> Vec<f64> {
+pub fn importance_weighting_inf_seeded(seeds: Vec<u64>, steps: usize, p: &ProgramUD) -> Vec<f64> {
     let (mut exp, mut expw, mut expw2) = (vec![], vec![], vec![]);
     let mut ws: Vec<f64> = vec![];
     let mut qss: Vec<Vec<f64>> = vec![];

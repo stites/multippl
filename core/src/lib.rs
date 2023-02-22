@@ -436,7 +436,7 @@ pub mod semantics {
             }
         }
 
-        pub fn log_samples(&mut self, id: UniqueId, ebound: &Expr, bound: &Compiled) {
+        pub fn log_samples(&mut self, id: UniqueId, ebound: &ExprUD, bound: &Compiled) {
             if ebound.is_sample() {
                 let samples = bound
                     .dists
@@ -451,16 +451,16 @@ pub mod semantics {
             }
         }
 
-        pub fn eval_expr(&mut self, ctx: &Context, e: &Expr) -> Result<Compiled, CompileError> {
+        pub fn eval_expr(&mut self, ctx: &Context, e: &ExprUD) -> Result<Compiled, CompileError> {
             use Expr::*;
             match e {
-                EAnf(a) => {
+                EAnf(_, a) => {
                     debug!(">>>anf: {:?}", a);
                     let c = self.eval_anf(ctx, a)?;
                     debug_compiled("anf", ctx, &c);
                     Ok(c)
                 }
-                EPrj(i, a, ty) => {
+                EPrj(_, i, a, ty) => {
                     if i > &1 {
                         debug!(">>>prj@{}: {:?}", i, a);
                     }
@@ -475,19 +475,19 @@ pub mod semantics {
                     }
                     Ok(c)
                 }
-                EFst(a, ty) => {
+                EFst(_, a, ty) => {
                     debug!(">>>fst: {:?}", a);
-                    let c = self.eval_expr(ctx, &EPrj(0, a.clone(), ty.clone()))?;
+                    let c = self.eval_expr(ctx, &EPrj((), 0, a.clone(), ty.clone()))?;
                     debug_compiled("fst", ctx, &c);
                     Ok(c)
                 }
-                ESnd(a, ty) => {
+                ESnd(_, a, ty) => {
                     debug!(">>>snd: {:?}", a);
-                    let c = self.eval_expr(ctx, &EPrj(1, a.clone(), ty.clone()))?;
+                    let c = self.eval_expr(ctx, &EPrj((), 1, a.clone(), ty.clone()))?;
                     debug_compiled("snd", ctx, &c);
                     Ok(c)
                 }
-                EProd(anfs, ty) => {
+                EProd(_, anfs, ty) => {
                     debug!(">>>prod: {:?} {:?}", anfs, ty);
                     let dists = anfs.iter().fold(Ok(vec![]), |res, a| {
                         let fin = res?;
@@ -507,7 +507,7 @@ pub mod semantics {
                     debug_compiled("prod", ctx, &c);
                     Ok(c)
                 }
-                ELetIn(s, tbound, ebound, ebody, tbody) => {
+                ELetIn(_, s, tbound, ebound, ebody, tbody) => {
                     debug!(">>>let-in {}", s);
                     let (lbl, wm) =
                         self.get_or_create_varlabel(s.clone(), &ctx.weight_map, &ctx.substitutions);
@@ -553,7 +553,7 @@ pub mod semantics {
                     debug_compiled(&format!("let-in {}", s), ctx, &c);
                     Ok(c)
                 }
-                EIte(cond, t, f, ty) => {
+                EIte(_, cond, t, f, ty) => {
                     let pred = self.eval_anf(ctx, cond)?;
                     if !pred.dists.len() == 1 {
                         return Err(TypeError(format!(
@@ -606,7 +606,7 @@ pub mod semantics {
                     debug_compiled("ite", ctx, &c);
                     Ok(c)
                 }
-                EFlip(param) => {
+                EFlip(_, param) => {
                     debug!(">>>flip {param}");
                     let sym = self.fresh();
                     let mut weight_map = ctx.weight_map.clone();
@@ -624,7 +624,7 @@ pub mod semantics {
                     debug_compiled("flip {param}", ctx, &c);
                     Ok(c)
                 }
-                EObserve(a) => {
+                EObserve(_, a) => {
                     debug!(">>>observe");
                     let comp = self.eval_anf(ctx, a)?;
                     let accept = self
@@ -647,7 +647,7 @@ pub mod semantics {
                     debug_compiled("observe", ctx, &c);
                     Ok(c)
                 }
-                ESample(e) => {
+                ESample(_, e) => {
                     debug!(">>>sample");
                     let comp = self.eval_expr(ctx, e)?;
 
@@ -699,7 +699,7 @@ pub mod semantics {
             }
         }
     }
-    pub fn compile(env: &mut Env, p: &Program) -> Result<Compiled, CompileError> {
+    pub fn compile(env: &mut Env, p: &ProgramUD) -> Result<Compiled, CompileError> {
         match p {
             Program::Body(e) => {
                 debug!("========================================================");

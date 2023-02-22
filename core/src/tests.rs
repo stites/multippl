@@ -4,92 +4,12 @@ use crate::render::*;
 use crate::semantics::*;
 use crate::*;
 use itertools::*;
-use quickcheck::*;
 use rsdd::sample::probability::*;
 use std::any::{Any, TypeId};
 use std::ops::Range;
 use tracing_test::*;
 
-impl Arbitrary for Val {
-    fn arbitrary(g: &mut Gen) -> Self {
-        let x = g.choose(&[None, Some(true), Some(false), Some(true), Some(false)]);
-        match x {
-            None => panic!("impossible: choose vec has len > 0"),
-            Some(Some(b)) => Val::Bool(*b),
-            Some(None) => {
-                // let arb = u8::arbitrary(g);
-                // let len = (arb % 3) + 2; // only generate between 2-4 tuples
-                // Val::Prod((0..len).map(|_i| Self::arbitrary(g)).collect_vec())
-                // ...actually, just work with 2-tuples for now.
-                Val::Prod((0..2).map(|_i| Self::arbitrary(g)).collect_vec())
-            }
-        }
-    }
-}
-
-impl Arbitrary for ANF {
-    fn arbitrary(g: &mut Gen) -> Self {
-        let x = g.choose(&[0, 1, 2_u8]).copied();
-        match x {
-            None => panic!("impossible: choose vec has len > 0"),
-            Some(0) => ANF::AVar(String::arbitrary(g), Box::new(Ty::Bool)),
-            Some(1) => ANF::AVal(Val::arbitrary(g)),
-            Some(2) => {
-                let x = g.choose(&[0, 1, 2_u8]);
-                match x {
-                    None => panic!("impossible: choose vec has len > 0"),
-                    Some(0) => ANF::And(Box::<ANF>::arbitrary(g), Box::<ANF>::arbitrary(g)),
-                    Some(1) => ANF::Or(Box::<ANF>::arbitrary(g), Box::<ANF>::arbitrary(g)),
-                    Some(2) => ANF::Neg(Box::<ANF>::arbitrary(g)),
-                    _ => panic!("impossible"),
-                }
-            }
-            _ => panic!("impossible"),
-        }
-    }
-}
-
-impl Arbitrary for Expr {
-    fn arbitrary(g: &mut Gen) -> Self {
-        let x = g.choose(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).copied();
-        match x {
-            None => panic!("impossible: choose vec has len > 0"),
-            Some(0) => Expr::EAnf(Box::<ANF>::arbitrary(g)),
-            Some(1) => Expr::EFst(Box::<ANF>::arbitrary(g), Box::new(Ty::Bool)),
-            Some(2) => Expr::ESnd(Box::<ANF>::arbitrary(g), Box::new(Ty::Bool)),
-            Some(3) => Expr::EProd(
-                (0..2).map(|_i| ANF::arbitrary(g)).collect_vec(),
-                Box::new(Ty::Bool),
-            ),
-            Some(4) => {
-                let var = String::arbitrary(g);
-                let bind = Box::<Expr>::arbitrary(g);
-                let body = Box::<Expr>::arbitrary(g);
-                Expr::ELetIn(var, Box::new(Ty::Bool), bind, body, Box::new(Ty::Bool))
-            }
-            Some(5) => {
-                let p = Box::<ANF>::arbitrary(g);
-                let t = Box::<Expr>::arbitrary(g);
-                let f = Box::<Expr>::arbitrary(g);
-                Expr::EIte(p, t, f, Box::new(Ty::Bool))
-            }
-            Some(6) => {
-                let r = u8::arbitrary(g); // 256
-                Expr::EFlip(<u8 as Into<f64>>::into(r) / <u8 as Into<f64>>::into(u8::MAX))
-            }
-            Some(7) => Expr::EObserve(Box::<ANF>::arbitrary(g)),
-            Some(8) => Expr::ESample(Box::<Expr>::arbitrary(g)),
-            _ => panic!("impossible"),
-        }
-    }
-}
-impl Arbitrary for Program {
-    fn arbitrary(g: &mut Gen) -> Self {
-        Program::Body(Expr::arbitrary(g))
-    }
-}
-
-pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &Program) {
+pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &ProgramUD) {
     let precision = precision.unwrap_or_else(|| 0.01);
     let n = n.unwrap_or_else(|| 10000);
     let mut env_args = EnvArgs::default_args(None);
@@ -116,11 +36,11 @@ pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &Pr
 }
 pub fn check_inference(
     infname: &str,
-    inf: &dyn Fn(&mut Env, &Program) -> Vec<f64>,
+    inf: &dyn Fn(&mut Env, &ProgramUD) -> Vec<f64>,
     precision: f64,
     s: &str,
     fs: Vec<f64>,
-    p: &Program,
+    p: &ProgramUD,
 ) {
     let mut env_args = EnvArgs::default_args(None);
     let mut env = Env::from_args(&mut env_args);
@@ -141,13 +61,13 @@ pub fn check_inference(
         );
     });
 }
-pub fn check_exact(s: &str, f: Vec<f64>, p: &Program) {
+pub fn check_exact(s: &str, f: Vec<f64>, p: &ProgramUD) {
     check_inference("exact", &exact_inf, 0.000001, s, f, &p.strip_samples());
 }
-pub fn check_exact1(s: &str, f: f64, p: &Program) {
+pub fn check_exact1(s: &str, f: f64, p: &ProgramUD) {
     check_exact(s, vec![f], p)
 }
-pub fn check_approx(s: &str, f: Vec<f64>, p: &Program, n: usize) {
+pub fn check_approx(s: &str, f: Vec<f64>, p: &ProgramUD, n: usize) {
     check_inference(
         "approx",
         &|env, p| importance_weighting_inf(env, n, p),
@@ -157,10 +77,10 @@ pub fn check_approx(s: &str, f: Vec<f64>, p: &Program, n: usize) {
         p,
     );
 }
-pub fn check_approx1(s: &str, f: f64, p: &Program, n: usize) {
+pub fn check_approx1(s: &str, f: f64, p: &ProgramUD, n: usize) {
     check_approx(s, vec![f], p, n)
 }
-pub fn check_approx_conc(s: &str, f: Vec<f64>, p: &Program, n: usize) {
+pub fn check_approx_conc(s: &str, f: Vec<f64>, p: &ProgramUD, n: usize) {
     let env_args = EnvArgs::default_args(None);
     // let mut env = Env::from_args(&mut env_args);
     let precision = 0.01;
@@ -182,10 +102,10 @@ pub fn check_approx_conc(s: &str, f: Vec<f64>, p: &Program, n: usize) {
         );
     });
 }
-pub fn check_approx1_conc(s: &str, f: f64, p: &Program, n: usize) {
+pub fn check_approx1_conc(s: &str, f: f64, p: &ProgramUD, n: usize) {
     check_approx_conc(s, vec![f], p, n)
 }
-pub fn check_approx_seeded(s: &str, f: Vec<f64>, p: &Program, n: usize, seeds: &Vec<u64>) {
+pub fn check_approx_seeded(s: &str, f: Vec<f64>, p: &ProgramUD, n: usize, seeds: &Vec<u64>) {
     check_inference(
         "approx",
         &|env, p| importance_weighting_inf_seeded(seeds.clone(), n, p),
@@ -195,7 +115,7 @@ pub fn check_approx_seeded(s: &str, f: Vec<f64>, p: &Program, n: usize, seeds: &
         p,
     );
 }
-pub fn check_approx_seeded1(s: &str, f: f64, p: &Program, n: usize, seeds: &Vec<u64>) {
+pub fn check_approx_seeded1(s: &str, f: f64, p: &ProgramUD, n: usize, seeds: &Vec<u64>) {
     check_approx_seeded(s, vec![f], p, n, seeds)
 }
 
@@ -217,7 +137,7 @@ fn program01() {
 #[test]
 // #[traced_test]
 fn program02() {
-    let mk02 = |ret: Expr| {
+    let mk02 = |ret: ExprUD| {
         Program::Body(lets![
             "x" ; B!() ;= flip!(1.0/3.0);
             "y" ; B!() ;= flip!(1.0/4.0);
@@ -233,7 +153,7 @@ fn program02() {
 #[test]
 // #[traced_test]
 fn program03() {
-    let mk03 = |ret: Expr| {
+    let mk03 = |ret: ExprUD| {
         Program::Body(lets![
             "x" ; B!() ;= flip!(1.0/3.0);
             "y" ; B!() ;= flip!(1.0/4.0);
@@ -250,7 +170,7 @@ fn program03() {
 #[test]
 // #[traced_test]
 fn program04_seeded() {
-    let mk04 = |ret: Expr| {
+    let mk04 = |ret: ExprUD| {
         Program::Body(lets![
             "x" ; B!() ;= sample!(flip!(1/3));
             "y" ; B!() ;= flip!(1/4);
@@ -270,7 +190,7 @@ fn program04_seeded() {
 #[test]
 // #[traced_test]
 fn program04_approx() {
-    let mk04 = |ret: Expr| {
+    let mk04 = |ret: ExprUD| {
         Program::Body(lets![
             "x" ; B!() ;= sample!(flip!(1/3));
             "y" ; B!() ;= flip!(1/4);
@@ -311,7 +231,7 @@ fn tuple0() {
         ])
     };
     check_exact("tuples0/T,T", vec![1.0, 1.0], &p);
-    let mk = |ret: Expr| {
+    let mk = |ret: ExprUD| {
         Program::Body(lets![
             "y" ; b!(B)   ;= b!(true);
             "z" ; b!(B,B) ;= b!("y", true);
@@ -325,7 +245,7 @@ fn tuple0() {
 #[test]
 // #[traced_test]
 fn tuple1() {
-    let mk = |ret: Expr| {
+    let mk = |ret: ExprUD| {
         Program::Body(lets![
             "x" ; b!()     ;= flip!(1.0/3.0);
             "y" ; b!()     ;= flip!(1.0/4.0);
@@ -362,7 +282,7 @@ fn sample_tuple() {
 #[ignore = "this test will always break until we are doing data flow analysis"]
 #[traced_test]
 fn free_variables_0() {
-    let mk = |ret: Expr| {
+    let mk = |ret: ExprUD| {
         Program::Body(lets![
            "x" ; B!() ;= flip!(1/3);
            "y" ; B!() ;= sample!(var!("x"));
@@ -397,7 +317,7 @@ fn free_variables_1() {
 // #[traced_test]
 #[ignore = "punt till data flow analysis"]
 fn free_variables_2() {
-    let mk = |ret: Expr| {
+    let mk = |ret: ExprUD| {
         Program::Body(lets![
             "x" ; b!() ;= flip!(1/3);
             "l" ; b!() ;= sample!(
@@ -448,7 +368,7 @@ fn free_variables_shared_tuple() {
 #[test]
 // #[traced_test]
 fn ite_00() {
-    let mk = |p: Expr| {
+    let mk = |p: ExprUD| {
         Program::Body(ite!(
                     if ( p )
                     then { flip!(1/3) }
@@ -461,7 +381,7 @@ fn ite_00() {
 #[test]
 // #[traced_test]
 fn ite_0() {
-    let mk = |ret: Expr| {
+    let mk = |ret: ExprUD| {
         Program::Body(lets![
             "b" ; b!() ;= ite!(
                 if ( b!(true) )
@@ -477,7 +397,7 @@ fn ite_0() {
 // #[traced_test]
 // #[ignore]
 fn ite_1() {
-    let mk = |ret: Expr| {
+    let mk = |ret: ExprUD| {
         Program::Body(lets![
             "x" ; b!() ;= flip!(1/3);
             "y" ; b!() ;= ite!(
@@ -498,7 +418,7 @@ fn ite_1() {
 // #[traced_test]
 // #[ignore]
 fn ite_2() {
-    let mk = |ret: Expr| {
+    let mk = |ret: ExprUD| {
         Program::Body(lets![
             "x" ; b!() ;= flip!(1/3);
             "y" ; b!() ;= ite!(
@@ -517,7 +437,7 @@ fn ite_2() {
 
 #[test]
 fn ite_3_with_one_sample_easy() {
-    let mk = |ret: Expr| {
+    let mk = |ret: ExprUD| {
         Program::Body(lets![
             "x" ; b!() ;= flip!(1/3);
             "y" ; b!() ;= ite!(
@@ -538,7 +458,7 @@ fn ite_3_with_one_sample_easy() {
 #[ignore = "I'm confident that this is a data flow analysis problem (in that sample formulas need to be added to the accepting criteria)"]
 #[traced_test]
 fn ite_3_with_one_sample_hard1() {
-    let mk = |ret: Expr| {
+    let mk = |ret: ExprUD| {
         Program::Body(lets![
             "x" ; b!() ;= flip!(2/3);
             "y" ; b!() ;= ite!(
@@ -556,7 +476,7 @@ fn ite_3_with_one_sample_hard1() {
 #[test]
 #[ignore = "I'm confident that this is a data flow analysis problem (in that sample formulas need to be added to the accepting criteria)"]
 fn ite_3_with_one_sample_hard2() {
-    let mk = |ret: Expr| {
+    let mk = |ret: ExprUD| {
         Program::Body(lets![
             "x" ; b!() ;= flip!(1/3);
             "y" ; b!() ;= ite!(
@@ -575,7 +495,7 @@ fn ite_3_with_one_sample_hard2() {
 // ============================================================ //
 #[test]
 fn nested_1() {
-    let mk = |ret: Expr| {
+    let mk = |ret: ExprUD| {
         Program::Body(lets![
             "x" ; B!() ;= sample!(sample!(flip!(1/3)));
             "y" ; B!() ;= flip!(1/4);
@@ -592,7 +512,7 @@ fn nested_1() {
 
 #[test]
 fn nested_2() {
-    let mk = |ret: Expr| {
+    let mk = |ret: ExprUD| {
         Program::Body(lets![
             "x" ; B!() ;= flip!(2/5);
             "y" ; B!() ;= sample!(
@@ -630,7 +550,7 @@ fn nested_2() {
 #[test]
 // #[traced_test]
 fn grid2x2_warmup0() {
-    let mk = |ret: Expr| {
+    let mk = |ret: ExprUD| {
         Program::Body(lets![
             "00" ; B!() ;= flip!(1/2);
             "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -646,7 +566,7 @@ fn grid2x2_warmup0() {
 // #[traced_test]
 // #[ignore]
 fn grid2x2_warmup1() {
-    let mk = |ret: Expr| {
+    let mk = |ret: ExprUD| {
         Program::Body(lets![
             "01" ; B!() ;= flip!(1/3) ;
             "10" ; B!() ;= flip!(1/4) ;
@@ -668,7 +588,7 @@ fn grid2x2_warmup1() {
 // #[ignore]
 // #[traced_test]
 fn grid2x2() {
-    let mk = |ret: Expr| {
+    let mk = |ret: ExprUD| {
         Program::Body(lets![
             "00" ; B!() ;= flip!(1/2);
             "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -691,7 +611,7 @@ fn grid2x2() {
 // #[ignore]
 // #[traced_test]
 fn grid2x2_sampled() {
-    let mk = |ret: Expr| {
+    let mk = |ret: ExprUD| {
         Program::Body(lets![
             "00" ; B!() ;= flip!(1/2);
             "01_10" ; b!(B, B) ;= sample!(
@@ -726,7 +646,7 @@ fn grid2x2_sampled() {
 // #[ignore]
 // #[traced_test]
 fn grid3x3_sampled_diag() {
-    let mk = |ret: Expr| {
+    let mk = |ret: ExprUD| {
         Program::Body(lets![
             "00" ; B!() ;= flip!(1/2);
             "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -802,7 +722,7 @@ fn grid3x3_sampled_diag() {
 ///   (2,0) -> (2,1) -> (2,2)
 #[test]
 fn grid3x3() {
-    let mk = |ret: Expr| {
+    let mk = |ret: ExprUD| {
         Program::Body(lets![
             "00" ; B!() ;= flip!(1/2);
             "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
