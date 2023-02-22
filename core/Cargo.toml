@@ -3,6 +3,10 @@ name = "weight4me"
 version = "0.1.0"
 edition = "2021"
 
+[[bench]]
+name = "data_flow"
+harness = false
+
 [dependencies]
 rand = "0.8.5"
 nalgebra = "0.30.1"
@@ -19,3 +23,6 @@ rayon = "1.6.1"
 #[dev-dependencies]
 quickcheck = "1"
 quickcheck_macros = "1"
+
+[dev-dependencies]
+criterion = "0.4"
