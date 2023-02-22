@@ -28,26 +28,26 @@ pub mod grammar {
 
     #[derive(Debug, PartialEq, Clone)]
     pub struct Annotated;
-    #[derive(Debug, PartialEq, Clone)]
-    pub struct Variables {
-        pub above: Vec<UniqueId>,
-        pub below: Vec<UniqueId>,
-        pub id: UniqueId,
-    }
-    impl Variables {
-        pub fn new(id: UniqueId) -> Variables {
-            Variables {
-                id,
-                above: Default::default(),
-                below: Default::default(),
-            }
-        }
-    }
+    // #[derive(Debug, PartialEq, Clone)]
+    // pub struct Variables {
+    //     pub above: Vec<UniqueId>,
+    //     pub below: Vec<UniqueId>,
+    //     pub id: UniqueId,
+    // }
+    // impl Variables {
+    //     pub fn new(id: UniqueId) -> Variables {
+    //         Variables {
+    //             id,
+    //             above: Default::default(),
+    //             below: Default::default(),
+    //         }
+    //     }
+    // }
 
     impl ξ<Annotated> for AVarExt {
         // vars up/down
         // Vars are "sample-able"
-        type Ext = Variables;
+        type Ext = UniqueId;
     }
     impl ξ<Annotated> for AValExt {
         type Ext = ();
@@ -73,7 +73,7 @@ pub mod grammar {
     impl ξ<Annotated> for ELetInExt {
         // vars up/down
         // binders are "sample-able"
-        type Ext = Variables;
+        type Ext = UniqueId;
     }
     impl ξ<Annotated> for EIteExt {
         type Ext = ();
@@ -81,7 +81,7 @@ pub mod grammar {
     impl ξ<Annotated> for EFlipExt {
         // vars up/down
         // flip is sample-able
-        type Ext = Variables;
+        type Ext = UniqueId;
     }
     impl ξ<Annotated> for EObserveExt {
         type Ext = ();
@@ -144,7 +144,7 @@ impl SymEnv {
         match a {
             AVar(_, s) => {
                 let uid = self.get_or_create(s.to_string())?;
-                Ok(AVar(Variables::new(uid), s.to_string()))
+                Ok(AVar(uid, s.to_string()))
             }
             AVal(_, b) => Ok(AVal((), b.clone())),
             And(bl, br) => Ok(And(
@@ -176,7 +176,7 @@ impl SymEnv {
                 let v = self.get_or_create(s.to_string())?;
                 self.read_only = true;
                 Ok(ELetIn(
-                    Variables::new(v),
+                    v,
                     s.clone(),
                     Box::new(self.annotate_expr(ebound)?),
                     Box::new(self.annotate_expr(ebody)?),
@@ -188,7 +188,7 @@ impl SymEnv {
                 Box::new(self.annotate_expr(t)?),
                 Box::new(self.annotate_expr(f)?),
             )),
-            EFlip(_, param) => Ok(EFlip(Variables::new(self.fresh()), param.clone())),
+            EFlip(_, param) => Ok(EFlip(self.fresh(), param.clone())),
             EObserve(_, a) => {
                 let anf = self.annotate_anf(a)?;
                 Ok(EObserve((), Box::new(anf)))
@@ -208,7 +208,7 @@ impl SymEnv {
 }
 
 #[cfg(test)]
-mod active_tests {
+mod tests {
     use crate::compile::*;
     use crate::grammar::*;
     use crate::grammar_macros::*;

@@ -287,7 +287,7 @@ fn free_variables_0() {
            ...? ret ; B!()
         ])
     };
-    let n = 1000;
+    let n = 10000;
 
     check_approx1("free/x ", 1.0 / 3.0, &mk(var!("x")), n);
     check_approx1("free/y ", 1.0 / 3.0, &mk(var!("y")), n);

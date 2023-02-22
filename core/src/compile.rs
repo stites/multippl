@@ -308,14 +308,10 @@ impl<'a> Env<'a> {
     pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnn) -> Result<Compiled, CompileError> {
         use ANF::*;
         match a {
-            AVar(_, s) => {
+            AVar(vs, s) => {
                 let (lbl, wm) =
                     self.get_or_create_varlabel(s.to_string(), &ctx.weight_map, &ctx.substitutions);
-                // if !ctx.gamma.typechecks(s.clone(), ty) {
-                //     Err(TypeError(format!(
-                //         "Expected {s} : {ty:?}\nGot: {a:?}\n{ctx:?}",
-                //     )))
-                // } else {
+                assert_eq!(vs.0, lbl.value());
                 Ok(Compiled {
                     accept: ctx.accept.clone(),
                     substitutions: ctx.substitutions.clone(),
@@ -456,10 +452,11 @@ impl<'a> Env<'a> {
                 debug_compiled("prod", ctx, &c);
                 Ok(c)
             }
-            ELetIn(_, s, ebound, ebody) => {
+            ELetIn(vs, s, ebound, ebody) => {
                 debug!(">>>let-in {}", s);
                 let (lbl, wm) =
                     self.get_or_create_varlabel(s.clone(), &ctx.weight_map, &ctx.substitutions);
+                assert_eq!(vs.0, lbl.value());
                 let id = UniqueId(lbl.value());
 
                 let mut newctx = ctx.clone();
@@ -554,9 +551,10 @@ impl<'a> Env<'a> {
                 debug_compiled("ite", ctx, &c);
                 Ok(c)
             }
-            EFlip(_, param) => {
+            EFlip(vs, param) => {
                 debug!(">>>flip {param}");
                 let sym = self.fresh();
+                assert_eq!(*vs, sym);
                 let mut weight_map = ctx.weight_map.clone();
                 let lbl = VarLabel::new(sym.0);
                 weight_map.insert(sym, (1.0 - *param, *param));
