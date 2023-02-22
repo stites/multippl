@@ -34,33 +34,33 @@ macro_rules! P {
 #[macro_export]
 macro_rules! anf {
     ( $x:expr ) => {{
-        Expr::<Typed>::EAnf((), Box::new($x))
+        Expr::<crate::typecheck::grammar::Typed>::EAnf((), Box::new($x))
     }};
 }
 
 #[macro_export]
 macro_rules! val {
     ( $x:ident ) => {
-        anf!(ANF::<Typed>::AVal((), Val::Bool($x)))
+        anf!(ANF::<crate::typecheck::grammar::Typed>::AVal((), Val::Bool($x)))
     };
     ( $y:literal, $( $x:literal ),+ ) => {{
         let mut fin = Box::new(Val::Bool($y));
         $(
             fin = Box::new(ANF::Prod(fin, Box::new(Val::Bool($x))));
         )+
-        anf!(ANF::<Typed>::AVal((), *fin))
+        anf!(ANF::<crate::typecheck::grammar::Typed>::AVal((), *fin))
     }};
 }
 
 #[macro_export]
 macro_rules! var {
     ( $x:literal ) => {
-        anf!(ANF::<Typed>::AVar(B!(), $x.to_string()))
+        anf!(ANF::<crate::typecheck::grammar::Typed>::AVar(B!(), $x.to_string()))
     };
     ( $y:literal, $( $x:literal ),+ ) => {{
-        let mut fin = anf!(ANF::<Typed>::AVar(B!(), $y.to_string()));
+        let mut fin = anf!(ANF::<crate::typecheck::grammar::Typed>::AVar(B!(), $y.to_string()));
         $(
-            fin = Box::new(Expr::<Typed>::EProd((), fin, Box::new(anf!(ANF::<Typed>::AVar(B!(), $x.to_string())))));
+            fin = Box::new(Expr::<crate::typecheck::grammar::Typed>::EProd((), fin, Box::new(anf!(ANF::<crate::typecheck::grammar::Typed>::AVar(B!(), $x.to_string())))));
         )+
        *fin
     }};
@@ -76,9 +76,9 @@ macro_rules! b {
     };
     (@anf $x:literal ; $ty:expr) => {
         if $x.to_string() == "true" || $x.to_string() == "false" {
-            ANF::<Typed>::AVal((), Val::Bool($x.to_string() == "true"))
+            ANF::<crate::typecheck::grammar::Typed>::AVal((), Val::Bool($x.to_string() == "true"))
         } else {
-            ANF::<Typed>::AVar($ty, $x.to_string())
+            ANF::<crate::typecheck::grammar::Typed>::AVar($ty, $x.to_string())
         }
     };
     (@anf $x:literal) => {
@@ -105,11 +105,11 @@ macro_rules! b {
             prod.push(b!(@anf $xs));
             typ.push(b!());
         )+
-        Expr::<Typed>::EProd(Ty::Prod(typ), prod)
+        Expr::<crate::typecheck::grammar::Typed>::EProd(Ty::Prod(typ), prod)
     }};
     ( $x:expr, $y:expr ) => {{
         let ty = Ty::Prod(vec![b!(), b!()]);
-        Expr::<Typed>::EProd(vec![$x, $y], Box::new(ty))
+        Expr::<crate::typecheck::grammar::Typed>::EProd(vec![$x, $y], Box::new(ty))
     }};
     ( $y:literal && $( $x:literal )&&+ ) => {{
         let mut fin = Box::new(ANF::AVar(B!(), $y.to_string()));
@@ -126,23 +126,23 @@ macro_rules! b {
         *fin
     }};
     ( $y:literal || $( $x:literal )||+ ) => {{
-        let mut fin = Box::new(ANF::<Typed>::AVar(B!(), $y.to_string()));
+        let mut fin = Box::new(ANF::<crate::typecheck::grammar::Typed>::AVar(B!(), $y.to_string()));
         $(
-            fin = Box::new(ANF::Or(fin, Box::new(ANF::<Typed>::AVar(B!(), $x.to_string()))));
+            fin = Box::new(ANF::Or(fin, Box::new(ANF::<crate::typecheck::grammar::Typed>::AVar(B!(), $x.to_string()))));
         )+
         anf!(*fin)
     }};
     (@anf $y:literal && $( $x:literal )&&+ ) => {{
-        let mut fin = Box::new(ANF::<Typed>::AVar(B!(), $y.to_string()));
+        let mut fin = Box::new(ANF::<crate::typecheck::grammar::Typed>::AVar(B!(), $y.to_string()));
         $(
-            fin = Box::new(ANF::And(fin, Box::new(ANF::<Typed>::AVar(B!(), $x.to_string()))));
+            fin = Box::new(ANF::And(fin, Box::new(ANF::<crate::typecheck::grammar::Typed>::AVar(B!(), $x.to_string()))));
         )+
         *fin
     }};
     (@anf $y:literal || $( $x:literal )||+ ) => {{
-        let mut fin = Box::new(ANF::<Typed>::AVar(B!(), $y.to_string()));
+        let mut fin = Box::new(ANF::<crate::typecheck::grammar::Typed>::AVar(B!(), $y.to_string()));
         $(
-            fin = Box::new(ANF::Or(fin, Box::new(ANF::<Typed>::AVar(B!(), $x.to_string()))));
+            fin = Box::new(ANF::Or(fin, Box::new(ANF::<crate::typecheck::grammar::Typed>::AVar(B!(), $x.to_string()))));
         )+
         *fin
     }};
@@ -153,7 +153,7 @@ macro_rules! q {
     ( $x:literal x $y:literal ) => {{
         let typ = vec![b!(); 4];
         let prod = vec![b!(@anf $x), b!(@anf $y), b!(@anf $x || $y), b!(@anf $x && $y)];
-        Expr::<Typed>::EProd(Ty::Prod(typ), prod)
+        Expr::<crate::typecheck::grammar::Typed>::EProd(Ty::Prod(typ), prod)
     }};
 }
 
@@ -163,7 +163,7 @@ macro_rules! snd {
         snd!(b!(@anf $x))
     }};
     ( $x:expr ) => {{
-        Expr::<Typed>::ESnd(b!(), Box::new($x))
+        Expr::<crate::typecheck::grammar::Typed>::ESnd(b!(), Box::new($x))
     }};
 }
 
@@ -180,7 +180,7 @@ macro_rules! fst {
         fst!(b!(@anf $x))
     }};
     ( $x:expr ) => {{
-        Expr::<Typed>::EFst(b!(), Box::new($x))
+        Expr::<crate::typecheck::grammar::Typed>::EFst(b!(), Box::new($x))
     }};
 }
 #[macro_export]
@@ -189,20 +189,20 @@ macro_rules! thd {
         thd!(b!(@anf $x))
     }};
     ( $x:expr ) => {{
-        Expr::<Typed>::EPrj(b!(), 2, Box::new($x))
+        Expr::<crate::typecheck::grammar::Typed>::EPrj(b!(), 2, Box::new($x))
     }};
 }
 #[macro_export]
 macro_rules! sample {
     ( $x:expr ) => {{
-        Expr::<Typed>::ESample((), Box::new($x))
+        Expr::<crate::typecheck::grammar::Typed>::ESample((), Box::new($x))
     }};
 }
 #[macro_export]
 macro_rules! observe {
     ( $x:expr ) => {{
-        if let Expr::<Typed>::EAnf(_, a) = $x {
-            Expr::<Typed>::EObserve((), a)
+        if let Expr::<crate::typecheck::grammar::Typed>::EAnf(_, a) = $x {
+            Expr::<crate::typecheck::grammar::Typed>::EObserve((), a)
         } else {
             panic!("passed in a non-anf expression!");
         }
@@ -211,17 +211,17 @@ macro_rules! observe {
 #[macro_export]
 macro_rules! flip {
     ( $num:literal / $denom:literal) => {{
-        Expr::<Typed>::EFlip((), $num as f64 / $denom as f64)
+        Expr::<crate::typecheck::grammar::Typed>::EFlip((), $num as f64 / $denom as f64)
     }};
     ( $p:literal ) => {{
-        Expr::<Typed>::EFlip($p)
+        Expr::<crate::typecheck::grammar::Typed>::EFlip($p)
     }};
 }
 
 #[macro_export]
 macro_rules! lets {
     ( $var:literal : $vty:ty := $bound:expr ; in $body:expr ; $ty:ty ) => {{
-        Expr::<Typed>::ELetIn(crate::typecheck::grammar::LetInTypes {
+        Expr::<crate::typecheck::grammar::Typed>::ELetIn(crate::typecheck::grammar::LetInTypes {
             bindee: typ!(TypeId::of::<$vty>()),
             body: typ!(TypeId::of::<$vty>()),
         },
@@ -240,8 +240,8 @@ macro_rules! lets {
                 )+
                 tracing::debug!("...? {:?} ; {:?}", $body, TypeId::of::<$ty>());
                 for (v, tyid, e) in bindees.iter().rev() {
-                     let types = LetInTypes { bindee: typ!(tyid), body: typ!(tyid)};
-                    fin = Box::new(Expr::<Typed>::ELetIn(types, v.to_string(), Box::new(e.clone()), fin));
+                     let types = crate::typecheck::grammar::LetInTypes { bindee: typ!(tyid), body: typ!(tyid)};
+                    fin = Box::new(Expr::<crate::typecheck::grammar::Typed>::ELetIn(types, v.to_string(), Box::new(e.clone()), fin));
                 }
                 *fin
             }
@@ -260,7 +260,7 @@ macro_rules! lets {
     //             let mut fin = Box::new($body.clone());
 
     //             for (v, cotyid, e) in bindees.iter().rev() {
-    //                 fin = Box::new(Expr::<Typed>::ELetIn(v.to_string(), Box::new(typ!(tyid)), Box::new(e.clone()), fin, fintype.clone()));
+    //                 fin = Box::new(Expr::<crate::typecheck::grammar::Typed>::ELetIn(v.to_string(), Box::new(typ!(tyid)), Box::new(e.clone()), fin, fintype.clone()));
     //             }
     //             *fin
     //         }
@@ -278,8 +278,8 @@ macro_rules! lets {
                 let mut fin = Box::new($body.clone());
 
                 for (v, tyid, e) in bindees.iter().rev() {
-                     let types = LetInTypes { bindee: tyid.clone(), body: *fintype.clone()};
-                    fin = Box::new(Expr::<Typed>::ELetIn(types, v.to_string(), Box::new(e.clone()), fin));
+                     let types = crate::typecheck::grammar::LetInTypes { bindee: tyid.clone(), body: *fintype.clone()};
+                    fin = Box::new(Expr::<crate::typecheck::grammar::Typed>::ELetIn(types, v.to_string(), Box::new(e.clone()), fin));
                 }
                 *fin
             }
@@ -289,16 +289,27 @@ macro_rules! lets {
 #[macro_export]
 macro_rules! ite {
     ( if ( $pred:expr ) then { $true:expr } else { $false:expr } ) => {
-        if let Expr::<Typed>::EAnf((), a) = $pred {
-            Expr::<Typed>::EIte(b!(), a, Box::new($true), Box::new($false))
+        if let Expr::<crate::typecheck::grammar::Typed>::EAnf((), a) = $pred {
+            Expr::<crate::typecheck::grammar::Typed>::EIte(
+                b!(),
+                a,
+                Box::new($true),
+                Box::new($false),
+            )
         } else {
             panic!("passed in a non-anf expression as predicate!");
         }
     };
     ( ( $pred:expr ) ? ( $true:expr ) : ( $false:expr ) ) => {
-        Expr::<Typed>::EIte(b!(), Box::new($pred), Box::new($true), Box::new($false))
-        // if let Expr::<Typed>::EAnf(a) = $pred {
-        //     Expr::<Typed>::EIte($pred, Box::new($true), Box::new($false), Box::new(b!()))
+        Expr::<crate::typecheck::grammar::Typed>::EIte(
+            b!(),
+            Box::new($pred),
+            Box::new($true),
+            Box::new($false),
+        )
+
+        // if let Expr::<crate::typecheck::grammar::Typed>::EAnf(a) = $pred {
+        //     Expr::<crate::typecheck::grammar::Typed>::EIte($pred, Box::new($true), Box::new($false), Box::new(b!()))
         // } else {
         //     panic!("passed in a non-anf expression as predicate!");
         // }
