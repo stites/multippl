@@ -29,7 +29,6 @@
 mod grammar;
 mod grammar_macros;
 
-mod annotate;
 mod compile;
 mod inference;
 mod parser;
@@ -37,11 +36,12 @@ mod render;
 #[cfg(test)]
 mod tests;
 mod typecheck;
+mod uniquify;
 
-use crate::annotate::SymEnv;
 use crate::compile::{compile, CompileError, Compiled, Env};
 use crate::typecheck::grammar::{ExprTyped, ProgramTyped};
 use crate::typecheck::typecheck;
+use crate::uniquify::SymEnv;
 
 pub fn run(env: &mut Env, p: &ProgramTyped) -> Result<Compiled, CompileError> {
     let p = typecheck(p)?;
@@ -59,10 +59,11 @@ mod active_tests {
     use crate::grammar_macros::*;
     use inference::*;
     use tests::*;
+    use tracing::*;
     use tracing_test::traced_test;
     #[test]
     #[traced_test]
-    #[ignore = "punt till data flow analysis"]
+    // #[ignore = "punt till data flow analysis"]
     fn free_variables_2() {
         let mk = |ret: ExprTyped| {
             Program::Body(lets![
@@ -77,19 +78,27 @@ mod active_tests {
                ...? ret ; b!()
             ])
         };
-        let n = 1000;
-        check_exact(
-            "free2/x,l",
-            vec![0.714285714, 1.0, 1.0, 0.714285714],
-            &mk(q!("x" x "l")),
-        );
-        println!("===============================================================================");
-        check_approx(
-            "free2/x,l",
-            vec![0.714285714, 1.0, 1.0, 0.714285714],
-            &mk(q!("x" x "l")),
-            n,
-        );
+        let n = 10;
+        debug!("{:#?}", &mk(b!("x" || "y")));
+        check_exact1("free2/x|y", 1.0, &mk(b!("x" || "y")));
+        check_exact1("free2/x|y", 1.0, &mk(b!("x" || "y")));
+        check_exact1("free2/x|y", 1.0, &mk(b!("x" || "y")));
+        check_exact1("free2/x|y", 1.0, &mk(b!("x" || "y")));
+        check_exact1("free2/x|y", 1.0, &mk(b!("x" || "y")));
+        check_approx1("free2/x|y", 1.0, &mk(b!("x" || "y")), n);
+
+        // check_exact(
+        //     "free2/x*y",
+        //     vec![0.714285714, 1.0, 1.0, 0.714285714],
+        //     &mk(q!("x" x "y")),
+        // );
+        // println!("===============================================================================");
+        // check_approx(
+        //     "free2/x*y",
+        //     vec![0.714285714, 1.0, 1.0, 0.714285714],
+        //     &mk(q!("x" x "y")),
+        //     n,
+        // );
         // check_invariant("free2/x,l ", None, None, &mk(q!("x" x "l")));
     }
 

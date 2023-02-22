@@ -1,9 +1,9 @@
-use crate::annotate::grammar::*;
 use crate::compile::*;
 use crate::grammar::*;
 use crate::render::*;
 use crate::run;
 use crate::typecheck::grammar::ProgramTyped;
+use crate::uniquify::grammar::*;
 use itertools::*;
 use rayon::iter::*;
 use rayon::prelude::*;
@@ -18,10 +18,14 @@ use tracing::debug;
 pub fn _wmc_prob(env: &mut Env, m: &WeightMap, dist: BddPtr, accept: BddPtr) -> (f64, f64) {
     let (params, mx) = weight_map_to_params(m);
     let var_order = VarOrder::linear_order(mx as usize);
-    let a = env.mgr.and(dist, accept).wmc(&var_order, &params);
+    let num = env.mgr.and(dist, accept);
+    let a = num.wmc(&var_order, &params);
+
     let z = accept.wmc(&var_order, &params);
     debug!(dist = dist.print_bdd());
-    debug!(accept = dist.print_bdd());
+    debug!(num = num.print_bdd());
+    debug!(dnm_accept = dist.print_bdd());
+    debug!(a = a, z = z);
     (a, z)
 }
 pub fn wmc_prob(env: &mut Env, c: &Compiled) -> Vec<(f64, f64)> {
@@ -49,7 +53,7 @@ pub fn exact_inf(env: &mut Env, p: &ProgramTyped) -> Vec<f64> {
             let azs = wmc_prob(env, &c);
             azs.into_iter()
                 .map(|(a, z)| {
-                    debug!(a = a, z = z);
+                    //   debug!(a = a, z = z);
                     a / z
                 })
                 .collect_vec()

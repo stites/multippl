@@ -27,7 +27,7 @@ pub mod grammar {
     }
 
     #[derive(Debug, PartialEq, Clone)]
-    pub struct Annotated;
+    pub struct Uniquify;
     // #[derive(Debug, PartialEq, Clone)]
     // pub struct Variables {
     //     pub above: Vec<UniqueId>,
@@ -43,54 +43,54 @@ pub mod grammar {
     //         }
     //     }
     // }
-    impl ξ<Annotated> for AVarExt {
+    impl ξ<Uniquify> for AVarExt {
         // vars up/down
         // Vars are "sample-able"
         type Ext = UniqueId;
     }
-    impl ξ<Annotated> for AValExt {
+    impl ξ<Uniquify> for AValExt {
         type Ext = ();
     }
-    pub type AnfAnn = ANF<Annotated>;
+    pub type AnfUnq = ANF<Uniquify>;
 
-    impl ξ<Annotated> for EAnfExt {
+    impl ξ<Uniquify> for EAnfExt {
         type Ext = ();
     }
-    impl ξ<Annotated> for EFstExt {
+    impl ξ<Uniquify> for EFstExt {
         type Ext = ();
     }
-    impl ξ<Annotated> for ESndExt {
+    impl ξ<Uniquify> for ESndExt {
         type Ext = ();
     }
-    impl ξ<Annotated> for EPrjExt {
+    impl ξ<Uniquify> for EPrjExt {
         // sampleable
         type Ext = ();
     }
-    impl ξ<Annotated> for EProdExt {
+    impl ξ<Uniquify> for EProdExt {
         type Ext = ();
     }
-    impl ξ<Annotated> for ELetInExt {
+    impl ξ<Uniquify> for ELetInExt {
         // vars up/down
         // binders are "sample-able"
         type Ext = UniqueId;
     }
-    impl ξ<Annotated> for EIteExt {
+    impl ξ<Uniquify> for EIteExt {
         type Ext = ();
     }
-    impl ξ<Annotated> for EFlipExt {
+    impl ξ<Uniquify> for EFlipExt {
         // vars up/down
         // flip is sample-able
         type Ext = UniqueId;
     }
-    impl ξ<Annotated> for EObserveExt {
+    impl ξ<Uniquify> for EObserveExt {
         type Ext = ();
     }
-    impl ξ<Annotated> for ESampleExt {
+    impl ξ<Uniquify> for ESampleExt {
         type Ext = ();
     }
 
-    pub type ExprAnn = Expr<Annotated>;
-    pub type ProgramAnn = Program<Annotated>;
+    pub type ExprUnq = Expr<Uniquify>;
+    pub type ProgramUnq = Program<Uniquify>;
 }
 
 pub struct SymEnv {
@@ -138,7 +138,7 @@ impl SymEnv {
             Some(sym) => Ok(sym),
         }
     }
-    pub fn annotate_anf(&mut self, a: &AnfUD) -> Result<AnfAnn, CompileError> {
+    pub fn annotate_anf(&mut self, a: &AnfUD) -> Result<AnfUnq, CompileError> {
         use crate::grammar::ANF::*;
         match a {
             AVar(_, s) => {
@@ -157,11 +157,11 @@ impl SymEnv {
             Neg(bl) => Ok(Neg(Box::new(self.annotate_anf(bl)?))),
         }
     }
-    pub fn annotate_anfs(&mut self, anfs: &Vec<AnfUD>) -> Result<Vec<AnfAnn>, CompileError> {
+    pub fn annotate_anfs(&mut self, anfs: &Vec<AnfUD>) -> Result<Vec<AnfUnq>, CompileError> {
         anfs.iter().map(|a| self.annotate_anf(a)).collect()
     }
 
-    pub fn annotate_expr(&mut self, e: &ExprUD) -> Result<ExprAnn, CompileError> {
+    pub fn annotate_expr(&mut self, e: &ExprUD) -> Result<ExprUnq, CompileError> {
         use crate::grammar::Expr::*;
         match e {
             EAnf(_, a) => Ok(EAnf((), Box::new(self.annotate_anf(a)?))),
@@ -196,7 +196,7 @@ impl SymEnv {
         }
     }
 
-    pub fn annotate(&mut self, p: &ProgramUD) -> Result<ProgramAnn, CompileError> {
+    pub fn annotate(&mut self, p: &ProgramUD) -> Result<ProgramUnq, CompileError> {
         match p {
             Program::Body(e) => {
                 let eann = self.annotate_expr(e)?;

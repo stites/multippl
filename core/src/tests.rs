@@ -8,6 +8,7 @@ use itertools::*;
 use rsdd::sample::probability::*;
 use std::any::{Any, TypeId};
 use std::ops::Range;
+use tracing::*;
 use tracing_test::*;
 
 pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &ProgramTyped) {
@@ -53,6 +54,9 @@ pub fn check_inference(
         renderfloats(&prs, false),
         renderfloats(&fs, false),
     );
+    debug!("query: {:?}", p.query());
+    debug!("expecting: {}", renderfloats(&fs, false));
+    debug!("computed:  {}", renderfloats(&prs, false));
     izip!(prs, fs).enumerate().for_each(|(i, (pr, f))| {
         let ret = (f - pr).abs() < precision;
         let i = i + 1;
@@ -63,7 +67,9 @@ pub fn check_inference(
     });
 }
 pub fn check_exact(s: &str, f: Vec<f64>, p: &ProgramTyped) {
-    check_inference("exact", &exact_inf, 0.000001, s, f, &p.strip_samples());
+    let p = p.strip_samples();
+    debug!("program: {:#?}", &p);
+    check_inference("exact", &exact_inf, 0.000001, s, f, &p);
 }
 pub fn check_exact1(s: &str, f: f64, p: &ProgramTyped) {
     check_exact(s, vec![f], p)

@@ -4,6 +4,7 @@ use crate::grammar::*;
 pub mod grammar {
     use super::*;
 
+    #[derive(Debug, PartialEq, Clone)]
     pub struct Typed;
     #[derive(Debug, PartialEq, Clone)]
     pub struct LetInTypes {

@@ -1,6 +1,6 @@
-use crate::annotate::grammar::*;
 use crate::grammar::*;
 use crate::render::*;
+use crate::uniquify::grammar::*;
 use itertools::*;
 use rand::distributions::{Bernoulli, Distribution};
 use rand::rngs::StdRng;
@@ -240,8 +240,8 @@ impl<'a> Env<'a> {
     pub fn eval_anf_binop(
         &mut self,
         ctx: &Context,
-        bl: &AnfAnn,
-        br: &AnfAnn,
+        bl: &AnfUnq,
+        br: &AnfUnq,
         op: &dyn Fn(&mut Mgr, BddPtr, BddPtr) -> BddPtr,
     ) -> Result<Compiled, CompileError> {
         let l = self.eval_anf(ctx, bl)?;
@@ -269,7 +269,7 @@ impl<'a> Env<'a> {
         }
     }
 
-    pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnn) -> Result<Compiled, CompileError> {
+    pub fn eval_anf(&mut self, ctx: &Context, a: &AnfUnq) -> Result<Compiled, CompileError> {
         use ANF::*;
         match a {
             AVar(v, s) => {
@@ -346,7 +346,7 @@ impl<'a> Env<'a> {
         }
     }
 
-    pub fn log_samples(&mut self, id: UniqueId, ebound: &ExprAnn, bound: &Compiled) {
+    pub fn log_samples(&mut self, id: UniqueId, ebound: &ExprUnq, bound: &Compiled) {
         if ebound.is_sample() {
             let samples = bound
                 .dists
@@ -361,7 +361,7 @@ impl<'a> Env<'a> {
         }
     }
 
-    pub fn eval_expr(&mut self, ctx: &Context, e: &ExprAnn) -> Result<Compiled, CompileError> {
+    pub fn eval_expr(&mut self, ctx: &Context, e: &ExprUnq) -> Result<Compiled, CompileError> {
         use Expr::*;
         match e {
             EAnf(_, a) => {
@@ -612,7 +612,7 @@ impl<'a> Env<'a> {
         }
     }
 }
-pub fn compile(env: &mut Env, p: &ProgramAnn) -> Result<Compiled, CompileError> {
+pub fn compile(env: &mut Env, p: &ProgramUnq) -> Result<Compiled, CompileError> {
     match p {
         Program::Body(e) => {
             debug!("========================================================");

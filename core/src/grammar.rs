@@ -105,6 +105,7 @@ where
             AVal(ext, v) => f.write_fmt(format_args!("Val {:?}", v)),
             And(l, r) => f.write_fmt(format_args!("And({:?} && {:?})", l, r)),
             Or(l, r) => f.write_fmt(format_args!("Or({:?} || {:?})", l, r)),
+
             Neg(n) => f.write_fmt(format_args!("!({:?})", n)),
         }
     }

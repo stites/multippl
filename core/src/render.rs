@@ -1,5 +1,5 @@
-use crate::annotate::grammar::UniqueId;
 use crate::grammar::*;
+use crate::uniquify::grammar::UniqueId;
 use itertools::*;
 /// helper functions for rendering
 use rsdd::repr::bdd::*;
