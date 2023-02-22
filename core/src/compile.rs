@@ -599,11 +599,11 @@ impl<'a> Env<'a> {
                 debug!(">>>sample");
                 let comp = self.eval_expr(ctx, e)?;
 
-                if comp.accept != BddPtr::PtrTrue {
-                    return Err(SemanticsError(
-                        "impossible! Sample statement includes observe statement.".to_string(),
-                    ));
-                }
+                // if comp.accept != BddPtr::PtrTrue {
+                //     return Err(SemanticsError(
+                //         "impossible! Sample statement includes observe statement.".to_string(),
+                //     ));
+                // }
                 let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
                 let var_order = VarOrder::linear_order(max_var as usize);
                 let comp_dists = self.apply_substitutions(comp.dists, &ctx.substitutions);
@@ -624,13 +624,13 @@ impl<'a> Env<'a> {
                 // FIXME(#1): adding this breaks tuple support (unless we bring in data-flow analysis)
                 // but without it we cannot satisfy circumstances like `free_variables_0`
                 //
-                // debug!(dists = renderbdds(&dists));
-                // let accept = comp_dists.iter().fold(comp.accept.clone(), |global, dist| {
-                //     let dist_holds = self.mgr.iff(*dist, BddPtr::PtrTrue);
-                //     self.mgr.and(global, dist_holds)
-                // });
-                // let accept = self.mgr.and(accept, ctx.accept);
-                let accept = ctx.accept;
+                debug!(dists = renderbdds(&dists));
+                let accept =
+                    izip!(comp_dists, &dists).fold(comp.accept.clone(), |global, (dist, v)| {
+                        let dist_holds = self.mgr.iff(dist, *v);
+                        self.mgr.and(global, dist_holds)
+                    });
+                let accept = self.mgr.and(accept, ctx.accept);
                 debug!(accept = accept.print_bdd());
 
                 let c = Compiled {
