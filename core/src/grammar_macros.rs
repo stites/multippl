@@ -41,26 +41,26 @@ macro_rules! anf {
 #[macro_export]
 macro_rules! val {
     ( $x:ident ) => {
-        anf!(ANF::AVal(Val::Bool($x)))
+        anf!(ANF::<Typed>::AVal((), Val::Bool($x)))
     };
     ( $y:literal, $( $x:literal ),+ ) => {{
         let mut fin = Box::new(Val::Bool($y));
         $(
             fin = Box::new(ANF::Prod(fin, Box::new(Val::Bool($x))));
         )+
-        anf!(ANF::AVal(*fin))
+        anf!(ANF::<Typed>::AVal((), *fin))
     }};
 }
 
 #[macro_export]
 macro_rules! var {
     ( $x:literal ) => {
-        anf!(ANF::AVar($x.to_string(), Box::new(B!())))
+        anf!(ANF::<Typed>::AVar(B!(), $x.to_string()))
     };
     ( $y:literal, $( $x:literal ),+ ) => {{
-        let mut fin = anf!(ANF::AVar($y.to_string()));
+        let mut fin = anf!(ANF::<Typed>::AVar(B!(), $y.to_string()));
         $(
-            fin = Box::new(Expr::<Typed>::EProd((), fin, Box::new(anf!(ANF::AVar($x.to_string(), Box::new(B!()))))));
+            fin = Box::new(Expr::<Typed>::EProd((), fin, Box::new(anf!(ANF::<Typed>::AVar(B!(), $x.to_string())))));
         )+
        *fin
     }};
@@ -76,9 +76,9 @@ macro_rules! b {
     };
     (@anf $x:literal ; $ty:expr) => {
         if $x.to_string() == "true" || $x.to_string() == "false" {
-            ANF::AVal(Val::Bool($x.to_string() == "true"))
+            ANF::<Typed>::AVal((), Val::Bool($x.to_string() == "true"))
         } else {
-            ANF::AVar($x.to_string(), Box::new($ty))
+            ANF::<Typed>::AVar($ty, $x.to_string())
         }
     };
     (@anf $x:literal) => {
@@ -112,9 +112,9 @@ macro_rules! b {
         Expr::<Typed>::EProd(vec![$x, $y], Box::new(ty))
     }};
     ( $y:literal && $( $x:literal )&&+ ) => {{
-        let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(B!())));
+        let mut fin = Box::new(ANF::AVar(B!(), $y.to_string()));
         $(
-            fin = Box::new(ANF::And(fin, Box::new(ANF::AVar($x.to_string(), Box::new(B!())))));
+            fin = Box::new(ANF::And(fin, Box::new(ANF::AVar(B!(), $x.to_string()))));
         )+
         anf!(*fin)
     }};
@@ -126,23 +126,23 @@ macro_rules! b {
         *fin
     }};
     ( $y:literal || $( $x:literal )||+ ) => {{
-        let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(B!())));
+        let mut fin = Box::new(ANF::<Typed>::AVar(B!(), $y.to_string()));
         $(
-            fin = Box::new(ANF::Or(fin, Box::new(ANF::AVar($x.to_string(), Box::new(B!())))));
+            fin = Box::new(ANF::Or(fin, Box::new(ANF::<Typed>::AVar(B!(), $x.to_string()))));
         )+
         anf!(*fin)
     }};
     (@anf $y:literal && $( $x:literal )&&+ ) => {{
-        let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(B!())));
+        let mut fin = Box::new(ANF::<Typed>::AVar(B!(), $y.to_string()));
         $(
-            fin = Box::new(ANF::And(fin, Box::new(ANF::AVar($x.to_string(), Box::new(B!())))));
+            fin = Box::new(ANF::And(fin, Box::new(ANF::<Typed>::AVar(B!(), $x.to_string()))));
         )+
         *fin
     }};
     (@anf $y:literal || $( $x:literal )||+ ) => {{
-        let mut fin = Box::new(ANF::AVar($y.to_string(), Box::new(B!())));
+        let mut fin = Box::new(ANF::<Typed>::AVar(B!(), $y.to_string()));
         $(
-            fin = Box::new(ANF::Or(fin, Box::new(ANF::AVar($x.to_string(), Box::new(B!())))));
+            fin = Box::new(ANF::Or(fin, Box::new(ANF::<Typed>::AVar(B!(), $x.to_string()))));
         )+
         *fin
     }};

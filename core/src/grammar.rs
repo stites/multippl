@@ -36,6 +36,24 @@ impl Ty {
         }
     }
 }
+
+pub trait ξ<X> {
+    type Ext;
+}
+pub struct EAnfExt;
+pub struct EFstExt;
+pub struct ESndExt;
+pub struct EPrjExt;
+pub struct EProdExt;
+pub struct ELetInExt;
+pub struct EIteExt;
+pub struct EFlipExt;
+pub struct EObserveExt;
+pub struct ESampleExt;
+// fucking ridicuous
+pub struct AVarExt;
+pub struct AValExt;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Val {
     Bool(bool),
@@ -58,46 +76,93 @@ impl Val {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum ANF {
-    AVar(String, Box<Ty>), // FIXME
-    AVal(Val),
+pub enum ANF<X>
+where
+    AVarExt: ξ<X>,
+    AValExt: ξ<X>,
+{
+    AVar(<AVarExt as ξ<X>>::Ext, String),
+    AVal(<AValExt as ξ<X>>::Ext, Val),
 
     // TODO: not sure this is where I should add booleans, but it makes
     // the observe statements stay closer to the semantics: ~observe anf~
-    And(Box<ANF>, Box<ANF>),
-    Or(Box<ANF>, Box<ANF>),
-    Neg(Box<ANF>),
+    And(Box<ANF<X>>, Box<ANF<X>>),
+    Or(Box<ANF<X>>, Box<ANF<X>>),
+    Neg(Box<ANF<X>>),
 }
-impl ANF {
-    pub fn as_type(&self) -> Ty {
+
+impl<X> Debug for ANF<X>
+where
+    AVarExt: ξ<X>,
+    AValExt: ξ<X>,
+    <AVarExt as ξ<X>>::Ext: Debug,
+    <AValExt as ξ<X>>::Ext: Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use ANF::*;
         match self {
-            AVar(_, t) => *t.clone(),
-            AVal(v) => v.as_type(),
-            _ => Ty::Bool,
+            AVar(ext, s) => f
+                .debug_struct("Var")
+                .field("ext", &ext)
+                .field("name", s)
+                .finish(),
+            AVal(ext, v) => f
+                .debug_struct("Val")
+                .field("ext", &ext)
+                .field("value", v)
+                .finish(),
+            And(l, r) => f
+                .debug_struct("And")
+                .field("left", &l)
+                .field("right", &r)
+                .finish(),
+            Or(l, r) => f
+                .debug_struct("Or")
+                .field("left", &l)
+                .field("right", &r)
+                .finish(),
+            Neg(n) => f.debug_struct("Neg").field("pred", &n).finish(),
         }
     }
-    pub fn is_type(&self, ty: &Ty) -> bool {
-        self.as_type() == *ty
+}
+impl<X> Clone for ANF<X>
+where
+    AVarExt: ξ<X>,
+    AValExt: ξ<X>,
+    <AVarExt as ξ<X>>::Ext: Clone,
+    <AValExt as ξ<X>>::Ext: Clone,
+{
+    fn clone(&self) -> Self {
+        use ANF::*;
+        match self {
+            AVar(ext, x) => AVar(ext.clone(), x.clone()),
+            AVal(ext, x) => AVal(ext.clone(), x.clone()),
+            And(l, r) => And(l.clone(), r.clone()),
+            Or(l, r) => Or(l.clone(), r.clone()),
+            Neg(x) => Neg(x.clone()),
+        }
+    }
+}
+impl<X> PartialEq for ANF<X>
+where
+    AVarExt: ξ<X>,
+    AValExt: ξ<X>,
+    <AVarExt as ξ<X>>::Ext: PartialEq,
+    <AValExt as ξ<X>>::Ext: PartialEq,
+{
+    fn eq(&self, o: &Self) -> bool {
+        use ANF::*;
+        match (self, o) {
+            (AVar(ext0, a0), AVar(ext1, a1)) => ext0 == ext1 && a0 == a1,
+            (AVal(ext0, a0), AVal(ext1, a1)) => ext0 == ext1 && a0 == a1,
+            (And(ext0, a0), And(ext1, a1)) => ext0 == ext1 && a0 == a1,
+            (Or(ext0, a0), Or(ext1, a1)) => ext0 == ext1 && a0 == a1,
+            (Neg(a0), Neg(a1)) => a0 == a1,
+            (_, _) => false,
+        }
     }
 }
 
-pub trait ξ<X> {
-    type Ext;
-}
-pub struct EAnfExt;
-pub struct EFstExt;
-pub struct ESndExt;
-pub struct EPrjExt;
-pub struct EProdExt;
-pub struct ELetInExt;
-pub struct EIteExt;
-pub struct EFlipExt;
-pub struct EObserveExt;
-pub struct ESampleExt;
-
-// #[derive(Debug, Clone, PartialEq)]
 pub enum Expr<X>
 where
     EAnfExt: ξ<X>,
@@ -110,20 +175,27 @@ where
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
+    AVarExt: ξ<X>,
+    AValExt: ξ<X>,
 {
-    EAnf(<EAnfExt as ξ<X>>::Ext, Box<ANF>),
+    EAnf(<EAnfExt as ξ<X>>::Ext, Box<ANF<X>>),
 
-    EFst(<EFstExt as ξ<X>>::Ext, Box<ANF>),
-    ESnd(<ESndExt as ξ<X>>::Ext, Box<ANF>),
-    EPrj(<EPrjExt as ξ<X>>::Ext, usize, Box<ANF>),
-    EProd(<EProdExt as ξ<X>>::Ext, Vec<ANF>),
+    EFst(<EFstExt as ξ<X>>::Ext, Box<ANF<X>>),
+    ESnd(<ESndExt as ξ<X>>::Ext, Box<ANF<X>>),
+    EPrj(<EPrjExt as ξ<X>>::Ext, usize, Box<ANF<X>>),
+    EProd(<EProdExt as ξ<X>>::Ext, Vec<ANF<X>>),
 
     // TODO Ignore function calls for now
     // EApp(String, Box<ANF>),
     ELetIn(<ELetInExt as ξ<X>>::Ext, String, Box<Expr<X>>, Box<Expr<X>>),
-    EIte(<EIteExt as ξ<X>>::Ext, Box<ANF>, Box<Expr<X>>, Box<Expr<X>>),
+    EIte(
+        <EIteExt as ξ<X>>::Ext,
+        Box<ANF<X>>,
+        Box<Expr<X>>,
+        Box<Expr<X>>,
+    ),
     EFlip(<EFlipExt as ξ<X>>::Ext, f64),
-    EObserve(<EObserveExt as ξ<X>>::Ext, Box<ANF>),
+    EObserve(<EObserveExt as ξ<X>>::Ext, Box<ANF<X>>),
     ESample(<ESampleExt as ξ<X>>::Ext, Box<Expr<X>>),
 }
 impl<X> Debug for Expr<X>
@@ -138,6 +210,8 @@ where
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
+    AVarExt: ξ<X>,
+    AValExt: ξ<X>,
     <EAnfExt as ξ<X>>::Ext: Debug,
     <EFstExt as ξ<X>>::Ext: Debug,
     <ESndExt as ξ<X>>::Ext: Debug,
@@ -148,6 +222,8 @@ where
     <EFlipExt as ξ<X>>::Ext: Debug,
     <EObserveExt as ξ<X>>::Ext: Debug,
     <ESampleExt as ξ<X>>::Ext: Debug,
+    <AVarExt as ξ<X>>::Ext: Debug,
+    <AValExt as ξ<X>>::Ext: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Expr::*;
@@ -222,6 +298,9 @@ where
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
+    AVarExt: ξ<X>,
+    AValExt: ξ<X>,
+
     <EAnfExt as ξ<X>>::Ext: Clone,
     <EFstExt as ξ<X>>::Ext: Clone,
     <ESndExt as ξ<X>>::Ext: Clone,
@@ -232,6 +311,8 @@ where
     <EFlipExt as ξ<X>>::Ext: Clone,
     <EObserveExt as ξ<X>>::Ext: Clone,
     <ESampleExt as ξ<X>>::Ext: Clone,
+    <AVarExt as ξ<X>>::Ext: Clone,
+    <AValExt as ξ<X>>::Ext: Clone,
 {
     fn clone(&self) -> Self {
         use Expr::*;
@@ -263,6 +344,7 @@ where
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
+
     <EAnfExt as ξ<X>>::Ext: PartialEq,
     <EFstExt as ξ<X>>::Ext: PartialEq,
     <ESndExt as ξ<X>>::Ext: PartialEq,
@@ -273,6 +355,10 @@ where
     <EFlipExt as ξ<X>>::Ext: PartialEq,
     <EObserveExt as ξ<X>>::Ext: PartialEq,
     <ESampleExt as ξ<X>>::Ext: PartialEq,
+    AVarExt: ξ<X>,
+    AValExt: ξ<X>,
+    <AVarExt as ξ<X>>::Ext: PartialEq,
+    <AValExt as ξ<X>>::Ext: PartialEq,
 {
     fn eq(&self, o: &Self) -> bool {
         use Expr::*;
@@ -313,20 +399,26 @@ impl Arbitrary for Val {
     }
 }
 
-impl Arbitrary for ANF {
+impl<X: 'static> Arbitrary for ANF<X>
+where
+    AVarExt: ξ<X>,
+    AValExt: ξ<X>,
+    <AVarExt as ξ<X>>::Ext: Arbitrary,
+    <AValExt as ξ<X>>::Ext: Arbitrary,
+{
     fn arbitrary(g: &mut Gen) -> Self {
         let x = g.choose(&[0, 1, 2_u8]).copied();
         match x {
             None => panic!("impossible: choose vec has len > 0"),
-            Some(0) => ANF::AVar(String::arbitrary(g), Box::new(Ty::Bool)),
-            Some(1) => ANF::AVal(Val::arbitrary(g)),
+            Some(0) => ANF::<X>::AVar(Arbitrary::arbitrary(g), String::arbitrary(g)),
+            Some(1) => ANF::AVal(Arbitrary::arbitrary(g), Val::arbitrary(g)),
             Some(2) => {
                 let x = g.choose(&[0, 1, 2_u8]);
                 match x {
                     None => panic!("impossible: choose vec has len > 0"),
-                    Some(0) => ANF::And(Box::<ANF>::arbitrary(g), Box::<ANF>::arbitrary(g)),
-                    Some(1) => ANF::Or(Box::<ANF>::arbitrary(g), Box::<ANF>::arbitrary(g)),
-                    Some(2) => ANF::Neg(Box::<ANF>::arbitrary(g)),
+                    Some(0) => ANF::And(Box::<ANF<X>>::arbitrary(g), Box::<ANF<X>>::arbitrary(g)),
+                    Some(1) => ANF::Or(Box::<ANF<X>>::arbitrary(g), Box::<ANF<X>>::arbitrary(g)),
+                    Some(2) => ANF::Neg(Box::<ANF<X>>::arbitrary(g)),
                     _ => panic!("impossible"),
                 }
             }
@@ -357,6 +449,10 @@ where
     <EFlipExt as ξ<X>>::Ext: Arbitrary,
     <EObserveExt as ξ<X>>::Ext: Arbitrary,
     <ESampleExt as ξ<X>>::Ext: Arbitrary,
+    AVarExt: ξ<X>,
+    AValExt: ξ<X>,
+    <AVarExt as ξ<X>>::Ext: Arbitrary,
+    <AValExt as ξ<X>>::Ext: Arbitrary,
 {
     fn arbitrary(g: &mut Gen) -> Expr<X> {
         let x = g.choose(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).copied();
@@ -417,6 +513,10 @@ where
     <EFlipExt as ξ<X>>::Ext: Arbitrary + Debug + Clone,
     <EObserveExt as ξ<X>>::Ext: Arbitrary + Debug + Clone,
     <ESampleExt as ξ<X>>::Ext: Arbitrary + Debug + Clone,
+    AVarExt: ξ<X>,
+    AValExt: ξ<X>,
+    <AVarExt as ξ<X>>::Ext: Arbitrary + Debug + Clone,
+    <AValExt as ξ<X>>::Ext: Arbitrary + Debug + Clone,
 {
     fn arbitrary(g: &mut Gen) -> Program<X> {
         Program::Body(Expr::arbitrary(g))
@@ -475,6 +575,10 @@ where
     <EFlipExt as ξ<X>>::Ext: Debug + Clone,
     <EObserveExt as ξ<X>>::Ext: Debug + Clone,
     <ESampleExt as ξ<X>>::Ext: Debug + Clone,
+    AVarExt: ξ<X>,
+    AValExt: ξ<X>,
+    <AVarExt as ξ<X>>::Ext: Debug + Clone,
+    <AValExt as ξ<X>>::Ext: Debug + Clone,
 {
     pub fn is_sample(&self) -> bool {
         use Expr::*;
@@ -527,6 +631,10 @@ where
     <EFlipExt as ξ<X>>::Ext: Debug + Clone,
     <EObserveExt as ξ<X>>::Ext: Debug + Clone,
     <ESampleExt as ξ<X>>::Ext: Debug + Clone,
+    AVarExt: ξ<X>,
+    AValExt: ξ<X>,
+    <AVarExt as ξ<X>>::Ext: Debug + Clone,
+    <AValExt as ξ<X>>::Ext: Debug + Clone,
 {
     Body(Expr<X>),
     // TODO
@@ -554,6 +662,10 @@ where
     <EFlipExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <EObserveExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <ESampleExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    AVarExt: ξ<X>,
+    AValExt: ξ<X>,
+    <AVarExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <AValExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
 {
     pub fn strip_samples(&self) -> Program<X> {
         use Program::*;
@@ -574,3 +686,46 @@ where
         }
     }
 }
+
+// UD comprises of the default, undecorated grammar. Grammar.rs seems to be the best place for this.
+pub struct UD;
+impl ξ<UD> for AVarExt {
+    type Ext = ();
+}
+impl ξ<UD> for AValExt {
+    type Ext = ();
+}
+impl ξ<UD> for EAnfExt {
+    type Ext = ();
+}
+impl ξ<UD> for EFstExt {
+    type Ext = ();
+}
+impl ξ<UD> for ESndExt {
+    type Ext = ();
+}
+impl ξ<UD> for EPrjExt {
+    type Ext = ();
+}
+impl ξ<UD> for EProdExt {
+    type Ext = ();
+}
+impl ξ<UD> for ELetInExt {
+    type Ext = ();
+}
+impl ξ<UD> for EIteExt {
+    type Ext = ();
+}
+impl ξ<UD> for EFlipExt {
+    type Ext = ();
+}
+impl ξ<UD> for EObserveExt {
+    type Ext = ();
+}
+impl ξ<UD> for ESampleExt {
+    type Ext = ();
+}
+
+pub type AnfUD = ANF<UD>;
+pub type ExprUD = Expr<UD>;
+pub type ProgramUD = Program<UD>;

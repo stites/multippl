@@ -1,5 +1,5 @@
-use crate::compile::grammar::*;
-use crate::compile::semantics::*;
+use crate::annotate::grammar::*;
+use crate::compile::*;
 use crate::grammar::*;
 use crate::render::*;
 use crate::run;

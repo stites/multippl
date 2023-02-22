@@ -29,6 +29,7 @@
 mod grammar;
 mod grammar_macros;
 
+mod annotate;
 mod compile;
 mod inference;
 mod parser;
@@ -37,17 +38,18 @@ mod render;
 mod tests;
 mod typecheck;
 
-use crate::compile::semantics::{compile, CompileError, Compiled, Env};
+use crate::annotate::annotate;
+use crate::compile::{compile, CompileError, Compiled, Env};
 use crate::typecheck::{grammar::ProgramTyped, typecheck};
 
 pub fn run(env: &mut Env, p: &ProgramTyped) -> Result<Compiled, CompileError> {
-    compile(env, &typecheck(p)?)
+    compile(env, &annotate(&typecheck(p)?)?)
 }
 
 #[cfg(test)]
 mod active_tests {
     use super::*;
-    use crate::compile::semantics::*;
+    use crate::compile::*;
     use grammar::*;
     use inference::*;
     use tests::*;

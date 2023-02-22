@@ -1,7 +1,4 @@
-use crate::compile::{
-    grammar::{ExprUD, ProgramUD},
-    semantics::CompileError,
-};
+use crate::compile::CompileError;
 use crate::grammar::*;
 
 pub mod grammar {
@@ -12,6 +9,12 @@ pub mod grammar {
     pub struct LetInTypes {
         pub bindee: Ty,
         pub body: Ty,
+    }
+    impl ξ<Typed> for AVarExt {
+        type Ext = Ty;
+    }
+    impl ξ<Typed> for AValExt {
+        type Ext = ();
     }
     impl ξ<Typed> for EAnfExt {
         type Ext = ();
@@ -44,8 +47,22 @@ pub mod grammar {
         type Ext = ();
     }
 
+    pub type AnfTyped = ANF<Typed>;
     pub type ExprTyped = Expr<Typed>;
     pub type ProgramTyped = Program<Typed>;
+    impl AnfTyped {
+        pub fn as_type(&self) -> Ty {
+            use ANF::*;
+            match self {
+                AVar(t, _) => t.clone(),
+                AVal(_, v) => v.as_type(),
+                _ => Ty::Bool,
+            }
+        }
+        pub fn is_type(&self, ty: &Ty) -> bool {
+            self.as_type() == *ty
+        }
+    }
 }
 
 pub fn is_type(e: &grammar::ExprTyped, ty: &Ty) -> bool {
@@ -67,19 +84,46 @@ pub fn as_type(e: &grammar::ExprTyped) -> Ty {
     }
 }
 
+pub fn typecheck_anf(a: &grammar::AnfTyped) -> Result<AnfUD, CompileError> {
+    use crate::grammar::ANF::*;
+    match a {
+        AVar(ty, s) => {
+            // if !ctx.gamma.typechecks(s.clone(), ty) {
+            //     Err(TypeError(format!(
+            //         "Expected {s} : {ty:?}\nGot: {a:?}\n{ctx:?}",
+            //     )))
+            // } else {
+            Ok(AVar((), s.clone()))
+        }
+        AVal(_, v) => Ok(AVal((), v.clone())),
+        And(bl, br) => Ok(And(
+            Box::new(typecheck_anf(bl)?),
+            Box::new(typecheck_anf(br)?),
+        )),
+        Or(bl, br) => Ok(Or(
+            Box::new(typecheck_anf(bl)?),
+            Box::new(typecheck_anf(br)?),
+        )),
+        Neg(bl) => Ok(Neg(Box::new(typecheck_anf(bl)?))),
+    }
+}
+pub fn typecheck_anfs(anfs: &Vec<grammar::AnfTyped>) -> Result<Vec<AnfUD>, CompileError> {
+    anfs.iter().map(typecheck_anf).collect()
+}
+
 pub fn typecheck_expr(e: &grammar::ExprTyped) -> Result<ExprUD, CompileError> {
     use crate::grammar::Expr::*;
     match e {
-        EAnf(_, a) => Ok(EAnf((), a.clone())),
+        EAnf(_, a) => Ok(EAnf((), Box::new(typecheck_anf(a)?))),
         EPrj(_ty, i, a) => {
             // ignore types for now.
             // let aty = a.as_type();
             // assert!(aty.left() == Some(*ty.clone()), "actual {:?} != expected {:?}. type is: {:?}", aty.left(), Some(*ty.clone()), ty);
-            Ok(EPrj((), *i, a.clone()))
+            Ok(EPrj((), *i, Box::new(typecheck_anf(a)?)))
         }
-        EFst(_ty, a) => Ok(EFst((), a.clone())),
-        ESnd(_ty, a) => Ok(ESnd((), a.clone())),
-        EProd(_ty, anfs) => Ok(EProd((), anfs.clone())),
+        EFst(_ty, a) => Ok(EFst((), Box::new(typecheck_anf(a)?))),
+        ESnd(_ty, a) => Ok(ESnd((), Box::new(typecheck_anf(a)?))),
+        EProd(_ty, anfs) => Ok(EProd((), typecheck_anfs(anfs)?)),
         ELetIn(_ty, s, ebound, ebody) => Ok(ELetIn(
             (),
             s.clone(),
@@ -88,12 +132,12 @@ pub fn typecheck_expr(e: &grammar::ExprTyped) -> Result<ExprUD, CompileError> {
         )),
         EIte(_ty, cond, t, f) => Ok(EIte(
             (),
-            cond.clone(),
+            Box::new(typecheck_anf(cond)?),
             Box::new(typecheck_expr(t)?),
             Box::new(typecheck_expr(f)?),
         )),
         EFlip(_, param) => Ok(EFlip((), param.clone())),
-        EObserve(_, a) => Ok(EObserve((), a.clone())),
+        EObserve(_, a) => Ok(EObserve((), Box::new(typecheck_anf(a)?))),
         ESample(_, e) => Ok(ESample((), Box::new(typecheck_expr(e)?))),
     }
 }

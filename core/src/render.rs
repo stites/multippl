@@ -1,4 +1,4 @@
-use crate::compile::semantics::UniqueId;
+use crate::annotate::grammar::UniqueId;
 use crate::grammar::*;
 use itertools::*;
 /// helper functions for rendering

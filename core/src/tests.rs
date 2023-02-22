@@ -1,5 +1,4 @@
-use crate::compile::semantics::*;
-use crate::grammar::*;
+use crate::compile::*;
 use crate::grammar::*;
 use crate::inference::*;
 use crate::render::*;
