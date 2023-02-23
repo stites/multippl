@@ -18,11 +18,14 @@ pub fn renderbdds(fs: &Vec<BddPtr>) -> String {
     rendervec(&fs.iter().map(|b| b.print_bdd()).collect_vec())
 }
 
+pub fn rendervar(var: &Var) -> String {
+    format!("({}L{}C{})", var.id, var.label.value(), var.is_constant,)
+}
 pub fn rendersubs(fs: &HashMap<UniqueId, (Vec<BddPtr>, Var)>) -> String {
     format!(
         "[{}]",
         &fs.iter()
-            .map(|(k, (b, _))| format!("{:?}: {}", k, renderbdds(b)))
+            .map(|(k, (b, var))| format!("{:?}@{}: {}", k, rendervar(var), renderbdds(b)))
             .collect_vec()
             .join(" ,")
     )

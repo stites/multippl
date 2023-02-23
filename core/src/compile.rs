@@ -261,15 +261,17 @@ impl<'a> Env<'a> {
     pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnn) -> Result<Compiled, CompileError> {
         use ANF::*;
         match a {
-            AVar(var, s) => {
-                Ok(Compiled {
+            AVar(var, s) => match ctx.substitutions.get(&var.id) {
+                None => Err(Generic(
+                    "variable does not reference known substitution".to_string(),
+                )),
+                Some((subs, subvar)) => Ok(Compiled {
                     accept: ctx.accept.clone(),
                     substitutions: ctx.substitutions.clone(),
                     weight_map: ctx.weight_map.clone(),
-                    ..Compiled::default(self.mgr.var(var.label, true))
-                })
-                // }
-            }
+                    ..Compiled::default_vec(subs.to_vec())
+                }),
+            },
             AVal(_, Val::Bool(b)) => Ok(Compiled {
                 accept: ctx.accept.clone(),
                 substitutions: ctx.substitutions.clone(),
@@ -290,10 +292,21 @@ impl<'a> Env<'a> {
     }
 
     pub fn apply_substitutions1(&mut self, bdd: BddPtr, p: &SubstMap) -> Vec<BddPtr> {
+        println!("substitutions: {}", rendersubs(p));
         match leaf_variable(bdd) {
             Some(lbl) => match p.get(&UniqueId::from_lbl(lbl)) {
-                None => vec![bdd],
-                Some((subs, _)) => subs.clone(),
+                None => {
+                    debug!("isleaf, no substitution found for bdd: {}", bdd.print_bdd());
+                    vec![bdd]
+                }
+                Some((subs, _)) => {
+                    debug!(
+                        "isleaf, swapping {lbl:?}: {} -> {}",
+                        bdd.print_bdd(),
+                        renderbdds(subs)
+                    );
+                    subs.clone()
+                }
             },
             None => {
                 let mut cur = bdd.clone();
@@ -304,10 +317,36 @@ impl<'a> Env<'a> {
                         if sub.len() > 1 {
                             fin // subs are intended to be a product and should be replacing a variable.
                         } else {
-                            self.mgr.compose(fin, lbl.as_lbl(), sub[0])
+                            let x = fin.clone();
+                            let c = self.mgr.compose(fin, lbl.as_lbl(), sub[0]);
+                            if x != c {
+                                debug!(
+                                    "[substituting] notleaf: apply sub: {:?}@{}",
+                                    v.id,
+                                    sub[0].print_bdd(),
+                                );
+                                debug!(
+                                    "[substituting] notleaf: transform: {} => {}",
+                                    x.print_bdd(),
+                                    c.print_bdd()
+                                );
+                            }
+                            c
                         }
                     });
                     if cur == finl {
+                        if bdd.clone() == cur {
+                            debug!(
+                                "[substituting] no substitution found for {}",
+                                bdd.print_bdd()
+                            );
+                        } else {
+                            debug!(
+                                "[substituting] final: {} -> {}",
+                                bdd.print_bdd(),
+                                finl.print_bdd()
+                            );
+                        }
                         return vec![finl];
                     } else {
                         cur = finl.clone();
@@ -363,7 +402,8 @@ impl<'a> Env<'a> {
                 // let aty = a.as_type();
                 // assert!(aty.left() == Some(*ty.clone()), "actual {:?} != expected {:?}. type is: {:?}", aty.left(), Some(*ty.clone()), ty);
                 let mut c = self.eval_anf(ctx, a)?;
-                let dists = self.apply_substitutions(c.dists, &ctx.substitutions);
+                // let dists = self.apply_substitutions(c.dists, &ctx.substitutions);
+                let dists = c.dists;
                 c.dists = vec![dists[*i]];
                 if i > &1 {
                     debug_compiled(&format!("prj@{}", i).to_string(), ctx, &c);
@@ -425,7 +465,7 @@ impl<'a> Env<'a> {
 
                 let mut substitutions = body.substitutions.clone();
                 substitutions.extend(bound_substitutions); // FIXME: almost certainly redundant
-                let dists = self.apply_substitutions(body.dists, &substitutions);
+                let dists = body.dists; // .apply_substitutions(body.dists, &substitutions);
                 let accept = self.mgr.and(bound.accept, body.accept);
                 let accept = self.mgr.and(accept, ctx.accept);
 
@@ -523,8 +563,9 @@ impl<'a> Env<'a> {
                 let comp = self.eval_anf(ctx, a)?;
                 debug!("[observe] In. Accept {}", &ctx.accept.print_bdd());
                 debug!("[observe] Comp. dist {}", renderbdds(&comp.dists));
-                let accept = self
-                    .apply_substitutions(comp.dists, &ctx.substitutions)
+                let accept = // self
+                    // .apply_substitutions(comp.dists, &ctx.substitutions)
+                    comp.dists
                     .into_iter()
                     .fold(ctx.accept.clone(), |global, cur| self.mgr.and(global, cur));
 
@@ -563,7 +604,8 @@ impl<'a> Env<'a> {
                 // debug!("[sample] max_var    {}", max_var);
                 debug!("[sample] WMCParams  {:?}", wmc_params);
                 debug!("[sample] VarOrder   {:?}", var_order);
-                let comp_dists = self.apply_substitutions(comp.dists, &ctx.substitutions);
+                // let comp_dists = self.apply_substitutions(comp.dists, &ctx.substitutions);
+                let comp_dists = comp.dists;
 
                 let (qs, dists): (Vec<Probability>, Vec<BddPtr>) = comp_dists
                     .iter()
@@ -607,5 +649,248 @@ pub fn compile(env: &mut Env, p: &ProgramAnn) -> Result<Compiled, CompileError> 
             debug!("========================================================");
             env.eval_expr(&Default::default(), e)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tracing_test::*;
+
+    pub fn apply_substitutions1(mgr: &mut Mgr, bdd: BddPtr, p: &SubstMap) -> Vec<BddPtr> {
+        // println!("substitutions: {}", rendersubs(p));
+        match leaf_variable(bdd) {
+            Some(lbl) => match p.get(&UniqueId::from_lbl(lbl)) {
+                None => {
+                    debug!("isleaf, no substitution found for bdd: {}", bdd.print_bdd());
+                    vec![bdd]
+                }
+                Some((subs, _)) => {
+                    debug!(
+                        "isleaf, swapping {lbl:?}: {} -> {}",
+                        bdd.print_bdd(),
+                        renderbdds(subs)
+                    );
+                    subs.clone()
+                }
+            },
+            None => {
+                let mut cur = bdd.clone();
+                // doing this stupid looping to make sure substitutions are fully normalized.
+                // this is a problem, for instance, when you have ITE and observe statements interacting.
+                loop {
+                    let finl = p.iter().fold(cur, |fin, (lbl, (sub, v))| {
+                        if sub.len() > 1 {
+                            fin // subs are intended to be a product and should be replacing a variable.
+                        } else {
+                            let x = fin.clone();
+                            let c = mgr.compose(fin, lbl.as_lbl(), sub[0]);
+                            if x != c {
+                                debug!(
+                                    "[substituting] notleaf: apply sub: {:?}@{}",
+                                    v.id,
+                                    sub[0].print_bdd(),
+                                );
+                                debug!(
+                                    "[substituting] notleaf: transform: {} => {}",
+                                    x.print_bdd(),
+                                    c.print_bdd()
+                                );
+                            }
+                            c
+                        }
+                    });
+                    if cur == finl {
+                        if bdd.clone() == cur {
+                            debug!(
+                                "[substituting] no substitution found for {}",
+                                bdd.print_bdd()
+                            );
+                        } else {
+                            debug!(
+                                "[substituting] final: {} -> {}",
+                                bdd.print_bdd(),
+                                finl.print_bdd()
+                            );
+                        }
+                        return vec![finl];
+                    } else {
+                        cur = finl.clone();
+                    }
+                }
+            }
+        }
+    }
+
+    pub fn apply_substitutions(mgr: &mut Mgr, bdds: Vec<BddPtr>, p: &SubstMap) -> Vec<BddPtr> {
+        // punt on typed substitution, just assume a nice user
+        match bdds.first() {
+            None => vec![],
+            Some(hd) => {
+                let mut hds = apply_substitutions1(mgr, *hd, p);
+                let tl = &bdds[1..];
+                let tl = apply_substitutions(mgr, tl.to_vec(), p);
+                hds.extend(tl);
+                hds
+            }
+        }
+    }
+
+    #[test]
+    #[ignore]
+    #[traced_test]
+    fn test_bdd_manager() {
+        let mut mgr = BddManager::<AllTable<BddPtr>>::new_default_order(6);
+        let lxv = VarLabel::new(0);
+        let lxp = VarLabel::new(1);
+        let x_var = mgr.var(lxv, true);
+        let x_ptr = mgr.var(lxp, true);
+
+        let lyv = VarLabel::new(2);
+        let y_var = mgr.var(lyv, true);
+
+        let lx0v = VarLabel::new(3);
+        let lx0p = VarLabel::new(4);
+        let x0_var = mgr.var(lx0v, true);
+        let x0_ptr = mgr.var(lx0p, true);
+
+        let y_ptr = mgr.or(x0_var, x_var);
+
+        let y_expected = mgr.or(x0_ptr, x_ptr);
+
+        let mut substitutions: SubstMap = HashMap::new();
+        let mut add_sub = |lbl, ptr| {
+            substitutions.insert(
+                UniqueId::from_lbl(lbl),
+                (
+                    vec![ptr],
+                    Var::new(UniqueId::from_lbl(lbl), lbl, true, None),
+                ),
+            )
+        };
+        add_sub(lx0v, x0_ptr); // 3 -> 4
+        add_sub(lxv, x_ptr); // 0 -> 1
+        add_sub(lyv, y_expected); // 2 -> (1, (4, F, T), T) y_ptr
+
+        // first bug I am seeing: (0, (2, F, T), T) -> (4, F, T)
+        // return of x || y collapses to x0
+        //
+        // substitutions:
+        // - UniqueId(5)@(#5L5Ctrue): [T]
+        // - UniqueId(2)@(#2L2Ctrue): [(1, (4, F, T), T)]
+        // - UniqueId(3)@(#3L3Ctrue): [(4, F, T)]
+        // - UniqueId(0)@(#0L0Ctrue): [(1, F, T)]
+        //
+        // [substituting] notleaf: apply sub: UniqueId(2)@(1, (4, F, T), T)
+        // [substituting] notleaf: transform: (0, (2, F, T), T) => (1, (4, F, T), T)
+        // [substituting] notleaf: apply sub: UniqueId(2)@(1, (4, F, T), T)
+        // [substituting] notleaf: transform: (1, (4, F, T), T) => (4, F, T)
+        // [substituting] final: (0, (2, F, T), T) -> (4, F, T)
+        let observation = mgr.or(x_var, y_var);
+        let bug = apply_substitutions(&mut mgr, vec![observation], &substitutions);
+        assert_eq!(bug.len(), 1);
+        assert_eq!(
+            bug[0],
+            y_expected,
+            "{} != {}",
+            bug[0].print_bdd(),
+            y_expected.print_bdd()
+        );
+
+        let mut mgr = BddManager::<AllTable<BddPtr>>::new_default_order(6);
+        // x variable point to the x bdd ptr
+        let x_var = mgr.var(VarLabel::new(0), true); // (0, F, T)
+        let x_ptr = mgr.var(VarLabel::new(1), true); // (1, F, T)
+
+        // x0 variable point to the x0 bdd ptr
+        let x0_var = mgr.var(VarLabel::new(3), true); // (3, F, T)
+        let x0_ptr = mgr.var(VarLabel::new(4), true); // (4, F, T)
+
+        // y_ptr is a bdd pointer to a disjunction: y = x || x0
+        let y_ptr = mgr.or(x0_ptr, x_ptr); // (1, (4, F, T), T)
+
+        // .. and y is a variable pointing to this y_ptr BDD
+        let y_var = mgr.var(VarLabel::new(2), true); // (2, F, T)
+
+        // observe on the variables x and y: x || y
+        let observation = mgr.or(x_var, y_var); // (0, (2, F, T), T)
+
+        // now the goal is to substitute out x and y variables for their BDD pointers:
+        let x = mgr.compose(observation, VarLabel::new(2), y_ptr);
+        // should result in: (0, (2, F, T), T) -> (0, (1, (4, F, T), T), T)
+        // but it results in (1, (4, F, T), T)
+        println!("{}", x.print_bdd());
+        // composing again should be idempotent: there is no VarLabel(2) in the BDD:
+        let x = mgr.compose(observation, VarLabel::new(2), y_ptr);
+        // but it results in !(1, (4, F, T), T)
+        println!("{}", x.print_bdd());
+        // let printx = diagnostic_fold_dfs(
+        //     &y_ptr,
+        //     &mut |s: String, bdd| match bdd.node {
+        //         BddPtr::PtrTrue => format!("T"),
+        //         BddPtr::PtrFalse => format!("F"),
+
+        //         BddPtr::Compl(n) => format!("!{}", s),
+        //         BddPtr::Reg(n) => {
+        //             format!("{:?}", bdd.node.var())
+        //         }
+        //     },
+        //     "".to_string(),
+        //     &|out| match (out.node, out.lo_hi) {
+        //         (s, None) => s,
+        //         (s, Some((lo, hi))) => format!("({}, {}, {})", s, lo, hi),
+        //     },
+        // );
+        // println!("{}", printx);
+
+        // let vs = diagnostic_fold_dfs(
+        //     &y_ptr,
+        //     &mut |vs: Vec<Option<VarLabel>>, bdd| {
+        //         let mut vs = vs.clone();
+        //         vs.push(bdd.node.var_safe());
+        //         vs
+        //     },
+        //     vec![],
+        //     &|out| match (out.node, out.lo_hi) {
+        //         (s, None) => s,
+        //         (s, Some((lo, hi))) => {
+        //             let mut v = s.clone();
+        //             v.extend(lo);
+        //             v.extend(hi);
+        //             v
+        //         }
+        //     },
+        // );
+        // println!("{:?}", vs);
+        assert_eq!(
+            x,
+            y_expected,
+            "{} != {}",
+            x.print_bdd(),
+            y_expected.print_bdd()
+        );
+
+        // let x = mgr.compose(observation, VarLabel::new(2), y_ptr);
+        // let x = mgr.compose(observation, VarLabel::new(2), y_ptr);
+        // assert_eq!(
+        //     x,
+        //     y_expected,
+        //     "{} != {}",
+        //     x.print_bdd(),
+        //     y_expected.print_bdd()
+        // );
+
+        // observe bug 1: apply_substitutions becomes a negation
+        // Comp. dist [(0, (2, F, T), T)]
+        // substitutions:
+        // - UniqueId(2)@(#2L2Ctrue): [(1, (4, F, T), T)]
+        // - UniqueId(0)@(#0L0Ctrue): [(1, F, T)]
+        // - UniqueId(3)@(#3L3Ctrue): [(4, F, T)]
+        //
+        // [substituting] notleaf: apply sub: UniqueId(2)@(1, (4, F, T), T)
+        // [substituting] notleaf: transform: (0, (2, F, T), T) => (1, (4, F, T), T)
+        // [substituting] notleaf: apply sub: UniqueId(2)@(1, (4, F, T), T)
+        // [substituting] notleaf: transform: (1, (4, F, T), T) => !(1, T, (4, F, T))
+        // [substituting] final: (0, (2, F, T), T) -> !(1, T, (4, F, T))
     }
 }
