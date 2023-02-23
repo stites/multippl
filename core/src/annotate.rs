@@ -10,11 +10,29 @@ pub mod grammar {
     use std::fmt;
     use std::fmt::*;
 
-    #[derive(Clone, Eq, Hash, PartialEq, Debug)]
+    #[derive(Clone, PartialEq, Debug)]
+    pub struct Weight {
+        lo: f64,
+        hi: f64,
+    }
+    impl Weight {
+        pub fn as_tuple(&self) -> (f64, f64) {
+            (self.lo, self.hi)
+        }
+        pub fn from_high(hi: f64) -> Weight {
+            Weight { lo: 1.0 - hi, hi }
+        }
+        pub fn constant() -> Weight {
+            Self::from_high(0.5)
+        }
+    }
+
+    #[derive(Clone, PartialEq, Debug)]
     pub struct Var {
         pub id: UniqueId,
         pub label: VarLabel,
         pub is_constant: bool,
+        pub weight: Weight,
         pub provenance: Option<String>, // when None, this indicates that the variable is in the final formula
     }
     impl Var {
@@ -22,12 +40,14 @@ pub mod grammar {
             id: UniqueId,
             label: VarLabel,
             is_constant: bool,
+            weight: Weight,
             provenance: Option<String>,
         ) -> Var {
             Var {
                 id,
                 label,
                 is_constant,
+                weight,
                 provenance,
             }
         }
@@ -153,7 +173,7 @@ impl LabelEnv {
             EProd(_, anfs) => Ok(EProd((), self.annotate_anfs(anfs)?)),
             ELetIn(id, s, ebound, ebody) => {
                 let lbl = self.fresh();
-                let var = Var::new(*id, lbl, true, Some(s.to_string()));
+                let var = Var::new(*id, lbl, true, Weight::constant(), Some(s.to_string()));
                 self.substitutions.insert(*id, var.clone());
                 Ok(ELetIn(
                     var,
@@ -170,7 +190,7 @@ impl LabelEnv {
             )),
             EFlip(id, param) => {
                 let lbl = self.fresh();
-                let var = Var::new(*id, lbl, false, None);
+                let var = Var::new(*id, lbl, false, Weight::from_high(*param), None);
                 Ok(EFlip(var, param.clone()))
             }
             EObserve(_, a) => {
