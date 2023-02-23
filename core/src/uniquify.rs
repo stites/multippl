@@ -138,7 +138,7 @@ impl SymEnv {
             Some(sym) => Ok(sym),
         }
     }
-    pub fn annotate_anf(&mut self, a: &AnfUD) -> Result<AnfUnq, CompileError> {
+    pub fn uniquify_anf(&mut self, a: &AnfUD) -> Result<AnfUnq, CompileError> {
         use crate::grammar::ANF::*;
         match a {
             AVar(_, s) => {
@@ -147,28 +147,28 @@ impl SymEnv {
             }
             AVal(_, b) => Ok(AVal((), b.clone())),
             And(bl, br) => Ok(And(
-                Box::new(self.annotate_anf(bl)?),
-                Box::new(self.annotate_anf(br)?),
+                Box::new(self.uniquify_anf(bl)?),
+                Box::new(self.uniquify_anf(br)?),
             )),
             Or(bl, br) => Ok(Or(
-                Box::new(self.annotate_anf(bl)?),
-                Box::new(self.annotate_anf(br)?),
+                Box::new(self.uniquify_anf(bl)?),
+                Box::new(self.uniquify_anf(br)?),
             )),
-            Neg(bl) => Ok(Neg(Box::new(self.annotate_anf(bl)?))),
+            Neg(bl) => Ok(Neg(Box::new(self.uniquify_anf(bl)?))),
         }
     }
-    pub fn annotate_anfs(&mut self, anfs: &Vec<AnfUD>) -> Result<Vec<AnfUnq>, CompileError> {
-        anfs.iter().map(|a| self.annotate_anf(a)).collect()
+    pub fn uniquify_anfs(&mut self, anfs: &Vec<AnfUD>) -> Result<Vec<AnfUnq>, CompileError> {
+        anfs.iter().map(|a| self.uniquify_anf(a)).collect()
     }
 
-    pub fn annotate_expr(&mut self, e: &ExprUD) -> Result<ExprUnq, CompileError> {
+    pub fn uniquify_expr(&mut self, e: &ExprUD) -> Result<ExprUnq, CompileError> {
         use crate::grammar::Expr::*;
         match e {
-            EAnf(_, a) => Ok(EAnf((), Box::new(self.annotate_anf(a)?))),
-            EPrj(_ty, i, a) => Ok(EPrj((), *i, Box::new(self.annotate_anf(a)?))),
-            EFst(_ty, a) => Ok(EFst((), Box::new(self.annotate_anf(a)?))),
-            ESnd(_ty, a) => Ok(ESnd((), Box::new(self.annotate_anf(a)?))),
-            EProd(_ty, anfs) => Ok(EProd((), self.annotate_anfs(anfs)?)),
+            EAnf(_, a) => Ok(EAnf((), Box::new(self.uniquify_anf(a)?))),
+            EPrj(_ty, i, a) => Ok(EPrj((), *i, Box::new(self.uniquify_anf(a)?))),
+            EFst(_ty, a) => Ok(EFst((), Box::new(self.uniquify_anf(a)?))),
+            ESnd(_ty, a) => Ok(ESnd((), Box::new(self.uniquify_anf(a)?))),
+            EProd(_ty, anfs) => Ok(EProd((), self.uniquify_anfs(anfs)?)),
             ELetIn(_ty, s, ebound, ebody) => {
                 // too lazy to do something smarter
                 self.read_only = false;
@@ -177,29 +177,29 @@ impl SymEnv {
                 Ok(ELetIn(
                     v,
                     s.clone(),
-                    Box::new(self.annotate_expr(ebound)?),
-                    Box::new(self.annotate_expr(ebody)?),
+                    Box::new(self.uniquify_expr(ebound)?),
+                    Box::new(self.uniquify_expr(ebody)?),
                 ))
             }
             EIte(_ty, cond, t, f) => Ok(EIte(
                 (),
-                Box::new(self.annotate_anf(cond)?),
-                Box::new(self.annotate_expr(t)?),
-                Box::new(self.annotate_expr(f)?),
+                Box::new(self.uniquify_anf(cond)?),
+                Box::new(self.uniquify_expr(t)?),
+                Box::new(self.uniquify_expr(f)?),
             )),
             EFlip(_, param) => Ok(EFlip(self.fresh(), param.clone())),
             EObserve(_, a) => {
-                let anf = self.annotate_anf(a)?;
+                let anf = self.uniquify_anf(a)?;
                 Ok(EObserve((), Box::new(anf)))
             }
-            ESample(_, e) => Ok(ESample((), Box::new(self.annotate_expr(e)?))),
+            ESample(_, e) => Ok(ESample((), Box::new(self.uniquify_expr(e)?))),
         }
     }
 
-    pub fn annotate(&mut self, p: &ProgramUD) -> Result<ProgramUnq, CompileError> {
+    pub fn uniquify(&mut self, p: &ProgramUD) -> Result<ProgramUnq, CompileError> {
         match p {
             Program::Body(e) => {
-                let eann = self.annotate_expr(e)?;
+                let eann = self.uniquify_expr(e)?;
                 Ok(Program::Body(eann))
             }
         }
@@ -219,7 +219,7 @@ mod tests {
 
     #[test]
     fn invalid_observe() {
-        let res = SymEnv::default().annotate(&typecheck(&program!(observe!(b!("x")))).unwrap());
+        let res = SymEnv::default().uniquify(&typecheck(&program!(observe!(b!("x")))).unwrap());
         assert!(res.is_err());
         let mk = |ret: ExprTyped| {
             Program::Body(lets![
@@ -234,10 +234,10 @@ mod tests {
                ...? ret ; b!()
             ])
         };
-        let res = SymEnv::default().annotate(&typecheck(&mk(b!("l"))).unwrap());
+        let res = SymEnv::default().uniquify(&typecheck(&mk(b!("l"))).unwrap());
         assert!(res.is_err());
         let mut senv = SymEnv::default();
-        let res = senv.annotate(&typecheck(&mk(b!("x"))).unwrap());
+        let res = senv.uniquify(&typecheck(&mk(b!("x"))).unwrap());
         assert!(res.is_ok());
         assert!(senv.gensym == 6);
     }

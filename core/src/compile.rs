@@ -1,6 +1,7 @@
+use crate::annotate::grammar::*;
 use crate::grammar::*;
 use crate::render::*;
-use crate::uniquify::grammar::*;
+use crate::uniquify::grammar::UniqueId;
 use itertools::*;
 use rand::distributions::{Bernoulli, Distribution};
 use rand::rngs::StdRng;
@@ -240,8 +241,8 @@ impl<'a> Env<'a> {
     pub fn eval_anf_binop(
         &mut self,
         ctx: &Context,
-        bl: &AnfUnq,
-        br: &AnfUnq,
+        bl: &AnfAnn,
+        br: &AnfAnn,
         op: &dyn Fn(&mut Mgr, BddPtr, BddPtr) -> BddPtr,
     ) -> Result<Compiled, CompileError> {
         let l = self.eval_anf(ctx, bl)?;
@@ -269,11 +270,11 @@ impl<'a> Env<'a> {
         }
     }
 
-    pub fn eval_anf(&mut self, ctx: &Context, a: &AnfUnq) -> Result<Compiled, CompileError> {
+    pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnn) -> Result<Compiled, CompileError> {
         use ANF::*;
         match a {
-            AVar(v, s) => {
-                let lbl = v.as_lbl();
+            AVar(var, s) => {
+                let lbl = var.label;
                 // let (lbl, wm) =
                 //     self.get_or_create_varlabel(s.to_string(), &ctx.weight_map, &ctx.substitutions);
                 // assert_eq!(vs.0, lbl.value());
@@ -346,7 +347,7 @@ impl<'a> Env<'a> {
         }
     }
 
-    pub fn log_samples(&mut self, id: UniqueId, ebound: &ExprUnq, bound: &Compiled) {
+    pub fn log_samples(&mut self, id: UniqueId, ebound: &ExprAnn, bound: &Compiled) {
         if ebound.is_sample() {
             let samples = bound
                 .dists
@@ -361,7 +362,7 @@ impl<'a> Env<'a> {
         }
     }
 
-    pub fn eval_expr(&mut self, ctx: &Context, e: &ExprUnq) -> Result<Compiled, CompileError> {
+    pub fn eval_expr(&mut self, ctx: &Context, e: &ExprAnn) -> Result<Compiled, CompileError> {
         use Expr::*;
         match e {
             EAnf(_, a) => {
@@ -417,18 +418,18 @@ impl<'a> Env<'a> {
                 debug_compiled("prod", ctx, &c);
                 Ok(c)
             }
-            ELetIn(id, s, ebound, ebody) => {
+            ELetIn(var, s, ebound, ebody) => {
                 debug!(">>>let-in {}", s);
-                let lbl = id.as_lbl();
+                let lbl = var.label;
                 let mut wm = ctx.weight_map.clone();
-                wm.insert(*id, const_weight());
+                wm.insert(var.id, const_weight());
 
                 let mut newctx = ctx.clone();
                 newctx.weight_map = wm;
 
                 let bound = self.eval_expr(&newctx, ebound)?;
                 let mut bound_substitutions = bound.substitutions.clone();
-                bound_substitutions.insert(*id, bound.dists.clone());
+                bound_substitutions.insert(var.id, bound.dists.clone());
 
                 let mut newctx = newctx.clone();
                 newctx.weight_map = bound.weight_map.clone();
@@ -444,7 +445,7 @@ impl<'a> Env<'a> {
                 let accept = self.mgr.and(bound.accept, body.accept);
                 let accept = self.mgr.and(accept, ctx.accept);
 
-                self.log_samples(*id, ebound, &bound);
+                self.log_samples(var.id, ebound, &bound);
 
                 let probabilities = izip!(bound.probabilities, body.probabilities)
                     .map(|(p1, p2)| p1 * p2)
@@ -514,13 +515,13 @@ impl<'a> Env<'a> {
                 debug_compiled("ite", ctx, &c);
                 Ok(c)
             }
-            EFlip(sym, param) => {
+            EFlip(var, param) => {
                 debug!(">>>flip {}", param);
                 // let sym = self.fresh();
                 // assert_eq!(*vs, sym);
                 let mut weight_map = ctx.weight_map.clone();
-                let lbl = sym.as_lbl();
-                weight_map.insert(*sym, (1.0 - *param, *param));
+                let lbl = var.label;
+                weight_map.insert(var.id, (1.0 - *param, *param));
 
                 let c = Compiled {
                     dists: vec![self.mgr.var(lbl, true)],
@@ -612,7 +613,7 @@ impl<'a> Env<'a> {
         }
     }
 }
-pub fn compile(env: &mut Env, p: &ProgramUnq) -> Result<Compiled, CompileError> {
+pub fn compile(env: &mut Env, p: &ProgramAnn) -> Result<Compiled, CompileError> {
     match p {
         Program::Body(e) => {
             debug!("========================================================");

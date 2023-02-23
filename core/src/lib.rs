@@ -29,15 +29,18 @@
 mod grammar;
 mod grammar_macros;
 
+mod annotate;
 mod compile;
 mod inference;
 mod parser;
 mod render;
-#[cfg(test)]
-mod tests;
 mod typecheck;
 mod uniquify;
 
+#[cfg(test)]
+mod tests;
+
+use crate::annotate::LabelEnv;
 use crate::compile::{compile, CompileError, Compiled, Env};
 use crate::typecheck::grammar::{ExprTyped, ProgramTyped};
 use crate::typecheck::typecheck;
@@ -46,8 +49,10 @@ use crate::uniquify::SymEnv;
 pub fn run(env: &mut Env, p: &ProgramTyped) -> Result<Compiled, CompileError> {
     let p = typecheck(p)?;
     let mut senv = SymEnv::default();
-    let p = senv.annotate(&p)?;
-    env.names = senv.names; // just for debugging, really.
+    let p = senv.uniquify(&p)?;
+    let mut lenv = LabelEnv::new(senv.names.clone());
+    env.names = senv.names.clone(); // just for debugging, really.
+    let p = lenv.annotate(&p)?;
     compile(env, &p)
 }
 
