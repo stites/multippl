@@ -33,6 +33,30 @@ fn leaf_variable(bdd: BddPtr) -> Option<VarLabel> {
     }
 }
 
+fn variables(bdd: BddPtr, order: VarOrder) -> Vec<VarLabel> {
+    Fold::new(
+        &mut |vs: Vec<Option<VarLabel>>, bdd| {
+            let mut vs = vs.clone();
+            vs.push(bdd.node.var_safe());
+            vs
+        },
+        vec![],
+        &|ret, lo_hi| match lo_hi {
+            None => ret,
+            Some((lo, hi)) => {
+                let mut v = ret.clone();
+                v.extend(lo);
+                v.extend(hi);
+                v
+            }
+        },
+    )
+    .mut_fold(&bdd)
+    .into_iter()
+    .filter_map(|x| x)
+    .collect()
+}
+
 fn debug_compiled(s: &str, ctx: &Context, c: &Compiled) {
     let w = &ctx.weight_map;
     let p = &ctx.substitutions;
