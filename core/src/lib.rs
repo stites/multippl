@@ -51,12 +51,14 @@ pub fn run(env: &mut Env, p: &ProgramTyped) -> Result<Compiled, CompileError> {
     let mut senv = SymEnv::default();
     let p = senv.uniquify(&p)?;
     let mut lenv = LabelEnv::new();
-    let (p, wm, vo) = lenv.annotate(&p)?;
-
+    let (p, wm, vo, inv) = lenv.annotate(&p)?;
     env.names = senv.names; // just for debugging, really.
     env.weightmap = Some(wm);
     env.order = Some(vo);
-    compile(env, &p)
+    env.inv = Some(inv);
+    let c = compile(env, &p);
+    tracing::debug!("hurray!");
+    c
 }
 
 #[cfg(test)]
@@ -71,7 +73,7 @@ mod active_tests {
     use tracing_test::traced_test;
     #[test]
     #[traced_test]
-    // #[ignore = "punt till data flow analysis"]
+    #[ignore = "punt till data flow analysis"]
     fn free_variables_2() {
         let mk = |ret: ExprTyped| {
             Program::Body(lets![

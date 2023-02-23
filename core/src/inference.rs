@@ -16,8 +16,9 @@ use std::iter::Sum;
 use tracing::debug;
 
 pub fn _wmc_prob(env: &mut Env, m: &WeightMap, dist: BddPtr, accept: BddPtr) -> (f64, f64) {
-    let (params, mx) = weight_map_to_params(m);
-    let var_order = VarOrder::linear_order(mx as usize);
+    // let (params, mx) = weight_map_to_params(m);
+    let params = env.weightmap.clone().unwrap();
+    let var_order = env.order.clone().unwrap();
     let num = env.mgr.and(dist, accept);
     let a = num.wmc(&var_order, &params);
 

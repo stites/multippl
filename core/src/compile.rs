@@ -175,6 +175,7 @@ pub struct Env<'a> {
     pub names: HashMap<String, UniqueId>,
     pub order: Option<VarOrder>,
     pub weightmap: Option<WmcParams<f64>>,
+    pub inv: Option<HashMap<VarLabel, Var>>,
     pub mgr: &'a mut BddManager<AllTable<BddPtr>>,
     pub rng: &'a mut StdRng,
     pub samples: HashMap<UniqueId, Vec<bool>>,
@@ -185,6 +186,7 @@ impl<'a> Env<'a> {
             names: HashMap::new(),
             order: None,
             weightmap: None,
+            inv: None,
             mgr,
             rng,
             samples: HashMap::new(),
@@ -195,6 +197,7 @@ impl<'a> Env<'a> {
             names: x.names.clone(),
             order: None,
             weightmap: None,
+            inv: None,
             mgr: &mut x.mgr,
             rng: &mut x.rng,
             samples: HashMap::new(),
@@ -231,7 +234,6 @@ impl<'a> Env<'a> {
             })
         }
     }
-
     pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnn) -> Result<Compiled, CompileError> {
         use ANF::*;
         match a {
@@ -502,10 +504,12 @@ impl<'a> Env<'a> {
                     .into_iter()
                     .fold(ctx.accept.clone(), |global, cur| self.mgr.and(global, cur));
 
-                let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
-                let var_order = VarOrder::linear_order((max_var + 1) as usize);
+                // let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
+                // let var_order = VarOrder::linear_order((max_var + 1) as usize);
+                let wmc_params = self.weightmap.clone().unwrap();
+                let var_order = self.order.clone().unwrap();
                 debug!("[observe] weight_map {:?}", &comp.weight_map);
-                debug!("[observe] max_var    {}", max_var);
+                // debug!("[observe] max_var    {}", max_var);
                 debug!("[observe] WMCParams  {:?}", wmc_params);
                 debug!("[observe] VarOrder   {:?}", var_order);
                 debug!("[observe] Accept     {}", accept.print_bdd());
@@ -527,10 +531,12 @@ impl<'a> Env<'a> {
                 debug!(">>>sample");
                 let comp = self.eval_expr(ctx, e)?;
 
-                let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
-                let var_order = VarOrder::linear_order((max_var + 1) as usize);
+                // let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
+                // let var_order = VarOrder::linear_order((max_var + 1) as usize);
+                let wmc_params = self.weightmap.clone().unwrap();
+                let var_order = self.order.clone().unwrap();
                 debug!("[sample] weight_map {:?}", &comp.weight_map);
-                debug!("[sample] max_var    {}", max_var);
+                // debug!("[sample] max_var    {}", max_var);
                 debug!("[sample] WMCParams  {:?}", wmc_params);
                 debug!("[sample] VarOrder   {:?}", var_order);
                 let comp_dists = self.apply_substitutions(comp.dists, &ctx.substitutions);
