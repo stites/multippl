@@ -52,7 +52,7 @@ pub fn run(env: &mut Env, p: &ProgramTyped) -> Result<Compiled, CompileError> {
     let p = senv.uniquify(&p)?;
     let mut lenv = LabelEnv::new(senv.names.clone());
     env.names = senv.names.clone(); // just for debugging, really.
-    let p = lenv.annotate(&p)?;
+    let (p, wm, vo) = lenv.annotate(&p)?;
     compile(env, &p)
 }
 

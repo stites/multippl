@@ -3,8 +3,9 @@ use crate::grammar::*;
 use crate::uniquify::grammar::*;
 use grammar::*;
 use rsdd::repr::var_label::*;
+use rsdd::repr::var_order::VarOrder;
+use rsdd::repr::wmc::WmcParams;
 use std::collections::HashMap;
-
 pub mod grammar {
     use super::*;
     use std::fmt;
@@ -12,8 +13,8 @@ pub mod grammar {
 
     #[derive(Clone, PartialEq, Debug)]
     pub struct Weight {
-        lo: f64,
-        hi: f64,
+        pub lo: f64,
+        pub hi: f64,
     }
     impl Weight {
         pub fn as_tuple(&self) -> (f64, f64) {
@@ -128,9 +129,21 @@ impl LabelEnv {
             substitutions: HashMap::new(),
         }
     }
-    pub fn max_varlabel_val(&self) -> u64 {
-        self.lblsym - 1
+    pub fn max_varlabel_val(&self) -> usize {
+        (self.lblsym - 1) as usize
     }
+
+    pub fn linear_var_order(&self) -> rsdd::repr::var_order::VarOrder {
+        rsdd::repr::var_order::VarOrder::linear_order(self.max_varlabel_val())
+    }
+    pub fn weight_map(&self) -> rsdd::repr::wmc::WmcParams<f64> {
+        let mut wmc_params = rsdd::repr::wmc::WmcParams::new(0.0, 1.0);
+        for (_, var) in self.substitutions.iter() {
+            wmc_params.set_weight(var.label, var.weight.lo, var.weight.hi);
+        }
+        wmc_params
+    }
+
     fn fresh(&mut self) -> VarLabel {
         let sym = self.lblsym;
         self.lblsym += 1;
@@ -200,11 +213,16 @@ impl LabelEnv {
             ESample(_, e) => Ok(ESample((), Box::new(self.annotate_expr(e)?))),
         }
     }
-    pub fn annotate(&mut self, p: &ProgramUnq) -> Result<ProgramAnn, CompileError> {
+    pub fn annotate(
+        &mut self,
+        p: &ProgramUnq,
+    ) -> Result<(ProgramAnn, WmcParams<f64>, VarOrder), CompileError> {
         match p {
             Program::Body(e) => {
                 let eann = self.annotate_expr(e)?;
-                Ok(Program::Body(eann))
+                let weights = self.weight_map();
+                let order = self.linear_var_order();
+                Ok((Program::Body(eann), weights, order))
             }
         }
     }
