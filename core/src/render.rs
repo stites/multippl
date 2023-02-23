@@ -1,3 +1,4 @@
+use crate::annotate::grammar::Var;
 use crate::grammar::*;
 use crate::uniquify::grammar::UniqueId;
 use itertools::*;
@@ -17,11 +18,11 @@ pub fn renderbdds(fs: &Vec<BddPtr>) -> String {
     rendervec(&fs.iter().map(|b| b.print_bdd()).collect_vec())
 }
 
-pub fn rendersubs(fs: &HashMap<UniqueId, Vec<BddPtr>>) -> String {
+pub fn rendersubs(fs: &HashMap<UniqueId, (Vec<BddPtr>, Var)>) -> String {
     format!(
         "[{}]",
         &fs.iter()
-            .map(|(k, b)| format!("{:?}: {}", k, renderbdds(b)))
+            .map(|(k, (b, _))| format!("{:?}: {}", k, renderbdds(b)))
             .collect_vec()
             .join(" ,")
     )

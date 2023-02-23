@@ -50,9 +50,12 @@ pub fn run(env: &mut Env, p: &ProgramTyped) -> Result<Compiled, CompileError> {
     let p = typecheck(p)?;
     let mut senv = SymEnv::default();
     let p = senv.uniquify(&p)?;
-    let mut lenv = LabelEnv::new(senv.names.clone());
-    env.names = senv.names.clone(); // just for debugging, really.
+    let mut lenv = LabelEnv::new();
     let (p, wm, vo) = lenv.annotate(&p)?;
+
+    env.names = senv.names; // just for debugging, really.
+    env.weightmap = Some(wm);
+    env.order = Some(vo);
     compile(env, &p)
 }
 

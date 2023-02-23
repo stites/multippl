@@ -43,7 +43,7 @@ fn debug_compiled(s: &str, ctx: &Context, c: &Compiled) {
     };
     let renderp = |ps: &SubstMap| {
         ps.iter()
-            .map(|(k, v)| format!("{k}: {}", renderbdds(v)))
+            .map(|(k, (v, _))| format!("{k}: {}", renderbdds(v)))
             .join(", ")
     };
 
@@ -82,7 +82,7 @@ impl CompileError {
 use CompileError::*;
 
 pub type WeightMap = HashMap<UniqueId, (f64, f64)>;
-pub type SubstMap = HashMap<UniqueId, Vec<BddPtr>>;
+pub type SubstMap = HashMap<UniqueId, (Vec<BddPtr>, Var)>;
 
 fn const_weight() -> (f64, f64) {
     (0.5, 0.5)
@@ -173,6 +173,8 @@ impl EnvArgs {
 
 pub struct Env<'a> {
     pub names: HashMap<String, UniqueId>,
+    pub order: Option<VarOrder>,
+    pub weightmap: Option<WmcParams<f64>>,
     pub mgr: &'a mut BddManager<AllTable<BddPtr>>,
     pub rng: &'a mut StdRng,
     pub samples: HashMap<UniqueId, Vec<bool>>,
@@ -181,6 +183,8 @@ impl<'a> Env<'a> {
     pub fn new(mgr: &'a mut BddManager<AllTable<BddPtr>>, rng: &'a mut StdRng) -> Env<'a> {
         Env {
             names: HashMap::new(),
+            order: None,
+            weightmap: None,
             mgr,
             rng,
             samples: HashMap::new(),
@@ -189,53 +193,11 @@ impl<'a> Env<'a> {
     pub fn from_args(x: &'a mut EnvArgs) -> Env<'a> {
         Env {
             names: x.names.clone(),
+            order: None,
+            weightmap: None,
             mgr: &mut x.mgr,
             rng: &mut x.rng,
             samples: HashMap::new(),
-        }
-    }
-
-    /// a complicated mess
-    fn get_or_create_varlabel(
-        &mut self,
-        sym: UniqueId,
-        s: String,
-        m: &WeightMap,
-        p: &SubstMap,
-    ) -> (VarLabel, WeightMap) {
-        debug!(
-            s = s,
-            p = rendersubs(p),
-            names = format!("{:?}", self.names)
-        );
-        let mut nxt = p.get(&sym);
-        debug!(get_var = format!("{:?}", sym), nxt = nxt.map(renderbdds));
-        while nxt.is_some() {
-            match nxt.unwrap()[..] {
-                [n] => match leaf_variable(n) {
-                    None => break,
-                    Some(lbl) => nxt = p.get(&UniqueId(lbl.value())),
-                },
-                _ => break,
-            }
-        }
-        match nxt {
-            Some(vs) => match vs[..] {
-                [BddPtr::Reg(n)] => match leaf_variable(vs[0]) {
-                    None => (VarLabel::new(sym.0), m.clone()),
-                    Some(lbl) => (lbl, m.clone()),
-                },
-                _ => {
-                    let lbl = VarLabel::new(sym.0);
-                    debug!(path = 2, to = format!("{:?}", lbl));
-                    (lbl, m.clone())
-                }
-            },
-            _ => {
-                let lbl = VarLabel::new(sym.0);
-                debug!(path = 3, to = format!("{:?}", lbl));
-                (lbl, m.clone())
-            }
         }
     }
     pub fn eval_anf_binop(
@@ -274,15 +236,11 @@ impl<'a> Env<'a> {
         use ANF::*;
         match a {
             AVar(var, s) => {
-                let lbl = var.label;
-                // let (lbl, wm) =
-                //     self.get_or_create_varlabel(s.to_string(), &ctx.weight_map, &ctx.substitutions);
-                // assert_eq!(vs.0, lbl.value());
                 Ok(Compiled {
                     accept: ctx.accept.clone(),
                     substitutions: ctx.substitutions.clone(),
                     weight_map: ctx.weight_map.clone(),
-                    ..Compiled::default(self.mgr.var(lbl, true))
+                    ..Compiled::default(self.mgr.var(var.label, true))
                 })
                 // }
             }
@@ -309,14 +267,14 @@ impl<'a> Env<'a> {
         match leaf_variable(bdd) {
             Some(lbl) => match p.get(&UniqueId::from_lbl(lbl)) {
                 None => vec![bdd],
-                Some(subs) => subs.clone(),
+                Some((subs, _)) => subs.clone(),
             },
             None => {
                 let mut cur = bdd.clone();
                 // doing this stupid looping to make sure substitutions are fully normalized.
                 // this is a problem, for instance, when you have ITE and observe statements interacting.
                 loop {
-                    let finl = p.iter().fold(cur, |fin, (lbl, sub)| {
+                    let finl = p.iter().fold(cur, |fin, (lbl, (sub, v))| {
                         if sub.len() > 1 {
                             fin // subs are intended to be a product and should be replacing a variable.
                         } else {
@@ -429,7 +387,7 @@ impl<'a> Env<'a> {
 
                 let bound = self.eval_expr(&newctx, ebound)?;
                 let mut bound_substitutions = bound.substitutions.clone();
-                bound_substitutions.insert(var.id, bound.dists.clone());
+                bound_substitutions.insert(var.id, (bound.dists.clone(), var.clone()));
 
                 let mut newctx = newctx.clone();
                 newctx.weight_map = bound.weight_map.clone();

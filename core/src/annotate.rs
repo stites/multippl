@@ -123,7 +123,7 @@ pub struct LabelEnv {
 }
 
 impl LabelEnv {
-    pub fn new(names: HashMap<String, UniqueId>) -> Self {
+    pub fn new() -> Self {
         Self {
             lblsym: 0,
             substitutions: HashMap::new(),
