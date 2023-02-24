@@ -314,6 +314,58 @@ fn free_variables_1() {
     check_approx1("free/!!", 1.0 / 3.0, &problem, 10000);
 }
 
+macro_rules! free_variable_2_tests {
+    ($($name:ident: $value:expr,)*) => {
+    $(
+        #[test]
+        fn $name() {
+            let mk = |ret: ExprTyped| {
+                Program::Body(lets![
+                    "x" ; b!() ;= flip!(1/3);
+                    "y" ; b!() ;= sample!(
+                        lets![
+                            "x0" ; b!() ;= flip!(1/5);
+                            ...? b!("x0" || "x") ; b!()
+                        ]);
+                   "_" ; b!() ;= observe!(b!("x" || "y")); // is this a problem?
+                   ...? ret ; b!()
+                ])
+            };
+            ($value)(mk(q!("x" x "y")));
+        }
+    )*
+    }
+}
+
+free_variable_2_tests! {
+    free_variable_2_exact: (|p| check_exact("free_2/x*y", vec![0.714285714, 1.0, 1.0, 0.714285714], &p,)),
+    free_variable_2_approx: (|p| check_approx("free2/x*y", vec![0.714285714, 1.0, 1.0, 0.714285714], &p, 5000,)),
+    free_variable_2_inv: (|p| check_invariant("free2/x*l ", None, None, &p)),
+}
+
+#[test]
+fn free_variables_shared() {
+    let mk = |ret: ExprTyped| {
+        Program::Body(lets![
+           "x" ; b!() ;= flip!(1/3);
+           "l" ; b!() ;= sample!(var!("x"));
+           "r" ; b!() ;= sample!(var!("x"));
+           ...? ret ; b!()
+        ])
+    };
+    check_approx("shared ", vec![1.0 / 3.0; 4], &mk(q!("l" x "r")), 10000);
+}
+
+#[test]
+// #[traced_test]
+fn free_variables_shared_tuple() {
+    let p = Program::Body(lets![
+       "x" ; b!()     ;= flip!(1/3);
+       "z" ; b!(B, B) ;= sample!(b!("x", "x"));
+       ...? b!("z" ; b!(B, B)); b!(B, B)
+    ]);
+    check_approx("sharedtuple", vec![1.0 / 3.0, 1.0 / 3.0], &p, 10000);
+}
 // ===================================================================== //
 //                   START: deterministic if-then-else                   //
 // ===================================================================== //

@@ -402,40 +402,44 @@ impl<'a> Env<'a> {
             ESample(_, e) => {
                 debug!(">>>sample");
                 let comp = self.eval_expr(ctx, e)?;
-
                 let wmc_params = self.weightmap.clone().unwrap();
                 let var_order = self.order.clone().unwrap();
                 debug!("[sample] weight_map {:?}", &wmc_params);
                 debug!("[sample] WMCParams  {:?}", wmc_params);
                 debug!("[sample] VarOrder   {:?}", var_order);
 
-                let (qs, dists): (Vec<Probability>, Vec<BddPtr>) = comp
-                    .dists
-                    .iter()
-                    .map(|dist| {
-                        let sample_dist = self.mgr.and(comp.accept, *dist);
-                        let (a, z) = crate::inference::calculate_wmc_prob(
-                            self.mgr,
-                            &self.weightmap.clone().unwrap(),
-                            &self.order.clone().unwrap(),
-                            sample_dist,
-                            comp.accept,
-                        );
-                        let theta_q = a / z;
-                        let bern = Bernoulli::new(theta_q).unwrap();
-                        let sample = bern.sample(self.rng);
-                        let q = Probability::new(if sample { theta_q } else { 1.0 - theta_q });
-                        let dists = BddPtr::from_bool(sample);
-                        (q, dists)
-                    })
-                    .unzip();
+                let (accept, qs, dists): (BddPtr, Vec<Probability>, Vec<BddPtr>) =
+                    comp.dists.iter().fold(
+                        (comp.accept, vec![], vec![]),
+                        |(accept, mut qs, mut dists), dist| {
+                            let sample_dist = self.mgr.and(accept, *dist);
+                            let (a, z) = crate::inference::calculate_wmc_prob(
+                                self.mgr,
+                                &wmc_params,
+                                &var_order,
+                                sample_dist,
+                                accept,
+                            );
+                            let theta_q = a / z;
+                            let bern = Bernoulli::new(theta_q).unwrap();
+                            let sample = bern.sample(self.rng);
+                            qs.push(Probability::new(if sample {
+                                theta_q
+                            } else {
+                                1.0 - theta_q
+                            }));
+                            let sampled_value = BddPtr::from_bool(sample);
+                            dists.push(sampled_value);
 
+                            // sample in sequence. A smarter sample would compile
+                            // all samples of a multi-rooted BDD, but I need to futz
+                            // with rsdd's fold
+                            let dist_holds = self.mgr.iff(*dist, sampled_value);
+                            let new_accept = self.mgr.and(accept, dist_holds);
+                            (accept, qs, dists)
+                        },
+                    );
                 debug!(dists = renderbdds(&dists));
-                let accept =
-                    izip!(comp.dists, &dists).fold(comp.accept.clone(), |global, (dist, v)| {
-                        let dist_holds = self.mgr.iff(dist, *v);
-                        self.mgr.and(global, dist_holds)
-                    });
                 debug!(accept = accept.print_bdd());
 
                 let c = Compiled {

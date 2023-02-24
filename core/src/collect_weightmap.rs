@@ -69,7 +69,7 @@ impl WeightEnv {
     pub fn collect_over_program(&mut self, p: &ProgramAnn) -> Result<WmcParams<f64>, CompileError> {
         match p {
             Program::Body(e) => {
-                self.collect_over_expr(e);
+                let _ = self.collect_over_expr(e)?;
                 let weights = self.weightmap();
                 Ok(weights)
             }
