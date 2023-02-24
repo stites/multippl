@@ -81,19 +81,6 @@ impl Compiled {
             (selfp.as_f64() * self.importance_weight + op.as_f64() * o.importance_weight) / 2.0
         })
     }
-    fn default(dist: BddPtr) -> Compiled {
-        Compiled::default_vec(vec![dist])
-    }
-    fn default_vec(dists: Vec<BddPtr>) -> Compiled {
-        let probabilities = vec![Probability::new(1.0); dists.len()];
-        Compiled {
-            dists,
-            probabilities,
-            accept: BddPtr::PtrTrue,
-            substitutions: HashMap::new(),
-            importance_weight: 1.0,
-        }
-    }
 }
 
 pub struct EnvArgs {
@@ -172,10 +159,13 @@ impl<'a> Env<'a> {
             let dists = izip!(l.dists, r.dists)
                 .map(|(l, r)| op(self.mgr, l, r))
                 .collect_vec();
+            let dists_len = dists.len();
             Ok(Compiled {
+                dists,
                 accept: ctx.accept.clone(),
                 substitutions: ctx.substitutions.clone(),
-                ..Compiled::default_vec(dists)
+                probabilities: vec![Probability::new(1.0); dists_len],
+                importance_weight: 1.0,
             })
         }
     }
@@ -188,15 +178,19 @@ impl<'a> Env<'a> {
                     s
                 ))),
                 Some((subs, subvar)) => Ok(Compiled {
+                    dists: subs.to_vec(),
                     accept: ctx.accept.clone(),
                     substitutions: ctx.substitutions.clone(),
-                    ..Compiled::default_vec(subs.to_vec())
+                    probabilities: vec![Probability::new(1.0); subs.len()],
+                    importance_weight: 1.0,
                 }),
             },
             AVal(_, Val::Bool(b)) => Ok(Compiled {
+                dists: vec![BddPtr::from_bool(*b)],
                 accept: ctx.accept.clone(),
                 substitutions: ctx.substitutions.clone(),
-                ..Compiled::default(BddPtr::from_bool(*b))
+                probabilities: vec![Probability::new(1.0)],
+                importance_weight: 1.0,
             }),
             AVal(_, Val::Prod(vs)) => Err(CompileError::Todo()),
             And(bl, br) => self.eval_anf_binop(ctx, bl, br, &BddManager::and),
