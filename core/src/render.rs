@@ -1,10 +1,12 @@
 use crate::annotate::grammar::Var;
+use crate::compile::{Compiled, Context, SubstMap, WeightMap};
 use crate::grammar::*;
 use crate::uniquify::grammar::UniqueId;
 use itertools::*;
 /// helper functions for rendering
 use rsdd::repr::bdd::*;
 use std::collections::HashMap;
+use tracing::*;
 
 pub fn rendervec(fs: &Vec<String>) -> String {
     format!("[{}]", fs.join(", "))
@@ -55,4 +57,29 @@ pub fn render_history(xss: &Vec<Vec<f64>>, high_precision: bool) -> String {
         .map(|ws| ws.iter().cloned().map(fmt_f64(high_precision)).join(", "))
         .map(|ws| format!("[{}]", ws))
         .join(", ")
+}
+
+pub fn debug_compiled(s: &str, ctx: &Context, c: &Compiled) {
+    let p = &ctx.substitutions;
+    let renderw = |ws: &WeightMap| {
+        ws.iter()
+            .map(|(k, (l, h))| format!("{k}: ({l}, {h})"))
+            .join(", ")
+    };
+    let renderp = |ps: &SubstMap| {
+        ps.iter()
+            .map(|(k, (v, _))| format!("{k}: {}", renderbdds(v)))
+            .join(", ")
+    };
+
+    let dists = renderbdds(&c.dists);
+
+    let accepts = format!("{}", c.accept.print_bdd());
+
+    debug!("{s}, [{}]", renderp(p));
+    debug!("      \\||/  {}", dists);
+    debug!("      \\||/  {}", accepts);
+    debug!("      \\||/  {}", renderp(&c.substitutions));
+    debug!("      \\||/  {}", fmt_f64(false)(c.importance_weight));
+    debug!("----------------------------------------");
 }
