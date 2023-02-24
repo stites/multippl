@@ -16,7 +16,7 @@ use std::collections::HashMap;
 use std::iter::Sum;
 use tracing::debug;
 
-pub fn calculate_wmc_prob<T: Copy + std::fmt::Debug + num_traits::Num>(
+pub fn calculate_wmc_prob<T: Copy + std::fmt::Debug + num_traits::Num + std::fmt::Display>(
     mgr: &mut Mgr,
     params: &WmcParams<T>,
     var_order: &VarOrder,
@@ -24,11 +24,20 @@ pub fn calculate_wmc_prob<T: Copy + std::fmt::Debug + num_traits::Num>(
     accept: BddPtr,
 ) -> (T, T) {
     let num = mgr.and(dist, accept);
+    debug!(
+        "{} /\\ {} = {}",
+        dist.print_bdd(),
+        accept.print_bdd(),
+        num.print_bdd()
+    );
+    debug!("-------------");
+    debug!("{}", accept.print_bdd());
+
     let a = num.wmc(&var_order, &params);
     let z = accept.wmc(&var_order, &params);
-    debug!(dist = dist.print_bdd());
-    debug!(num = num.print_bdd());
-    debug!(dnm_accept = dist.print_bdd());
+    debug!("{}", a);
+    debug!("----------- = {}", a / z);
+    debug!("{}", z);
     (a, z)
 }
 
