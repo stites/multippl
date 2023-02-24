@@ -48,14 +48,20 @@ pub type SubstMap = HashMap<UniqueId, (Vec<BddPtr>, Var)>;
 
 #[derive(Debug, Clone)]
 pub struct Context {
-    pub gamma: Γ,
     pub accept: BddPtr,
     pub substitutions: SubstMap,
+}
+impl Context {
+    pub fn from_compiled(c: &Compiled) -> Self {
+        Context {
+            accept: c.accept.clone(),
+            substitutions: c.substitutions.clone(),
+        }
+    }
 }
 impl Default for Context {
     fn default() -> Self {
         Context {
-            gamma: Γ(Default::default()),
             accept: BddPtr::PtrTrue,
             substitutions: Default::default(),
         }
@@ -232,11 +238,7 @@ impl<'a> Env<'a> {
                 if i > &1 {
                     debug!(">>>prj@{}: {:?}", i, a);
                 }
-                // ignore types for now.
-                // let aty = a.as_type();
-                // assert!(aty.left() == Some(*ty.clone()), "actual {:?} != expected {:?}. type is: {:?}", aty.left(), Some(*ty.clone()), ty);
                 let mut c = self.eval_anf(ctx, a)?;
-                // let dists = self.apply_substitutions(c.dists, &ctx.substitutions);
                 let dists = c.dists;
                 c.dists = vec![dists[*i]];
                 if i > &1 {
@@ -280,19 +282,15 @@ impl<'a> Env<'a> {
                 let lbl = var.label;
 
                 let bound = self.eval_expr(&ctx, ebound)?;
-                let mut bound_substitutions = bound.substitutions.clone();
-                bound_substitutions.insert(var.id, (bound.dists.clone(), var.clone()));
-
-                let mut newctx = ctx.clone();
-                newctx.substitutions = bound_substitutions.clone();
+                let mut newctx = Context::from_compiled(&bound);
+                newctx
+                    .substitutions
+                    .insert(var.id, (bound.dists.clone(), var.clone()));
 
                 let body = self.eval_expr(&newctx, ebody)?;
 
-                let mut substitutions = body.substitutions.clone();
-                substitutions.extend(bound_substitutions); // FIXME: almost certainly redundant
-                let dists = body.dists; // .apply_substitutions(body.dists, &substitutions);
-                let accept = self.mgr.and(bound.accept, body.accept);
-                let accept = self.mgr.and(accept, ctx.accept);
+                let accept = self.mgr.and(body.accept, ctx.accept);
+                println!("let-in accept: {}", accept.print_bdd());
 
                 self.log_samples(var.id, ebound, &bound);
 
@@ -302,9 +300,9 @@ impl<'a> Env<'a> {
                 let importance_weight = bound.importance_weight * body.importance_weight;
 
                 let c = Compiled {
-                    dists,
+                    dists: body.dists,
                     accept,
-                    substitutions,
+                    substitutions: body.substitutions.clone(),
                     probabilities,
                     importance_weight,
                 };
@@ -361,19 +359,15 @@ impl<'a> Env<'a> {
                 Ok(c)
             }
             EFlip(var, param) => {
-                debug!(">>>flip {}", param);
-                // let sym = self.fresh();
-                // assert_eq!(*vs, sym);
-                let lbl = var.label.unwrap();
-
+                debug!(">>>flip {:.3}", param);
                 let c = Compiled {
-                    dists: vec![self.mgr.var(lbl, true)],
+                    dists: vec![self.mgr.var(var.label.unwrap(), true)],
                     accept: ctx.accept.clone(),
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0)],
                     importance_weight: 1.0,
                 };
-                debug_compiled("flip {param}", ctx, &c);
+                debug_compiled("flip", ctx, &c);
                 Ok(c)
             }
             EObserve(_, a) => {
@@ -381,9 +375,8 @@ impl<'a> Env<'a> {
                 let comp = self.eval_anf(ctx, a)?;
                 debug!("[observe] In. Accept {}", &ctx.accept.print_bdd());
                 debug!("[observe] Comp. dist {}", renderbdds(&comp.dists));
-                let accept = // self
-                    // .apply_substitutions(comp.dists, &ctx.substitutions)
-                    comp.dists
+                let accept = comp
+                    .dists
                     .into_iter()
                     .fold(ctx.accept.clone(), |global, cur| self.mgr.and(global, cur));
 
@@ -414,17 +407,18 @@ impl<'a> Env<'a> {
                 let wmc_params = self.weightmap.clone().unwrap();
                 let var_order = self.order.clone().unwrap();
                 debug!("[sample] weight_map {:?}", &wmc_params);
-                // debug!("[sample] max_var    {}", max_var);
                 debug!("[sample] WMCParams  {:?}", wmc_params);
                 debug!("[sample] VarOrder   {:?}", var_order);
-                // let comp_dists = self.apply_substitutions(comp.dists, &ctx.substitutions);
-                let comp_dists = comp.dists;
 
-                let (qs, dists): (Vec<Probability>, Vec<BddPtr>) = comp_dists
+                let (qs, dists): (Vec<Probability>, Vec<BddPtr>) = comp
+                    .dists
                     .iter()
                     .map(|dist| {
-                        // FIXME: okay to unify accepts, should I conjoin them here???
-                        let theta_q = dist.wmc(&var_order, &wmc_params) as f64;
+                        let sample_dist = self.mgr.and(comp.accept, *dist);
+                        println!("accept: {}", ctx.accept.print_bdd());
+                        println!("dist: {}", dist.print_bdd());
+                        println!("sample_dist: {}", sample_dist.print_bdd());
+                        let theta_q = sample_dist.wmc(&var_order, &wmc_params) as f64;
                         let bern = Bernoulli::new(theta_q).unwrap();
                         let sample = bern.sample(self.rng);
                         let q = Probability::new(if sample { theta_q } else { 1.0 - theta_q });
@@ -435,11 +429,10 @@ impl<'a> Env<'a> {
 
                 debug!(dists = renderbdds(&dists));
                 let accept =
-                    izip!(comp_dists, &dists).fold(comp.accept.clone(), |global, (dist, v)| {
+                    izip!(comp.dists, &dists).fold(comp.accept.clone(), |global, (dist, v)| {
                         let dist_holds = self.mgr.iff(dist, *v);
                         self.mgr.and(global, dist_holds)
                     });
-                let accept = self.mgr.and(accept, ctx.accept);
                 debug!(accept = accept.print_bdd());
 
                 let c = Compiled {
