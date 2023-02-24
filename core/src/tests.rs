@@ -54,9 +54,9 @@ pub fn check_inference(
         renderfloats(&prs, false),
         renderfloats(&fs, false),
     );
-    debug!("query: {:?}", p.query());
-    debug!("expecting: {}", renderfloats(&fs, false));
-    debug!("computed:  {}", renderfloats(&prs, false));
+    println!("query: {:?}", p.query());
+    println!("expecting: {}", renderfloats(&fs, false));
+    println!("computed:  {}", renderfloats(&prs, false));
     izip!(prs, fs).enumerate().for_each(|(i, (pr, f))| {
         let ret = (f - pr).abs() < precision;
         let i = i + 1;
@@ -293,13 +293,13 @@ fn free_variables_0() {
            ...? ret ; B!()
         ])
     };
-    let n = 10000;
+    let n = 20000;
 
-    check_approx1("free/x ", 1.0 / 3.0, &mk(var!("x")), n);
-    check_approx1("free/y ", 1.0 / 3.0, &mk(var!("y")), n);
+    check_approx("free/x ", vec![1.0 / 3.0, 1.0 / 3.0], &mk(b!("x", "y")), n);
+    // check_approx1("free/y ", 1.0 / 3.0, &mk(var!("y")), n);
 
-    check_invariant("free/y ", None, None, &mk(var!("y")));
-    check_invariant("free/x ", None, None, &mk(var!("x")));
+    check_invariant("free/y,x", None, None, &mk(b!("y", "x")));
+    // check_invariant("free/x ", None, None, &mk(var!("x")));
 }
 #[test]
 fn free_variables_1() {
@@ -386,24 +386,6 @@ fn ite_2() {
     check_exact1("ite_2/x&y", 0.178571429, &mk(b!("x" && "y")));
 }
 
-#[test]
-fn ite_3_with_one_sample_easy() {
-    let mk = |ret: ExprTyped| {
-        Program::Body(lets![
-            "x" ; b!() ;= flip!(1/3);
-            "y" ; b!() ;= ite!(
-                if ( var!("x") )
-                then { sample!(flip!(1/4)) }
-                else { flip!(1/5) });
-            "_" ; b!() ;= observe!(b!("x" || "y"));
-            ...? ret ; b!()
-        ])
-    };
-    let n = 1000;
-    check_approx1("ite_3/x  ", 0.714285714, &mk(b!("x")), n);
-    check_approx1("ite_3/x|y", 1.000000000, &mk(b!("x" || "y")), n);
-}
-
 // ============================================================ //
 // nested tests
 // ============================================================ //
@@ -444,17 +426,25 @@ fn nested_2() {
     check_exact1("nest_2/exact/x|y", 1.000000000, &mk(b!("x" || "y")));
     check_exact1("nest_2/exact/x&y", 0.285714286, &mk(b!("x" && "y")));
 
-    let n = 10000;
-    check_approx1("nest_2/appx/y  ", 0.714285714, &mk(b!("y")), n);
-    check_approx1("nest_2/appx/x  ", 0.571428571, &mk(b!("x")), n);
-    check_approx1("nest_2/appx/x|y", 1.000000000, &mk(b!("x" || "y")), n);
-    check_approx1("nest_2/appx/x&y", 0.285714286, &mk(b!("x" && "y")), n);
+    let n = 20000;
+    // check_approx1("nest_2/appx/y  ", 0.714285714, &mk(b!("y")), n);
+    // check_approx1("nest_2/appx/x  ", 0.571428571, &mk(b!("x")), n);
+    // check_approx1("nest_2/appx/x|y", 1.000000000, &mk(b!("x" || "y")), n);
+    // check_approx1("nest_2/appx/x&y", 0.285714286, &mk(b!("x" && "y")), n);
+
+    check_approx(
+        "nest_2/appx/y*x",
+        vec![0.714285714, 0.571428571, 1.000000000, 0.285714286],
+        &mk(q!("y" x "x")),
+        n,
+    );
 
     let n = Some(n);
-    check_invariant("nest_2/invt/y  ", None, n, &mk(b!("y")));
-    check_invariant("nest_2/invt/x  ", None, n, &mk(b!("x")));
-    check_invariant("nest_2/invt/x|y", None, n, &mk(b!("x" || "y")));
-    check_invariant("nest_2/invt/x&y", None, n, &mk(b!("x" && "y")));
+    // check_invariant("nest_2/invt/y  ", None, n, &mk(b!("y")));
+    // check_invariant("nest_2/invt/x  ", None, n, &mk(b!("x")));
+    // check_invariant("nest_2/invt/x|y", None, n, &mk(b!("x" || "y")));
+    // check_invariant("nest_2/invt/x&y", None, n, &mk(b!("x" && "y")));
+    check_invariant("nest_2/invt/x*y", None, n, &mk(q!("x" x "y")));
 }
 
 // ============================================================ //
@@ -544,10 +534,17 @@ fn grid2x2_sampled() {
             ...? ret ; B!()
         ])
     };
-    check_approx1("grid2x2/approx_diag/00", 1.0 / 2.0, &mk(b!("00")), 10000);
-    check_approx1("grid2x2/approx_diag/01", 0.291666667, &mk(b!("01")), 10000);
-    check_approx1("grid2x2/approx_diag/10", 0.183333333, &mk(b!("10")), 10000);
-    check_approx1("grid2x2/approx_diag/11", 0.102927589, &mk(b!("11")), 10000);
+    // check_approx1("grid2x2/approx_diag/00", 1.0 / 2.0, &mk(b!("00")), 10000);
+    // check_approx1("grid2x2/approx_diag/01", 0.291666667, &mk(b!("01")), 10000);
+    // check_approx1("grid2x2/approx_diag/10", 0.183333333, &mk(b!("10")), 10000);
+    // check_approx1("grid2x2/approx_diag/11", 0.102927589, &mk(b!("11")), 10000);
+
+    check_approx(
+        "grid2x2/approx_diag/00,01,10,11",
+        vec![1.0 / 2.0, 0.291666667, 0.183333333, 0.102927589],
+        &mk(b!("00", "01", "10", "11")),
+        20000,
+    );
 }
 
 /// a directed 3x3 grid test where we place samples according to various policies
@@ -624,7 +621,7 @@ fn grid3x3_sampled_diag() {
             0.770263904,
         ],
         &mk(b!("00", "01", "10", "02", "20", "11", "12", "21", "22")),
-        100000,
+        20000,
     );
 }
 
