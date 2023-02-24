@@ -58,7 +58,6 @@ fn variables(bdd: BddPtr, order: VarOrder) -> Vec<VarLabel> {
 }
 
 fn debug_compiled(s: &str, ctx: &Context, c: &Compiled) {
-    let w = &ctx.weight_map;
     let p = &ctx.substitutions;
     let renderw = |ws: &WeightMap| {
         ws.iter()
@@ -75,10 +74,9 @@ fn debug_compiled(s: &str, ctx: &Context, c: &Compiled) {
 
     let accepts = format!("{}", c.accept.print_bdd());
 
-    debug!("{s}, [{}], [{}]", renderw(w), renderp(p));
+    debug!("{s}, [{}]", renderp(p));
     debug!("      \\||/  {}", dists);
     debug!("      \\||/  {}", accepts);
-    debug!("      \\||/  {}", renderw(&c.weight_map));
     debug!("      \\||/  {}", renderp(&c.substitutions));
     debug!("      \\||/  {}", fmt_f64(false)(c.importance_weight));
     debug!("----------------------------------------");
@@ -108,27 +106,10 @@ use CompileError::*;
 pub type WeightMap = HashMap<UniqueId, (f64, f64)>;
 pub type SubstMap = HashMap<UniqueId, (Vec<BddPtr>, Var)>;
 
-fn const_weight() -> (f64, f64) {
-    (0.5, 0.5)
-}
-pub fn weight_map_to_params(m: &WeightMap) -> (WmcParams<f64>, u64) {
-    let mut wmc_params = WmcParams::new(0.0, 1.0);
-    let mut max = 0;
-    for (lbl, (l, h)) in m {
-        wmc_params.set_weight(VarLabel::new(lbl.0), *l, *h);
-        if lbl.0 > max {
-            max = lbl.0;
-        }
-    }
-    debug!(max = max);
-    (wmc_params, max)
-}
-
 #[derive(Debug, Clone)]
 pub struct Context {
     pub gamma: Γ,
     pub accept: BddPtr,
-    pub weight_map: WeightMap,
     pub substitutions: SubstMap,
 }
 impl Default for Context {
@@ -136,7 +117,6 @@ impl Default for Context {
         Context {
             gamma: Γ(Default::default()),
             accept: BddPtr::PtrTrue,
-            weight_map: Default::default(),
             substitutions: Default::default(),
         }
     }
@@ -145,7 +125,6 @@ impl Default for Context {
 pub struct Compiled {
     pub dists: Vec<BddPtr>,
     pub accept: BddPtr,
-    pub weight_map: WeightMap, // must be a hashmap as sample will collapse variables
     pub probabilities: Vec<Probability>,
     pub substitutions: SubstMap,
     pub importance_weight: f64,
@@ -165,7 +144,6 @@ impl Compiled {
             dists,
             probabilities,
             accept: BddPtr::PtrTrue,
-            weight_map: HashMap::new(),
             substitutions: HashMap::new(),
             importance_weight: 1.0,
         }
@@ -236,8 +214,6 @@ impl<'a> Env<'a> {
     ) -> Result<Compiled, CompileError> {
         let l = self.eval_anf(ctx, bl)?;
         let r = self.eval_anf(ctx, br)?;
-        let mut weight_map = l.weight_map.clone();
-        weight_map.extend(r.weight_map.clone());
         let mut substitutions = l.substitutions.clone();
         substitutions.extend(r.substitutions.clone());
         if l.dists.len() != r.dists.len() {
@@ -252,7 +228,6 @@ impl<'a> Env<'a> {
                 .collect_vec();
             Ok(Compiled {
                 accept: ctx.accept.clone(),
-                weight_map: ctx.weight_map.clone(),
                 substitutions: ctx.substitutions.clone(),
                 ..Compiled::default_vec(dists)
             })
@@ -262,20 +237,19 @@ impl<'a> Env<'a> {
         use ANF::*;
         match a {
             AVar(var, s) => match ctx.substitutions.get(&var.id) {
-                None => Err(Generic(
-                    "variable does not reference known substitution".to_string(),
-                )),
+                None => Err(Generic(format!(
+                    "variable {} does not reference known substitution",
+                    s
+                ))),
                 Some((subs, subvar)) => Ok(Compiled {
                     accept: ctx.accept.clone(),
                     substitutions: ctx.substitutions.clone(),
-                    weight_map: ctx.weight_map.clone(),
                     ..Compiled::default_vec(subs.to_vec())
                 }),
             },
             AVal(_, Val::Bool(b)) => Ok(Compiled {
                 accept: ctx.accept.clone(),
                 substitutions: ctx.substitutions.clone(),
-                weight_map: ctx.weight_map.clone(),
                 ..Compiled::default(BddPtr::from_bool(*b))
             }),
             AVal(_, Val::Prod(vs)) => Err(CompileError::Todo()),
@@ -353,7 +327,6 @@ impl<'a> Env<'a> {
                 let c = Compiled {
                     dists,
                     accept: ctx.accept.clone(),
-                    weight_map: ctx.weight_map.clone(),
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0); flen],
                     importance_weight: 1.0,
@@ -365,23 +338,15 @@ impl<'a> Env<'a> {
             ELetIn(var, s, ebound, ebody) => {
                 debug!(">>>let-in {}", s);
                 let lbl = var.label;
-                let mut wm = ctx.weight_map.clone();
-                wm.insert(var.id, const_weight());
 
-                let mut newctx = ctx.clone();
-                newctx.weight_map = wm;
-
-                let bound = self.eval_expr(&newctx, ebound)?;
+                let bound = self.eval_expr(&ctx, ebound)?;
                 let mut bound_substitutions = bound.substitutions.clone();
                 bound_substitutions.insert(var.id, (bound.dists.clone(), var.clone()));
 
-                let mut newctx = newctx.clone();
-                newctx.weight_map = bound.weight_map.clone();
+                let mut newctx = ctx.clone();
                 newctx.substitutions = bound_substitutions.clone();
 
                 let body = self.eval_expr(&newctx, ebody)?;
-                let mut weight_map = bound.weight_map.clone();
-                weight_map.extend(body.weight_map);
 
                 let mut substitutions = body.substitutions.clone();
                 substitutions.extend(bound_substitutions); // FIXME: almost certainly redundant
@@ -399,7 +364,6 @@ impl<'a> Env<'a> {
                 let c = Compiled {
                     dists,
                     accept,
-                    weight_map,
                     substitutions,
                     probabilities,
                     importance_weight,
@@ -438,8 +402,6 @@ impl<'a> Env<'a> {
                 let accept = self.mgr.or(accept_l, accept_r);
                 let accept = self.mgr.and(accept, ctx.accept);
 
-                let mut weight_map = truthy.weight_map.clone();
-                weight_map.extend(falsey.weight_map.clone());
                 let mut substitutions = truthy.substitutions.clone();
                 substitutions.extend(falsey.substitutions.clone());
 
@@ -451,7 +413,6 @@ impl<'a> Env<'a> {
                 let c = Compiled {
                     dists,
                     accept,
-                    weight_map,
                     substitutions,
                     probabilities,
                     importance_weight,
@@ -463,14 +424,11 @@ impl<'a> Env<'a> {
                 debug!(">>>flip {}", param);
                 // let sym = self.fresh();
                 // assert_eq!(*vs, sym);
-                let mut weight_map = ctx.weight_map.clone();
                 let lbl = var.label.unwrap();
-                weight_map.insert(var.id, (1.0 - *param, *param));
 
                 let c = Compiled {
                     dists: vec![self.mgr.var(lbl, true)],
                     accept: ctx.accept.clone(),
-                    weight_map,
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0)],
                     importance_weight: 1.0,
@@ -489,11 +447,9 @@ impl<'a> Env<'a> {
                     .into_iter()
                     .fold(ctx.accept.clone(), |global, cur| self.mgr.and(global, cur));
 
-                // let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
-                // let var_order = VarOrder::linear_order((max_var + 1) as usize);
                 let wmc_params = self.weightmap.clone().unwrap();
                 let var_order = self.order.clone().unwrap();
-                debug!("[observe] weight_map {:?}", &comp.weight_map);
+                debug!("[observe] weight_map {:?}", &wmc_params);
                 // debug!("[observe] max_var    {}", max_var);
                 debug!("[observe] WMCParams  {:?}", wmc_params);
                 debug!("[observe] VarOrder   {:?}", var_order);
@@ -504,7 +460,6 @@ impl<'a> Env<'a> {
                 let c = Compiled {
                     dists: vec![BddPtr::PtrTrue],
                     accept,
-                    weight_map: ctx.weight_map.clone(),
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0)],
                     importance_weight,
@@ -516,11 +471,9 @@ impl<'a> Env<'a> {
                 debug!(">>>sample");
                 let comp = self.eval_expr(ctx, e)?;
 
-                // let (wmc_params, max_var) = weight_map_to_params(&comp.weight_map);
-                // let var_order = VarOrder::linear_order((max_var + 1) as usize);
                 let wmc_params = self.weightmap.clone().unwrap();
                 let var_order = self.order.clone().unwrap();
-                debug!("[sample] weight_map {:?}", &comp.weight_map);
+                debug!("[sample] weight_map {:?}", &wmc_params);
                 // debug!("[sample] max_var    {}", max_var);
                 debug!("[sample] WMCParams  {:?}", wmc_params);
                 debug!("[sample] VarOrder   {:?}", var_order);
@@ -552,7 +505,6 @@ impl<'a> Env<'a> {
                 let c = Compiled {
                     dists,
                     accept,
-                    weight_map: comp.weight_map.clone(),
                     substitutions: ctx.substitutions.clone(),
                     probabilities: qs,
                     importance_weight: 1.0,

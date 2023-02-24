@@ -15,7 +15,7 @@ use std::collections::HashMap;
 use std::iter::Sum;
 use tracing::debug;
 
-pub fn _wmc_prob(env: &mut Env, m: &WeightMap, dist: BddPtr, accept: BddPtr) -> (f64, f64) {
+pub fn _wmc_prob(env: &mut Env, dist: BddPtr, accept: BddPtr) -> (f64, f64) {
     // let (params, mx) = weight_map_to_params(m);
     let params = env.weightmap.clone().unwrap();
     let var_order = env.order.clone().unwrap();
@@ -32,7 +32,7 @@ pub fn _wmc_prob(env: &mut Env, m: &WeightMap, dist: BddPtr, accept: BddPtr) -> 
 pub fn wmc_prob(env: &mut Env, c: &Compiled) -> Vec<(f64, f64)> {
     c.dists
         .iter()
-        .map(|d| _wmc_prob(env, &c.weight_map, *d, c.accept))
+        .map(|d| _wmc_prob(env, *d, c.accept))
         .collect_vec()
 }
 

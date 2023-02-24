@@ -293,7 +293,7 @@ fn free_variables_0() {
            ...? ret ; B!()
         ])
     };
-    let n = 20000;
+    let n = 40000;
 
     check_approx("free/x ", vec![1.0 / 3.0, 1.0 / 3.0], &mk(b!("x", "y")), n);
     // check_approx1("free/y ", 1.0 / 3.0, &mk(var!("y")), n);
