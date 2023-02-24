@@ -30,24 +30,15 @@ pub mod grammar {
 
     #[derive(Clone, Hash, Eq, PartialEq, Debug)]
     pub struct Var {
-        pub id: UniqueId,    // originally meant to be "constant var unique id"
-        pub label: VarLabel, // this was meant to only hold values in the final formula
-        pub is_constant: bool,
+        pub id: UniqueId,               // associated unique ids
+        pub label: Option<VarLabel>,    // only hold values in the final formula
         pub provenance: Option<String>, // when None, this indicates that the variable is in the final formula
     }
     impl Var {
-        pub fn new(
-            id: UniqueId,
-            label: VarLabel,
-            is_constant: bool,
-            //  weight: Weight,
-            provenance: Option<String>,
-        ) -> Var {
-            Var {
+        pub fn new(id: UniqueId, label: Option<VarLabel>, provenance: Option<String>) -> Self {
+            Self {
                 id,
                 label,
-                is_constant,
-                //  weight,
                 provenance,
             }
         }
@@ -140,14 +131,20 @@ impl LabelEnv {
     pub fn weight_map(&self) -> rsdd::repr::wmc::WmcParams<f64> {
         let mut wmc_params = rsdd::repr::wmc::WmcParams::new(0.0, 1.0);
         for (var, weight) in self.weights.iter() {
-            wmc_params.set_weight(var.label, weight.lo, weight.hi);
+            match var.label {
+                Some(label) => wmc_params.set_weight(label, weight.lo, weight.hi),
+                None => panic!("impossible"),
+            }
         }
         wmc_params
     }
     pub fn get_inv(&self) -> HashMap<VarLabel, Var> {
         let mut inv = HashMap::new();
         for (_, var) in self.substitutions.iter() {
-            inv.insert(var.label.clone(), var.clone());
+            match var.label {
+                Some(label) => inv.insert(label.clone(), var.clone()),
+                None => continue,
+            };
         }
         inv
     }
@@ -194,8 +191,8 @@ impl LabelEnv {
             EProd(_, anfs) => Ok(EProd((), self.annotate_anfs(anfs)?)),
             ELetIn(id, s, ebound, ebody) => {
                 // let lbl = self.fresh();
-                let var = Var::new(*id, id.as_lbl(), true, Some(s.to_string()));
-                self.weights.insert(var.clone(), Weight::constant());
+                let var = Var::new(*id, None, Some(s.to_string()));
+                // self.weights.insert(var.clone(), Weight::constant());
                 self.substitutions.insert(*id, var.clone());
                 Ok(ELetIn(
                     var,
@@ -212,7 +209,7 @@ impl LabelEnv {
             )),
             EFlip(id, param) => {
                 let lbl = self.fresh();
-                let var = Var::new(*id, id.as_lbl(), false, None);
+                let var = Var::new(*id, Some(id.as_lbl()), None);
                 self.weights.insert(var.clone(), Weight::from_high(*param));
                 self.substitutions.insert(*id, var.clone());
                 Ok(EFlip(var, param.clone()))

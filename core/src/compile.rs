@@ -464,7 +464,7 @@ impl<'a> Env<'a> {
                 // let sym = self.fresh();
                 // assert_eq!(*vs, sym);
                 let mut weight_map = ctx.weight_map.clone();
-                let lbl = var.label;
+                let lbl = var.label.unwrap();
                 weight_map.insert(var.id, (1.0 - *param, *param));
 
                 let c = Compiled {

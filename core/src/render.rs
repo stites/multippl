@@ -19,7 +19,12 @@ pub fn renderbdds(fs: &Vec<BddPtr>) -> String {
 }
 
 pub fn rendervar(var: &Var) -> String {
-    format!("({}L{}C{})", var.id, var.label.value(), var.is_constant,)
+    format!(
+        "({}{})",
+        var.id,
+        var.label
+            .map_or_else(|| "L-".to_string(), |l| format!("L{}", l.value())),
+    )
 }
 pub fn rendersubs(fs: &HashMap<UniqueId, (Vec<BddPtr>, Var)>) -> String {
     format!(
