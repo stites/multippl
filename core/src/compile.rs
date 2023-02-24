@@ -20,7 +20,7 @@ use std::fmt;
 use std::string::String;
 use tracing::debug;
 
-type Mgr = BddManager<AllTable<BddPtr>>;
+pub type Mgr = BddManager<AllTable<BddPtr>>;
 
 #[derive(Clone, Eq, Hash, PartialEq, Debug)]
 pub enum CompileError {
@@ -290,7 +290,6 @@ impl<'a> Env<'a> {
                 let body = self.eval_expr(&newctx, ebody)?;
 
                 let accept = self.mgr.and(body.accept, ctx.accept);
-                println!("let-in accept: {}", accept.print_bdd());
 
                 self.log_samples(var.id, ebound, &bound);
 
@@ -415,10 +414,14 @@ impl<'a> Env<'a> {
                     .iter()
                     .map(|dist| {
                         let sample_dist = self.mgr.and(comp.accept, *dist);
-                        println!("accept: {}", ctx.accept.print_bdd());
-                        println!("dist: {}", dist.print_bdd());
-                        println!("sample_dist: {}", sample_dist.print_bdd());
-                        let theta_q = sample_dist.wmc(&var_order, &wmc_params) as f64;
+                        let (a, z) = crate::inference::calculate_wmc_prob(
+                            self.mgr,
+                            &self.weightmap.clone().unwrap(),
+                            &self.order.clone().unwrap(),
+                            sample_dist,
+                            comp.accept,
+                        );
+                        let theta_q = a / z;
                         let bern = Bernoulli::new(theta_q).unwrap();
                         let sample = bern.sample(self.rng);
                         let q = Probability::new(if sample { theta_q } else { 1.0 - theta_q });

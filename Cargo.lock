@@ -1477,6 +1477,7 @@ dependencies = [
  "criterion 0.4.0",
  "itertools",
  "nalgebra",
+ "num-traits",
  "quickcheck",
  "quickcheck_macros",
  "rand 0.8.5",

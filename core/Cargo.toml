@@ -23,6 +23,7 @@ rayon = "1.6.1"
 #[dev-dependencies]
 quickcheck = "1"
 quickcheck_macros = "1"
+num-traits = "0.2.15"
 
 [dev-dependencies]
 criterion = "0.4"

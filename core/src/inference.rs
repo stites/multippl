@@ -10,29 +10,40 @@ use rayon::prelude::*;
 use rsdd::repr::bdd::*;
 use rsdd::repr::ddnnf::DDNNFPtr;
 use rsdd::repr::var_order::VarOrder;
+use rsdd::repr::wmc::WmcParams;
 use rsdd::sample::probability::Probability;
 use std::collections::HashMap;
 use std::iter::Sum;
 use tracing::debug;
 
-pub fn _wmc_prob(env: &mut Env, dist: BddPtr, accept: BddPtr) -> (f64, f64) {
-    // let (params, mx) = weight_map_to_params(m);
-    let params = env.weightmap.clone().unwrap();
-    let var_order = env.order.clone().unwrap();
-    let num = env.mgr.and(dist, accept);
+pub fn calculate_wmc_prob<T: Copy + std::fmt::Debug + num_traits::Num>(
+    mgr: &mut Mgr,
+    params: &WmcParams<T>,
+    var_order: &VarOrder,
+    dist: BddPtr,
+    accept: BddPtr,
+) -> (T, T) {
+    let num = mgr.and(dist, accept);
     let a = num.wmc(&var_order, &params);
-
     let z = accept.wmc(&var_order, &params);
     debug!(dist = dist.print_bdd());
     debug!(num = num.print_bdd());
     debug!(dnm_accept = dist.print_bdd());
-    debug!(a = a, z = z);
     (a, z)
 }
+
 pub fn wmc_prob(env: &mut Env, c: &Compiled) -> Vec<(f64, f64)> {
     c.dists
         .iter()
-        .map(|d| _wmc_prob(env, *d, c.accept))
+        .map(|d| {
+            calculate_wmc_prob(
+                env.mgr,
+                &env.weightmap.clone().unwrap(),
+                &env.order.clone().unwrap(),
+                *d,
+                c.accept,
+            )
+        })
         .collect_vec()
 }
 

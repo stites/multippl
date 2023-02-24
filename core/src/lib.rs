@@ -80,17 +80,18 @@ mod active_tests {
     use tests::*;
     use tracing::*;
     use tracing_test::traced_test;
-    // free variable edge case
+
     #[test]
-    #[traced_test]
     fn free_variables_shared() {
-        let p = Program::Body(lets![
-           "x" ; b!() ;= flip!(1/3);
-           "l" ; b!() ;= sample!(var!("x"));
-           "r" ; b!() ;= sample!(var!("x"));
-           ...? b!("r") ; b!()
-        ]);
-        check_approx1("shared ", 1.0 / 3.0, &p, 10);
+        let mk = |ret: ExprTyped| {
+            Program::Body(lets![
+               "x" ; b!() ;= flip!(1/3);
+               "l" ; b!() ;= sample!(var!("x"));
+               "r" ; b!() ;= sample!(var!("x"));
+               ...? ret ; b!()
+            ])
+        };
+        check_approx("shared ", vec![1.0 / 3.0; 4], &mk(q!("l" x "r")), 10000);
     }
 
     // macro_rules! free_variable_2_tests {
