@@ -19,6 +19,7 @@ pub struct Compiled {
     pub substitutions: SubstMap,
     pub importance: Importance,
 }
+
 impl Compiled {
     pub fn convex_combination(&self, o: &Compiled) -> Importance {
         izip!(&self.probabilities, &o.probabilities,).fold(Zero::zero(), |res, (selfp, op)| {

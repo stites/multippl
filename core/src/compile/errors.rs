@@ -18,3 +18,5 @@ impl CompileError {
         }
     }
 }
+
+pub type Result<T> = core::result::Result<T, CompileError>;
