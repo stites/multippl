@@ -5,6 +5,7 @@ use crate::uniquify::grammar::UniqueId;
 use itertools::*;
 /// helper functions for rendering
 use rsdd::repr::bdd::*;
+use rsdd::sample::probability::Probability;
 use std::collections::HashMap;
 use tracing::*;
 
@@ -51,6 +52,12 @@ pub fn render_weights(ws: &Vec<f64>, high_precision: bool) -> String {
         .map(|w| format!("[{}]", fmt_f64(high_precision)(w)))
         .join(", ")
 }
+pub fn render_probs(ws: &Vec<Probability>, high_precision: bool) -> String {
+    ws.iter()
+        .cloned()
+        .map(|w| format!("[{}]", fmt_f64(high_precision)(w.as_f64())))
+        .join(", ")
+}
 
 pub fn render_history(xss: &Vec<Vec<f64>>, high_precision: bool) -> String {
     xss.iter()
@@ -62,8 +69,9 @@ pub fn render_history(xss: &Vec<Vec<f64>>, high_precision: bool) -> String {
 pub fn debug_compiled(s: &str, ctx: &Context, c: &Compiled) {
     let p = &ctx.substitutions;
     let renderw = |ws: &WeightMap| {
-        ws.iter()
-            .map(|(k, (l, h))| format!("{k}: ({l}, {h})"))
+        ws.weights
+            .iter()
+            .map(|(k, w)| format!("L{}: ({:.4}, {:.4})", k.value(), w.lo, w.hi))
             .join(", ")
     };
     let renderp = |ps: &SubstMap| {
@@ -76,10 +84,12 @@ pub fn debug_compiled(s: &str, ctx: &Context, c: &Compiled) {
 
     let accepts = format!("{}", c.accept.print_bdd());
 
-    debug!("{s}, [{}]", renderp(p));
+    debug!("{s}, [{}], [{}]", renderp(p), renderw(&ctx.weightmap));
     debug!("      \\||/  {}", dists);
     debug!("      \\||/  {}", accepts);
-    debug!("      \\||/  {}", renderp(&c.substitutions));
+    debug!("      \\||/  [{}]", renderw(&c.weightmap));
+    debug!("      \\||/  [{}]", renderp(&c.substitutions));
+    debug!("      \\||/  {}", render_probs(&c.probabilities, false));
     debug!("      \\||/  {}", fmt_f64(false)(c.importance_weight));
     debug!("----------------------------------------");
 }

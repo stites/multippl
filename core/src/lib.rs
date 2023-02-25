@@ -30,7 +30,7 @@ mod grammar;
 mod grammar_macros;
 
 mod annotate;
-mod collect_weightmap;
+// mod collect_weightmap;
 mod compile;
 mod inference;
 mod parser;
@@ -39,9 +39,9 @@ mod render;
 mod tests;
 mod typecheck;
 mod uniquify;
+mod utils;
 
 use crate::annotate::LabelEnv;
-use crate::collect_weightmap::collect_weightmap;
 use crate::compile::{compile, CompileError, Compiled, Env};
 use crate::typecheck::grammar::{ExprTyped, ProgramTyped};
 use crate::typecheck::typecheck;
@@ -52,11 +52,11 @@ pub fn run(env: &mut Env, p: &ProgramTyped) -> Result<Compiled, CompileError> {
     let mut senv = SymEnv::default();
     let p = senv.uniquify(&p)?;
     let mut lenv = LabelEnv::new();
-    let (p, _, vo, inv) = lenv.annotate(&p)?;
+    let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
     env.names = senv.names; // just for debugging, really.
-    let wm = collect_weightmap(&p)?;
-    env.weightmap = Some(wm);
     env.order = Some(vo);
+    env.max_label = Some(mxlbl);
+    env.varmap = Some(varmap);
     env.inv = Some(inv);
     let c = compile(env, &p);
     tracing::debug!("hurray!");
@@ -81,60 +81,85 @@ mod active_tests {
     use tracing::*;
     use tracing_test::traced_test;
 
-    // #[test]
-    // #[ignore = "I'm confident that this is a data flow analysis problem (in that sample formulas need to be added to the accepting criteria)"]
-    // fn ite_3_with_one_sample_easy() {
-    //     let mk = |ret: ExprTyped| {
-    //         Program::Body(lets![
-    //             "x" ; b!() ;= flip!(1/3);
-    //             "y" ; b!() ;= ite!(
-    //                 if ( var!("x") )
-    //                 then { sample!(flip!(1/4)) }
-    //                 else { flip!(1/5) });
-    //             "_" ; b!() ;= observe!(b!("x" || "y"));
-    //             ...? ret ; b!()
-    //         ])
-    //     };
-    //     let n = 1000;
-    //     check_approx1("ite_3/x  ", 0.714285714, &mk(b!("x")), n);
-    //     check_approx1("ite_3/x|y", 1.000000000, &mk(b!("x" || "y")), n);
-    // }
+    macro_rules! ite_3_with_one_sample_tests {
+    ($($name:ident: $query:expr, $value:expr,)*) => {
+    $(
+        #[test]
+        #[ignore]
+        fn $name() {
+            let mk = |ret: ExprTyped| {
+                Program::Body(lets![
+                    "x" ; b!() ;= flip!(2/3);
+                    "y" ; b!() ;= ite!(
+                        if ( var!("x") )
+                        then { sample!(flip!(1/4)) }
+                        else { flip!(1/5) });
+                    "_" ; b!() ;= observe!(b!("x" || "y"));
+                    ...? ret ; b!()
+                ])
+            };
+            ($value)(mk($query));
+        }
+    )*
+    }
+}
 
-    // /// represents another semantic bug, still need to grapple how this all works, though
-    // #[test]
-    // #[ignore = "I'm confident that this is a data flow analysis problem (in that sample formulas need to be added to the accepting criteria)"]
-    // // #[traced_test]
-    // fn ite_3_with_one_sample_hard1() {
-    //     let mk = |ret: ExprTyped| {
-    //         Program::Body(lets![
-    //             "x" ; b!() ;= flip!(2/3);
-    //             "y" ; b!() ;= ite!(
-    //                 if ( var!("x") )
-    //                 then { sample!(flip!(3/4)) }
-    //                 else { flip!(1/5) });
-    //             "_" ; b!() ;= observe!(b!("x" || "y"));
-    //             ...? ret ; b!()
-    //         ])
-    //     };
-    //     let n = 1000;
-    //     check_approx1("ite_3/y-sample3/4 ", 0.772727273, &mk(b!("y")), n); // dice's answer for 3/4 @ sample site
-    //                                                                        // check_approx1("ite_3/y  ", 0.545454545, &mk(b!("y")), n); // dice's answer for 2/4 @ sample site
-    // }
-    // #[test]
-    // #[ignore = "I'm confident that this is a data flow analysis problem (in that sample formulas need to be added to the accepting criteria)"]
-    // fn ite_3_with_one_sample_hard2() {
-    //     let mk = |ret: ExprTyped| {
-    //         Program::Body(lets![
-    //             "x" ; b!() ;= flip!(1/3);
-    //             "y" ; b!() ;= ite!(
-    //                 if ( var!("x") )
-    //                 then { sample!(flip!(1/4)) }
-    //                 else { flip!(1/5) });
-    //             "_" ; b!() ;= observe!(b!("x" || "y"));
-    //             ...? ret ; b!()
-    //         ])
-    //     };
-    //     let n = 1000;
-    //     check_approx1("ite_3/x&y", 0.178571429, &mk(b!("x" && "y")), n * n * n);
-    // }
+    ite_3_with_one_sample_tests! {
+        ite_3_with_one_sample_easy_x:  b!("x"), (|p| check_approx1("ite_3/x  ", 0.909090909, &p, 1000)),
+        ite_3_with_one_sample_easy_x_or_y: b!("x" || "y"), (|p| check_approx1("ite_3/x|y", 1.000000000, &p, 1000)),
+    }
+
+    #[test]
+    // #[traced_test]
+    fn ite_3_with_one_sample_hard1_simplified() {
+        let mk = |ret: ExprTyped| {
+            Program::Body(lets![
+                "x" ; b!() ;= flip!(1/5);
+                "y" ; b!() ;= ite!(
+                    if ( var!("x") )
+                    then { sample!(flip!(1/3)) }
+                    else { flip!(1/4) });
+                ...? ret ; b!()
+            ])
+        };
+        let n = 50000;
+        // check_exact1("ite_3/y-sample1/4-simpl", 0.266666667, &mk(b!("y")));
+        check_approx1("ite_3/y-sample1/4-simpl", 0.266666667, &mk(b!("y")), n);
+        // dice's answer for 2/4 @ sample site
+        // check_approx1("ite_3/y-sample2/4  ", 0.545454545, &mk(b!("y")), n);
+        // dice's answer for 3/4 @ sample site
+        // check_approx1("ite_3/y-sample3/4 ", 0.772727273, &mk(b!("y")), n);
+
+        // last one to tackle:
+        // dice's answer for 1/4 @ sample site
+        // check_approx1("ite_3/x&y", 0.227272727, &mk(b!("x" && "y")), n * n * n);
+    }
+
+    /// represents another semantic bug, still need to grapple how this all works, though
+    #[test]
+    #[ignore]
+    // #[traced_test]
+    fn ite_3_with_one_sample_hard1() {
+        let mk = |ret: ExprTyped| {
+            Program::Body(lets![
+                "x" ; b!() ;= flip!(2/3);
+                "y" ; b!() ;= ite!(
+                    if ( var!("x") )
+                    then { sample!(flip!(1/4)) }
+                    else { flip!(1/5) });
+                "_" ; b!() ;= observe!(b!("x" || "y"));
+                ...? ret ; b!()
+            ])
+        };
+        let n = 50000;
+        check_approx1("ite_3/y-sample1/4 ", 0.464285714, &mk(b!("y")), n);
+        // dice's answer for 2/4 @ sample site
+        // check_approx1("ite_3/y-sample2/4  ", 0.545454545, &mk(b!("y")), n);
+        // dice's answer for 3/4 @ sample site
+        // check_approx1("ite_3/y-sample3/4 ", 0.772727273, &mk(b!("y")), n);
+
+        // last one to tackle:
+        // dice's answer for 1/4 @ sample site
+        // check_approx1("ite_3/x&y", 0.227272727, &mk(b!("x" && "y")), n * n * n);
+    }
 }

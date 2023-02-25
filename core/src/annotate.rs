@@ -11,23 +11,6 @@ pub mod grammar {
     use std::fmt;
     use std::fmt::*;
 
-    #[derive(Clone, PartialEq, Debug)]
-    pub struct Weight {
-        pub lo: f64,
-        pub hi: f64,
-    }
-    impl Weight {
-        pub fn as_tuple(&self) -> (f64, f64) {
-            (self.lo, self.hi)
-        }
-        pub fn from_high(hi: f64) -> Weight {
-            Weight { lo: 1.0 - hi, hi }
-        }
-        pub fn constant() -> Weight {
-            Self::from_high(0.5)
-        }
-    }
-
     #[derive(Clone, Hash, Eq, PartialEq, Debug)]
     pub struct Var {
         pub id: UniqueId,               // associated unique ids
@@ -109,38 +92,26 @@ pub mod grammar {
 
 pub struct LabelEnv {
     lblsym: u64,
-    substitutions: HashMap<UniqueId, Var>,
-    weights: HashMap<Var, Weight>,
+    subst_var: HashMap<UniqueId, Var>,
 }
 
 impl LabelEnv {
     pub fn new() -> Self {
         Self {
             lblsym: 0,
-            substitutions: HashMap::new(),
-            weights: HashMap::new(),
+            subst_var: HashMap::new(),
         }
     }
-    pub fn max_varlabel_val(&self) -> usize {
-        self.lblsym as usize
+    pub fn max_varlabel_val(&self) -> u64 {
+        self.lblsym
     }
 
     pub fn linear_var_order(&self) -> rsdd::repr::var_order::VarOrder {
-        rsdd::repr::var_order::VarOrder::linear_order(self.max_varlabel_val())
-    }
-    pub fn weight_map(&self) -> rsdd::repr::wmc::WmcParams<f64> {
-        let mut wmc_params = rsdd::repr::wmc::WmcParams::new(0.0, 1.0);
-        for (var, weight) in self.weights.iter() {
-            match var.label {
-                Some(label) => wmc_params.set_weight(label, weight.lo, weight.hi),
-                None => panic!("impossible"),
-            }
-        }
-        wmc_params
+        rsdd::repr::var_order::VarOrder::linear_order(self.max_varlabel_val() as usize)
     }
     pub fn get_inv(&self) -> HashMap<VarLabel, Var> {
         let mut inv = HashMap::new();
-        for (_, var) in self.substitutions.iter() {
+        for (_, var) in self.subst_var.iter() {
             match var.label {
                 Some(label) => inv.insert(label.clone(), var.clone()),
                 None => continue,
@@ -156,7 +127,7 @@ impl LabelEnv {
     }
 
     pub fn get_var(&self, id: &UniqueId) -> Result<Var, CompileError> {
-        match self.substitutions.get(id) {
+        match self.subst_var.get(id) {
             None => Err(CompileError::Generic(format!("symbol {id} not in scope"))),
             Some(x) => Ok(x.clone()),
         }
@@ -193,7 +164,7 @@ impl LabelEnv {
                 // let lbl = self.fresh();
                 let var = Var::new(*id, None, Some(s.to_string()));
                 // self.weights.insert(var.clone(), Weight::constant());
-                self.substitutions.insert(*id, var.clone());
+                self.subst_var.insert(*id, var.clone());
                 Ok(ELetIn(
                     var,
                     s.clone(),
@@ -209,9 +180,8 @@ impl LabelEnv {
             )),
             EFlip(id, param) => {
                 let lbl = self.fresh();
-                let var = Var::new(*id, Some(id.as_lbl()), None);
-                self.weights.insert(var.clone(), Weight::from_high(*param));
-                self.substitutions.insert(*id, var.clone());
+                let var = Var::new(*id, Some(lbl), None);
+                self.subst_var.insert(*id, var.clone());
                 Ok(EFlip(var, param.clone()))
             }
             EObserve(_, a) => {
@@ -225,14 +195,23 @@ impl LabelEnv {
     pub fn annotate(
         &mut self,
         p: &ProgramUnq,
-    ) -> Result<(ProgramAnn, WmcParams<f64>, VarOrder, HashMap<VarLabel, Var>), CompileError> {
+    ) -> Result<
+        (
+            ProgramAnn,
+            VarOrder,
+            HashMap<UniqueId, Var>,
+            HashMap<VarLabel, Var>,
+            u64,
+        ),
+        CompileError,
+    > {
         match p {
             Program::Body(e) => {
                 let eann = self.annotate_expr(e)?;
-                let weights = self.weight_map();
                 let order = self.linear_var_order();
                 let inv = self.get_inv();
-                Ok((Program::Body(eann), weights, order, inv))
+                let mx = self.max_varlabel_val();
+                Ok((Program::Body(eann), order, self.subst_var.clone(), inv, mx))
             }
         }
     }

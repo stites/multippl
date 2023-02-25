@@ -47,7 +47,7 @@ pub fn wmc_prob(env: &mut Env, c: &Compiled) -> Vec<(f64, f64)> {
         .map(|d| {
             calculate_wmc_prob(
                 env.mgr,
-                &env.weightmap.clone().unwrap(),
+                &c.weightmap.as_params(env.max_label.unwrap()),
                 &env.order.clone().unwrap(),
                 *d,
                 c.accept,

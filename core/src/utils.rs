@@ -1,4 +1,10 @@
-fn leaf_variable(bdd: BddPtr) -> Option<VarLabel> {
+use rsdd::builder::bdd_builder::*;
+use rsdd::builder::cache::all_app::*;
+use rsdd::repr::bdd::*;
+use rsdd::repr::var_label::*;
+use rsdd::repr::var_order::*;
+
+pub fn leaf_variable(bdd: BddPtr) -> Option<VarLabel> {
     let n = bdd.into_node_safe()?;
     if (n.low == BddPtr::PtrTrue && n.high == BddPtr::PtrFalse)
         || (n.low == BddPtr::PtrFalse && n.high == BddPtr::PtrTrue)
@@ -9,7 +15,7 @@ fn leaf_variable(bdd: BddPtr) -> Option<VarLabel> {
     }
 }
 
-fn variables(bdd: BddPtr, order: VarOrder) -> Vec<VarLabel> {
+pub fn variables(bdd: BddPtr) -> Vec<VarLabel> {
     Fold::new(
         &mut |vs: Vec<Option<VarLabel>>, bdd| {
             let mut vs = vs.clone();

@@ -43,19 +43,78 @@ impl CompileError {
 }
 use CompileError::*;
 
-pub type WeightMap = HashMap<UniqueId, (f64, f64)>;
+#[derive(Clone, PartialEq, Debug)]
+pub struct Weight {
+    pub lo: f64,
+    pub hi: f64,
+}
+impl Weight {
+    pub fn as_tuple(&self) -> (f64, f64) {
+        (self.lo, self.hi)
+    }
+    pub fn from_high(hi: f64) -> Weight {
+        Weight { lo: 1.0 - hi, hi }
+    }
+    pub fn constant() -> Weight {
+        Weight { lo: 1.0, hi: 1.0 }
+        // Self::from_high(0.5)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct WeightMap {
+    pub weights: HashMap<VarLabel, Weight>,
+}
+
+impl WeightMap {
+    pub fn as_params(&self, max_label: u64) -> WmcParams<f64> {
+        let mut wmc_params = WmcParams::new(0.0, 1.0);
+        let cnst = Weight::constant();
+        for ix in 0..max_label {
+            let lbl = VarLabel::new(ix);
+            let weight = self.weights.get(&lbl).unwrap_or_else(|| &cnst);
+            wmc_params.set_weight(lbl, weight.lo, weight.hi);
+        }
+        for (label, weight) in self.weights.iter() {
+            wmc_params.set_weight(*label, weight.lo, weight.hi);
+        }
+        wmc_params
+    }
+    pub fn insert(&mut self, lbl: VarLabel, high: f64) {
+        self.weights.insert(lbl, Weight::from_high(high));
+    }
+}
+impl Default for WeightMap {
+    fn default() -> Self {
+        Self {
+            weights: HashMap::new(),
+        }
+    }
+}
+
+impl IntoIterator for WeightMap {
+    type Item = (VarLabel, Weight);
+    type IntoIter = std::collections::hash_map::IntoIter<VarLabel, Weight>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.weights.into_iter()
+    }
+}
+
 pub type SubstMap = HashMap<UniqueId, (Vec<BddPtr>, Var)>;
 
 #[derive(Debug, Clone)]
 pub struct Context {
     pub accept: BddPtr,
     pub substitutions: SubstMap,
+    pub weightmap: WeightMap,
 }
 impl Context {
     pub fn from_compiled(c: &Compiled) -> Self {
         Context {
             accept: c.accept.clone(),
             substitutions: c.substitutions.clone(),
+            weightmap: c.weightmap.clone(),
         }
     }
 }
@@ -64,6 +123,7 @@ impl Default for Context {
         Context {
             accept: BddPtr::PtrTrue,
             substitutions: Default::default(),
+            weightmap: Default::default(),
         }
     }
 }
@@ -72,6 +132,7 @@ pub struct Compiled {
     pub dists: Vec<BddPtr>,
     pub accept: BddPtr,
     pub probabilities: Vec<Probability>,
+    pub weightmap: WeightMap,
     pub substitutions: SubstMap,
     pub importance_weight: f64,
 }
@@ -111,6 +172,8 @@ pub struct Env<'a> {
     pub order: Option<VarOrder>,
     pub weightmap: Option<WmcParams<f64>>,
     pub inv: Option<HashMap<VarLabel, Var>>,
+    pub varmap: Option<HashMap<UniqueId, Var>>,
+    pub max_label: Option<u64>,
     pub mgr: &'a mut BddManager<AllTable<BddPtr>>,
     pub rng: &'a mut StdRng,
     pub samples: HashMap<UniqueId, Vec<bool>>,
@@ -121,6 +184,8 @@ impl<'a> Env<'a> {
             names: HashMap::new(),
             order: None,
             weightmap: None,
+            varmap: None,
+            max_label: None,
             inv: None,
             mgr,
             rng,
@@ -132,6 +197,8 @@ impl<'a> Env<'a> {
             names: x.names.clone(),
             order: None,
             weightmap: None,
+            varmap: None,
+            max_label: None,
             inv: None,
             mgr: &mut x.mgr,
             rng: &mut x.rng,
@@ -147,8 +214,9 @@ impl<'a> Env<'a> {
     ) -> Result<Compiled, CompileError> {
         let l = self.eval_anf(ctx, bl)?;
         let r = self.eval_anf(ctx, br)?;
-        let mut substitutions = l.substitutions.clone();
-        substitutions.extend(r.substitutions.clone());
+        debug!("[anf_binop][left ] {}", renderbdds(&l.dists));
+        debug!("[anf_binop][right] {}", renderbdds(&r.dists));
+
         if l.dists.len() != r.dists.len() {
             return Err(SemanticsError(format!(
                 "impossible! compiled {} dists on the left and {} formulas on the right.",
@@ -164,6 +232,7 @@ impl<'a> Env<'a> {
                 dists,
                 accept: ctx.accept.clone(),
                 substitutions: ctx.substitutions.clone(),
+                weightmap: ctx.weightmap.clone(),
                 probabilities: vec![Probability::new(1.0); dists_len],
                 importance_weight: 1.0,
             })
@@ -181,6 +250,7 @@ impl<'a> Env<'a> {
                     dists: subs.to_vec(),
                     accept: ctx.accept.clone(),
                     substitutions: ctx.substitutions.clone(),
+                    weightmap: ctx.weightmap.clone(),
                     probabilities: vec![Probability::new(1.0); subs.len()],
                     importance_weight: 1.0,
                 }),
@@ -189,12 +259,17 @@ impl<'a> Env<'a> {
                 dists: vec![BddPtr::from_bool(*b)],
                 accept: ctx.accept.clone(),
                 substitutions: ctx.substitutions.clone(),
+                weightmap: ctx.weightmap.clone(),
                 probabilities: vec![Probability::new(1.0)],
                 importance_weight: 1.0,
             }),
             AVal(_, Val::Prod(vs)) => Err(CompileError::Todo()),
             And(bl, br) => self.eval_anf_binop(ctx, bl, br, &BddManager::and),
-            Or(bl, br) => self.eval_anf_binop(ctx, bl, br, &BddManager::or),
+            Or(bl, br) => {
+                let x = self.eval_anf_binop(ctx, bl, br, &BddManager::or);
+                debug!("[anf_OR][final] {}", renderbdds(&x.as_ref().unwrap().dists));
+                x
+            }
             Neg(bp) => {
                 let mut p = self.eval_anf(ctx, bp)?;
                 // FIXME negating a tuple? seems weird!!!!
@@ -263,6 +338,7 @@ impl<'a> Env<'a> {
                 let c = Compiled {
                     dists,
                     accept: ctx.accept.clone(),
+                    weightmap: ctx.weightmap.clone(),
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0); flen],
                     importance_weight: 1.0,
@@ -296,6 +372,7 @@ impl<'a> Env<'a> {
                     dists: body.dists,
                     accept,
                     substitutions: body.substitutions.clone(),
+                    weightmap: body.weightmap.clone(),
                     probabilities,
                     importance_weight,
                 };
@@ -335,6 +412,8 @@ impl<'a> Env<'a> {
 
                 let mut substitutions = truthy.substitutions.clone();
                 substitutions.extend(falsey.substitutions.clone());
+                let mut weightmap = truthy.weightmap.clone();
+                weightmap.weights.extend(falsey.weightmap.clone());
 
                 let probabilities = izip!(&truthy.probabilities, &falsey.probabilities)
                     // dancing with the numerically unstable devil
@@ -344,6 +423,7 @@ impl<'a> Env<'a> {
                 let c = Compiled {
                     dists,
                     accept,
+                    weightmap,
                     substitutions,
                     probabilities,
                     importance_weight,
@@ -353,9 +433,12 @@ impl<'a> Env<'a> {
             }
             EFlip(var, param) => {
                 debug!(">>>flip {:.3}", param);
+                let mut weightmap = ctx.weightmap.clone();
+                weightmap.insert(var.label.unwrap(), *param);
                 let c = Compiled {
                     dists: vec![self.mgr.var(var.label.unwrap(), true)],
                     accept: ctx.accept.clone(),
+                    weightmap,
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0)],
                     importance_weight: 1.0,
@@ -368,14 +451,18 @@ impl<'a> Env<'a> {
                 let comp = self.eval_anf(ctx, a)?;
                 debug!("[observe] In. Accept {}", &ctx.accept.print_bdd());
                 debug!("[observe] Comp. dist {}", renderbdds(&comp.dists));
+                debug!("[observe] weightmap  {:?}", ctx.weightmap);
                 let accept = comp
                     .dists
                     .into_iter()
                     .fold(ctx.accept.clone(), |global, cur| self.mgr.and(global, cur));
 
-                let wmc_params = self.weightmap.clone().unwrap();
+                let wmc_params = ctx.weightmap.as_params(self.max_label.unwrap());
                 let var_order = self.order.clone().unwrap();
-                debug!("[observe] weight_map {:?}", &wmc_params);
+                let avars = crate::utils::variables(accept);
+                for (i, var) in avars.iter().enumerate() {
+                    debug!("{}@{:?}: {:?}", i, var, wmc_params.get_var_weight(*var));
+                }
                 // debug!("[observe] max_var    {}", max_var);
                 debug!("[observe] WMCParams  {:?}", wmc_params);
                 debug!("[observe] VarOrder   {:?}", var_order);
@@ -386,6 +473,7 @@ impl<'a> Env<'a> {
                 let c = Compiled {
                     dists: vec![BddPtr::PtrTrue],
                     accept,
+                    weightmap: ctx.weightmap.clone(),
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0)],
                     importance_weight,
@@ -396,9 +484,13 @@ impl<'a> Env<'a> {
             ESample(_, e) => {
                 debug!(">>>sample");
                 let comp = self.eval_expr(ctx, e)?;
-                let wmc_params = self.weightmap.clone().unwrap();
+                let wmc_params = comp.weightmap.as_params(self.max_label.unwrap());
                 let var_order = self.order.clone().unwrap();
-                debug!("[sample] weight_map {:?}", &wmc_params);
+                debug!("[sample] Incm accept {}", &ctx.accept.print_bdd());
+                debug!("[sample] Comp accept {}", comp.accept.print_bdd());
+                debug!("[sample] Comp distrb {}", renderbdds(&comp.dists));
+
+                debug!("[sample] weight_map {:?}", &comp.weightmap);
                 debug!("[sample] WMCParams  {:?}", wmc_params);
                 debug!("[sample] VarOrder   {:?}", var_order);
 
@@ -430,16 +522,17 @@ impl<'a> Env<'a> {
                             // with rsdd's fold
                             let dist_holds = self.mgr.iff(*dist, sampled_value);
                             let new_accept = self.mgr.and(accept, dist_holds);
-                            (accept, qs, dists)
+                            (new_accept, qs, dists)
                         },
                     );
-                debug!(dists = renderbdds(&dists));
-                debug!(accept = accept.print_bdd());
+                debug!("[sample] final samples: {}", renderbdds(&dists));
+                debug!("[sample] final accept : {}", accept.print_bdd());
 
                 let c = Compiled {
                     dists,
                     accept,
-                    substitutions: ctx.substitutions.clone(),
+                    weightmap: ctx.weightmap.clone(),
+                    substitutions: ctx.substitutions.clone(), // any dangling references will be treated as constant and, thus, ignored -- information about this will live only in the propagated weight
                     probabilities: qs,
                     importance_weight: 1.0,
                 };
