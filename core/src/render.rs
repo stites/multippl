@@ -1,5 +1,5 @@
 use crate::annotate::grammar::Var;
-use crate::compile::{Compiled, Context, SubstMap, WeightMap};
+use crate::compile::*;
 use crate::grammar::*;
 use crate::uniquify::grammar::UniqueId;
 use itertools::*;

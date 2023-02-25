@@ -18,7 +18,7 @@ impl num_traits::identities::Zero for Importance {
     }
     fn is_zero(&self) -> bool {
         match self {
-            I::Weight(0.0) => true,
+            I::Weight(w) => *w == 0.0,
             _ => false,
         }
     }

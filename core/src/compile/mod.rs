@@ -1,3 +1,4 @@
+pub mod compiled;
 pub mod context;
 pub mod errors;
 pub mod importance;
@@ -29,33 +30,12 @@ use tracing::debug;
 
 pub type Mgr = BddManager<AllTable<BddPtr>>;
 
+pub use crate::compile::compiled::{Compiled, SubstMap};
 pub use crate::compile::context::Context;
 pub use crate::compile::errors::CompileError;
 pub use crate::compile::importance::{Importance, I};
 pub use crate::compile::weighting::{Weight, WeightMap};
 use CompileError::*;
-
-pub type SubstMap = HashMap<UniqueId, (Vec<BddPtr>, Var)>;
-
-#[derive(Debug, Clone)]
-pub struct Compiled {
-    pub dists: Vec<BddPtr>,
-    pub accept: BddPtr,
-    pub probabilities: Vec<Probability>,
-    pub weightmap: WeightMap,
-    pub substitutions: SubstMap,
-    pub importance: Importance,
-}
-impl Compiled {
-    fn convex_combination(&self, o: &Compiled) -> Importance {
-        izip!(&self.probabilities, &o.probabilities,).fold(Zero::zero(), |res, (selfp, op)| {
-            I::Weight(
-                (selfp.as_f64() * self.importance.weight() + op.as_f64() * o.importance.weight())
-                    / 2.0,
-            )
-        })
-    }
-}
 
 pub struct EnvArgs {
     // FIXME: just have env own BddManager and StdRng
