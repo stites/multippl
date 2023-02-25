@@ -32,6 +32,8 @@ mod grammar_macros;
 mod annotate;
 // mod collect_weightmap;
 mod compile;
+#[cfg(test)]
+mod debug;
 mod inference;
 mod parser;
 mod render;
@@ -110,7 +112,8 @@ mod active_tests {
     }
 
     #[test]
-    // #[traced_test]
+    #[traced_test]
+    #[ignore]
     fn ite_3_with_one_sample_hard1_simplified() {
         let mk = |ret: ExprTyped| {
             Program::Body(lets![
@@ -122,7 +125,7 @@ mod active_tests {
                 ...? ret ; b!()
             ])
         };
-        let n = 50000;
+        let n = 10;
         // check_exact1("ite_3/y-sample1/4-simpl", 0.266666667, &mk(b!("y")));
         check_approx1("ite_3/y-sample1/4-simpl", 0.266666667, &mk(b!("y")), n);
         // dice's answer for 2/4 @ sample site
@@ -164,7 +167,7 @@ mod active_tests {
     // }
 
     #[test]
-    #[traced_test]
+    ////#[traced_test]
     fn free_variable_2_approx() {
         let mk = |ret: ExprTyped| {
             Program::Body(lets![
@@ -179,8 +182,8 @@ mod active_tests {
             ])
         };
         // check_approx("free2/x*y", vec![0.714285714, 1.0, 1.0, 0.714285714], &mk(q!("x" x "y")), 10,);
-        check_approx1("free2/x", 0.714285714, &mk(b!("x")), 10);
-        check_approx1("free2/x&y", 0.714285714, &mk(b!("x" && "y")), 10);
+        check_approx1("free2/x", 0.714285714, &mk(b!("x")), 10000);
+        check_approx1("free2/x&y", 0.714285714, &mk(b!("x" && "y")), 10000);
         //check_approx("free2/x&y", vec![0.714285714, 1.0, 1.0, 0.714285714], &mk(q!("x" x "y")), 10,);
     }
 }

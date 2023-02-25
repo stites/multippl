@@ -1,4 +1,8 @@
-let x = flip 1/3 in
-let y = (let x0 = flip 1/5 in x || x0) in
-let tmp = observe x || y in
-x && y
+let x = flip 1/5 in                             ---> weight = 1
+let y = (
+    if x
+    then sample (flip 1/3)                      ---> weight is 1, p is 1
+    else flip 1/4
+) in
+observe (x || y)
+y

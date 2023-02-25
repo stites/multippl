@@ -342,7 +342,7 @@ macro_rules! free_variable_2_tests {
 free_variable_2_tests! {
     free_variable_2_exact: (|p| check_exact("free_2/x*y", vec![0.714285714, 1.0, 1.0, 0.714285714], &p,)),
     free_variable_2_approx: (|p| check_approx("free2/x*y", vec![0.714285714, 1.0, 1.0, 0.714285714], &p, 5000,)),
-    free_variable_2_inv: (|p| check_invariant("free2/x*l ", None, None, &p)),
+    free_variable_2_inv: (|p| check_invariant("free2/x*x ", None, None, &p)),
 }
 
 #[test]

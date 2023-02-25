@@ -180,7 +180,7 @@ pub fn importance_weighting_inf(env: &mut Env, steps: usize, p: &ProgramTyped) -
                     })
                     .collect_vec();
 
-                let w = c.importance_weight;
+                let w = c.importance.weight();
 
                 debug!("{}", c.accept.print_bdd());
                 debug!("{}", renderbdds(&c.dists));
@@ -234,7 +234,7 @@ fn conc_prelude(env: &mut Env, p: &ProgramTyped) -> (Vec<f64>, Vec<f64>, Vec<f64
                 .iter()
                 .map(Probability::as_f64)
                 .collect_vec();
-            let w = c.importance_weight;
+            let w = c.importance.weight();
 
             let mut exp = vec![0.0; prs.len()];
             let mut expw = vec![0.0; prs.len()];
@@ -338,7 +338,7 @@ pub fn importance_weighting_inf_conc(
                         .iter()
                         .map(Probability::as_f64)
                         .collect_vec();
-                    let w = c.importance_weight;
+                    let w = c.importance.weight();
 
                     return Ok(Expectations::new(w, prs));
                     // let mut exp = vec![0.0; prs.len()];
@@ -402,7 +402,7 @@ pub fn importance_weighting_inf_seeded(
                     .iter()
                     .map(Probability::as_f64)
                     .collect_vec();
-                let w = c.importance_weight;
+                let w = c.importance.weight();
 
                 if exp.len() == 0 {
                     exp = vec![0.0; prs.len()];

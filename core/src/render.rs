@@ -66,30 +66,38 @@ pub fn render_history(xss: &Vec<Vec<f64>>, high_precision: bool) -> String {
         .join(", ")
 }
 
-pub fn debug_compiled(s: &str, ctx: &Context, c: &Compiled) {
-    let p = &ctx.substitutions;
-    let renderw = |ws: &WeightMap| {
-        ws.weights
-            .iter()
-            .map(|(k, w)| format!("L{}: ({:.4}, {:.4})", k.value(), w.lo, w.hi))
-            .join(", ")
-    };
-    let renderp = |ps: &SubstMap| {
-        ps.iter()
-            .map(|(k, (v, _))| format!("{k}: {}", renderbdds(v)))
-            .join(", ")
-    };
+#[macro_export]
+macro_rules! debug_compiled {
+    ($s:expr, $ctx:expr, $comp:expr) => {{
+        let renderw = |ws: &WeightMap| {
+            ws.weights
+                .iter()
+                .map(|(k, w)| format!("L{}: ({:.4}, {:.4})", k.value(), w.lo, w.hi))
+                .join(", ")
+        };
+        let renderp = |ps: &SubstMap| {
+            ps.iter()
+                .map(|(k, (v, _))| format!("{k}: {}", renderbdds(v)))
+                .join(", ")
+        };
 
-    let dists = renderbdds(&c.dists);
+        let p = &$ctx.substitutions;
+        let dists = renderbdds(&$comp.dists);
+        let accepts = format!("{}", $comp.accept.print_bdd());
+        let weights = $comp
+            .importance
+            .clone()
+            .into_iter()
+            .map(fmt_f64(false))
+            .join(", ");
 
-    let accepts = format!("{}", c.accept.print_bdd());
-
-    debug!("{s}, [{}], [{}]", renderp(p), renderw(&ctx.weightmap));
-    debug!("      \\||/  {}", dists);
-    debug!("      \\||/  {}", accepts);
-    debug!("      \\||/  [{}]", renderw(&c.weightmap));
-    debug!("      \\||/  [{}]", renderp(&c.substitutions));
-    debug!("      \\||/  {}", render_probs(&c.probabilities, false));
-    debug!("      \\||/  {}", fmt_f64(false)(c.importance_weight));
-    debug!("----------------------------------------");
+        debug!("{}, [{}], [{}]", $s, renderp(p), renderw(&$ctx.weightmap));
+        debug!("      \\||/  {}", dists);
+        debug!("      \\||/  {}", accepts);
+        debug!("      \\||/  [{}]", renderw(&$comp.weightmap));
+        debug!("      \\||/  [{}]", renderp(&$comp.substitutions));
+        debug!("      \\||/  {}", render_probs(&$comp.probabilities, false));
+        debug!("      \\||/  {}", weights);
+        debug!("----------------------------------------");
+    }};
 }

@@ -1,8 +1,15 @@
+pub mod context;
+pub mod errors;
+pub mod importance;
+pub mod weighting;
+
 use crate::annotate::grammar::*;
 use crate::grammar::*;
 use crate::render::*;
 use crate::uniquify::grammar::UniqueId;
+use crate::*;
 use itertools::*;
+use num_traits::*;
 use rand::distributions::{Bernoulli, Distribution};
 use rand::rngs::StdRng;
 use rand::SeedableRng;
@@ -22,111 +29,14 @@ use tracing::debug;
 
 pub type Mgr = BddManager<AllTable<BddPtr>>;
 
-#[derive(Clone, Eq, Hash, PartialEq, Debug)]
-pub enum CompileError {
-    AcceptingNonZeroError(String),
-    Todo(),
-    TypeError(String),
-    Generic(String),
-    SemanticsError(String),
-}
-impl CompileError {
-    pub fn to_string(&self) -> String {
-        match self {
-            AcceptingNonZeroError(s) => s.to_string(),
-            Todo() => "todo!".to_string(),
-            TypeError(s) => s.to_string(),
-            Generic(s) => s.to_string(),
-            SemanticsError(s) => s.to_string(),
-        }
-    }
-}
+pub use crate::compile::context::Context;
+pub use crate::compile::errors::CompileError;
+pub use crate::compile::importance::{Importance, I};
+pub use crate::compile::weighting::{Weight, WeightMap};
 use CompileError::*;
-
-#[derive(Clone, PartialEq, Debug)]
-pub struct Weight {
-    pub lo: f64,
-    pub hi: f64,
-}
-impl Weight {
-    pub fn as_tuple(&self) -> (f64, f64) {
-        (self.lo, self.hi)
-    }
-    pub fn from_high(hi: f64) -> Weight {
-        Weight { lo: 1.0 - hi, hi }
-    }
-    pub fn constant() -> Weight {
-        Weight { lo: 1.0, hi: 1.0 }
-        // Self::from_high(0.5)
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct WeightMap {
-    pub weights: HashMap<VarLabel, Weight>,
-}
-
-impl WeightMap {
-    pub fn as_params(&self, max_label: u64) -> WmcParams<f64> {
-        let mut wmc_params = WmcParams::new(0.0, 1.0);
-        let cnst = Weight::constant();
-        for ix in 0..max_label {
-            let lbl = VarLabel::new(ix);
-            let weight = self.weights.get(&lbl).unwrap_or_else(|| &cnst);
-            wmc_params.set_weight(lbl, weight.lo, weight.hi);
-        }
-        for (label, weight) in self.weights.iter() {
-            wmc_params.set_weight(*label, weight.lo, weight.hi);
-        }
-        wmc_params
-    }
-    pub fn insert(&mut self, lbl: VarLabel, high: f64) {
-        self.weights.insert(lbl, Weight::from_high(high));
-    }
-}
-impl Default for WeightMap {
-    fn default() -> Self {
-        Self {
-            weights: HashMap::new(),
-        }
-    }
-}
-
-impl IntoIterator for WeightMap {
-    type Item = (VarLabel, Weight);
-    type IntoIter = std::collections::hash_map::IntoIter<VarLabel, Weight>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.weights.into_iter()
-    }
-}
 
 pub type SubstMap = HashMap<UniqueId, (Vec<BddPtr>, Var)>;
 
-#[derive(Debug, Clone)]
-pub struct Context {
-    pub accept: BddPtr,
-    pub substitutions: SubstMap,
-    pub weightmap: WeightMap,
-}
-impl Context {
-    pub fn from_compiled(c: &Compiled) -> Self {
-        Context {
-            accept: c.accept.clone(),
-            substitutions: c.substitutions.clone(),
-            weightmap: c.weightmap.clone(),
-        }
-    }
-}
-impl Default for Context {
-    fn default() -> Self {
-        Context {
-            accept: BddPtr::PtrTrue,
-            substitutions: Default::default(),
-            weightmap: Default::default(),
-        }
-    }
-}
 #[derive(Debug, Clone)]
 pub struct Compiled {
     pub dists: Vec<BddPtr>,
@@ -134,12 +44,15 @@ pub struct Compiled {
     pub probabilities: Vec<Probability>,
     pub weightmap: WeightMap,
     pub substitutions: SubstMap,
-    pub importance_weight: f64,
+    pub importance: Importance,
 }
 impl Compiled {
-    fn convex_combination(&self, o: &Compiled) -> f64 {
-        izip!(&self.probabilities, &o.probabilities,).fold(0.0, |res, (selfp, op)| {
-            (selfp.as_f64() * self.importance_weight + op.as_f64() * o.importance_weight) / 2.0
+    fn convex_combination(&self, o: &Compiled) -> Importance {
+        izip!(&self.probabilities, &o.probabilities,).fold(Zero::zero(), |res, (selfp, op)| {
+            I::Weight(
+                (selfp.as_f64() * self.importance.weight() + op.as_f64() * o.importance.weight())
+                    / 2.0,
+            )
         })
     }
 }
@@ -234,7 +147,7 @@ impl<'a> Env<'a> {
                 substitutions: ctx.substitutions.clone(),
                 weightmap: ctx.weightmap.clone(),
                 probabilities: vec![Probability::new(1.0); dists_len],
-                importance_weight: 1.0,
+                importance: I::Weight(1.0),
             })
         }
     }
@@ -252,7 +165,7 @@ impl<'a> Env<'a> {
                     substitutions: ctx.substitutions.clone(),
                     weightmap: ctx.weightmap.clone(),
                     probabilities: vec![Probability::new(1.0); subs.len()],
-                    importance_weight: 1.0,
+                    importance: I::Weight(1.0),
                 }),
             },
             AVal(_, Val::Bool(b)) => Ok(Compiled {
@@ -261,7 +174,7 @@ impl<'a> Env<'a> {
                 substitutions: ctx.substitutions.clone(),
                 weightmap: ctx.weightmap.clone(),
                 probabilities: vec![Probability::new(1.0)],
-                importance_weight: 1.0,
+                importance: I::Weight(1.0),
             }),
             AVal(_, Val::Prod(vs)) => Err(CompileError::Todo()),
             And(bl, br) => self.eval_anf_binop(ctx, bl, br, &BddManager::and),
@@ -300,7 +213,7 @@ impl<'a> Env<'a> {
             EAnf(_, a) => {
                 debug!(">>>anf: {:?}", a);
                 let c = self.eval_anf(ctx, a)?;
-                debug_compiled("anf", ctx, &c);
+                debug_compiled!("anf", ctx, &c);
                 Ok(c)
             }
             EPrj(_, i, a) => {
@@ -311,20 +224,20 @@ impl<'a> Env<'a> {
                 let dists = c.dists;
                 c.dists = vec![dists[*i]];
                 if i > &1 {
-                    debug_compiled(&format!("prj@{}", i).to_string(), ctx, &c);
+                    debug_compiled!(&format!("prj@{}", i).to_string(), ctx, c);
                 }
                 Ok(c)
             }
             EFst(_, a) => {
                 debug!(">>>fst: {:?}", a);
                 let c = self.eval_expr(ctx, &EPrj((), 0, a.clone()))?;
-                debug_compiled("fst", ctx, &c);
+                debug_compiled!("fst", ctx, c);
                 Ok(c)
             }
             ESnd(_, a) => {
                 debug!(">>>snd: {:?}", a);
                 let c = self.eval_expr(ctx, &EPrj((), 1, a.clone()))?;
-                debug_compiled("snd", ctx, &c);
+                debug_compiled!("snd", ctx, c);
                 Ok(c)
             }
             EProd(_, anfs) => {
@@ -341,10 +254,10 @@ impl<'a> Env<'a> {
                     weightmap: ctx.weightmap.clone(),
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0); flen],
-                    importance_weight: 1.0,
+                    importance: I::Weight(1.0),
                 };
 
-                debug_compiled("prod", ctx, &c);
+                debug_compiled!("prod", ctx, c);
                 Ok(c)
             }
             ELetIn(var, s, ebound, ebody) => {
@@ -366,7 +279,7 @@ impl<'a> Env<'a> {
                 let probabilities = izip!(bound.probabilities, body.probabilities)
                     .map(|(p1, p2)| p1 * p2)
                     .collect_vec();
-                let importance_weight = bound.importance_weight * body.importance_weight;
+                let importance = I::Weight(bound.importance.weight() * body.importance.weight());
 
                 let c = Compiled {
                     dists: body.dists,
@@ -374,9 +287,9 @@ impl<'a> Env<'a> {
                     substitutions: body.substitutions.clone(),
                     weightmap: body.weightmap.clone(),
                     probabilities,
-                    importance_weight,
+                    importance,
                 };
-                debug_compiled(&format!("let-in {}", s), ctx, &c);
+                debug_compiled!(format!("let-in {}", s), ctx, c);
                 Ok(c)
             }
             EIte(_, cond, t, f) => {
@@ -419,16 +332,16 @@ impl<'a> Env<'a> {
                     // dancing with the numerically unstable devil
                     .map(|(t, f)| (*t * Probability::new(0.5) + *f * Probability::new(0.5)))
                     .collect_vec();
-                let importance_weight = truthy.convex_combination(&falsey);
+                let importance = truthy.convex_combination(&falsey);
                 let c = Compiled {
                     dists,
                     accept,
                     weightmap,
                     substitutions,
                     probabilities,
-                    importance_weight,
+                    importance,
                 };
-                debug_compiled("ite", ctx, &c);
+                debug_compiled!("ite", ctx, c);
                 Ok(c)
             }
             EFlip(var, param) => {
@@ -441,9 +354,9 @@ impl<'a> Env<'a> {
                     weightmap,
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0)],
-                    importance_weight: 1.0,
+                    importance: I::Weight(1.0),
                 };
-                debug_compiled("flip", ctx, &c);
+                debug_compiled!("flip", ctx, c);
                 Ok(c)
             }
             EObserve(_, a) => {
@@ -474,8 +387,8 @@ impl<'a> Env<'a> {
                     dist,
                     ctx.accept,
                 );
-                let importance_weight = a / z;
-                debug!("[observe] IWeight    {}", importance_weight);
+                let importance = I::Weight(a / z);
+                debug!("[observe] IWeight    {}", importance.weight());
 
                 let c = Compiled {
                     dists: vec![BddPtr::PtrTrue],
@@ -483,9 +396,9 @@ impl<'a> Env<'a> {
                     weightmap: ctx.weightmap.clone(),
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0)],
-                    importance_weight,
+                    importance,
                 };
-                debug_compiled("observe", ctx, &c);
+                debug_compiled!("observe", ctx, c);
                 Ok(c)
             }
             ESample(_, e) => {
@@ -514,6 +427,7 @@ impl<'a> Env<'a> {
                                 accept,
                             );
                             let theta_q = a / z;
+
                             let bern = Bernoulli::new(theta_q).unwrap();
                             let sample = bern.sample(self.rng);
                             qs.push(Probability::new(if sample {
@@ -538,16 +452,14 @@ impl<'a> Env<'a> {
                 let c = Compiled {
                     dists,
                     accept,
-                    // !!!! seems to me that there is a dataflow analysis between free_variable_2_approx and program04_approx
                     // weightmap: ctx.weightmap.clone(), // FIXME
                     // substitutions: ctx.substitutions.clone(), // TODO any dangling references will be treated as constant and, thus, ignored -- information about this will live only in the propagated weight
                     weightmap: comp.weightmap.clone(), // FIXME
                     substitutions: comp.substitutions.clone(), // TODO any dangling references will be treated as constant and, thus, ignored -- information about this will live only in the propagated weight
-
                     probabilities: qs,
-                    importance_weight: 1.0,
+                    importance: I::Weight(1.0),
                 };
-                debug_compiled("sample", ctx, &c);
+                debug_compiled!("sample", ctx, c);
                 Ok(c)
             }
         }
