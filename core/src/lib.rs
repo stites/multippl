@@ -44,12 +44,12 @@ mod uniquify;
 mod utils;
 
 use crate::annotate::LabelEnv;
-use crate::compile::{compile, CompileError, Compiled, Env};
+use crate::compile::{compile, CompileError, Compiled, Env, Output, Result};
 use crate::typecheck::grammar::{ExprTyped, ProgramTyped};
 use crate::typecheck::typecheck;
 use crate::uniquify::SymEnv;
 
-pub fn run(env: &mut Env, p: &ProgramTyped) -> Result<Compiled, CompileError> {
+pub fn run(env: &mut Env, p: &ProgramTyped) -> Result<Output> {
     let p = typecheck(p)?;
     let mut senv = SymEnv::default();
     let p = senv.uniquify(&p)?;

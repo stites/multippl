@@ -41,7 +41,7 @@ pub fn calculate_wmc_prob<T: Copy + std::fmt::Debug + num_traits::Num + std::fmt
     (a, z)
 }
 
-pub fn wmc_prob(env: &mut Env, c: &Compiled) -> Vec<(f64, f64)> {
+pub fn wmc_prob(env: &mut Env, c: &Output) -> Vec<(f64, f64)> {
     c.dists
         .iter()
         .map(|d| {

@@ -1,4 +1,5 @@
 use crate::annotate::grammar::Var;
+use crate::compile::context::Context;
 use crate::compile::importance::{Importance, I};
 use crate::compile::weighting::{Weight, WeightMap};
 use crate::uniquify::grammar::UniqueId;
@@ -11,7 +12,7 @@ use std::collections::HashMap;
 pub type SubstMap = HashMap<UniqueId, (Vec<BddPtr>, Var)>;
 
 #[derive(Debug, Clone)]
-pub struct Compiled {
+pub struct Output {
     pub dists: Vec<BddPtr>,
     pub accept: BddPtr,
     pub probabilities: Vec<Probability>,
@@ -20,13 +21,73 @@ pub struct Compiled {
     pub importance: Importance,
 }
 
-impl Compiled {
-    pub fn convex_combination(&self, o: &Compiled) -> Importance {
+impl Output {
+    pub fn convex_combination(&self, o: &Output) -> Importance {
         izip!(&self.probabilities, &o.probabilities,).fold(Zero::zero(), |res, (selfp, op)| {
             I::Weight(
                 (selfp.as_f64() * self.importance.weight() + op.as_f64() * o.importance.weight())
                     / 2.0,
             )
         })
+    }
+    pub fn from_anf_dists(ctx: &Context, dists: Vec<BddPtr>) -> Output {
+        let probabilities = vec![Probability::new(1.0); dists.len()];
+        Output {
+            dists,
+            accept: ctx.accept.clone(),
+            substitutions: ctx.substitutions.clone(),
+            weightmap: ctx.weightmap.clone(),
+            probabilities,
+            importance: I::Weight(1.0),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum Compiled {
+    Output(Output),
+    Debug(Vec<Output>),
+}
+impl Compiled {
+    pub fn is_single_run(&self) -> bool {
+        match self {
+            Compiled::Output(_) => true,
+            _ => false,
+        }
+    }
+    pub fn from_output(o: Output) -> Compiled {
+        Compiled::Output(o)
+    }
+    pub fn as_output(&self) -> Option<Output> {
+        match self {
+            Compiled::Output(o) => Some(o.clone()),
+            Compiled::Debug(_) => None,
+        }
+    }
+}
+impl IntoIterator for Compiled {
+    type Item = Output;
+    type IntoIter = std::vec::IntoIter<Output>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        match self {
+            Compiled::Output(o) => vec![o].into_iter(),
+            Compiled::Debug(os) => os.into_iter(),
+        }
+    }
+}
+
+impl FromIterator<Output> for Compiled {
+    fn from_iter<T>(iter: T) -> Self
+    where
+        T: IntoIterator<Item = Output>,
+    {
+        let os = iter.into_iter().collect::<Vec<Output>>();
+        let os_len = os.len();
+        match os_len {
+            0 => panic!("empty iterator, cannot produce compiled output"),
+            1 => Compiled::from_output(os[0].clone()),
+            _ => Compiled::Debug(os),
+        }
     }
 }

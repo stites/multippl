@@ -30,9 +30,9 @@ use tracing::debug;
 
 pub type Mgr = BddManager<AllTable<BddPtr>>;
 
-pub use crate::compile::compiled::{Compiled, SubstMap};
+pub use crate::compile::compiled::{Compiled, Output, SubstMap};
 pub use crate::compile::context::Context;
-pub use crate::compile::errors::CompileError;
+pub use crate::compile::errors::{CompileError, Result};
 pub use crate::compile::importance::{Importance, I};
 pub use crate::compile::weighting::{Weight, WeightMap};
 use CompileError::*;
@@ -104,7 +104,7 @@ impl<'a> Env<'a> {
         bl: &AnfAnn,
         br: &AnfAnn,
         op: &dyn Fn(&mut Mgr, BddPtr, BddPtr) -> BddPtr,
-    ) -> Result<Compiled, CompileError> {
+    ) -> Result<Output> {
         let l = self.eval_anf(ctx, bl)?;
         let r = self.eval_anf(ctx, br)?;
         debug!("[anf_binop][left ] {}", renderbdds(&l.dists));
@@ -121,7 +121,7 @@ impl<'a> Env<'a> {
                 .map(|(l, r)| op(self.mgr, l, r))
                 .collect_vec();
             let dists_len = dists.len();
-            Ok(Compiled {
+            Ok(Output {
                 dists,
                 accept: ctx.accept.clone(),
                 substitutions: ctx.substitutions.clone(),
@@ -131,7 +131,7 @@ impl<'a> Env<'a> {
             })
         }
     }
-    pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnn) -> Result<Compiled, CompileError> {
+    pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnn) -> Result<Output> {
         use ANF::*;
         match a {
             AVar(var, s) => match ctx.substitutions.get(&var.id) {
@@ -139,7 +139,7 @@ impl<'a> Env<'a> {
                     "variable {} does not reference known substitution",
                     s
                 ))),
-                Some((subs, subvar)) => Ok(Compiled {
+                Some((subs, subvar)) => Ok(Output {
                     dists: subs.to_vec(),
                     accept: ctx.accept.clone(),
                     substitutions: ctx.substitutions.clone(),
@@ -148,7 +148,7 @@ impl<'a> Env<'a> {
                     importance: I::Weight(1.0),
                 }),
             },
-            AVal(_, Val::Bool(b)) => Ok(Compiled {
+            AVal(_, Val::Bool(b)) => Ok(Output {
                 dists: vec![BddPtr::from_bool(*b)],
                 accept: ctx.accept.clone(),
                 substitutions: ctx.substitutions.clone(),
@@ -172,7 +172,7 @@ impl<'a> Env<'a> {
             }
         }
     }
-    pub fn log_samples(&mut self, id: UniqueId, ebound: &ExprAnn, bound: &Compiled) {
+    pub fn log_samples(&mut self, id: UniqueId, ebound: &ExprAnn, bound: &Output) {
         if ebound.is_sample() {
             let samples = bound
                 .dists
@@ -187,7 +187,7 @@ impl<'a> Env<'a> {
         }
     }
 
-    pub fn eval_expr(&mut self, ctx: &Context, e: &ExprAnn) -> Result<Compiled, CompileError> {
+    pub fn eval_expr(&mut self, ctx: &Context, e: &ExprAnn) -> Result<Output> {
         use Expr::*;
         match e {
             EAnf(_, a) => {
@@ -228,7 +228,7 @@ impl<'a> Env<'a> {
                     Ok(fin.iter().chain(&c.dists).cloned().collect_vec())
                 })?;
                 let flen = dists.len();
-                let c = Compiled {
+                let c = Output {
                     dists,
                     accept: ctx.accept.clone(),
                     weightmap: ctx.weightmap.clone(),
@@ -261,7 +261,7 @@ impl<'a> Env<'a> {
                     .collect_vec();
                 let importance = I::Weight(bound.importance.weight() * body.importance.weight());
 
-                let c = Compiled {
+                let c = Output {
                     dists: body.dists,
                     accept,
                     substitutions: body.substitutions.clone(),
@@ -313,7 +313,7 @@ impl<'a> Env<'a> {
                     .map(|(t, f)| (*t * Probability::new(0.5) + *f * Probability::new(0.5)))
                     .collect_vec();
                 let importance = truthy.convex_combination(&falsey);
-                let c = Compiled {
+                let c = Output {
                     dists,
                     accept,
                     weightmap,
@@ -328,7 +328,7 @@ impl<'a> Env<'a> {
                 debug!(">>>flip {:.3}", param);
                 let mut weightmap = ctx.weightmap.clone();
                 weightmap.insert(var.label.unwrap(), *param);
-                let c = Compiled {
+                let c = Output {
                     dists: vec![self.mgr.var(var.label.unwrap(), true)],
                     accept: ctx.accept.clone(),
                     weightmap,
@@ -370,7 +370,7 @@ impl<'a> Env<'a> {
                 let importance = I::Weight(a / z);
                 debug!("[observe] IWeight    {}", importance.weight());
 
-                let c = Compiled {
+                let c = Output {
                     dists: vec![BddPtr::PtrTrue],
                     accept: dist,
                     weightmap: ctx.weightmap.clone(),
@@ -429,7 +429,7 @@ impl<'a> Env<'a> {
                 debug!("[sample] final samples: {}", renderbdds(&dists));
                 debug!("[sample] final accept : {}", accept.print_bdd());
 
-                let c = Compiled {
+                let c = Output {
                     dists,
                     accept,
                     // weightmap: ctx.weightmap.clone(), // FIXME
@@ -445,7 +445,7 @@ impl<'a> Env<'a> {
         }
     }
 }
-pub fn compile(env: &mut Env, p: &ProgramAnn) -> Result<Compiled, CompileError> {
+pub fn compile(env: &mut Env, p: &ProgramAnn) -> Result<Output> {
     match p {
         Program::Body(e) => {
             debug!("========================================================");

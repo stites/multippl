@@ -24,7 +24,7 @@ use tracing::debug;
 
 pub type Mgr = BddManager<AllTable<BddPtr>>;
 
-pub use crate::compile::compiled::{Compiled, SubstMap};
+pub use crate::compile::compiled::{Compiled, Output, SubstMap};
 pub use crate::compile::context::Context;
 pub use crate::compile::errors::{CompileError, Result};
 pub use crate::compile::importance::{Importance, I};
@@ -62,9 +62,71 @@ pub struct Env<'a> {
     pub varmap: Option<HashMap<UniqueId, Var>>,
     pub max_label: Option<u64>,
     pub mgr: &'a mut BddManager<AllTable<BddPtr>>,
-    pub rng: &'a mut StdRng,
+    pub rng: Option<&'a mut StdRng>,
     pub samples: HashMap<UniqueId, Vec<bool>>,
 }
+struct Rnd<'a> {
+    pub rng: Option<&'a mut StdRng>,
+}
+
+struct Foo<'a> {
+    rng: &'a mut StdRng,
+}
+
+impl<'a> Foo<'a> {
+    fn new() -> Self {
+        todo!()
+    }
+    fn mk_true(&mut self, _theta_q: f64) -> bool {
+        false
+    }
+    fn mk_false(&mut self, _theta_q: f64) -> bool {
+        true
+    }
+}
+impl<'a> Rnd<'a> {
+    // fn mk_false<'b>(_rng: &mut StdRng, _theta_q: f64) -> bool {
+    //     false
+    // }
+    // fn mk_true<'b>(_rng: &mut StdRng, _theta_q: f64) -> bool {
+    //     true
+    // }
+
+    // // fn bernoulli<'b>(rng: &'b mut StdRng) -> &dyn Fn(f64) -> bool {
+    // //     &self.bernoulli_h
+    // // }
+    // fn bernoulli(_rng: &mut StdRng, theta_q: f64) -> bool {
+    //     let bern = Bernoulli::new(theta_q).unwrap();
+    //     bern.sample(_rng)
+    // }
+    // pub fn sample_bool(&mut self, x: bool) -> Vec<&'a dyn FnMut(f64) -> bool> {
+    //     if x {
+    //         // vec![&|x| self.bernoulli(x)]
+    //         let foo = Foo::new();
+    //         vec![&|x| self.mk_false(x)]
+    //     } else {
+    //         let bar = Foo::new();
+    //         vec![&bar.mkTrue]
+    //     }
+    // }
+
+    // pub fn sample_bool(x: bool) -> Vec<&'a dyn FnMut(&mut StdRng, f64) -> bool> {
+    //     if x {
+    //         vec![&Self::bernoulli]
+    //     } else {
+    //         vec![&Self::mk_true, &Self::mk_false]
+    //     }
+    // }
+    // pub fn sample_bool_option<'b>(
+    //     x: Option<&'b mut StdRng>,
+    // ) -> Vec<&dyn FnMut(&'b mut StdRng, f64) -> bool> {
+    //     match x {
+    //         Some(rng) => vec![&Self::bernoulli],
+    //         None => vec![&Self::mk_true, &Self::mk_false],
+    //     }
+    // }
+}
+
 impl<'a> Env<'a> {
     pub fn new(mgr: &'a mut BddManager<AllTable<BddPtr>>, rng: &'a mut StdRng) -> Env<'a> {
         Env {
@@ -75,7 +137,7 @@ impl<'a> Env<'a> {
             max_label: None,
             inv: None,
             mgr,
-            rng,
+            rng: Some(rng),
             samples: HashMap::new(),
         }
     }
@@ -88,7 +150,7 @@ impl<'a> Env<'a> {
             max_label: None,
             inv: None,
             mgr: &mut x.mgr,
-            rng: &mut x.rng,
+            rng: Some(&mut x.rng),
             samples: HashMap::new(),
         }
     }
@@ -98,11 +160,9 @@ impl<'a> Env<'a> {
         bl: &AnfAnn,
         br: &AnfAnn,
         op: &dyn Fn(&mut Mgr, BddPtr, BddPtr) -> BddPtr,
-    ) -> Result<Compiled> {
+    ) -> Result<Output> {
         let l = self.eval_anf(ctx, bl)?;
         let r = self.eval_anf(ctx, br)?;
-        debug!("[anf_binop][left ] {}", renderbdds(&l.dists));
-        debug!("[anf_binop][right] {}", renderbdds(&r.dists));
 
         if l.dists.len() != r.dists.len() {
             return Err(SemanticsError(format!(
@@ -114,19 +174,13 @@ impl<'a> Env<'a> {
             let dists = izip!(l.dists, r.dists)
                 .map(|(l, r)| op(self.mgr, l, r))
                 .collect_vec();
+
             let dists_len = dists.len();
-            Ok(Compiled {
-                dists,
-                accept: ctx.accept.clone(),
-                substitutions: ctx.substitutions.clone(),
-                weightmap: ctx.weightmap.clone(),
-                probabilities: vec![Probability::new(1.0); dists_len],
-                importance: I::Weight(1.0),
-            })
+            Ok(Output::from_anf_dists(ctx, dists))
         }
     }
 
-    pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnn) -> Result<Compiled> {
+    pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnn) -> Result<Output> {
         use ANF::*;
         match a {
             AVar(var, s) => match ctx.substitutions.get(&var.id) {
@@ -134,52 +188,37 @@ impl<'a> Env<'a> {
                     "variable {} does not reference known substitution",
                     s
                 ))),
-                Some((subs, subvar)) => Ok(Compiled {
-                    dists: subs.to_vec(),
-                    accept: ctx.accept.clone(),
-                    substitutions: ctx.substitutions.clone(),
-                    weightmap: ctx.weightmap.clone(),
-                    probabilities: vec![Probability::new(1.0); subs.len()],
-                    importance: I::Weight(1.0),
-                }),
+                Some((subs, subvar)) => Ok(Output::from_anf_dists(ctx, subs.to_vec())),
             },
-            AVal(_, Val::Bool(b)) => Ok(Compiled {
-                dists: vec![BddPtr::from_bool(*b)],
-                accept: ctx.accept.clone(),
-                substitutions: ctx.substitutions.clone(),
-                weightmap: ctx.weightmap.clone(),
-                probabilities: vec![Probability::new(1.0)],
-                importance: I::Weight(1.0),
-            }),
+            AVal(_, Val::Bool(b)) => Ok(Output::from_anf_dists(ctx, vec![BddPtr::from_bool(*b)])),
             AVal(_, Val::Prod(vs)) => Err(CompileError::Todo()),
             And(bl, br) => self.eval_anf_binop(ctx, bl, br, &BddManager::and),
             Or(bl, br) => {
                 let x = self.eval_anf_binop(ctx, bl, br, &BddManager::or);
-                debug!("[anf_OR][final] {}", renderbdds(&x.as_ref().unwrap().dists));
                 x
             }
             Neg(bp) => {
                 let mut p = self.eval_anf(ctx, bp)?;
                 // FIXME negating a tuple? seems weird!!!!
                 p.dists = p.dists.iter().map(BddPtr::neg).collect_vec();
-
                 Ok(p)
             }
         }
     }
-    pub fn eval_anf_over(&mut self, ctx: &Context, a: &AnfAnn) -> Result<Vec<Compiled>> {
-        let c = self.eval_anf(ctx, a)?;
-        Ok(vec![c])
+    pub fn result_from(&self, c: Output) -> Result<Compiled> {
+        Ok(match self.rng {
+            Some(_) => Compiled::from_output(c),
+            None => Compiled::Output(c),
+        })
     }
-
-    pub fn eval_expr(&mut self, ctx: &Context, e: &ExprAnn) -> Result<Vec<Compiled>> {
+    pub fn eval_expr(&mut self, ctx: &Context, e: &ExprAnn) -> Result<Compiled> {
         use Expr::*;
         match e {
             EAnf(_, a) => {
                 debug!(">>>anf: {:?}", a);
                 let c = self.eval_anf(ctx, a)?;
                 debug_compiled!("anf", ctx, &c);
-                Ok(vec![c])
+                self.result_from(c)
             }
             EPrj(_, i, a) => {
                 if i > &1 {
@@ -191,7 +230,7 @@ impl<'a> Env<'a> {
                 if i > &1 {
                     debug_compiled!(&format!("prj@{}", i).to_string(), ctx, c);
                 }
-                Ok(vec![c])
+                self.result_from(c)
             }
             EFst(_, a) => {
                 debug!(">>>fst: {:?}", a);
@@ -213,7 +252,7 @@ impl<'a> Env<'a> {
                     Ok(fin.iter().chain(&c.dists).cloned().collect_vec())
                 })?;
                 let flen = dists.len();
-                let c = Compiled {
+                let c = Output {
                     dists,
                     accept: ctx.accept.clone(),
                     weightmap: ctx.weightmap.clone(),
@@ -223,7 +262,7 @@ impl<'a> Env<'a> {
                 };
 
                 debug_compiled!("prod", ctx, c);
-                Ok(vec![c])
+                self.result_from(c)
             }
             ELetIn(var, s, ebound, ebody) => {
                 debug!(">>>let-in {}", s);
@@ -252,7 +291,7 @@ impl<'a> Env<'a> {
                                 let importance =
                                     I::Weight(bound.importance.weight() * body.importance.weight());
 
-                                let c = Compiled {
+                                let c = Output {
                                     dists: body.dists,
                                     accept,
                                     substitutions: body.substitutions.clone(),
@@ -263,12 +302,12 @@ impl<'a> Env<'a> {
                                 debug_compiled!(format!("let-in {}", s), ctx, c);
                                 Ok(c)
                             })
-                            .collect::<Result<Vec<Compiled>>>()
+                            .collect::<Result<Vec<Output>>>()
                     })
-                    .collect::<Result<Vec<Vec<Compiled>>>>()?
+                    .collect::<Result<Vec<Vec<Output>>>>()?
                     .into_iter()
                     .flatten()
-                    .collect_vec())
+                    .collect::<Compiled>())
             }
             EIte(_, cond, t, f) => {
                 let pred = self.eval_anf(ctx, cond)?;
@@ -280,58 +319,60 @@ impl<'a> Env<'a> {
                 let pred_dist = pred.dists[0];
 
                 Ok(self.eval_expr(ctx, t)?.into_iter().map(|truthy| {
-                    self.eval_expr(ctx, f)?.into_iter().map(|falsey| {
-if truthy.dists.len() != falsey.dists.len() {
-                    return Err(TypeError(format!(
-                                          "Expected both branches of ITE to return same len tuple\nGot (left): {:?}\nGot (right):{:?}",
-                                          truthy.dists.len(), falsey.dists.len(),
-                                      )));
-                }
+                                  self.eval_expr(ctx, f)?.into_iter().map(|falsey| {
+              if truthy.dists.len() != falsey.dists.len() {
+                                  return Err(TypeError(format!(
+                                                        "Expected both branches of ITE to return same len tuple\nGot (left): {:?}\nGot (right):{:?}",
+                                                        truthy.dists.len(), falsey.dists.len(),
+                                                    )));
+                              }
 
-                let dists = izip!(&truthy.dists, &falsey.dists)
-                    .map(|(tdist, fdist)| {
-                        let dist_l = self.mgr.and(pred_dist, *tdist);
-                        let dist_r = self.mgr.and(pred_dist.neg(), *fdist);
-                        self.mgr.or(dist_l, dist_r)
-                    })
-                    .collect_vec();
+                              let dists = izip!(&truthy.dists, &falsey.dists)
+                                  .map(|(tdist, fdist)| {
+                                      let dist_l = self.mgr.and(pred_dist, *tdist);
+                                      let dist_r = self.mgr.and(pred_dist.neg(), *fdist);
+                                      self.mgr.or(dist_l, dist_r)
+                                  })
+                                  .collect_vec();
 
-                let accept_l = self.mgr.and(pred_dist, truthy.accept);
-                let accept_r = self.mgr.and(pred_dist.neg(), falsey.accept);
-                let accept = self.mgr.or(accept_l, accept_r);
-                let accept = self.mgr.and(accept, ctx.accept);
+                              let accept_l = self.mgr.and(pred_dist, truthy.accept);
+                              let accept_r = self.mgr.and(pred_dist.neg(), falsey.accept);
+                              let accept = self.mgr.or(accept_l, accept_r);
+                              let accept = self.mgr.and(accept, ctx.accept);
 
-                let mut substitutions = truthy.substitutions.clone();
-                substitutions.extend(falsey.substitutions.clone());
-                let mut weightmap = truthy.weightmap.clone();
-                weightmap.weights.extend(falsey.weightmap.clone());
+                              let mut substitutions = truthy.substitutions.clone();
+                              substitutions.extend(falsey.substitutions.clone());
+                              let mut weightmap = truthy.weightmap.clone();
+                              weightmap.weights.extend(falsey.weightmap.clone());
 
-                let probabilities = izip!(&truthy.probabilities, &falsey.probabilities)
-                    // dancing with the numerically unstable devil
-                    .map(|(t, f)| (*t * Probability::new(0.5) + *f * Probability::new(0.5)))
-                    .collect_vec();
-                let importance = truthy.convex_combination(&falsey);
-                let c = Compiled {
-                    dists,
-                    accept,
-                    weightmap,
-                    substitutions,
-                    probabilities,
-                    importance,
-                };
-                debug_compiled!("ite", ctx, c);
-                        Ok(c)
-                    }).collect::<Result<Vec<Compiled>>>()
-                }).collect::<Result<Vec<Vec<Compiled>>>>()?
-    .into_iter()
+                              let probabilities = izip!(&truthy.probabilities, &falsey.probabilities)
+                                  // dancing with the numerically unstable devil
+                                  .map(|(t, f)| (*t * Probability::new(0.5) + *f * Probability::new(0.5)))
+                                  .collect_vec();
+                              let importance = truthy.convex_combination(&falsey);
+                              let c = Output {
+                                  dists,
+                                  accept,
+                                  weightmap,
+                                  substitutions,
+                                  probabilities,
+                                  importance,
+                              };
+                              debug_compiled!("ite", ctx, c);
+                                      Ok(c)
+                                  }).collect::<Result<Vec<Output>>>()
+                })
+
+                    .collect::<Result<Vec<Vec<Output>>>>()?
+                    .into_iter()
                     .flatten()
-                    .collect_vec())
+                    .collect::<Compiled>())
             }
             EFlip(var, param) => {
                 debug!(">>>flip {:.3}", param);
                 let mut weightmap = ctx.weightmap.clone();
                 weightmap.insert(var.label.unwrap(), *param);
-                let c = Compiled {
+                let c = Output {
                     dists: vec![self.mgr.var(var.label.unwrap(), true)],
                     accept: ctx.accept.clone(),
                     weightmap,
@@ -340,7 +381,7 @@ if truthy.dists.len() != falsey.dists.len() {
                     importance: I::Weight(1.0),
                 };
                 debug_compiled!("flip", ctx, c);
-                Ok(vec![c])
+                self.result_from(c)
             }
             EObserve(_, a) => {
                 debug!(">>>observe");
@@ -373,7 +414,7 @@ if truthy.dists.len() != falsey.dists.len() {
                 let importance = I::Weight(a / z);
                 debug!("[observe] IWeight    {}", importance.weight());
 
-                let c = Compiled {
+                let c = Output {
                     dists: vec![BddPtr::PtrTrue],
                     accept: dist,
                     weightmap: ctx.weightmap.clone(),
@@ -382,11 +423,12 @@ if truthy.dists.len() != falsey.dists.len() {
                     importance,
                 };
                 debug_compiled!("observe", ctx, c);
-                Ok(vec![c])
+                self.result_from(c)
             }
             ESample(_, e) => {
                 debug!(">>>sample");
-                self.eval_expr(ctx, e)?
+                Ok(self
+                    .eval_expr(ctx, e)?
                     .into_iter()
                     .map(|comp| {
                         let wmc_params = comp.weightmap.as_params(self.max_label.unwrap());
@@ -399,129 +441,167 @@ if truthy.dists.len() != falsey.dists.len() {
                         debug!("[sample] WMCParams  {:?}", wmc_params);
                         debug!("[sample] VarOrder   {:?}", var_order);
 
-                        let (accept, qs, dists): (BddPtr, Vec<Probability>, Vec<BddPtr>) =
-                            comp.dists.iter().fold(
-                                (comp.accept, vec![], vec![]),
-                                |(accept, mut qs, mut dists), dist| {
-                                    let sample_dist = self.mgr.and(accept, *dist);
-                                    let (a, z) = crate::inference::calculate_wmc_prob(
-                                        self.mgr,
-                                        &wmc_params,
-                                        &var_order,
-                                        sample_dist,
-                                        accept,
-                                    );
-                                    let theta_q = a / z;
+                        // let (mut accept, mut dists, mut thetas) = (comp.accept, vec![], vec![]);
+                        // for dist in comp.dists.iter() {
+                        //     let sample_dist = self.mgr.and(accept, *dist);
+                        //     let (a, z) = crate::inference::calculate_wmc_prob(
+                        //         self.mgr,
+                        //         &wmc_params,
+                        //         &var_order,
+                        //         sample_dist,
+                        //         accept,
+                        //     );
+                        //     let theta_q = a / z;
+                        //     let dist_holds = self.mgr.iff(*dist, sampled_value);
+                        //     accept = self.mgr.and(accept, dist_holds);
+                        // }
+                        let mut fin = vec![];
 
-                                    let bern = Bernoulli::new(theta_q).unwrap();
-                                    let sample = bern.sample(self.rng);
-                                    qs.push(Probability::new(if sample {
-                                        theta_q
-                                    } else {
-                                        1.0 - theta_q
-                                    }));
-                                    let sampled_value = BddPtr::from_bool(sample);
-                                    dists.push(sampled_value);
+                        for sample_fn in [|| true, || false] {
+                            let (mut accept, mut qs, mut dists) = (comp.accept, vec![], vec![]);
+                            for dist in comp.dists.iter() {
+                                let sample_dist = self.mgr.and(accept, *dist);
+                                let (a, z) = crate::inference::calculate_wmc_prob(
+                                    self.mgr,
+                                    &wmc_params,
+                                    &var_order,
+                                    sample_dist,
+                                    accept,
+                                );
+                                let theta_q = a / z;
 
-                                    // sample in sequence. A smarter sample would compile
-                                    // all samples of a multi-rooted BDD, but I need to futz
-                                    // with rsdd's fold
-                                    let dist_holds = self.mgr.iff(*dist, sampled_value);
-                                    let new_accept = self.mgr.and(accept, dist_holds);
-                                    (new_accept, qs, dists)
-                                },
-                            );
-                        debug!("[sample] final samples: {}", renderbdds(&dists));
-                        debug!("[sample] final accept : {}", accept.print_bdd());
+                                let sample = match self.rng.as_mut() {
+                                    Some(rng) => {
+                                        let bern = Bernoulli::new(theta_q).unwrap();
+                                        bern.sample(rng)
+                                    }
+                                    None => sample_fn(),
+                                };
+                                qs.push(Probability::new(if sample {
+                                    theta_q
+                                } else {
+                                    1.0 - theta_q
+                                }));
+                                let sampled_value = BddPtr::from_bool(sample);
+                                dists.push(sampled_value);
 
-                        let c = Compiled {
-                            dists,
-                            accept,
-                            // weightmap: ctx.weightmap.clone(), // FIXME
-                            // substitutions: ctx.substitutions.clone(), // TODO any dangling references will be treated as constant and, thus, ignored -- information about this will live only in the propagated weight
-                            weightmap: comp.weightmap.clone(), // FIXME
-                            substitutions: comp.substitutions.clone(), // TODO any dangling references will be treated as constant and, thus, ignored -- information about this will live only in the propagated weight
-                            probabilities: qs,
-                            importance: I::Weight(1.0),
-                        };
-                        debug_compiled!("sample", ctx, c);
-                        Ok(c)
+                                // sample in sequence. A smarter sample would compile
+                                // all samples of a multi-rooted BDD, but I need to futz
+                                // with rsdd's fold
+                                let dist_holds = self.mgr.iff(*dist, sampled_value);
+                                accept = self.mgr.and(accept, dist_holds);
+                            }
+                            debug!("[sample] final samples: {}", renderbdds(&dists));
+                            debug!("[sample] final accept : {}", accept.print_bdd());
+
+                            let c = Output {
+                                dists,
+                                accept,
+                                // weightmap: ctx.weightmap.clone(), // FIXME
+                                // substitutions: ctx.substitutions.clone(), // TODO any dangling references will be treated as constant and, thus, ignored -- information about this will live only in the propagated weight
+                                weightmap: comp.weightmap.clone(), // FIXME
+                                substitutions: comp.substitutions.clone(), // TODO any dangling references will be treated as constant and, thus, ignored -- information about this will live only in the propagated weight
+                                probabilities: qs,
+                                importance: I::Weight(1.0),
+                            };
+                            debug_compiled!("sample", ctx, c);
+                            fin.push(c);
+                            if self.rng.is_some() {
+                                break;
+                            }
+                        }
+                        Ok(fin)
                     })
-                    .collect()
+                    .collect::<Result<Vec<Vec<Output>>>>()?
+                    .into_iter()
+                    .flatten()
+                    .collect())
             }
         }
     }
 }
-// pub fn compile(env: &mut Env, p: &ProgramAnn) -> Result<Vec<Compiled>, CompileError> {
-//     match p {
-//         Program::Body(e) => {
-//             debug!("========================================================");
-//             env.eval_expr(&Default::default(), e)
-//         }
-//     }
-// }
+pub fn compile(env: &mut Env, p: &ProgramAnn) -> Result<Compiled> {
+    match p {
+        Program::Body(e) => {
+            debug!("========================================================");
+            env.eval_expr(&Default::default(), e)
+        }
+    }
+}
 
-// use crate::typecheck::grammar::{ExprTyped, ProgramTyped};
-// use tracing::*;
+use crate::typecheck::grammar::{ExprTyped, ProgramTyped};
+use tracing::*;
 
-// pub fn debug(p: &ProgramTyped) -> Result<Vec<Compiled>, CompileError> {
-//     use crate::annotate::LabelEnv;
-//     use crate::typecheck::typecheck;
-//     use crate::uniquify::SymEnv;
+pub fn debug(p: &ProgramTyped) -> Result<Compiled> {
+    use crate::annotate::LabelEnv;
+    use crate::typecheck::typecheck;
+    use crate::uniquify::SymEnv;
 
-//     let p = typecheck(p)?;
-//     let mut senv = SymEnv::default();
-//     let p = senv.uniquify(&p)?;
-//     let mut lenv = LabelEnv::new();
-//     let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
+    let p = typecheck(p)?;
+    let mut senv = SymEnv::default();
+    let p = senv.uniquify(&p)?;
+    let mut lenv = LabelEnv::new();
+    let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
 
-//     let mut env_args = EnvArgs::default_args(None);
-//     let mut env = Env::from_args(&mut env_args);
-//     env.names = senv.names; // just for debugging, really.
-//     env.order = Some(vo);
-//     env.max_label = Some(mxlbl);
-//     env.varmap = Some(varmap);
-//     env.inv = Some(inv);
-//     let c = compile(&mut env, &p);
-//     tracing::debug!("hurray!");
-//     c
-// }
+    let mut env_args = EnvArgs::default_args(None);
+    let mut env = Env::from_args(&mut env_args);
+    env.names = senv.names; // just for debugging, really.
+    env.order = Some(vo);
+    env.rng = None;
+    env.max_label = Some(mxlbl);
+    env.varmap = Some(varmap);
+    env.inv = Some(inv);
+    let c = compile(&mut env, &p);
+    tracing::debug!("hurray!");
+    c
+}
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::compile::*;
-//     use crate::grammar::*;
-//     use crate::grammar_macros::*;
-//     use rsdd::builder::bdd_builder::*;
-//     use rsdd::builder::cache::all_app::*;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::compile::*;
+    use crate::grammar::*;
+    use crate::grammar_macros::*;
+    use rsdd::builder::bdd_builder::*;
+    use rsdd::builder::cache::all_app::*;
 
-//     use rsdd::repr::bdd::*;
-//     use rsdd::repr::ddnnf::DDNNFPtr;
-//     use rsdd::repr::var_label::*;
-//     use rsdd::*;
-//     use tracing_test::traced_test;
+    use rsdd::repr::bdd::*;
+    use rsdd::repr::ddnnf::DDNNFPtr;
+    use rsdd::repr::var_label::*;
+    use rsdd::*;
+    use tracing_test::traced_test;
 
-//     #[test]
-//     #[traced_test]
-//     fn enumerate_samples() {
-//         let mk = |ret: ExprTyped| {
-//             Program::Body(lets![
-//                 "x" ; b!() ;= flip!(1/5);
-//                 // "y" ; b!() ;= ite!(
-//                 //     if ( var!("x") )
-//                 //     then { sample!(flip!(1/3)) }
-//                 //     else { flip!(1/4) });
-//                 ...? ret ; b!()
-//             ])
-//         };
-//         let p = mk(b!("y"));
+    #[test]
+    #[traced_test]
+    fn enumerate_samples() {
+        match debug(&program!(flip!(1 / 5))) {
+            Ok(cs) => {
+                assert!(cs.is_single_run(), "{:?}", cs);
+            }
+            Err(e) => panic!("{:?}", e),
+        }
 
-//         match debug(&p) {
-//             Ok(cs) => {
-//                 debug!("{:?}", cs);
-//             }
-//             Err(e) => panic!("{:?}", e),
-//         }
-//     }
-// }
+        let mk = |ret: ExprTyped| {
+            Program::Body(lets![
+                "x" ; b!() ;= flip!(1/5);
+                "y" ; b!() ;= ite!(
+                    if ( var!("x") )
+                    then { sample!(flip!(1/3)) }
+                    else { flip!(1/4) });
+                ...? ret ; b!()
+            ])
+        };
+        let p = mk(b!("x"));
+        match debug(&mk(b!("y"))) {
+            Ok(cs) => {
+                assert!(!cs.is_single_run(), "{:?}", cs);
+                let cs = cs.into_iter().collect_vec();
+                for c in cs {
+                    println!("{:?}", c);
+                }
+                todo!()
+            }
+            Err(e) => panic!("{:?}", e),
+        }
+    }
+}

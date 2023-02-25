@@ -1,4 +1,4 @@
-use crate::compile::{Compiled, SubstMap, WeightMap};
+use crate::compile::{Output, SubstMap, WeightMap};
 use rsdd::repr::bdd::BddPtr;
 
 #[derive(Debug, Clone)]
@@ -8,7 +8,7 @@ pub struct Context {
     pub weightmap: WeightMap,
 }
 impl Context {
-    pub fn from_compiled(c: &Compiled) -> Self {
+    pub fn from_compiled(c: &Output) -> Self {
         Context {
             accept: c.accept.clone(),
             substitutions: c.substitutions.clone(),
