@@ -452,27 +452,34 @@ impl<'a> Env<'a> {
                 debug!("[observe] In. Accept {}", &ctx.accept.print_bdd());
                 debug!("[observe] Comp. dist {}", renderbdds(&comp.dists));
                 debug!("[observe] weightmap  {:?}", ctx.weightmap);
-                let accept = comp
+                let dist = comp
                     .dists
                     .into_iter()
                     .fold(ctx.accept.clone(), |global, cur| self.mgr.and(global, cur));
 
-                let wmc_params = ctx.weightmap.as_params(self.max_label.unwrap());
                 let var_order = self.order.clone().unwrap();
-                let avars = crate::utils::variables(accept);
+                let wmc_params = ctx.weightmap.as_params(self.max_label.unwrap());
+                let avars = crate::utils::variables(dist);
                 for (i, var) in avars.iter().enumerate() {
                     debug!("{}@{:?}: {:?}", i, var, wmc_params.get_var_weight(*var));
                 }
                 // debug!("[observe] max_var    {}", max_var);
                 debug!("[observe] WMCParams  {:?}", wmc_params);
                 debug!("[observe] VarOrder   {:?}", var_order);
-                debug!("[observe] Accept     {}", accept.print_bdd());
-                let importance_weight = accept.wmc(&var_order, &wmc_params);
+                debug!("[observe] Accept     {}", dist.print_bdd());
+                let (a, z) = crate::inference::calculate_wmc_prob(
+                    self.mgr,
+                    &wmc_params,
+                    &var_order,
+                    dist,
+                    ctx.accept,
+                );
+                let importance_weight = a / z;
                 debug!("[observe] IWeight    {}", importance_weight);
 
                 let c = Compiled {
                     dists: vec![BddPtr::PtrTrue],
-                    accept,
+                    accept: dist,
                     weightmap: ctx.weightmap.clone(),
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0)],
@@ -531,8 +538,12 @@ impl<'a> Env<'a> {
                 let c = Compiled {
                     dists,
                     accept,
-                    weightmap: ctx.weightmap.clone(),
-                    substitutions: ctx.substitutions.clone(), // any dangling references will be treated as constant and, thus, ignored -- information about this will live only in the propagated weight
+                    // !!!! seems to me that there is a dataflow analysis between free_variable_2_approx and program04_approx
+                    // weightmap: ctx.weightmap.clone(), // FIXME
+                    // substitutions: ctx.substitutions.clone(), // TODO any dangling references will be treated as constant and, thus, ignored -- information about this will live only in the propagated weight
+                    weightmap: comp.weightmap.clone(), // FIXME
+                    substitutions: comp.substitutions.clone(), // TODO any dangling references will be treated as constant and, thus, ignored -- information about this will live only in the propagated weight
+
                     probabilities: qs,
                     importance_weight: 1.0,
                 };

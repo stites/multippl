@@ -195,7 +195,7 @@ fn program03() {
 // }
 
 #[test]
-#[traced_test]
+// #[traced_test]
 fn program04_approx() {
     let mk04 = |ret: ExprTyped| {
         Program::Body(lets![

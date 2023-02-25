@@ -135,31 +135,52 @@ mod active_tests {
         // check_approx1("ite_3/x&y", 0.227272727, &mk(b!("x" && "y")), n * n * n);
     }
 
-    /// represents another semantic bug, still need to grapple how this all works, though
+    // /// represents another semantic bug, still need to grapple how this all works, though
+    // #[test]
+    // // #[ignore]
+    // // #[traced_test]
+    // fn ite_3_with_one_sample_hard1() {
+    //     let mk = |ret: ExprTyped| {
+    //         Program::Body(lets![
+    //             "x" ; b!() ;= flip!(2/3);
+    //             "y" ; b!() ;= ite!(
+    //                 if ( var!("x") )
+    //                 then { sample!(flip!(1/4)) }
+    //                 else { flip!(1/5) });
+    //             "_" ; b!() ;= observe!(b!("x" || "y"));
+    //             ...? ret ; b!()
+    //         ])
+    //     };
+    //     let n = 50000;
+    //     check_approx1("ite_3/y-sample1/4 ", 0.464285714, &mk(b!("y")), n);
+    //     // dice's answer for 2/4 @ sample site
+    //     // check_approx1("ite_3/y-sample2/4  ", 0.545454545, &mk(b!("y")), n);
+    //     // dice's answer for 3/4 @ sample site
+    //     // check_approx1("ite_3/y-sample3/4 ", 0.772727273, &mk(b!("y")), n);
+
+    //     // last one to tackle:
+    //     // dice's answer for 1/4 @ sample site
+    //     // check_approx1("ite_3/x&y", 0.227272727, &mk(b!("x" && "y")), n * n * n);
+    // }
+
     #[test]
-    #[ignore]
-    // #[traced_test]
-    fn ite_3_with_one_sample_hard1() {
+    #[traced_test]
+    fn free_variable_2_approx() {
         let mk = |ret: ExprTyped| {
             Program::Body(lets![
-                "x" ; b!() ;= flip!(2/3);
-                "y" ; b!() ;= ite!(
-                    if ( var!("x") )
-                    then { sample!(flip!(1/4)) }
-                    else { flip!(1/5) });
-                "_" ; b!() ;= observe!(b!("x" || "y"));
-                ...? ret ; b!()
+                "x" ; b!() ;= flip!(1/3);
+                "y" ; b!() ;= sample!(
+                    lets![
+                        "x0" ; b!() ;= flip!(1/5);
+                        ...? b!("x0" || "x") ; b!()
+                    ]);
+               "_" ; b!() ;= observe!(b!("x" || "y")); // is this a problem?
+               ...? ret ; b!()
             ])
         };
-        let n = 50000;
-        check_approx1("ite_3/y-sample1/4 ", 0.464285714, &mk(b!("y")), n);
-        // dice's answer for 2/4 @ sample site
-        // check_approx1("ite_3/y-sample2/4  ", 0.545454545, &mk(b!("y")), n);
-        // dice's answer for 3/4 @ sample site
-        // check_approx1("ite_3/y-sample3/4 ", 0.772727273, &mk(b!("y")), n);
-
-        // last one to tackle:
-        // dice's answer for 1/4 @ sample site
-        // check_approx1("ite_3/x&y", 0.227272727, &mk(b!("x" && "y")), n * n * n);
+        // check_approx("free2/x*y", vec![0.714285714, 1.0, 1.0, 0.714285714], &mk(q!("x" x "y")), 10,);
+        check_approx1("free2/x", 0.714285714, &mk(b!("x")), 10);
+        check_approx1("free2/x&y", 0.714285714, &mk(b!("x" && "y")), 10);
+        //check_approx("free2/x&y", vec![0.714285714, 1.0, 1.0, 0.714285714], &mk(q!("x" x "y")), 10,);
     }
 }
