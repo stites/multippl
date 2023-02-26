@@ -65,23 +65,34 @@ pub fn render_history(xss: &Vec<Vec<f64>>, high_precision: bool) -> String {
         .map(|ws| format!("[{}]", ws))
         .join(", ")
 }
+pub fn renderw(ws: &WeightMap) -> String {
+    ws.weights
+        .iter()
+        .map(|(k, w)| format!("L{}: ({:.4}, {:.4})", k.value(), w.lo, w.hi))
+        .join(", ")
+}
+pub fn renderp(ps: &SubstMap) -> String {
+    ps.iter()
+        .map(|(k, (v, _))| format!("{k}: {}", renderbdds(v)))
+        .join(", ")
+}
+
+#[macro_export]
+macro_rules! debug_step {
+    ($s:expr, $ctx:expr, $comp:expr) => {{
+        debug!(
+            "{}, [{}], [{}]",
+            $s,
+            renderp(&$ctx.substitutions),
+            renderw(&$ctx.weightmap)
+        );
+        debug_compiled!($comp);
+    }};
+}
 
 #[macro_export]
 macro_rules! debug_compiled {
-    ($s:expr, $ctx:expr, $comp:expr) => {{
-        let renderw = |ws: &WeightMap| {
-            ws.weights
-                .iter()
-                .map(|(k, w)| format!("L{}: ({:.4}, {:.4})", k.value(), w.lo, w.hi))
-                .join(", ")
-        };
-        let renderp = |ps: &SubstMap| {
-            ps.iter()
-                .map(|(k, (v, _))| format!("{k}: {}", renderbdds(v)))
-                .join(", ")
-        };
-
-        let p = &$ctx.substitutions;
+    ($comp:expr) => {{
         let dists = renderbdds(&$comp.dists);
         let accepts = format!("{}", $comp.accept.print_bdd());
         let weights = $comp
@@ -91,7 +102,6 @@ macro_rules! debug_compiled {
             .map(fmt_f64(false))
             .join(", ");
 
-        debug!("{}, [{}], [{}]", $s, renderp(p), renderw(&$ctx.weightmap));
         debug!("      \\||/  {}", dists);
         debug!("      \\||/  {}", accepts);
         debug!("      \\||/  [{}]", renderw(&$comp.weightmap));

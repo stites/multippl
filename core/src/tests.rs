@@ -62,6 +62,7 @@ pub fn check_inference(
         );
     });
 }
+
 pub fn check_exact(s: &str, f: Vec<f64>, p: &ProgramTyped) {
     let p = p.strip_samples();
     debug!("program: {:#?}", &p);
@@ -75,6 +76,19 @@ pub fn check_approx(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize) {
 }
 pub fn check_approx1(s: &str, f: f64, p: &ProgramTyped, n: usize) {
     check_approx(s, vec![f], p, n)
+}
+pub fn debug_approx(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize) {
+    check_inference(
+        "debug",
+        &|p| importance_weighting_inf_h(n, p, &Options::debug()),
+        0.01,
+        s,
+        f,
+        p,
+    );
+}
+pub fn debug_approx1(s: &str, f: f64, p: &ProgramTyped, n: usize) {
+    debug_approx(s, vec![f], p, n)
 }
 // pub fn check_approx_conc(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize) {
 //     let env_args = EnvArgs::default_args(None);

@@ -216,7 +216,7 @@ impl<'a> Env<'a> {
                 let _enter = span.enter();
                 debug!("{:?}", a);
                 let (o, atr) = self.eval_anf(ctx, a)?;
-                debug_compiled!("anf", ctx, &o);
+                debug_step!("anf", ctx, &o);
                 let c = Compiled::Output(o);
                 Ok((c.clone(), EAnf(Box::new(c), Box::new(atr))))
             }
@@ -230,7 +230,7 @@ impl<'a> Env<'a> {
                 let dists = o.dists;
                 o.dists = vec![dists[*i]];
                 if i > &1 {
-                    debug_compiled!(&format!("prj@{}", i).to_string(), ctx, o);
+                    debug_step!(&format!("prj@{}", i).to_string(), ctx, o);
                 }
                 let c = Compiled::Output(o);
                 Ok((c.clone(), EAnf(Box::new(c), Box::new(atr))))
@@ -240,7 +240,7 @@ impl<'a> Env<'a> {
                 let _enter = span.enter();
                 debug!("{:?}", a);
                 let c = self.eval_expr(ctx, &EPrj((), 0, a.clone()))?;
-                // debug_compiled!("fst", ctx, c);
+                // debug_step!("fst", ctx, c);
                 Ok(c.clone())
             }
             ESnd(_, a) => {
@@ -248,7 +248,7 @@ impl<'a> Env<'a> {
                 let _enter = span.enter();
                 debug!("{:?}", a);
                 let c = self.eval_expr(ctx, &EPrj((), 1, a.clone()))?;
-                // debug_compiled!("snd", ctx, c);
+                // debug_step!("snd", ctx, c);
                 Ok(c.clone())
             }
             EProd(_, anfs) => {
@@ -272,7 +272,7 @@ impl<'a> Env<'a> {
                     importance: I::Weight(1.0),
                 };
 
-                debug_compiled!("prod", ctx, o);
+                debug_step!("prod", ctx, o);
                 let c = Compiled::Output(o);
                 Ok((c.clone(), EProd(Box::new(c), atrs)))
             }
@@ -330,7 +330,7 @@ impl<'a> Env<'a> {
                                     probabilities,
                                     importance,
                                 };
-                                debug_compiled!(format!("let-in {}", s), ctx, c);
+                                debug_step!(format!("let-in {}", s), ctx, c);
                                 Ok(c)
                             })
                             .collect::<Result<Vec<Output>>>()?;
@@ -426,7 +426,7 @@ impl<'a> Env<'a> {
                                   probabilities,
                                   importance,
                             };
-                            debug_compiled!("ite", ctx, c);
+                            debug_step!("ite", ctx, c);
                             Ok(c)
                         }).collect::<Result<Vec<Output>>>()?;
                         Ok((c, ftr))
@@ -462,7 +462,7 @@ impl<'a> Env<'a> {
                     probabilities: vec![Probability::new(1.0)],
                     importance: I::Weight(1.0),
                 };
-                debug_compiled!("flip", ctx, o);
+                debug_step!("flip", ctx, o);
                 let c = Compiled::Output(o);
                 Ok((c.clone(), EFlip(Box::new(c), param.clone())))
             }
@@ -507,7 +507,7 @@ impl<'a> Env<'a> {
                     probabilities: vec![Probability::new(1.0)],
                     importance,
                 };
-                debug_compiled!("observe", ctx, o);
+                debug_step!("observe", ctx, o);
                 let c = Compiled::Output(o);
                 Ok((c.clone(), EObserve(Box::new(c), Box::new(atr))))
             }
@@ -594,7 +594,7 @@ impl<'a> Env<'a> {
                                 probabilities: qs,
                                 importance: I::Weight(1.0),
                             };
-                            debug_compiled!("sample", ctx, c);
+                            debug_step!("sample", ctx, c);
                             fin.push(c);
                             if self.rng.is_some() {
                                 break;

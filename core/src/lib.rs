@@ -45,6 +45,21 @@ impl Options {
             Some(s) => rand::SeedableRng::seed_from_u64(s),
         }
     }
+    pub fn stoch() -> Self {
+        Default::default()
+    }
+    pub fn seed(s: u64) -> Self {
+        Self {
+            seed: Some(s),
+            ..Default::default()
+        }
+    }
+    pub fn debug() -> Self {
+        Self {
+            debug: true,
+            ..Default::default()
+        }
+    }
 }
 impl Default for Options {
     fn default() -> Self {
@@ -54,32 +69,31 @@ impl Default for Options {
         }
     }
 }
-use crate::compile::{CompileError, Compiled, Env, Mgr, Output, Result};
-use crate::typecheck::grammar::ProgramTyped;
+use crate::annotate::LabelEnv;
+use crate::compile::{compile, CompileError, Compiled, Env, Mgr, Output, Result};
+use crate::typecheck::{
+    grammar::{ExprTyped, ProgramTyped},
+    typecheck,
+};
+use crate::uniquify::SymEnv;
 use rand::rngs::StdRng;
 
 pub fn run(p: &ProgramTyped) -> Result<(Mgr, Output)> {
-    let (m, c) = runner(p, Default::default())?;
+    let (m, c) = runner(p, &Default::default())?;
     Ok((m, c.as_output().unwrap()))
 }
 pub fn run_h(p: &ProgramTyped, mgr: &mut Mgr) -> Result<Output> {
-    let c = runner_h(p, mgr, Default::default())?;
+    let c = runner_h(p, mgr, &Default::default())?;
     Ok(c.as_output().unwrap())
 }
 
-pub fn runner(p: &ProgramTyped, opt: Options) -> Result<(Mgr, Compiled)> {
+pub fn runner(p: &ProgramTyped, opt: &Options) -> Result<(Mgr, Compiled)> {
     let mut mgr = make_mgr(p);
     let c = runner_h(p, &mut mgr, opt)?;
     Ok((mgr, c))
 }
 
 pub fn make_mgr(p: &ProgramTyped) -> Mgr {
-    // ugly, but fine for now
-    use crate::annotate::LabelEnv;
-    use crate::compile::{compile, Env, Mgr};
-    use crate::typecheck::{grammar::ExprTyped, typecheck};
-    use crate::uniquify::SymEnv;
-
     let Ok(p) = typecheck(p) else { todo!() };
     let mut senv = SymEnv::default();
     let Ok(p) = senv.uniquify(&p) else { todo!() };
@@ -89,12 +103,7 @@ pub fn make_mgr(p: &ProgramTyped) -> Mgr {
     Mgr::new_default_order(mxlbl as usize)
 }
 
-pub fn runner_h(p: &ProgramTyped, mgr: &mut Mgr, opt: Options) -> Result<Compiled> {
-    use crate::annotate::LabelEnv;
-    use crate::compile::{compile, Env, Mgr};
-    use crate::typecheck::{grammar::ExprTyped, typecheck};
-    use crate::uniquify::SymEnv;
-
+pub fn runner_h(p: &ProgramTyped, mgr: &mut Mgr, opt: &Options) -> Result<Compiled> {
     let p = typecheck(p)?;
     let mut senv = SymEnv::default();
     let p = senv.uniquify(&p)?;
@@ -135,40 +144,11 @@ mod active_tests {
     use tracing::*;
     use tracing_test::traced_test;
 
-    macro_rules! ite_3_with_one_sample_tests {
-    ($($name:ident: $query:expr, $value:expr,)*) => {
-    $(
-        #[test]
-        #[ignore]
-        fn $name() {
-            let mk = |ret: ExprTyped| {
-                Program::Body(lets![
-                    "x" ; b!() ;= flip!(2/3);
-                    "y" ; b!() ;= ite!(
-                        if ( var!("x") )
-                        then { sample!(flip!(1/4)) }
-                        else { flip!(1/5) });
-                    "_" ; b!() ;= observe!(b!("x" || "y"));
-                    ...? ret ; b!()
-                ])
-            };
-            ($value)(mk($query));
-        }
-    )*
-    }
-}
-
-    ite_3_with_one_sample_tests! {
-        ite_3_with_one_sample_easy_x:  b!("x"), (|p| check_approx1("ite_3/x  ", 0.909090909, &p, 1000)),
-        ite_3_with_one_sample_easy_x_or_y: b!("x" || "y"), (|p| check_approx1("ite_3/x|y", 1.000000000, &p, 1000)),
-    }
-
     #[test]
     #[traced_test]
-    #[ignore]
     fn ite_3_with_one_sample_hard1_simplified() {
         let mk = |ret: ExprTyped| {
-            Program::Body(lets![
+            program!(lets![
                 "x" ; b!() ;= flip!(1/5);
                 "y" ; b!() ;= ite!(
                     if ( var!("x") )
@@ -177,9 +157,9 @@ mod active_tests {
                 ...? ret ; b!()
             ])
         };
-        let n = 10;
+        let n = 1000;
         // check_exact1("ite_3/y-sample1/4-simpl", 0.266666667, &mk(b!("y")));
-        check_approx1("ite_3/y-sample1/4-simpl", 0.266666667, &mk(b!("y")), n);
+        debug_approx1("ite_3/y-sample1/4-simpl", 0.266666667, &mk(b!("y")), n);
         // dice's answer for 2/4 @ sample site
         // check_approx1("ite_3/y-sample2/4  ", 0.545454545, &mk(b!("y")), n);
         // dice's answer for 3/4 @ sample site
@@ -190,39 +170,73 @@ mod active_tests {
         // check_approx1("ite_3/x&y", 0.227272727, &mk(b!("x" && "y")), n * n * n);
     }
 
-    // /// represents another semantic bug, still need to grapple how this all works, though
-    // #[test]
-    // // #[ignore]
-    // // #[traced_test]
-    // fn ite_3_with_one_sample_hard1() {
-    //     let mk = |ret: ExprTyped| {
-    //         Program::Body(lets![
-    //             "x" ; b!() ;= flip!(2/3);
-    //             "y" ; b!() ;= ite!(
-    //                 if ( var!("x") )
-    //                 then { sample!(flip!(1/4)) }
-    //                 else { flip!(1/5) });
-    //             "_" ; b!() ;= observe!(b!("x" || "y"));
-    //             ...? ret ; b!()
-    //         ])
-    //     };
-    //     let n = 50000;
-    //     check_approx1("ite_3/y-sample1/4 ", 0.464285714, &mk(b!("y")), n);
-    //     // dice's answer for 2/4 @ sample site
-    //     // check_approx1("ite_3/y-sample2/4  ", 0.545454545, &mk(b!("y")), n);
-    //     // dice's answer for 3/4 @ sample site
-    //     // check_approx1("ite_3/y-sample3/4 ", 0.772727273, &mk(b!("y")), n);
-
-    //     // last one to tackle:
-    //     // dice's answer for 1/4 @ sample site
-    //     // check_approx1("ite_3/x&y", 0.227272727, &mk(b!("x" && "y")), n * n * n);
-    // }
-
     #[test]
-    #[traced_test]
+    #[ignore = "todo"]
+    fn ite_3_with_one_sample_easy_x() {
+        let mk = |ret: ExprTyped| {
+            program!(lets![
+                "x" ; b!() ;= flip!(2/3);
+                "y" ; b!() ;= ite!(
+                    if ( var!("x") )
+                    then { sample!(flip!(1/4)) }
+                    else { flip!(1/5) });
+                "_" ; b!() ;= observe!(b!("x" || "y"));
+                ...? ret ; b!()
+            ])
+        };
+        check_approx1("ite_3/x  ", 0.909090909, &mk(b!("x")), 1000);
+    }
+
+    /// represents another semantic bug, still need to grapple how this all works, though
+    #[test]
+    #[ignore = "todo"]
+    // #[traced_test]
+    fn ite_3_with_one_sample_hard1() {
+        let mk = |ret: ExprTyped| {
+            program!(lets![
+                "x" ; b!() ;= flip!(2/3);
+                "y" ; b!() ;= ite!(
+                    if ( var!("x") )
+                    then { sample!(flip!(1/4)) }
+                    else { flip!(1/5) });
+                "_" ; b!() ;= observe!(b!("x" || "y"));
+                ...? ret ; b!()
+            ])
+        };
+        let n = 50000;
+        check_approx1("ite_3/y-sample1/4 ", 0.464285714, &mk(b!("y")), n);
+        // dice's answer for 2/4 @ sample site
+        // check_approx1("ite_3/y-sample2/4  ", 0.545454545, &mk(b!("y")), n);
+        // dice's answer for 3/4 @ sample site
+        // check_approx1("ite_3/y-sample3/4 ", 0.772727273, &mk(b!("y")), n);
+
+        // last one to tackle:
+        // dice's answer for 1/4 @ sample site
+        // check_approx1("ite_3/x&y", 0.227272727, &mk(b!("x" && "y")), n * n * n);
+    }
+
+    /// passing
+    #[test]
+    fn ite_3_with_one_sample_easy_x_or_y() {
+        let mk = |ret: ExprTyped| {
+            program!(lets![
+                "x" ; b!() ;= flip!(2/3);
+                "y" ; b!() ;= ite!(
+                    if ( var!("x") )
+                    then { sample!(flip!(1/4)) }
+                    else { flip!(1/5) });
+                "_" ; b!() ;= observe!(b!("x" || "y"));
+                ...? ret ; b!()
+            ])
+        };
+        check_approx1("ite_3/x|y", 1.000000000, &mk(b!("x" || "y")), 1000);
+    }
+
+    /// working
+    #[test]
     fn free_variable_2_approx() {
         let mk = |ret: ExprTyped| {
-            Program::Body(lets![
+            program!(lets![
                 "x" ; b!() ;= flip!(1/3);
                 "y" ; b!() ;= sample!(
                     lets![
@@ -233,9 +247,13 @@ mod active_tests {
                ...? ret ; b!()
             ])
         };
-        // check_approx("free2/x*y", vec![0.714285714, 1.0, 1.0, 0.714285714], &mk(q!("x" x "y")), 10,);
-        check_approx1("free2/x", 0.714285714, &mk(b!("x")), 10);
-        // check_approx1("free2/x&y", 0.714285714, &mk(b!("x" && "y")), 10000);
-        //check_approx("free2/x&y", vec![0.714285714, 1.0, 1.0, 0.714285714], &mk(q!("x" x "y")), 10,);
+        check_approx(
+            "free2/x*y",
+            vec![0.714285714, 1.0, 1.0, 0.714285714],
+            &mk(q!("x" x "y")),
+            10000,
+        );
+        check_approx1("free2/x", 0.714285714, &mk(b!("x")), 10000);
+        check_approx1("free2/x&y", 0.714285714, &mk(b!("x" && "y")), 10000);
     }
 }

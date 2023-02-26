@@ -4,6 +4,7 @@ use crate::render::*;
 use crate::run;
 use crate::typecheck::grammar::ProgramTyped;
 use crate::uniquify::grammar::*;
+use crate::*;
 use itertools::*;
 use rayon::iter::*;
 use rayon::prelude::*;
@@ -112,25 +113,6 @@ fn debug_importance_weighting(
                 ))
                 .join(", ")
         );
-        if steps < 11 {
-            // debug!("");
-            // let num = izip!(ws, qs, ps)
-            //     .map(|(w, q, p)| format!("{:.2}*{:.2}*{:.2}", w, q, p))
-            //     .join(" + ");
-            // let denom = izip!(ws, qs)
-            //     .map(|(w, q)| format!("{:.2}*{:.2}", w, q))
-            //     .join(" + ");
-            // let num_len: i32 = num.len().try_into().unwrap();
-            // let denom_len: i32 = denom.len().try_into().unwrap();
-            // debug!("{}", num);
-
-            // izip!(exp, expw).enumerate().for_each(|(i, (exp, expw))| {
-            //     debug!("{} = {:.4}", "-".repeat(num.len()), (exp / expw));
-            // });
-
-            // let leftpad: usize = ((num_len - denom_len).abs() / 2).try_into().unwrap();
-            // debug!("{}{}", " ".repeat(leftpad), denom);
-        }
     }
     debug!("ws    = {}", ws.iter().sum::<f64>());
     debug!(exp = renderfloats(exp, false));
@@ -150,64 +132,114 @@ fn debug_importance_weighting(
     });
 }
 pub fn importance_weighting_inf(steps: usize, p: &ProgramTyped) -> Vec<f64> {
+    importance_weighting_inf_h(steps, p, &Default::default())
+}
+pub fn importance_weighting_inf_h(
+    steps: usize,
+    p: &ProgramTyped,
+    opt: &crate::Options,
+) -> Vec<f64> {
     let mut e = Expectations::empty();
     let mut ws: Vec<f64> = vec![];
     let mut qss: Vec<Vec<f64>> = vec![];
-    let mut pss: Vec<Vec<f64>> = vec![];
+    let mut prs: Vec<Vec<f64>> = vec![];
     let mut sss: Vec<HashMap<UniqueId, Vec<bool>>> = vec![];
     let mut mgr = crate::make_mgr(p);
+    let mut is_debug: bool = false;
+
+    let mut compilations = vec![];
+    let mut compilations_ws = vec![];
+    let mut compilations_prs = vec![];
 
     for _step in 1..=steps {
-        // FIXME: change back to step
-        // env.reset_names();
-        match crate::run_h(p, &mut mgr) {
-            Ok(c) => {
-                let azs = wmc_prob(&mut mgr, &c);
+        match crate::runner_h(p, &mut mgr, opt) {
+            Ok(cs) => {
+                is_debug = match cs {
+                    Compiled::Output(_) => false,
+                    Compiled::Debug(_) => {
+                        compilations = cs.clone().into_iter().collect();
+                        true
+                    }
+                };
+                cs.into_iter().for_each(|c| {
+                    let azs = wmc_prob(&mut mgr, &c);
+                    let ps = azs
+                        .into_iter()
+                        .map(|(a, z)| {
+                            debug!(
+                                a = a,
+                                z = z,
+                                accept = c.accept.print_bdd(),
+                                dists = renderbdds(&c.dists)
+                            );
+                            if a == z && a == 0.0 {
+                                0.0
+                            } else {
+                                (a / z) as f64
+                            }
+                        })
+                        .collect_vec();
 
-                let prs = azs
-                    .into_iter()
-                    .map(|(a, z)| {
-                        debug!(
-                            a = a,
-                            z = z,
-                            accept = c.accept.print_bdd(),
-                            dists = renderbdds(&c.dists)
-                        );
-                        if a == z && a == 0.0 {
-                            0.0
-                        } else {
-                            (a / z) as f64
-                        }
-                    })
-                    .collect_vec();
+                    let w = c.importance.weight();
+                    debug!("{}", c.accept.print_bdd());
+                    debug!("{}", renderbdds(&c.dists));
+                    debug!("{}, {}, {}", w, renderfloats(&ps, false), prs.len());
+                    let exp_cur = Expectations::new(w, ps.clone());
+                    e = Expectations::add(e.clone(), exp_cur);
+                    ws.push(w);
+                    // qss.push(_qs);
+                    prs.push(ps);
+                    // sss.push(env.samples.clone());
 
-                let w = c.importance.weight();
-
-                debug!("{}", c.accept.print_bdd());
-                debug!("{}", renderbdds(&c.dists));
-                debug!("{}, {}, {}", w, renderfloats(&prs, false), prs.len());
-                let exp_cur = Expectations::new(w, prs.clone());
-                e = Expectations::add(e, exp_cur);
-                ws.push(w);
-                // qss.push(_qs);
-                pss.push(prs);
-                // sss.push(env.samples.clone());
+                    if is_debug {
+                        compilations_ws.push(ws.clone());
+                        compilations_prs.push(prs.clone());
+                    }
+                });
+                if is_debug {
+                    break;
+                }
             }
             Err(e) => panic!("{:?}", e),
         }
     }
-    let exp = e.exp;
-    let expw = e.expw;
-    debug_importance_weighting(true, steps, &ws, &qss, &pss, &sss, &exp, &expw);
+
+    let exp = e.clone().exp.clone();
+    let expw = e.clone().expw.clone();
     // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
     // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
     debug!(
         exp = renderfloats(&exp, false),
         expw = renderfloats(&expw, false)
     );
-    izip!(exp, expw)
+    let res = izip!(exp.clone(), expw.clone())
         .map(|(exp, expw)| (exp / expw) as f64)
-        .collect_vec()
+        .collect_vec();
+    if is_debug {
+        debug!("weights:");
+        for (i, w) in compilations_ws.iter().enumerate() {
+            debug!("{}: {:?}", i, w);
+        }
+        debug!("probabilities:");
+        for (i, p) in compilations_prs.iter().enumerate() {
+            debug!("{}: {:?}", i, p);
+        }
+        debug!("expectations:");
+        debug!("{:?}", e);
+        debug!("{:?}", res);
+
+        debug!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        debug!("compilations:");
+        for (i, c) in compilations.iter().enumerate() {
+            debug_compiled!(c);
+        }
+        res
+    } else {
+        debug_importance_weighting(true, steps, &ws, &qss, &prs, &sss, &exp, &expw);
+        // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
+        // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
+        res
+    }
 }
 
 // fn conc_prelude(env: &mut Env, p: &ProgramTyped) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
@@ -253,6 +285,7 @@ pub fn importance_weighting_inf(steps: usize, p: &ProgramTyped) -> Vec<f64> {
 //     }
 // }
 
+#[derive(Debug, Clone)]
 pub struct Expectations {
     pub exp: Vec<f64>,
     pub expw: Vec<f64>,
