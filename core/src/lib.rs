@@ -62,8 +62,34 @@ pub fn run(p: &ProgramTyped) -> Result<(Mgr, Output)> {
     let (m, c) = runner(p, Default::default())?;
     Ok((m, c.as_output().unwrap()))
 }
+pub fn run_h(p: &ProgramTyped, mgr: &mut Mgr) -> Result<Output> {
+    let c = runner_h(p, mgr, Default::default())?;
+    Ok(c.as_output().unwrap())
+}
 
 pub fn runner(p: &ProgramTyped, opt: Options) -> Result<(Mgr, Compiled)> {
+    let mut mgr = make_mgr(p);
+    let c = runner_h(p, &mut mgr, opt)?;
+    Ok((mgr, c))
+}
+
+pub fn make_mgr(p: &ProgramTyped) -> Mgr {
+    // ugly, but fine for now
+    use crate::annotate::LabelEnv;
+    use crate::compile::{compile, Env, Mgr};
+    use crate::typecheck::{grammar::ExprTyped, typecheck};
+    use crate::uniquify::SymEnv;
+
+    let Ok(p) = typecheck(p) else { todo!() };
+    let mut senv = SymEnv::default();
+    let Ok(p) = senv.uniquify(&p) else { todo!() };
+    let mut lenv = LabelEnv::new();
+    let Ok((p, vo, varmap, inv, mxlbl)) = lenv.annotate(&p) else { todo!() };
+
+    Mgr::new_default_order(mxlbl as usize)
+}
+
+pub fn runner_h(p: &ProgramTyped, mgr: &mut Mgr, opt: Options) -> Result<Compiled> {
     use crate::annotate::LabelEnv;
     use crate::compile::{compile, Env, Mgr};
     use crate::typecheck::{grammar::ExprTyped, typecheck};
@@ -75,17 +101,16 @@ pub fn runner(p: &ProgramTyped, opt: Options) -> Result<(Mgr, Compiled)> {
     let mut lenv = LabelEnv::new();
     let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
 
-    let mut mgr = Mgr::new_default_order(mxlbl as usize);
     let mut rng = opt.rng();
     let orng = if opt.debug { None } else { Some(&mut rng) };
-    let mut env = Env::new(&mut mgr, orng);
+    let mut env = Env::new(mgr, orng);
 
     env.varmap = Some(varmap);
     env.inv = Some(inv);
 
     let c = compile(&mut env, &p)?;
     tracing::debug!("hurray!");
-    Ok((mgr, c))
+    Ok(c)
 }
 
 #[cfg(test)]

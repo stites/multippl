@@ -155,12 +155,13 @@ pub fn importance_weighting_inf(steps: usize, p: &ProgramTyped) -> Vec<f64> {
     let mut qss: Vec<Vec<f64>> = vec![];
     let mut pss: Vec<Vec<f64>> = vec![];
     let mut sss: Vec<HashMap<UniqueId, Vec<bool>>> = vec![];
+    let mut mgr = crate::make_mgr(p);
 
     for _step in 1..=steps {
         // FIXME: change back to step
         // env.reset_names();
-        match crate::run(p) {
-            Ok((mut mgr, c)) => {
+        match crate::run_h(p, &mut mgr) {
+            Ok(c) => {
                 let azs = wmc_prob(&mut mgr, &c);
 
                 let prs = azs
