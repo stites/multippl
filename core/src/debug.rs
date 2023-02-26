@@ -240,7 +240,9 @@ impl<'a> Env<'a> {
         use Expr::*;
         match e {
             EAnf(_, a) => {
-                debug!(">>>anf: {:?}", a);
+                let span = tracing::span!(tracing::Level::DEBUG, "anf");
+                let _enter = span.enter();
+                debug!("{:?}", a);
                 let (o, atr) = self.eval_anf(ctx, a)?;
                 debug_compiled!("anf", ctx, &o);
                 let c = Compiled::Output(o);
@@ -248,7 +250,9 @@ impl<'a> Env<'a> {
             }
             EPrj(_, i, a) => {
                 if i > &1 {
-                    debug!(">>>prj@{}: {:?}", i, a);
+                    let span = tracing::span!(tracing::Level::DEBUG, "prj", i);
+                    let _enter = span.enter();
+                    debug!("{:?}", a);
                 }
                 let (mut o, atr) = self.eval_anf(ctx, a)?;
                 let dists = o.dists;
@@ -260,19 +264,25 @@ impl<'a> Env<'a> {
                 Ok((c.clone(), EAnf(Box::new(c), Box::new(atr))))
             }
             EFst(_, a) => {
-                debug!(">>>fst: {:?}", a);
+                let span = tracing::span!(tracing::Level::DEBUG, "fst");
+                let _enter = span.enter();
+                debug!("{:?}", a);
                 let c = self.eval_expr(ctx, &EPrj((), 0, a.clone()))?;
                 // debug_compiled!("fst", ctx, c);
                 Ok(c.clone())
             }
             ESnd(_, a) => {
-                debug!(">>>snd: {:?}", a);
+                let span = tracing::span!(tracing::Level::DEBUG, "snd");
+                let _enter = span.enter();
+                debug!("{:?}", a);
                 let c = self.eval_expr(ctx, &EPrj((), 1, a.clone()))?;
                 // debug_compiled!("snd", ctx, c);
                 Ok(c.clone())
             }
             EProd(_, anfs) => {
-                debug!(">>>prod: {:?}", anfs);
+                let span = tracing::span!(tracing::Level::DEBUG, "prod");
+                let _enter = span.enter();
+                debug!("{:?}", anfs);
                 let (dists, atrs) = anfs.iter().fold(Ok((vec![], vec![])), |res, a| {
                     let (distsfin, mut atrs_fin) = res?;
                     let (o, atr) = self.eval_anf(ctx, a)?;
@@ -295,14 +305,25 @@ impl<'a> Env<'a> {
                 Ok((c.clone(), EProd(Box::new(c), atrs)))
             }
             ELetIn(var, s, ebound, ebody) => {
-                debug!(">>>let-in {}", s);
-                let lbl = var.label;
+                let let_in_span = tracing::span!(Level::DEBUG, "let", var = s);
+                let _enter = let_in_span.enter();
 
+                let lbl = var.label;
                 // if we produce multiple worlds, we must account for them all
                 let (cbound, eboundtr) = self.eval_expr(&ctx, ebound)?;
                 let (outs, mbody) = cbound
                     .into_iter()
-                    .map(|bound| {
+                    .enumerate()
+                    .map(|(ix, bound)| {
+                        let span = if ix == 0 {
+                            tracing::span!(tracing::Level::DEBUG, "")
+                        } else {
+                            tracing::span!(tracing::Level::DEBUG, "", ix)
+                        };
+                        let _enter = span.enter();
+
+                        let ix_span = tracing::span!(Level::DEBUG, "", ix);
+                        let _enter = ix_span.enter();
                         let mut newctx = Context::from_compiled(&bound);
                         newctx
                             .substitutions
@@ -311,7 +332,15 @@ impl<'a> Env<'a> {
                         let (bodies, bodiestr) = self.eval_expr(&newctx, ebody)?;
                         let cbodies = bodies
                             .into_iter()
-                            .map(|body| {
+                            .enumerate()
+                            .map(|(ix, body)| {
+                                let span = if ix == 0 {
+                                    tracing::span!(tracing::Level::DEBUG, "")
+                                } else {
+                                    tracing::span!(tracing::Level::DEBUG, "", ix)
+                                };
+                                let _enter = span.enter();
+
                                 let accept = self.mgr.and(body.accept, ctx.accept);
 
                                 let probabilities =
@@ -357,6 +386,9 @@ impl<'a> Env<'a> {
                 ))
             }
             EIte(_, cond, t, f) => {
+                let span = tracing::span!(tracing::Level::DEBUG, "ite");
+                let _enter = span.enter();
+
                 let (pred, atr) = self.eval_anf(ctx, cond)?;
                 if !pred.dists.len() == 1 {
                     return Err(TypeError(format!(
@@ -364,11 +396,30 @@ impl<'a> Env<'a> {
                     )));
                 }
                 let pred_dist = pred.dists[0];
+                let span = tracing::span!(tracing::Level::DEBUG, "truthy");
+                let _enter = span.enter();
                 let (ct, ttr) = self.eval_expr(ctx, t)?;
+                drop(_enter);
                 let (c, mftr) = ct.into_iter()
-                    .map(|truthy| {
+                    .enumerate()
+                    .map(|(ix, truthy)| {
+                            let span = if ix == 0 {
+                                tracing::span!(tracing::Level::DEBUG, "truthy")
+                            } else {
+                                tracing::span!(tracing::Level::DEBUG, "truthy", ix)
+                            };
+                            let _enter = span.enter();
+
+
                         let (cf, ftr) = self.eval_expr(ctx, f)?;
-                        let c = cf.into_iter().map(|falsey| {
+                        let c = cf.into_iter().enumerate().map(|(ix, falsey)| {
+                            let span = if ix == 0 {
+                                tracing::span!(tracing::Level::DEBUG, "falsey")
+                            } else {
+                                tracing::span!(tracing::Level::DEBUG, "falsey", ix)
+                            };
+                            let _enter = span.enter();
+
                             if truthy.dists.len() != falsey.dists.len() {
                                 return Err(TypeError(format!("Expected both branches of ITE to return same len tuple\nGot (left): {:?}\nGot (right):{:?}", truthy.dists.len(), falsey.dists.len(),)));
                             }
@@ -425,7 +476,10 @@ impl<'a> Env<'a> {
                 ))
             }
             EFlip(var, param) => {
-                debug!(">>>flip {:.3}", param);
+                let flip = (param * 100.0).round() / 100.0;
+                let span = tracing::span!(tracing::Level::DEBUG, "", flip);
+                let _enter = span.enter();
+
                 let mut weightmap = ctx.weightmap.clone();
                 weightmap.insert(var.label.unwrap(), *param);
                 let o = Output {
@@ -441,11 +495,13 @@ impl<'a> Env<'a> {
                 Ok((c.clone(), EFlip(Box::new(c), param.clone())))
             }
             EObserve(_, a) => {
-                debug!(">>>observe");
+                let span = tracing::span!(tracing::Level::DEBUG, "observe");
+                let _enter = span.enter();
+
                 let (comp, atr) = self.eval_anf(ctx, a)?;
-                debug!("[observe] In. Accept {}", &ctx.accept.print_bdd());
-                debug!("[observe] Comp. dist {}", renderbdds(&comp.dists));
-                debug!("[observe] weightmap  {:?}", ctx.weightmap);
+                debug!("In. Accept {}", &ctx.accept.print_bdd());
+                debug!("Comp. dist {}", renderbdds(&comp.dists));
+                debug!("weightmap  {:?}", ctx.weightmap);
                 let dist = comp
                     .dists
                     .into_iter()
@@ -458,9 +514,9 @@ impl<'a> Env<'a> {
                     debug!("{}@{:?}: {:?}", i, var, wmc_params.get_var_weight(*var));
                 }
                 // debug!("[observe] max_var    {}", max_var);
-                debug!("[observe] WMCParams  {:?}", wmc_params);
-                debug!("[observe] VarOrder   {:?}", var_order);
-                debug!("[observe] Accept     {}", dist.print_bdd());
+                debug!("WMCParams  {:?}", wmc_params);
+                debug!("VarOrder   {:?}", var_order);
+                debug!("Accept     {}", dist.print_bdd());
                 let (a, z) = crate::inference::calculate_wmc_prob(
                     self.mgr,
                     &wmc_params,
@@ -469,7 +525,7 @@ impl<'a> Env<'a> {
                     ctx.accept,
                 );
                 let importance = I::Weight(a / z);
-                debug!("[observe] IWeight    {}", importance.weight());
+                debug!("IWeight    {}", importance.weight());
 
                 let o = Output {
                     dists: vec![BddPtr::PtrTrue],
@@ -484,24 +540,42 @@ impl<'a> Env<'a> {
                 Ok((c.clone(), EObserve(Box::new(c), Box::new(atr))))
             }
             ESample(_, e) => {
-                debug!(">>>sample");
+                let span = tracing::span!(tracing::Level::DEBUG, "sample");
+                let _enter = span.enter();
+
                 let (comp, etr) = self.eval_expr(ctx, e)?;
                 let c: Compiled = comp
                     .into_iter()
-                    .map(|comp| {
+                    .enumerate()
+                    .map(|(ix, comp)| {
+                        let span = if ix == 0 {
+                            tracing::span!(tracing::Level::DEBUG, "")
+                        } else {
+                            tracing::span!(tracing::Level::DEBUG, "", ix)
+                        };
+                        let _enter = span.enter();
+
                         let wmc_params = comp.weightmap.as_params(self.max_label.unwrap());
                         let var_order = self.order.clone().unwrap();
-                        debug!("[sample] Incm accept {}", &ctx.accept.print_bdd());
-                        debug!("[sample] Comp accept {}", comp.accept.print_bdd());
-                        debug!("[sample] Comp distrb {}", renderbdds(&comp.dists));
+                        debug!("Incm accept {}", &ctx.accept.print_bdd());
+                        debug!("Comp accept {}", comp.accept.print_bdd());
+                        debug!("Comp distrb {}", renderbdds(&comp.dists));
 
-                        debug!("[sample] weight_map {:?}", &comp.weightmap);
-                        debug!("[sample] WMCParams  {:?}", wmc_params);
-                        debug!("[sample] VarOrder   {:?}", var_order);
+                        debug!("weight_map {:?}", &comp.weightmap);
+                        debug!("WMCParams  {:?}", wmc_params);
+                        debug!("VarOrder   {:?}", var_order);
 
                         let mut fin = vec![];
 
-                        for sample_fn in [|| true, || false] {
+                        for sample_det in [true, false] {
+                            let span = if sample_det {
+                                tracing::span!(tracing::Level::DEBUG, "")
+                            } else {
+                                let s = false;
+                                tracing::span!(tracing::Level::DEBUG, "", s)
+                            };
+                            let _enter = span.enter();
+
                             let (mut accept, mut qs, mut dists) = (comp.accept, vec![], vec![]);
                             for dist in comp.dists.iter() {
                                 let sample_dist = self.mgr.and(accept, *dist);
@@ -519,7 +593,7 @@ impl<'a> Env<'a> {
                                         let bern = Bernoulli::new(theta_q).unwrap();
                                         bern.sample(rng)
                                     }
-                                    None => sample_fn(),
+                                    None => sample_det,
                                 };
                                 qs.push(Probability::new(if sample {
                                     theta_q
@@ -535,8 +609,8 @@ impl<'a> Env<'a> {
                                 let dist_holds = self.mgr.iff(*dist, sampled_value);
                                 accept = self.mgr.and(accept, dist_holds);
                             }
-                            debug!("[sample] final samples: {}", renderbdds(&dists));
-                            debug!("[sample] final accept : {}", accept.print_bdd());
+                            debug!("final samples: {}", renderbdds(&dists));
+                            debug!("final accept : {}", accept.print_bdd());
 
                             let c = Output {
                                 dists,
