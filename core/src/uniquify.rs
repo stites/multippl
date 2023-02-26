@@ -208,6 +208,7 @@ impl SymEnv {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::compile::*;
     use crate::grammar::*;
     use crate::grammar_macros::*;

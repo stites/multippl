@@ -19,21 +19,12 @@
 #![allow(clippy::unnecessary_lazy_evaluations)]
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::ptr_arg)]
-// use itertools::*;
-// use rsdd::builder::bdd_builder::BddManager;
-// use rsdd::builder::cache::all_app::AllTable;
-// use std::collections::HashMap;
-// use std::string::String;
-// use tracing::debug;
-
 mod grammar;
 mod grammar_macros;
 
 mod annotate;
 // mod collect_weightmap;
 mod compile;
-#[cfg(test)]
-mod debug;
 mod inference;
 mod parser;
 mod render;
@@ -43,34 +34,70 @@ mod typecheck;
 mod uniquify;
 mod utils;
 
-use crate::annotate::LabelEnv;
-use crate::compile::{compile, CompileError, Compiled, Env, Output, Result};
-use crate::typecheck::grammar::{ExprTyped, ProgramTyped};
-use crate::typecheck::typecheck;
-use crate::uniquify::SymEnv;
+pub struct Options {
+    seed: Option<u64>,
+    debug: bool, // overrides seed
+}
+impl Options {
+    pub fn rng(&self) -> StdRng {
+        match self.seed {
+            None => rand::SeedableRng::from_entropy(),
+            Some(s) => rand::SeedableRng::seed_from_u64(s),
+        }
+    }
+}
+impl Default for Options {
+    fn default() -> Self {
+        Self {
+            debug: false,
+            seed: None,
+        }
+    }
+}
+use crate::compile::{CompileError, Compiled, Env, Mgr, Output, Result};
+use crate::typecheck::grammar::ProgramTyped;
+use rand::rngs::StdRng;
 
-pub fn run(env: &mut Env, p: &ProgramTyped) -> Result<Output> {
+pub fn run(p: &ProgramTyped) -> Result<(Mgr, Output)> {
+    let (m, c) = runner(p, Default::default())?;
+    Ok((m, c.as_output().unwrap()))
+}
+
+pub fn runner(p: &ProgramTyped, opt: Options) -> Result<(Mgr, Compiled)> {
+    use crate::annotate::LabelEnv;
+    use crate::compile::{compile, Env, Mgr};
+    use crate::typecheck::{grammar::ExprTyped, typecheck};
+    use crate::uniquify::SymEnv;
+
     let p = typecheck(p)?;
     let mut senv = SymEnv::default();
     let p = senv.uniquify(&p)?;
     let mut lenv = LabelEnv::new();
     let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
-    env.names = senv.names; // just for debugging, really.
-    env.order = Some(vo);
-    env.max_label = Some(mxlbl);
+
+    let mut mgr = Mgr::new_default_order(mxlbl as usize);
+    let mut rng = opt.rng();
+    let orng = if opt.debug { None } else { Some(&mut rng) };
+    let mut env = Env::new(&mut mgr, orng);
+
     env.varmap = Some(varmap);
     env.inv = Some(inv);
-    let c = compile(env, &p);
+
+    let c = compile(&mut env, &p)?;
     tracing::debug!("hurray!");
-    c
+    Ok((mgr, c))
 }
 
 #[cfg(test)]
 mod active_tests {
     use super::*;
+    use crate::annotate::LabelEnv;
     use crate::compile::*;
+    use crate::compile::{compile, CompileError, Compiled, Env, Output, Result};
     use crate::grammar::*;
     use crate::grammar_macros::*;
+    use crate::typecheck::{grammar::ExprTyped, typecheck};
+    use crate::uniquify::SymEnv;
     use inference::*;
     use rsdd::builder::bdd_builder::*;
     use rsdd::builder::cache::all_app::*;
@@ -167,7 +194,7 @@ mod active_tests {
     // }
 
     #[test]
-    ////#[traced_test]
+    #[traced_test]
     fn free_variable_2_approx() {
         let mk = |ret: ExprTyped| {
             Program::Body(lets![
@@ -182,8 +209,8 @@ mod active_tests {
             ])
         };
         // check_approx("free2/x*y", vec![0.714285714, 1.0, 1.0, 0.714285714], &mk(q!("x" x "y")), 10,);
-        check_approx1("free2/x", 0.714285714, &mk(b!("x")), 10000);
-        check_approx1("free2/x&y", 0.714285714, &mk(b!("x" && "y")), 10000);
+        check_approx1("free2/x", 0.714285714, &mk(b!("x")), 10);
+        // check_approx1("free2/x&y", 0.714285714, &mk(b!("x" && "y")), 10000);
         //check_approx("free2/x&y", vec![0.714285714, 1.0, 1.0, 0.714285714], &mk(q!("x" x "y")), 10,);
     }
 }

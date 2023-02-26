@@ -14,10 +14,8 @@ use tracing_test::*;
 pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &ProgramTyped) {
     let precision = precision.unwrap_or_else(|| 0.01);
     let n = n.unwrap_or_else(|| 10000);
-    let mut env_args = EnvArgs::default_args(None);
-    let mut env = Env::from_args(&mut env_args);
-    let exact = exact_inf(&mut env, &p.strip_samples());
-    let approx = importance_weighting_inf(&mut env, n, p);
+    let exact = exact_inf(&p.strip_samples());
+    let approx = importance_weighting_inf(n, p);
     assert_eq!(
         exact.len(),
         approx.len(),
@@ -38,15 +36,13 @@ pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &Pr
 }
 pub fn check_inference(
     infname: &str,
-    inf: &dyn Fn(&mut Env, &ProgramTyped) -> Vec<f64>,
+    inf: &dyn Fn(&ProgramTyped) -> Vec<f64>,
     precision: f64,
     s: &str,
     fs: Vec<f64>,
     p: &ProgramTyped,
 ) {
-    let mut env_args = EnvArgs::default_args(None);
-    let mut env = Env::from_args(&mut env_args);
-    let prs = inf(&mut env, p);
+    let prs = inf(p);
     assert_eq!(
         prs.len(),
         fs.len(),
@@ -75,56 +71,49 @@ pub fn check_exact1(s: &str, f: f64, p: &ProgramTyped) {
     check_exact(s, vec![f], p)
 }
 pub fn check_approx(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize) {
-    check_inference(
-        "approx",
-        &|env, p| importance_weighting_inf(env, n, p),
-        0.01,
-        s,
-        f,
-        p,
-    );
+    check_inference("approx", &|p| importance_weighting_inf(n, p), 0.01, s, f, p);
 }
 pub fn check_approx1(s: &str, f: f64, p: &ProgramTyped, n: usize) {
     check_approx(s, vec![f], p, n)
 }
-pub fn check_approx_conc(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize) {
-    let env_args = EnvArgs::default_args(None);
-    // let mut env = Env::from_args(&mut env_args);
-    let precision = 0.01;
-    let fs = f;
-    let i = "approx";
-    let prs = importance_weighting_inf_conc(&env_args, n, p);
-    assert_eq!(
-        prs.len(),
-        fs.len(),
-        "check_inference compiled {} queries, tests expect {} results",
-        prs.len(),
-        fs.len(),
-    );
-    izip!(prs, fs).for_each(|(pr, f)| {
-        let ret = (f - pr).abs() < precision;
-        assert!(
-            ret,
-            "[check_{i}][{s}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"
-        );
-    });
-}
-pub fn check_approx1_conc(s: &str, f: f64, p: &ProgramTyped, n: usize) {
-    check_approx_conc(s, vec![f], p, n)
-}
-pub fn check_approx_seeded(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize, seeds: &Vec<u64>) {
-    check_inference(
-        "approx",
-        &|env, p| importance_weighting_inf_seeded(seeds.clone(), n, p),
-        0.01,
-        s,
-        f,
-        p,
-    );
-}
-pub fn check_approx_seeded1(s: &str, f: f64, p: &ProgramTyped, n: usize, seeds: &Vec<u64>) {
-    check_approx_seeded(s, vec![f], p, n, seeds)
-}
+// pub fn check_approx_conc(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize) {
+//     let env_args = EnvArgs::default_args(None);
+//     // let mut env = Env::from_args(&mut env_args);
+//     let precision = 0.01;
+//     let fs = f;
+//     let i = "approx";
+//     let prs = importance_weighting_inf_conc(&env_args, n, p);
+//     assert_eq!(
+//         prs.len(),
+//         fs.len(),
+//         "check_inference compiled {} queries, tests expect {} results",
+//         prs.len(),
+//         fs.len(),
+//     );
+//     izip!(prs, fs).for_each(|(pr, f)| {
+//         let ret = (f - pr).abs() < precision;
+//         assert!(
+//             ret,
+//             "[check_{i}][{s}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"
+//         );
+//     });
+// }
+// pub fn check_approx1_conc(s: &str, f: f64, p: &ProgramTyped, n: usize) {
+//     check_approx_conc(s, vec![f], p, n)
+// }
+// pub fn check_approx_seeded(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize, seeds: &Vec<u64>) {
+//     check_inference(
+//         "approx",
+//         &|env, p| importance_weighting_inf_seeded(seeds.clone(), n, p),
+//         0.01,
+//         s,
+//         f,
+//         p,
+//     );
+// }
+// pub fn check_approx_seeded1(s: &str, f: f64, p: &ProgramTyped, n: usize, seeds: &Vec<u64>) {
+//     check_approx_seeded(s, vec![f], p, n, seeds)
+// }
 
 #[test]
 //#[traced_test]
