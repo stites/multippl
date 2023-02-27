@@ -22,14 +22,6 @@ pub struct Output {
 }
 
 impl Output {
-    pub fn convex_combination(&self, o: &Output) -> Importance {
-        izip!(&self.probabilities, &o.probabilities,).fold(Zero::zero(), |res, (selfp, op)| {
-            I::Weight(
-                (selfp.as_f64() * self.importance.weight() + op.as_f64() * o.importance.weight())
-                    / 2.0,
-            )
-        })
-    }
     pub fn from_anf_dists(ctx: &Context, dists: Vec<BddPtr>) -> Output {
         let probabilities = vec![Probability::new(1.0); dists.len()];
         Output {

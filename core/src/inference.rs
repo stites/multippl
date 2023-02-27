@@ -141,7 +141,7 @@ pub fn importance_weighting_inf_h(
 ) -> Vec<f64> {
     let mut e = Expectations::empty();
     let mut ws: Vec<f64> = vec![];
-    let mut qss: Vec<Vec<f64>> = vec![];
+    let mut qss: Vec<Vec<Probability>> = vec![];
     let mut prs: Vec<Vec<f64>> = vec![];
     let mut sss: Vec<HashMap<UniqueId, Vec<bool>>> = vec![];
     let mut mgr = crate::make_mgr(p);
@@ -150,6 +150,7 @@ pub fn importance_weighting_inf_h(
     let mut compilations = vec![];
     let mut compilations_ws = vec![];
     let mut compilations_prs = vec![];
+    let mut compilations_qs = vec![];
 
     for _step in 1..=steps {
         match crate::runner_h(p, &mut mgr, opt) {
@@ -190,10 +191,12 @@ pub fn importance_weighting_inf_h(
                     // qss.push(_qs);
                     prs.push(ps);
                     // sss.push(env.samples.clone());
+                    qss.push(c.probabilities.clone());
 
                     if is_debug {
                         compilations_ws.push(ws.clone());
                         compilations_prs.push(prs.clone());
+                        compilations_qs.push(qss.clone());
                     }
                 });
                 if is_debug {
@@ -212,32 +215,55 @@ pub fn importance_weighting_inf_h(
         exp = renderfloats(&exp, false),
         expw = renderfloats(&expw, false)
     );
-    let res = izip!(exp.clone(), expw.clone())
-        .map(|(exp, expw)| (exp / expw) as f64)
-        .collect_vec();
+
     if is_debug {
-        debug!("weights:");
-        for (i, w) in compilations_ws.iter().enumerate() {
+        let final_ws: Vec<f64> = compilations_ws.last().unwrap().to_vec();
+        debug!("weights: {:?}", final_ws);
+        for (i, w) in final_ws.iter().enumerate() {
             debug!("{}: {:?}", i, w);
         }
-        debug!("probabilities:");
-        for (i, p) in compilations_prs.iter().enumerate() {
+        let final_ps: Vec<Vec<f64>> = (compilations_prs.last().unwrap())
+            .into_iter()
+            .cloned()
+            .collect();
+        debug!("probabilities: {:?}", final_ps);
+        for (i, p) in final_ps.iter().enumerate() {
+            debug!("{}: {:?}", i, p);
+        }
+        let final_qs: Vec<Vec<Probability>> = (compilations_qs.last().unwrap())
+            .into_iter()
+            .cloned()
+            .collect();
+        debug!("proposed probs: {:?}", final_qs);
+        for (i, p) in final_qs.iter().enumerate() {
             debug!("{}: {:?}", i, p);
         }
         debug!("expectations:");
-        debug!("{:?}", e);
-        debug!("{:?}", res);
+        debug!("{:#?}", e);
 
         debug!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
         debug!("compilations:");
         for (i, c) in compilations.iter().enumerate() {
             debug_compiled!(c);
         }
-        res
+        debug!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+        debug!("~ WARNING! DEBUG WILL NOT PRUNE UNNESSECARY SAMPLES!!! ~");
+        debug!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
+
+        compilations
+            .iter()
+            .fold(vec![0.0; compilations[0].probabilities.len()], |agg, c| {
+                let azs = wmc_prob(&mut mgr, &c);
+                izip!(agg, c.probabilities.clone(), azs)
+                    .map(|(fin, q, (a, z))| fin + q.as_f64() * c.importance.weight() * a / z)
+                    .collect_vec()
+            })
     } else {
-        debug_importance_weighting(true, steps, &ws, &qss, &prs, &sss, &exp, &expw);
+        debug_importance_weighting(true, steps, &ws, &vec![], &prs, &sss, &exp, &expw);
         // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
-        // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
+        let res = izip!(exp.clone(), expw.clone())
+            .map(|(exp, expw)| (exp / expw) as f64)
+            .collect_vec();
         res
     }
 }

@@ -368,6 +368,30 @@ impl<'a> Env<'a> {
                     )));
                 }
                 let pred_dist = pred.dists[0];
+                let var_order = self.order.clone();
+                let wmc_params = ctx.weightmap.as_params(self.max_label);
+
+                let (a, z) = crate::inference::calculate_wmc_prob(
+                    self.mgr,
+                    &wmc_params,
+                    &var_order,
+                    pred_dist,
+                    ctx.accept,
+                );
+                let wmc_true = Probability::new(a / z);
+                let (a, z) = crate::inference::calculate_wmc_prob(
+                    self.mgr,
+                    &wmc_params,
+                    &var_order,
+                    pred_dist.neg(),
+                    ctx.accept,
+                );
+
+                let wmc_false = Probability::new(a / z);
+                debug!("=============================");
+                debug!("wmc_true {}, wmc_false {}", wmc_true, wmc_false);
+                debug!("=============================");
+
                 let span = tracing::span!(tracing::Level::DEBUG, "truthy");
                 let _enter = span.enter();
                 let (ct, ttr) = self.eval_expr(ctx, t)?;
@@ -375,13 +399,12 @@ impl<'a> Env<'a> {
                 let (c, mftr) = ct.into_iter()
                     .enumerate()
                     .map(|(ix, truthy)| {
-                            let span = if ix == 0 {
-                                tracing::span!(tracing::Level::DEBUG, "truthy")
-                            } else {
-                                tracing::span!(tracing::Level::DEBUG, "truthy", ix)
-                            };
-                            let _enter = span.enter();
-
+                        let span = if ix == 0 {
+                            tracing::span!(tracing::Level::DEBUG, "truthy")
+                        } else {
+                            tracing::span!(tracing::Level::DEBUG, "truthy", ix)
+                        };
+                        let _enter = span.enter();
 
                         let (cf, ftr) = self.eval_expr(ctx, f)?;
                         let c = cf.into_iter().enumerate().map(|(ix, falsey)| {
@@ -414,10 +437,18 @@ impl<'a> Env<'a> {
                             weightmap.weights.extend(falsey.weightmap.clone());
 
                             let probabilities = izip!(&truthy.probabilities, &falsey.probabilities)
-                                  // dancing with the numerically unstable devil
-                                  .map(|(t, f)| (*t * Probability::new(0.5) + *f * Probability::new(0.5)))
+                                  .map(|(t, f)| (*t * wmc_true + *f * wmc_false))
                                   .collect_vec();
-                            let importance = truthy.convex_combination(&falsey);
+
+                            debug!("=============================");
+                            let importance_true = truthy.importance.pr_mul(wmc_true);
+                            let importance_false = falsey.importance.pr_mul(wmc_false);
+                            debug!("importance_true {:?}, importance_false {:?}", importance_true, importance_false);
+                            let importance = importance_true + importance_false;
+                            debug!("importance {:?}", importance);
+                            debug!("=============================");
+
+
                             let c = Output {
                                   dists,
                                   accept,

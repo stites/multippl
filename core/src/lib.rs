@@ -145,7 +145,55 @@ mod active_tests {
     use tracing_test::traced_test;
 
     #[test]
-    #[traced_test]
+    // #[ignore]
+    fn ite_3_with_one_sample_hard1_simplified_even_more_true() {
+        let p = {
+            program!(ite!(
+                    if ( b!(true) )
+                    then { sample!(flip!(1/3)) }
+                    else { flip!(1/4) }))
+        };
+        let n = 5000;
+        check_approx1("ite_3/y-sample1/4-simpl", 1.0 / 3.0, &p, n);
+        // check_approx1("ite_3/y-sample1/4-simpl", 0.2, &mk(b!("x")), n);
+    }
+    #[test]
+    // #[ignore]
+    // #[traced_test]
+    fn ite_3_with_one_sample_hard1_simplified_even_more_false() {
+        let p = {
+            program!(ite!(
+                    if ( b!(false) )
+                    then { sample!(flip!(1/3)) }
+                    else { flip!(1/4) }))
+        };
+        let n = 5000;
+        check_approx1("ite_3/y-sample1/4-simpl", 1.0 / 4.0, &p, n);
+        // check_approx1("ite_3/y-sample1/4-simpl", 0.2, &mk(b!("x")), n);
+    }
+    #[test]
+    #[ignore]
+    fn ite_3_with_one_sample_hard1_simplified_more() {
+        let mk = |ret: ExprTyped| {
+            program!(lets![
+                "x" ; b!() ;= flip!(3/5);
+                "y" ; b!() ;= ite!(
+                    if ( var!("x") )
+                    then { sample!(flip!(1/3)) }
+                    else { flip!(1/4) });
+                ...? ret ; b!()
+            ])
+        };
+        let n = 10000;
+        check_approx1("ite_3/y-sample1/4-simpl", 0.3, &mk(b!("y")), n);
+        // last one to tackle:
+        // dice's answer for 1/4 @ sample site
+        // check_approx1("ite_3/x&y", 0.227272727, &mk(b!("x" && "y")), n * n * n);
+    }
+
+    #[test]
+    #[ignore]
+    // #[traced_test]
     fn ite_3_with_one_sample_hard1_simplified() {
         let mk = |ret: ExprTyped| {
             program!(lets![
@@ -157,9 +205,9 @@ mod active_tests {
                 ...? ret ; b!()
             ])
         };
-        let n = 1000;
+        let n = 5000;
         // check_exact1("ite_3/y-sample1/4-simpl", 0.266666667, &mk(b!("y")));
-        debug_approx1("ite_3/y-sample1/4-simpl", 0.266666667, &mk(b!("y")), n);
+        check_approx1("ite_3/y-sample1/4-simpl", 0.266666667, &mk(b!("y")), n);
         // dice's answer for 2/4 @ sample site
         // check_approx1("ite_3/y-sample2/4  ", 0.545454545, &mk(b!("y")), n);
         // dice's answer for 3/4 @ sample site
@@ -171,7 +219,7 @@ mod active_tests {
     }
 
     #[test]
-    #[ignore = "todo"]
+    #[ignore]
     fn ite_3_with_one_sample_easy_x() {
         let mk = |ret: ExprTyped| {
             program!(lets![
@@ -189,8 +237,8 @@ mod active_tests {
 
     /// represents another semantic bug, still need to grapple how this all works, though
     #[test]
-    #[ignore = "todo"]
     // #[traced_test]
+    #[ignore]
     fn ite_3_with_one_sample_hard1() {
         let mk = |ret: ExprTyped| {
             program!(lets![
@@ -217,6 +265,7 @@ mod active_tests {
 
     /// passing
     #[test]
+    #[ignore]
     fn ite_3_with_one_sample_easy_x_or_y() {
         let mk = |ret: ExprTyped| {
             program!(lets![

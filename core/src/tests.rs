@@ -546,7 +546,6 @@ fn grid2x2_warmup1() {
 ///     v        v
 ///   (1,0) -> (1,1)
 #[test]
-// #[ignore]
 // #[traced_test]
 fn grid2x2() {
     let mk = |ret: ExprTyped| {
