@@ -145,33 +145,6 @@ mod active_tests {
     use tracing_test::traced_test;
 
     #[test]
-    // #[ignore]
-    fn ite_3_with_one_sample_hard1_simplified_even_more_true() {
-        let p = {
-            program!(ite!(
-                    if ( b!(true) )
-                    then { sample!(flip!(1/3)) }
-                    else { flip!(1/4) }))
-        };
-        let n = 5000;
-        check_approx1("ite_3/y-sample1/4-simpl", 1.0 / 3.0, &p, n);
-        // check_approx1("ite_3/y-sample1/4-simpl", 0.2, &mk(b!("x")), n);
-    }
-    #[test]
-    // #[ignore]
-    // #[traced_test]
-    fn ite_3_with_one_sample_hard1_simplified_even_more_false() {
-        let p = {
-            program!(ite!(
-                    if ( b!(false) )
-                    then { sample!(flip!(1/3)) }
-                    else { flip!(1/4) }))
-        };
-        let n = 5000;
-        check_approx1("ite_3/y-sample1/4-simpl", 1.0 / 4.0, &p, n);
-        // check_approx1("ite_3/y-sample1/4-simpl", 0.2, &mk(b!("x")), n);
-    }
-    #[test]
     #[ignore]
     fn ite_3_with_one_sample_hard1_simplified_more() {
         let mk = |ret: ExprTyped| {

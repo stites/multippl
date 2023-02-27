@@ -322,7 +322,6 @@ macro_rules! free_variable_2_tests {
     ($($name:ident: $value:expr,)*) => {
     $(
         #[test]
-        // #[ignore]
         fn $name() {
             let mk = |ret: ExprTyped| {
                 Program::Body(lets![
@@ -424,7 +423,6 @@ fn ite_1() {
 
 #[test]
 // #[traced_test]
-// #[ignore]
 fn ite_2() {
     let mk = |ret: ExprTyped| {
         Program::Body(lets![
@@ -441,6 +439,32 @@ fn ite_2() {
     check_exact1("ite_2/x  ", 0.714285714, &mk(b!("x")));
     check_exact1("ite_2/x|y", 1.000000000, &mk(b!("x" || "y")));
     check_exact1("ite_2/x&y", 0.178571429, &mk(b!("x" && "y")));
+}
+
+#[test]
+fn ite_3_with_one_sample_hard1_simplified_even_more_true() {
+    let p = {
+        program!(ite!(
+                    if ( b!(true) )
+                    then { sample!(flip!(1/3)) }
+                    else { flip!(1/4) }))
+    };
+    let n = 5000;
+    check_approx1("ite_3/y-sample1/4-simpl", 1.0 / 3.0, &p, n);
+    // check_approx1("ite_3/y-sample1/4-simpl", 0.2, &mk(b!("x")), n);
+}
+#[test]
+// #[traced_test]
+fn ite_3_with_one_sample_hard1_simplified_even_more_false() {
+    let p = {
+        program!(ite!(
+                    if ( b!(false) )
+                    then { sample!(flip!(1/3)) }
+                    else { flip!(1/4) }))
+    };
+    let n = 5000;
+    check_approx1("ite_3/y-sample1/4-simpl", 1.0 / 4.0, &p, n);
+    // check_approx1("ite_3/y-sample1/4-simpl", 0.2, &mk(b!("x")), n);
 }
 
 // ============================================================ //
@@ -525,7 +549,6 @@ fn grid2x2_warmup0() {
 }
 #[test]
 // #[traced_test]
-// #[ignore]
 fn grid2x2_warmup1() {
     let mk = |ret: ExprTyped| {
         Program::Body(lets![
@@ -568,7 +591,6 @@ fn grid2x2() {
 }
 
 #[test]
-// #[ignore]
 // #[traced_test]
 fn grid2x2_sampled() {
     let mk = |ret: ExprTyped| {
@@ -610,7 +632,6 @@ fn grid2x2_sampled() {
 ///     v        v        v
 ///   (2,0) -> (2,1) -> (2,2)
 #[test]
-// #[ignore]
 // #[traced_test]
 fn grid3x3_sampled_diag() {
     let mk = |ret: ExprTyped| {
