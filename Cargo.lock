@@ -1340,6 +1340,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "tree-sitter-formula"
+version = "0.0.1"
+dependencies = [
+ "cc",
+ "tree-sitter",
+]
+
+[[package]]
 name = "tree-sitter-weight4me"
 version = "0.0.1"
 dependencies = [
