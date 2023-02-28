@@ -1,0 +1,15 @@
+[package]
+name = "formula"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+tracing = "0.1.37"
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+tracing-test = "0.2.4"
+
+rsdd = { path = "../rsdd" }
+tree-sitter = "0.20.9"
+tree-sitter-formula = { path = "../tree-sitter-formula" }
