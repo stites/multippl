@@ -77,7 +77,7 @@ pub mod grammar {
     impl ξ<Trace> for AValExt {
         type Ext = Box<Output>;
     }
-    pub type AnfTr = ANF<Trace>;
+    pub type AnfTr = Anf<Trace>;
 
     impl ξ<Trace> for EAnfExt {
         type Ext = Box<Compiled>;
@@ -169,7 +169,7 @@ impl<'a> Env<'a> {
     }
 
     pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnn) -> Result<(Output, AnfTr)> {
-        use ANF::*;
+        use Anf::*;
         match a {
             AVar(var, s) => match ctx.substitutions.get(&var.id) {
                 None => Err(Generic(format!(
@@ -198,7 +198,7 @@ impl<'a> Env<'a> {
                 let (mut p, ptr) = self.eval_anf(ctx, bp)?;
                 // FIXME negating a tuple? seems weird!!!!
                 p.dists = p.dists.iter().map(BddPtr::neg).collect_vec();
-                Ok((p.clone(), Neg(Box::new(ptr))))
+                Ok((p, Neg(Box::new(ptr))))
             }
         }
     }
@@ -230,7 +230,7 @@ impl<'a> Env<'a> {
                 let dists = o.dists;
                 o.dists = vec![dists[*i]];
                 if i > &1 {
-                    debug_step!(&format!("prj@{}", i).to_string(), ctx, o);
+                    debug_step!(&format!("prj@{}", i), ctx, o);
                 }
                 let c = Compiled::Output(o);
                 Ok((c.clone(), EAnf(Box::new(c), Box::new(atr))))
@@ -241,7 +241,7 @@ impl<'a> Env<'a> {
                 debug!("{:?}", a);
                 let c = self.eval_expr(ctx, &EPrj((), 0, a.clone()))?;
                 // debug_step!("fst", ctx, c);
-                Ok(c.clone())
+                Ok(c)
             }
             ESnd(_, a) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "snd");
@@ -249,7 +249,7 @@ impl<'a> Env<'a> {
                 debug!("{:?}", a);
                 let c = self.eval_expr(ctx, &EPrj((), 1, a.clone()))?;
                 // debug_step!("snd", ctx, c);
-                Ok(c.clone())
+                Ok(c)
             }
             EProd(_, anfs) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "prod");
@@ -265,7 +265,7 @@ impl<'a> Env<'a> {
                 let flen = dists.len();
                 let o = Output {
                     dists,
-                    accept: ctx.accept.clone(),
+                    accept: ctx.accept,
                     weightmap: ctx.weightmap.clone(),
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0); flen],
@@ -282,7 +282,7 @@ impl<'a> Env<'a> {
 
                 let lbl = var.label;
                 // if we produce multiple worlds, we must account for them all
-                let (cbound, eboundtr) = self.eval_expr(&ctx, ebound)?;
+                let (cbound, eboundtr) = self.eval_expr(ctx, ebound)?;
                 let (outs, mbody) = cbound
                     .into_iter()
                     .enumerate()
@@ -326,7 +326,7 @@ impl<'a> Env<'a> {
                                     dists: body.dists,
                                     accept,
                                     substitutions: body.substitutions.clone(),
-                                    weightmap: body.weightmap.clone(),
+                                    weightmap: body.weightmap,
                                     probabilities,
                                     importance,
                                 };
@@ -487,7 +487,7 @@ impl<'a> Env<'a> {
                 weightmap.insert(var.label.unwrap(), *param);
                 let o = Output {
                     dists: vec![self.mgr.var(var.label.unwrap(), true)],
-                    accept: ctx.accept.clone(),
+                    accept: ctx.accept,
                     weightmap,
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0)],
@@ -495,7 +495,7 @@ impl<'a> Env<'a> {
                 };
                 debug_step!("flip", ctx, o);
                 let c = Compiled::Output(o);
-                Ok((c.clone(), EFlip(Box::new(c), param.clone())))
+                Ok((c.clone(), EFlip(Box::new(c), *param)))
             }
             EObserve(_, a) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "observe");
@@ -508,7 +508,7 @@ impl<'a> Env<'a> {
                 let dist = comp
                     .dists
                     .into_iter()
-                    .fold(ctx.accept.clone(), |global, cur| self.mgr.and(global, cur));
+                    .fold(ctx.accept, |global, cur| self.mgr.and(global, cur));
 
                 let var_order = self.order.clone();
                 let wmc_params = ctx.weightmap.as_params(self.max_label);

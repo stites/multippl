@@ -51,7 +51,7 @@ pub mod grammar {
     impl ξ<Uniquify> for AValExt {
         type Ext = ();
     }
-    pub type AnfUnq = ANF<Uniquify>;
+    pub type AnfUnq = Anf<Uniquify>;
 
     impl ξ<Uniquify> for EAnfExt {
         type Ext = ();
@@ -139,7 +139,7 @@ impl SymEnv {
         }
     }
     pub fn uniquify_anf(&mut self, a: &AnfUD) -> Result<AnfUnq, CompileError> {
-        use crate::grammar::ANF::*;
+        use crate::grammar::Anf::*;
         match a {
             AVar(_, s) => {
                 let uid = self.get_or_create(s.to_string())?;
@@ -157,7 +157,7 @@ impl SymEnv {
             Neg(bl) => Ok(Neg(Box::new(self.uniquify_anf(bl)?))),
         }
     }
-    pub fn uniquify_anfs(&mut self, anfs: &Vec<AnfUD>) -> Result<Vec<AnfUnq>, CompileError> {
+    pub fn uniquify_anfs(&mut self, anfs: &[AnfUD]) -> Result<Vec<AnfUnq>, CompileError> {
         anfs.iter().map(|a| self.uniquify_anf(a)).collect()
     }
 
@@ -187,7 +187,7 @@ impl SymEnv {
                 Box::new(self.uniquify_expr(t)?),
                 Box::new(self.uniquify_expr(f)?),
             )),
-            EFlip(_, param) => Ok(EFlip(self.fresh(), param.clone())),
+            EFlip(_, param) => Ok(EFlip(self.fresh(), *param)),
             EObserve(_, a) => {
                 let anf = self.uniquify_anf(a)?;
                 Ok(EObserve((), Box::new(anf)))

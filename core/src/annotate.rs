@@ -48,7 +48,7 @@ pub mod grammar {
     impl ξ<Annotated> for AValExt {
         type Ext = ();
     }
-    pub type AnfAnn = ANF<Annotated>;
+    pub type AnfAnn = Anf<Annotated>;
 
     impl ξ<Annotated> for EAnfExt {
         type Ext = ();
@@ -113,7 +113,7 @@ impl LabelEnv {
         let mut inv = HashMap::new();
         for (_, var) in self.subst_var.iter() {
             match var.label {
-                Some(label) => inv.insert(label.clone(), var.clone()),
+                Some(label) => inv.insert(label, var.clone()),
                 None => continue,
             };
         }
@@ -134,12 +134,12 @@ impl LabelEnv {
     }
 
     pub fn annotate_anf(&mut self, a: &AnfUnq) -> Result<AnfAnn, CompileError> {
-        use crate::grammar::ANF::*;
+        use crate::grammar::Anf::*;
         match a {
             AVar(uid, s) => Ok(AVar(self.get_var(uid)?, s.to_string())),
             AVal(_, b) => Ok(AVal((), b.clone())),
             And(bl, br) => Ok(And(
-                Box::new(self.annotate_anf(&*bl)?),
+                Box::new(self.annotate_anf(bl)?),
                 Box::new(self.annotate_anf(br)?),
             )),
             Or(bl, br) => Ok(Or(
@@ -149,7 +149,7 @@ impl LabelEnv {
             Neg(bl) => Ok(Neg(Box::new(self.annotate_anf(bl)?))),
         }
     }
-    pub fn annotate_anfs(&mut self, anfs: &Vec<AnfUnq>) -> Result<Vec<AnfAnn>, CompileError> {
+    pub fn annotate_anfs(&mut self, anfs: &[AnfUnq]) -> Result<Vec<AnfAnn>, CompileError> {
         anfs.iter().map(|a| self.annotate_anf(a)).collect()
     }
     pub fn annotate_expr(&mut self, e: &ExprUnq) -> Result<ExprAnn, CompileError> {
@@ -182,7 +182,7 @@ impl LabelEnv {
                 let lbl = self.fresh();
                 let var = Var::new(*id, Some(lbl), None);
                 self.subst_var.insert(*id, var.clone());
-                Ok(EFlip(var, param.clone()))
+                Ok(EFlip(var, *param))
             }
             EObserve(_, a) => {
                 let anf = self.annotate_anf(a)?;
@@ -192,6 +192,7 @@ impl LabelEnv {
         }
     }
 
+    #[allow(clippy::type_complexity)]
     pub fn annotate(
         &mut self,
         p: &ProgramUnq,

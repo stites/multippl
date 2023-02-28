@@ -48,12 +48,12 @@ pub mod grammar {
         type Ext = ();
     }
 
-    pub type AnfTyped = ANF<Typed>;
+    pub type AnfTyped = Anf<Typed>;
     pub type ExprTyped = Expr<Typed>;
     pub type ProgramTyped = Program<Typed>;
     impl AnfTyped {
         pub fn as_type(&self) -> Ty {
-            use ANF::*;
+            use Anf::*;
             match self {
                 AVar(t, _) => t.clone(),
                 AVal(_, v) => v.as_type(),
@@ -86,7 +86,7 @@ pub fn as_type(e: &grammar::ExprTyped) -> Ty {
 }
 
 pub fn typecheck_anf(a: &grammar::AnfTyped) -> Result<AnfUD, CompileError> {
-    use crate::grammar::ANF::*;
+    use crate::grammar::Anf::*;
     match a {
         AVar(ty, s) => {
             // if !ctx.gamma.typechecks(s.clone(), ty) {
@@ -108,7 +108,7 @@ pub fn typecheck_anf(a: &grammar::AnfTyped) -> Result<AnfUD, CompileError> {
         Neg(bl) => Ok(Neg(Box::new(typecheck_anf(bl)?))),
     }
 }
-pub fn typecheck_anfs(anfs: &Vec<grammar::AnfTyped>) -> Result<Vec<AnfUD>, CompileError> {
+pub fn typecheck_anfs(anfs: &[grammar::AnfTyped]) -> Result<Vec<AnfUD>, CompileError> {
     anfs.iter().map(typecheck_anf).collect()
 }
 
@@ -137,7 +137,7 @@ pub fn typecheck_expr(e: &grammar::ExprTyped) -> Result<ExprUD, CompileError> {
             Box::new(typecheck_expr(t)?),
             Box::new(typecheck_expr(f)?),
         )),
-        EFlip(_, param) => Ok(EFlip((), param.clone())),
+        EFlip(_, param) => Ok(EFlip((), *param)),
         EObserve(_, a) => Ok(EObserve((), Box::new(typecheck_anf(a)?))),
         ESample(_, e) => Ok(ESample((), Box::new(typecheck_expr(e)?))),
     }

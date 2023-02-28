@@ -76,7 +76,7 @@ impl Val {
     }
 }
 
-pub enum ANF<X>
+pub enum Anf<X>
 where
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
@@ -86,12 +86,12 @@ where
 
     // TODO: not sure this is where I should add booleans, but it makes
     // the observe statements stay closer to the semantics: ~observe anf~
-    And(Box<ANF<X>>, Box<ANF<X>>),
-    Or(Box<ANF<X>>, Box<ANF<X>>),
-    Neg(Box<ANF<X>>),
+    And(Box<Anf<X>>, Box<Anf<X>>),
+    Or(Box<Anf<X>>, Box<Anf<X>>),
+    Neg(Box<Anf<X>>),
 }
 
-impl<X> Debug for ANF<X>
+impl<X> Debug for Anf<X>
 where
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
@@ -99,7 +99,7 @@ where
     <AValExt as ξ<X>>::Ext: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use ANF::*;
+        use Anf::*;
         match self {
             AVar(ext, s) => f.write_fmt(format_args!("Var {}", s)),
             AVal(ext, v) => f.write_fmt(format_args!("Val {:?}", v)),
@@ -110,7 +110,7 @@ where
         }
     }
 }
-impl<X> Clone for ANF<X>
+impl<X> Clone for Anf<X>
 where
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
@@ -118,7 +118,7 @@ where
     <AValExt as ξ<X>>::Ext: Clone,
 {
     fn clone(&self) -> Self {
-        use ANF::*;
+        use Anf::*;
         match self {
             AVar(ext, x) => AVar(ext.clone(), x.clone()),
             AVal(ext, x) => AVal(ext.clone(), x.clone()),
@@ -128,7 +128,7 @@ where
         }
     }
 }
-impl<X> PartialEq for ANF<X>
+impl<X> PartialEq for Anf<X>
 where
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
@@ -136,7 +136,7 @@ where
     <AValExt as ξ<X>>::Ext: PartialEq,
 {
     fn eq(&self, o: &Self) -> bool {
-        use ANF::*;
+        use Anf::*;
         match (self, o) {
             (AVar(ext0, a0), AVar(ext1, a1)) => ext0 == ext1 && a0 == a1,
             (AVal(ext0, a0), AVal(ext1, a1)) => ext0 == ext1 && a0 == a1,
@@ -147,7 +147,7 @@ where
         }
     }
 }
-
+#[allow(clippy::enum_variant_names)]
 pub enum Expr<X>
 where
     EAnfExt: ξ<X>,
@@ -163,24 +163,24 @@ where
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
 {
-    EAnf(<EAnfExt as ξ<X>>::Ext, Box<ANF<X>>),
+    EAnf(<EAnfExt as ξ<X>>::Ext, Box<Anf<X>>),
 
-    EFst(<EFstExt as ξ<X>>::Ext, Box<ANF<X>>),
-    ESnd(<ESndExt as ξ<X>>::Ext, Box<ANF<X>>),
-    EPrj(<EPrjExt as ξ<X>>::Ext, usize, Box<ANF<X>>),
-    EProd(<EProdExt as ξ<X>>::Ext, Vec<ANF<X>>),
+    EFst(<EFstExt as ξ<X>>::Ext, Box<Anf<X>>),
+    ESnd(<ESndExt as ξ<X>>::Ext, Box<Anf<X>>),
+    EPrj(<EPrjExt as ξ<X>>::Ext, usize, Box<Anf<X>>),
+    EProd(<EProdExt as ξ<X>>::Ext, Vec<Anf<X>>),
 
     // TODO Ignore function calls for now
-    // EApp(String, Box<ANF>),
+    // EApp(String, Box<Anf>),
     ELetIn(<ELetInExt as ξ<X>>::Ext, String, Box<Expr<X>>, Box<Expr<X>>),
     EIte(
         <EIteExt as ξ<X>>::Ext,
-        Box<ANF<X>>,
+        Box<Anf<X>>,
         Box<Expr<X>>,
         Box<Expr<X>>,
     ),
     EFlip(<EFlipExt as ξ<X>>::Ext, f64),
-    EObserve(<EObserveExt as ξ<X>>::Ext, Box<ANF<X>>),
+    EObserve(<EObserveExt as ξ<X>>::Ext, Box<Anf<X>>),
     ESample(<ESampleExt as ξ<X>>::Ext, Box<Expr<X>>),
 }
 impl<X> Debug for Expr<X>
@@ -297,13 +297,13 @@ where
             EAnf(ext, a) => EAnf(ext.clone(), a.clone()),
             EFst(ext, a) => EFst(ext.clone(), a.clone()),
             ESnd(ext, a) => ESnd(ext.clone(), a.clone()),
-            EPrj(ext, i, a) => EPrj(ext.clone(), i.clone(), a.clone()),
+            EPrj(ext, i, a) => EPrj(ext.clone(), *i, a.clone()),
             EProd(ext, anfs) => EProd(ext.clone(), anfs.clone()),
             ELetIn(ext, s, bindee, body) => {
                 ELetIn(ext.clone(), s.clone(), bindee.clone(), body.clone())
             }
             EIte(ext, p, tru, fls) => EIte(ext.clone(), p.clone(), tru.clone(), fls.clone()),
-            EFlip(ext, p) => EFlip(ext.clone(), p.clone()),
+            EFlip(ext, p) => EFlip(ext.clone(), *p),
             EObserve(ext, a) => EObserve(ext.clone(), a.clone()),
             ESample(ext, e) => ESample(ext.clone(), e.clone()),
         }
@@ -376,7 +376,7 @@ impl Arbitrary for Val {
     }
 }
 
-impl<X: 'static> Arbitrary for ANF<X>
+impl<X: 'static> Arbitrary for Anf<X>
 where
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
@@ -387,15 +387,15 @@ where
         let x = g.choose(&[0, 1, 2_u8]).copied();
         match x {
             None => panic!("impossible: choose vec has len > 0"),
-            Some(0) => ANF::<X>::AVar(Arbitrary::arbitrary(g), String::arbitrary(g)),
-            Some(1) => ANF::AVal(Arbitrary::arbitrary(g), Val::arbitrary(g)),
+            Some(0) => Anf::<X>::AVar(Arbitrary::arbitrary(g), String::arbitrary(g)),
+            Some(1) => Anf::AVal(Arbitrary::arbitrary(g), Val::arbitrary(g)),
             Some(2) => {
                 let x = g.choose(&[0, 1, 2_u8]);
                 match x {
                     None => panic!("impossible: choose vec has len > 0"),
-                    Some(0) => ANF::And(Box::<ANF<X>>::arbitrary(g), Box::<ANF<X>>::arbitrary(g)),
-                    Some(1) => ANF::Or(Box::<ANF<X>>::arbitrary(g), Box::<ANF<X>>::arbitrary(g)),
-                    Some(2) => ANF::Neg(Box::<ANF<X>>::arbitrary(g)),
+                    Some(0) => Anf::And(Box::<Anf<X>>::arbitrary(g), Box::<Anf<X>>::arbitrary(g)),
+                    Some(1) => Anf::Or(Box::<Anf<X>>::arbitrary(g), Box::<Anf<X>>::arbitrary(g)),
+                    Some(2) => Anf::Neg(Box::<Anf<X>>::arbitrary(g)),
                     _ => panic!("impossible"),
                 }
             }
@@ -440,7 +440,7 @@ where
             Some(2) => Expr::ESnd(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
             Some(3) => Expr::EProd(
                 Arbitrary::arbitrary(g),
-                (0..2).map(|_i| ANF::arbitrary(g)).collect_vec(),
+                (0..2).map(|_i| Anf::arbitrary(g)).collect_vec(),
             ),
             Some(4) => {
                 let var = String::arbitrary(g);
@@ -511,11 +511,11 @@ impl Γ {
             .cloned()
     }
     pub fn push(&mut self, x: String, ty: &Ty) {
-        self.0.push((x.clone(), ty.clone()));
+        self.0.push((x, ty.clone()));
     }
     pub fn append(&self, x: String, ty: &Ty) -> Γ {
         let mut ctx = self.0.clone();
-        ctx.push((x.clone(), ty.clone()));
+        ctx.push((x, ty.clone()));
         Γ(ctx)
     }
     pub fn typechecks(&self, x: String, ty: &Ty) -> bool {
@@ -558,11 +558,7 @@ where
     <AValExt as ξ<X>>::Ext: Debug + Clone,
 {
     pub fn is_sample(&self) -> bool {
-        use Expr::*;
-        match self {
-            ESample(_, _) => true,
-            _ => false,
-        }
+        matches!(self, Expr::ESample(_, _))
     }
     pub fn strip_samples1(&self) -> Expr<X> {
         use Expr::*;
@@ -716,6 +712,6 @@ impl ξ<UD> for ESampleExt {
     type Ext = ();
 }
 
-pub type AnfUD = ANF<UD>;
+pub type AnfUD = Anf<UD>;
 pub type ExprUD = Expr<UD>;
 pub type ProgramUD = Program<UD>;

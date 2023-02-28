@@ -3,22 +3,22 @@
 #![allow(mixed_script_confusables)] // for Gamma : )
 // temporary as I convert to using types
 #![allow(unused_variables)]
-#![allow(clippy::clone_on_copy)]
-#![allow(clippy::type_complexity)]
-#![allow(clippy::redundant_clone)]
-#![allow(clippy::useless_format)]
-#![allow(clippy::needless_return)]
-#![allow(clippy::upper_case_acronyms)]
-#![allow(clippy::single_component_path_imports)]
-#![allow(clippy::enum_variant_names)]
-#![allow(clippy::match_like_matches_macro)]
-#![allow(clippy::let_and_return)]
-#![allow(clippy::len_zero)]
-#![allow(clippy::assign_op_pattern)]
-#![allow(clippy::unnecessary_cast)]
-#![allow(clippy::unnecessary_lazy_evaluations)]
-#![allow(clippy::too_many_arguments)]
-#![allow(clippy::ptr_arg)]
+// #![allow(clippy::clone_on_copy)]
+// #![allow(clippy::type_complexity)]
+// #![allow(clippy::redundant_clone)]
+// #![allow(clippy::useless_format)]
+// #![allow(clippy::needless_return)]
+// #![allow(clippy::upper_case_acronyms)]
+// #![allow(clippy::single_component_path_imports)]
+// #![allow(clippy::enum_variant_names)]
+// #![allow(clippy::match_like_matches_macro)]
+// #![allow(clippy::let_and_return)]
+// #![allow(clippy::len_zero)]
+// #![allow(clippy::assign_op_pattern)]
+// #![allow(clippy::unnecessary_cast)]
+// #![allow(clippy::unnecessary_lazy_evaluations)]
+// #![allow(clippy::too_many_arguments)]
+// #![allow(clippy::ptr_arg)]
 mod grammar;
 mod grammar_macros;
 
@@ -34,6 +34,7 @@ mod typecheck;
 mod uniquify;
 mod utils;
 
+#[derive(Default)]
 pub struct Options {
     seed: Option<u64>,
     debug: bool, // overrides seed
@@ -61,14 +62,7 @@ impl Options {
         }
     }
 }
-impl Default for Options {
-    fn default() -> Self {
-        Self {
-            debug: false,
-            seed: None,
-        }
-    }
-}
+
 use crate::annotate::LabelEnv;
 use crate::compile::{compile, CompileError, Compiled, Env, Mgr, Output, Result};
 use crate::typecheck::{
@@ -145,7 +139,7 @@ mod active_tests {
     use tracing_test::traced_test;
 
     #[test]
-    #[ignore]
+    #[traced_test]
     fn ite_3_with_one_sample_hard1_simplified_more() {
         let mk = |ret: ExprTyped| {
             program!(lets![
@@ -158,10 +152,55 @@ mod active_tests {
             ])
         };
         let n = 10000;
-        check_approx1("ite_3/y-sample1/4-simpl", 0.3, &mk(b!("y")), n);
-        // last one to tackle:
-        // dice's answer for 1/4 @ sample site
-        // check_approx1("ite_3/x&y", 0.227272727, &mk(b!("x" && "y")), n * n * n);
+        // debug_approx1("ite_3/x", 0.6, &mk(b!("x")), n); // works!
+        debug_approx1("ite_3/y", 0.3, &mk(b!("y")), n); // broken!
+
+        // debug_approx1("ite_3/x|y", 0.7, &mk(b!("x" || "y")), n); // broken!
+        // debug_approx1("ite_3/x&y", 0.2, &mk(b!("x" && "y")), n); // broken!
+        // debug_approx("ite_3/x*y", vec![0.6, 0.3, 0.7, 0.2], &mk(q!("x" x "y")), n); // broken!
+    }
+
+    #[test]
+    fn manual_ite() {
+        let mut mgr = Mgr::new_default_order(10);
+        let (x_lbl, x) = mgr.new_pos();
+        let y_lbl = mgr.new_label();
+        let (yt_lbl, yt) = mgr.new_pos();
+        let (yf_lbl, yf) = mgr.new_pos();
+        let tmp = mgr.and(x, yt);
+        let y = mgr.and(x.neg(), yf);
+        let y = mgr.or(tmp, y);
+
+        let accept_true = mgr.and(x, yt);
+        let accept_true = mgr.or(accept_true, x.neg());
+        let dist_true = mgr.and(x.neg(), yf);
+        let dist_true = mgr.or(x, dist_true);
+        // conjoin query
+
+        let accept_false = accept_true.clone();
+        let dist_false = mgr.and(x.neg(), yf);
+        // conjoin query
+
+        // let accept_true =
+        // let dist_false =
+        // let accept_false =
+
+        let mk = |ret: ExprTyped| {
+            program!(lets![
+                "x" ; b!() ;= flip!(3/5);
+                "y" ; b!() ;= ite!(
+                    if ( var!("x") )
+                    then { sample!(flip!(1/3)) }
+                    else { flip!(1/4) });
+                ...? ret ; b!()
+            ])
+        };
+        let n = 10000;
+        // debug_approx1("ite_3/x", 0.6, &mk(b!("x")), n); // works!
+        debug_approx1("ite_3/y", 0.3, &mk(b!("y")), n); // broken!
+                                                        // debug_approx1("ite_3/x|y", 0.7, &mk(b!("x" || "y")), n); // broken!
+                                                        // debug_approx1("ite_3/x&y", 0.2, &mk(b!("x" && "y")), n); // broken!
+                                                        // debug_approx("ite_3/x*y", vec![0.6, 0.3, 0.7, 0.2], &mk(q!("x" x "y")), n); // broken!
     }
 
     #[test]

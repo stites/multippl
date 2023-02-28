@@ -1,3 +1,5 @@
+use std::fmt;
+
 #[derive(Clone, Eq, Hash, PartialEq, Debug)]
 pub enum CompileError {
     AcceptingNonZeroError(String),
@@ -6,15 +8,16 @@ pub enum CompileError {
     Generic(String),
     SemanticsError(String),
 }
-impl CompileError {
-    pub fn to_string(&self) -> String {
+
+impl fmt::Display for CompileError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use CompileError::*;
         match self {
-            AcceptingNonZeroError(s) => s.to_string(),
-            Todo() => "todo!".to_string(),
-            TypeError(s) => s.to_string(),
-            Generic(s) => s.to_string(),
-            SemanticsError(s) => s.to_string(),
+            AcceptingNonZeroError(s) => write!(f, "{}", s),
+            Todo() => write!(f, "todo!"),
+            TypeError(s) => write!(f, "{}", s),
+            Generic(s) => write!(f, "{}", s),
+            SemanticsError(s) => write!(f, "{}", s),
         }
     }
 }

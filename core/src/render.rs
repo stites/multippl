@@ -9,15 +9,15 @@ use rsdd::sample::probability::Probability;
 use std::collections::HashMap;
 use tracing::*;
 
-pub fn rendervec(fs: &Vec<String>) -> String {
+pub fn rendervec(fs: &[String]) -> String {
     format!("[{}]", fs.join(", "))
 }
 
-pub fn renderfloats(fs: &Vec<f64>, high_prec: bool) -> String {
+pub fn renderfloats(fs: &[f64], high_prec: bool) -> String {
     rendervec(&fs.iter().map(|x| fmt_f64(high_prec)(*x)).collect_vec())
 }
 
-pub fn renderbdds(fs: &Vec<BddPtr>) -> String {
+pub fn renderbdds(fs: &[BddPtr]) -> String {
     rendervec(&fs.iter().map(|b| b.print_bdd()).collect_vec())
 }
 
@@ -46,20 +46,20 @@ pub fn fmt_f64(high_precision: bool) -> impl Fn(f64) -> String {
     }
 }
 
-pub fn render_weights(ws: &Vec<f64>, high_precision: bool) -> String {
+pub fn render_weights(ws: &[f64], high_precision: bool) -> String {
     ws.iter()
         .cloned()
         .map(|w| format!("[{}]", fmt_f64(high_precision)(w)))
         .join(", ")
 }
-pub fn render_probs(ws: &Vec<Probability>, high_precision: bool) -> String {
+pub fn render_probs(ws: &[Probability], high_precision: bool) -> String {
     ws.iter()
         .cloned()
         .map(|w| format!("[{}]", fmt_f64(high_precision)(w.as_f64())))
         .join(", ")
 }
 
-pub fn render_history(xss: &Vec<Vec<f64>>, high_precision: bool) -> String {
+pub fn render_history(xss: &[Vec<f64>], high_precision: bool) -> String {
     xss.iter()
         .map(|ws| ws.iter().cloned().map(fmt_f64(high_precision)).join(", "))
         .map(|ws| format!("[{}]", ws))

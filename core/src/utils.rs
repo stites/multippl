@@ -18,7 +18,7 @@ pub fn leaf_variable(bdd: BddPtr) -> Option<VarLabel> {
 pub fn variables(bdd: BddPtr) -> Vec<VarLabel> {
     Fold::new(
         &mut |vs: Vec<Option<VarLabel>>, bdd| {
-            let mut vs = vs.clone();
+            let mut vs = vs;
             vs.push(bdd.node.var_safe());
             vs
         },
@@ -26,7 +26,7 @@ pub fn variables(bdd: BddPtr) -> Vec<VarLabel> {
         &|ret, lo_hi| match lo_hi {
             None => ret,
             Some((lo, hi)) => {
-                let mut v = ret.clone();
+                let mut v = ret;
                 v.extend(lo);
                 v.extend(hi);
                 v
@@ -35,7 +35,7 @@ pub fn variables(bdd: BddPtr) -> Vec<VarLabel> {
     )
     .mut_fold(&bdd)
     .into_iter()
-    .filter_map(|x| x)
+    .flatten()
     .collect()
 }
 

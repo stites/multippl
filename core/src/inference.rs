@@ -34,8 +34,8 @@ pub fn calculate_wmc_prob<T: Copy + std::fmt::Debug + num_traits::Num + std::fmt
     debug!("-------------");
     debug!("{}", accept.print_bdd());
 
-    let a = num.wmc(&var_order, &params);
-    let z = accept.wmc(&var_order, &params);
+    let a = num.wmc(var_order, params);
+    let z = accept.wmc(var_order, params);
     debug!("{}", a);
     debug!("----------- = {}", a / z);
     debug!("{}", z);
@@ -67,7 +67,7 @@ pub fn get_vec<T: Copy>(v: Vec<T>, i: usize) -> Option<T> {
 }
 #[inline]
 pub fn get_or_else<T: Copy>(v: Vec<T>, i: usize, d: T) -> T {
-    get_vec(v, i).unwrap_or_else(|| d)
+    get_vec(v, i).unwrap_or(d)
 }
 pub fn exact_inf(p: &ProgramTyped) -> Vec<f64> {
     match crate::run(p) {
@@ -82,20 +82,21 @@ pub fn exact_inf(p: &ProgramTyped) -> Vec<f64> {
         }
         Err(e) => panic!(
             "\nCompiler Error!!!\n==============\n{}\n==============\n",
-            e.to_string()
+            e
         ),
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn debug_importance_weighting(
     high_precision: bool,
     steps: usize,
-    ws: &Vec<f64>,
-    qss: &Vec<Vec<f64>>,
-    pss: &Vec<Vec<f64>>,
-    ss: &Vec<HashMap<UniqueId, Vec<bool>>>,
-    exp: &Vec<f64>,
-    expw: &Vec<f64>,
+    ws: &[f64],
+    qss: &[Vec<f64>],
+    pss: &[Vec<f64>],
+    ss: &[HashMap<UniqueId, Vec<bool>>],
+    exp: &[f64],
+    expw: &[f64],
 ) {
     if steps < 1001 {
         debug!("");
@@ -134,6 +135,7 @@ fn debug_importance_weighting(
 pub fn importance_weighting_inf(steps: usize, p: &ProgramTyped) -> Vec<f64> {
     importance_weighting_inf_h(steps, p, &Default::default())
 }
+#[allow(unused_mut)]
 pub fn importance_weighting_inf_h(
     steps: usize,
     p: &ProgramTyped,
@@ -176,7 +178,7 @@ pub fn importance_weighting_inf_h(
                             if a == z && a == 0.0 {
                                 0.0
                             } else {
-                                (a / z) as f64
+                                a / z
                             }
                         })
                         .collect_vec();
@@ -191,7 +193,7 @@ pub fn importance_weighting_inf_h(
                     // qss.push(_qs);
                     prs.push(ps);
                     // sss.push(env.samples.clone());
-                    qss.push(c.probabilities.clone());
+                    qss.push(c.probabilities);
 
                     if is_debug {
                         compilations_ws.push(ws.clone());
@@ -207,8 +209,8 @@ pub fn importance_weighting_inf_h(
         }
     }
 
-    let exp = e.clone().exp.clone();
-    let expw = e.clone().expw.clone();
+    let exp = e.exp.clone();
+    let expw = e.expw.clone();
     // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
     // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
     debug!(
@@ -222,18 +224,12 @@ pub fn importance_weighting_inf_h(
         for (i, w) in final_ws.iter().enumerate() {
             debug!("{}: {:?}", i, w);
         }
-        let final_ps: Vec<Vec<f64>> = (compilations_prs.last().unwrap())
-            .into_iter()
-            .cloned()
-            .collect();
+        let final_ps: Vec<Vec<f64>> = (compilations_prs.last().unwrap()).to_vec();
         debug!("probabilities: {:?}", final_ps);
         for (i, p) in final_ps.iter().enumerate() {
             debug!("{}: {:?}", i, p);
         }
-        let final_qs: Vec<Vec<Probability>> = (compilations_qs.last().unwrap())
-            .into_iter()
-            .cloned()
-            .collect();
+        let final_qs: Vec<Vec<Probability>> = (compilations_qs.last().unwrap()).to_vec();
         debug!("proposed probs: {:?}", final_qs);
         for (i, p) in final_qs.iter().enumerate() {
             debug!("{}: {:?}", i, p);
@@ -253,18 +249,15 @@ pub fn importance_weighting_inf_h(
         compilations
             .iter()
             .fold(vec![0.0; compilations[0].probabilities.len()], |agg, c| {
-                let azs = wmc_prob(&mut mgr, &c);
+                let azs = wmc_prob(&mut mgr, c);
                 izip!(agg, c.probabilities.clone(), azs)
                     .map(|(fin, q, (a, z))| fin + q.as_f64() * c.importance.weight() * a / z)
                     .collect_vec()
             })
     } else {
-        debug_importance_weighting(true, steps, &ws, &vec![], &prs, &sss, &exp, &expw);
+        debug_importance_weighting(true, steps, &ws, &[], &prs, &sss, &exp, &expw);
         // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
-        let res = izip!(exp.clone(), expw.clone())
-            .map(|(exp, expw)| (exp / expw) as f64)
-            .collect_vec();
-        res
+        izip!(exp, expw).map(|(exp, expw)| exp / expw).collect_vec()
     }
 }
 
@@ -337,7 +330,7 @@ impl Expectations {
         Self { exp, expw }
     }
     pub fn add(l: Self, o: Self) -> Self {
-        if l.exp.len() == 0 {
+        if l.exp.is_empty() {
             o
         } else {
             Self {

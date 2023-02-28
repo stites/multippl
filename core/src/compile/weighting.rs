@@ -19,7 +19,7 @@ impl Weight {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct WeightMap {
     pub weights: HashMap<VarLabel, Weight>,
 }
@@ -30,7 +30,7 @@ impl WeightMap {
         let cnst = Weight::constant();
         for ix in 0..max_label {
             let lbl = VarLabel::new(ix);
-            let weight = self.weights.get(&lbl).unwrap_or_else(|| &cnst);
+            let weight = self.weights.get(&lbl).unwrap_or(&cnst);
             wmc_params.set_weight(lbl, weight.lo, weight.hi);
         }
         for (label, weight) in self.weights.iter() {
@@ -40,13 +40,6 @@ impl WeightMap {
     }
     pub fn insert(&mut self, lbl: VarLabel, high: f64) {
         self.weights.insert(lbl, Weight::from_high(high));
-    }
-}
-impl Default for WeightMap {
-    fn default() -> Self {
-        Self {
-            weights: HashMap::new(),
-        }
     }
 }
 

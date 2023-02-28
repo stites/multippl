@@ -10,7 +10,7 @@ pub struct Context {
 impl Context {
     pub fn from_compiled(c: &Output) -> Self {
         Context {
-            accept: c.accept.clone(),
+            accept: c.accept,
             substitutions: c.substitutions.clone(),
             weightmap: c.weightmap.clone(),
         }

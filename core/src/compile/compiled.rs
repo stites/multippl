@@ -26,7 +26,7 @@ impl Output {
         let probabilities = vec![Probability::new(1.0); dists.len()];
         Output {
             dists,
-            accept: ctx.accept.clone(),
+            accept: ctx.accept,
             substitutions: ctx.substitutions.clone(),
             weightmap: ctx.weightmap.clone(),
             probabilities,
@@ -42,10 +42,7 @@ pub enum Compiled {
 }
 impl Compiled {
     pub fn is_single_run(&self) -> bool {
-        match self {
-            Compiled::Output(_) => true,
-            _ => false,
-        }
+        matches!(self, Compiled::Output(_))
     }
     pub fn from_output(o: Output) -> Compiled {
         Compiled::Output(o)
