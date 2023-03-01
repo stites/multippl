@@ -58,6 +58,15 @@
             };
           }
           {
+            # ad-hoc dev stuff for new graphviz cli in rsdd
+            packages = with pkgs; [
+              (python3.withPackages (p:
+                with p; [
+                  graphviz
+                ]))
+            ];
+          }
+          {
             # rust dev block
             languages.rust.enable = true;
 
