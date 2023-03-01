@@ -85,9 +85,9 @@ impl<'a, T: LruTable<BddPtr>> Context<'a, T> {
 }
 
 pub struct Output {
-    circuit: BddPtr,
-    variables: HashMap<VarLabel, BddPtr>,
-    names: HashMap<String, VarLabel>,
+    pub circuit: BddPtr,
+    pub variables: HashMap<VarLabel, BddPtr>,
+    pub names: HashMap<String, VarLabel>,
 }
 
 fn compile<T: LruTable<BddPtr>>(ctx: &mut Context<T>, f: &Formula) -> Result<Output, String> {

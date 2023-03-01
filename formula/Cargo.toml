@@ -13,3 +13,4 @@ tracing-test = "0.2.4"
 rsdd = { path = "../rsdd" }
 tree-sitter = "0.20.9"
 tree-sitter-formula = { path = "../tree-sitter-formula" }
+clap = { version = "4.1.8", features = ["derive"] }
