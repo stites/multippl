@@ -1,6 +1,10 @@
+use rsdd::builder::bdd_builder::*;
+use rsdd::builder::cache::all_app::AllTable;
+use std::char::decode_utf16;
+use std::collections::HashMap;
 use tree_sitter::*;
-use tree_sitter_formula;
 
+#[derive(Debug, PartialEq, Eq)]
 pub enum Formula {
     Var(String),
     Neg(Box<Formula>),
@@ -8,73 +12,216 @@ pub enum Formula {
     Or(Box<Formula>, Box<Formula>),
 }
 
-pub fn parse(code: String) -> Option<Tree> {
+pub fn parse(src: String) -> Option<Tree> {
     let mut parser = Parser::new();
     parser
         .set_language(tree_sitter_formula::language())
         .expect("Error loading formula grammar");
-    parser.parse(code, None)
+    parser.parse(src, None)
 }
 
-pub fn elaborate(t: Tree) -> Formula {
+pub fn elaborate(src: String, t: Tree) -> Result<Formula, String> {
     // https://docs.rs/tree-sitter/latest/tree_sitter/struct.TreeTreeCursor.html
     let mut c = t.walk();
     let source = c.node();
-    let mut c_ = c.clone();
-    let mut cs = source.named_children(&mut c_);
+    let mut cs = source.named_children(&mut c);
     let root = cs.next().unwrap();
-    let e = as_ast(&mut c, &root);
-    e
+    let src: Vec<u16> = src.encode_utf16().collect();
+    as_ast(&src, &root)
 }
 
-fn as_ast(_c: &mut TreeCursor, n: &Node) -> Formula {
+fn get_var(src: &[u16], n: &Node) -> Result<Formula, String> {
+    let bytestr = n.utf16_text(src);
+    let cs: String = decode_utf16(bytestr.to_vec())
+        .map(|r| r.unwrap_or(std::char::REPLACEMENT_CHARACTER))
+        .collect();
+    Ok(Formula::Var(cs))
+}
+
+fn as_ast(src: &[u16], n: &Node) -> Result<Formula, String> {
     let k = n.kind();
     match k {
-        "fst" => {
-            todo!()
-        }
-        "snd" => {
-            todo!()
-        }
-        "prod" => {
-            todo!()
-                    }
-        "let_binding" => {
-            todo!()
-        }
+        "var" => get_var(src, n),
+        "neg" => {
+            let mut c = n.walk();
+            let cs : Vec<_> = n.named_children(&mut c).collect();
+            assert_eq!(cs.len(),1);
+            let f = as_ast(src, &cs[0])?;
+            Ok(Formula::Neg(Box::new(f)))
+        },
+        "and" => {
+            let mut c = n.walk();
+            let cs : Vec<_> = n.named_children(&mut c).collect();
+            assert_eq!(cs.len(),2);
+            let l = as_ast(src, &cs[0])?;
+            let r = as_ast(src, &cs[1])?;
+            Ok(Formula::And(Box::new(l), Box::new(r)))
+        },
+        "or" => {
+            let mut c = n.walk();
+            let cs : Vec<_> = n.named_children(&mut c).collect();
+            assert_eq!(cs.len(),2);
+            let l = as_ast(src, &cs[0])?;
+            let r = as_ast(src, &cs[1])?;
+            Ok(Formula::Or(Box::new(l), Box::new(r)))
+        },
         s => panic!(
             "unexpected tree-sitter node kind `{}` (#named_children: {})! Likely, you need to rebuild the tree-sitter parser\nsexp: {}", s, n.named_child_count(), n.to_sexp()
         ),
     }
 }
-// #[cfg(test)]
-// mod parser_tests {
-//     use super::*;
-//     use crate::*;
-//     use std::any::TypeId;
+pub struct Context<'a, T: LruTable<BddPtr>> {
+    mgr: &'a mut BddManager<T>,
+    names: HashMap<String, VarLabel>,
+}
 
-//     /// ======================
-//     /// exact: trivial
-//     /// ======================
-//     ///
-//     /// let x = true in
-//     /// x
-//     ///
-//     /// ---
-//     ///
-//     /// (source_file
-//     ///   (let_binding
-//     ///     (identifier)
-//     ///     (anf (bool))
-//     ///   (anf (identifier))))
-//     #[test]
-//     #[ignore = "punt on parsing"]
-//     fn one_var() {
-//         let code = r#"let x = true in x"#;
-//         let tree = parse(code.to_string());
-//         assert!(tree.is_some());
-//         let tree = tree.unwrap();
-//         let expr = elaborate(tree);
-//         assert!(expr == lets!["x" : bool := b!("true"); in var!("x") ; bool]);
-//     }
-// }
+impl<'a, T: LruTable<BddPtr>> Context<'a, T> {
+    fn new(mgr: &'a mut BddManager<T>) -> Self {
+        Self {
+            mgr,
+            names: Default::default(),
+        }
+    }
+}
+
+pub struct Output {
+    circuit: BddPtr,
+    variables: HashMap<VarLabel, BddPtr>,
+    names: HashMap<String, VarLabel>,
+}
+
+fn compile<T: LruTable<BddPtr>>(ctx: &mut Context<T>, f: &Formula) -> Result<Output, String> {
+    use Formula::*;
+    match f {
+        Var(s) => match ctx.names.get(s) {
+            None => {
+                let (l, p) = ctx.mgr.new_pos();
+                let variables = HashMap::from([(l, p)]);
+                let names = HashMap::from([(s.clone(), l)]);
+                Ok(Output {
+                    circuit: p,
+                    variables,
+                    names,
+                })
+            }
+            Some(l) => {
+                let p = ctx.mgr.var(*l, true);
+                let variables = HashMap::from([(*l, p)]);
+                Ok(Output {
+                    circuit: p,
+                    variables,
+                    names: ctx.names.clone(),
+                })
+            }
+        },
+        Neg(f) => {
+            let o = compile(ctx, f)?;
+            Ok(Output {
+                circuit: o.circuit.neg(),
+                variables: o.variables,
+                names: o.names,
+            })
+        }
+        And(l, r) => {
+            let l = compile(ctx, l)?;
+            let r = compile(ctx, r)?;
+            let circuit = ctx.mgr.and(l.circuit, r.circuit);
+            let mut variables = l.variables;
+            variables.extend(r.variables);
+            let mut names = l.names;
+            names.extend(r.names);
+            Ok(Output {
+                circuit,
+                variables,
+                names,
+            })
+        }
+        Or(l, r) => {
+            let l = compile(ctx, l)?;
+            let r = compile(ctx, r)?;
+            let circuit = ctx.mgr.or(l.circuit, r.circuit);
+            let mut variables = l.variables;
+            variables.extend(r.variables);
+            let mut names = l.names;
+            names.extend(r.names);
+            Ok(Output {
+                circuit,
+                variables,
+                names,
+            })
+        }
+    }
+}
+
+pub fn eval(src: String) -> Result<(Output, BddManager<AllTable<BddPtr>>), String> {
+    let tree = parse(src.to_string());
+    let formula = elaborate(src, tree.unwrap())?;
+    let mut mgr = BddManager::<AllTable<BddPtr>>::new_default_order(0);
+    let mut ctx = Context::new(&mut mgr);
+    let out = compile(&mut ctx, &formula)?;
+    Ok((out, mgr))
+}
+
+#[cfg(test)]
+mod parser_tests {
+    use super::*;
+    use crate::*;
+    use tracing_test::traced_test;
+    use Formula::*;
+
+    #[test]
+    #[traced_test]
+    fn test_var() {
+        let src = r#"xyx302"#;
+        let tree = parse(src.to_string());
+        assert!(tree.is_some());
+        let tree = tree.unwrap();
+        let expr = elaborate(src.to_string(), tree);
+        assert!(expr == Ok(Formula::Var("xyx302".to_string())));
+    }
+
+    #[test]
+    #[traced_test]
+    fn test_neg() {
+        let src = r#"!xyx302"#;
+        let tree = parse(src.to_string());
+        assert!(tree.is_some());
+        let tree = tree.unwrap();
+        let expr = elaborate(src.to_string(), tree);
+        assert_eq!(expr, Ok(Neg(Box::new(Var("xyx302".to_string())))));
+    }
+
+    #[test]
+    #[traced_test]
+    fn test_and() {
+        let src = r#"(xyx302 & abc)"#;
+        let tree = parse(src.to_string());
+        assert!(tree.is_some());
+        let tree = tree.unwrap();
+        let expr = elaborate(src.to_string(), tree);
+        assert_eq!(
+            expr,
+            Ok(And(
+                Box::new(Var("xyx302".to_string())),
+                Box::new(Var("abc".to_string()))
+            ))
+        );
+    }
+
+    #[test]
+    #[traced_test]
+    fn test_or() {
+        let src = r#"(xyx302 | abc)"#;
+        let tree = parse(src.to_string());
+        assert!(tree.is_some());
+        let tree = tree.unwrap();
+        let expr = elaborate(src.to_string(), tree);
+        assert_eq!(
+            expr,
+            Ok(Or(
+                Box::new(Var("xyx302".to_string())),
+                Box::new(Var("abc".to_string()))
+            ))
+        );
+    }
+}
