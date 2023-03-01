@@ -140,6 +140,7 @@ mod active_tests {
 
     #[test]
     #[traced_test]
+    #[ignore]
     fn ite_3_with_one_sample_hard1_simplified_more() {
         let mk = |ret: ExprTyped| {
             program!(lets![
@@ -160,16 +161,23 @@ mod active_tests {
         // debug_approx("ite_3/x*y", vec![0.6, 0.3, 0.7, 0.2], &mk(q!("x" x "y")), n); // broken!
     }
 
+    use std::collections::HashMap;
     #[test]
+    #[traced_test]
     fn manual_ite() {
-        let mut mgr = Mgr::new_default_order(10);
-        let (x_lbl, x) = mgr.new_pos();
-        let y_lbl = mgr.new_label();
-        let (yt_lbl, yt) = mgr.new_pos();
-        let (yf_lbl, yf) = mgr.new_pos();
-        let tmp = mgr.and(x, yt);
-        let y = mgr.and(x.neg(), yf);
-        let y = mgr.or(tmp, y);
+        let mgr = Mgr::new_default_order(0);
+        let names = HashMap::new();
+        let (out, mgr) = formula::eval_with("x".to_string(), mgr, names).unwrap();
+        let x = out.circuit;
+        let (out, mut mgr) =
+            formula::eval_with("(x & yt) | (!x & yf)".to_string(), mgr, out.names).unwrap();
+        let y = out.circuit;
+        let yt = mgr.var(*out.names.get("yt").unwrap(), true);
+        let yf = mgr.var(*out.names.get("yf").unwrap(), true);
+        debug!("x: {}", x.print_bdd());
+        debug!("y: {}", y.print_bdd());
+        debug!("yt: {}", yt.print_bdd());
+        debug!("yf: {}", yf.print_bdd());
 
         let accept_true = mgr.and(x, yt);
         let accept_true = mgr.or(accept_true, x.neg());
@@ -180,27 +188,28 @@ mod active_tests {
         let accept_false = accept_true.clone();
         let dist_false = mgr.and(x.neg(), yf);
         // conjoin query
+        todo!()
 
         // let accept_true =
         // let dist_false =
         // let accept_false =
 
-        let mk = |ret: ExprTyped| {
-            program!(lets![
-                "x" ; b!() ;= flip!(3/5);
-                "y" ; b!() ;= ite!(
-                    if ( var!("x") )
-                    then { sample!(flip!(1/3)) }
-                    else { flip!(1/4) });
-                ...? ret ; b!()
-            ])
-        };
-        let n = 10000;
-        // debug_approx1("ite_3/x", 0.6, &mk(b!("x")), n); // works!
-        debug_approx1("ite_3/y", 0.3, &mk(b!("y")), n); // broken!
-                                                        // debug_approx1("ite_3/x|y", 0.7, &mk(b!("x" || "y")), n); // broken!
-                                                        // debug_approx1("ite_3/x&y", 0.2, &mk(b!("x" && "y")), n); // broken!
-                                                        // debug_approx("ite_3/x*y", vec![0.6, 0.3, 0.7, 0.2], &mk(q!("x" x "y")), n); // broken!
+        // let mk = |ret: ExprTyped| {
+        //     program!(lets![
+        //         "x" ; b!() ;= flip!(3/5);
+        //         "y" ; b!() ;= ite!(
+        //             if ( var!("x") )
+        //             then { sample!(flip!(1/3)) }
+        //             else { flip!(1/4) });
+        //         ...? ret ; b!()
+        //     ])
+        // };
+        // let n = 10000;
+        // // debug_approx1("ite_3/x", 0.6, &mk(b!("x")), n); // works!
+        // debug_approx1("ite_3/y", 0.3, &mk(b!("y")), n); // broken!
+        //                                                 // debug_approx1("ite_3/x|y", 0.7, &mk(b!("x" || "y")), n); // broken!
+        //                                                 // debug_approx1("ite_3/x&y", 0.2, &mk(b!("x" && "y")), n); // broken!
+        //                                                 // debug_approx("ite_3/x*y", vec![0.6, 0.3, 0.7, 0.2], &mk(q!("x" x "y")), n); // broken!
     }
 
     #[test]

@@ -1602,6 +1602,7 @@ name = "weight4me"
 version = "0.1.0"
 dependencies = [
  "criterion 0.4.0",
+ "formula",
  "itertools",
  "nalgebra",
  "num-traits",

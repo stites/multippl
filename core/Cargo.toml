@@ -27,3 +27,4 @@ num-traits = "0.2.15"
 
 [dev-dependencies]
 criterion = "0.4"
+formula = { path = "../formula" }
