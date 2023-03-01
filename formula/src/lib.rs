@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use rsdd::builder::bdd_builder::*;
 use rsdd::builder::cache::all_app::AllTable;
 use std::char::decode_utf16;
@@ -71,8 +72,8 @@ fn as_ast(src: &[u16], n: &Node) -> Result<Formula, String> {
     }
 }
 pub struct Context<'a, T: LruTable<BddPtr>> {
-    mgr: &'a mut BddManager<T>,
-    names: HashMap<String, VarLabel>,
+    pub mgr: &'a mut BddManager<T>,
+    pub names: HashMap<String, VarLabel>,
 }
 
 impl<'a, T: LruTable<BddPtr>> Context<'a, T> {
@@ -154,10 +155,24 @@ fn compile<T: LruTable<BddPtr>>(ctx: &mut Context<T>, f: &Formula) -> Result<Out
 }
 
 pub fn eval(src: String) -> Result<(Output, BddManager<AllTable<BddPtr>>), String> {
+    let mgr = BddManager::<AllTable<BddPtr>>::new_default_order(0);
+    let names = Default::default();
+    eval_with(src, mgr, names)
+}
+
+pub fn eval_with(
+    src: String,
+    mgr: BddManager<AllTable<BddPtr>>,
+    names: HashMap<String, VarLabel>,
+) -> Result<(Output, BddManager<AllTable<BddPtr>>), String> {
     let tree = parse(src.to_string());
     let formula = elaborate(src, tree.unwrap())?;
-    let mut mgr = BddManager::<AllTable<BddPtr>>::new_default_order(0);
-    let mut ctx = Context::new(&mut mgr);
+
+    let mut mgr = mgr;
+    let mut ctx = Context {
+        mgr: &mut mgr,
+        names,
+    };
     let out = compile(&mut ctx, &formula)?;
     Ok((out, mgr))
 }
