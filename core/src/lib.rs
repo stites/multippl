@@ -165,51 +165,147 @@ mod active_tests {
     #[test]
     #[traced_test]
     fn manual_ite() {
+        let mk = |ret: ExprTyped| {
+            program!(lets![
+                "x" ; b!() ;= flip!(3/5);
+                "y" ; b!() ;= ite!(
+                    if ( var!("x") )
+                    then { sample!(flip!(1/3)) }
+                    else { flip!(1/4) });
+                ...? ret ; b!()
+            ])
+        };
+        let n = 10000;
+        // debug_approx1("ite_3/x", 0.6, &mk(b!("x")), n); // works!
+        nfail_approx1("ite_3/y", 0.3, &mk(b!("y")), n); // broken!
+
         let mgr = Mgr::new_default_order(0);
         let names = HashMap::new();
         let (out, mgr) = formula::eval_with("x".to_string(), mgr, names).unwrap();
+        // hand-derived
         let x = out.circuit;
         let (out, mut mgr) =
             formula::eval_with("(x & yt) | (!x & yf)".to_string(), mgr, out.names).unwrap();
         let y = out.circuit;
-        let yt = mgr.var(*out.names.get("yt").unwrap(), true);
-        let yf = mgr.var(*out.names.get("yf").unwrap(), true);
-        debug!("x: {}", x.print_bdd());
-        debug!("y: {}", y.print_bdd());
+        let x_label = *out.names.get("x").unwrap();
+        let yt_label = *out.names.get("yt").unwrap();
+        let yf_label = *out.names.get("yf").unwrap();
+        let yt = mgr.var(yt_label, true);
+        let yf = mgr.var(yf_label, true);
+        debug!("=======================================================================================");
+        debug!(" current                                                                               ");
+        debug!("=======================================================================================");
+
+        debug!("x:  {}", x.print_bdd());
+        debug!("y:  {}", y.print_bdd());
         debug!("yt: {}", yt.print_bdd());
         debug!("yf: {}", yf.print_bdd());
 
         let accept_true = mgr.and(x, yt);
         let accept_true = mgr.or(accept_true, x.neg());
+
         let dist_true = mgr.and(x.neg(), yf);
         let dist_true = mgr.or(x, dist_true);
         // conjoin query
+        debug!("dist_true:    {}", dist_true.print_bdd());
+        debug!("accept_true:  {}", accept_true.print_bdd());
 
-        let accept_false = accept_true.clone();
+        let accept_false = mgr.and(x, yt.neg());
+        let accept_false = mgr.or(accept_false, x.neg());
         let dist_false = mgr.and(x.neg(), yf);
         // conjoin query
+        debug!("dist_false:   {}", dist_false.print_bdd());
+        debug!("accept_false: {}", accept_false.print_bdd());
+        // let (out, mgr) =
+        //     formula::eval_with("(x & F) | (!x & yf)".to_string(), mgr, out.names).unwrap();
+        // let dist_false_comp = out.circuit;
+        // debug!("dist_false_comp:   {}", dist_false_comp.print_bdd());
+        // let (out, mgr) =
+        //     formula::eval_with("(x & !yt) | (!x & T)".to_string(), mgr, out.names).unwrap();
+        // let accept_false_comp = out.circuit;
+        // debug!("accept_false_comp: {}", accept_false_comp.print_bdd());
+
+        let var_order = mgr.get_order().clone();
+        let mut params = WmcParams::new(0.0, 1.0);
+        for (lbl, weight) in [
+            (yf_label, Weight::new(0.7500, 0.2500)),
+            (yt_label, Weight::new(0.6667, 0.3333)),
+            (x_label, Weight::new(0.4000, 0.6000)),
+        ] {
+            params.set_weight(lbl, weight.lo, weight.hi);
+        }
+        let w_true = calculate_wmc_prob_f(&mut mgr, &params, &var_order, dist_true, accept_true);
+        debug!("w_true:   {:.3}", w_true);
+        let w_false = calculate_wmc_prob_f(&mut mgr, &params, &var_order, dist_false, accept_false);
+        debug!("w_false:   {:.3}", w_false);
+        debug!(
+            "1*w_true + 2*w_false / 3  == 0.3?   {:.4}",
+            (1.0 * w_true + 2.0 * w_false) / 3.0
+        );
+        debug!("=======================================================================================");
+        debug!(" exact                                                                                 ");
+        debug!("=======================================================================================");
+
+        let w_exact_t =
+            calculate_wmc_prob_f(&mut mgr, &params, &var_order, dist_true, BddPtr::PtrTrue);
+        debug!("w_exact_t:   {:.3}", w_exact_t);
+
+        let w_exact_f =
+            calculate_wmc_prob_f(&mut mgr, &params, &var_order, dist_false, BddPtr::PtrTrue);
+        debug!("w_exact_f:   {:.3}", w_exact_f);
+        debug!(
+            "1*w_exact_t + 2*w_exact_f / 3 == 0.3?   {:.4}",
+            (1.0 * w_exact_t + 2.0 * w_exact_f) / 03.0
+        );
+        debug!("=======================================================================================");
+        debug!(" hypothesized                                                                          ");
+        debug!("=======================================================================================");
+        let dist_hyp_true = dist_true.clone();
+        let dist_hyp_false = dist_false.clone();
+        debug!("dist_hyp_true:    {}", dist_hyp_true.print_bdd());
+        debug!("dist_hyp_false:   {}", dist_hyp_false.print_bdd());
+
+        let accept_hyp_true = mgr.and(x, yt);
+        let accept_hyp_true_tmp = mgr.and(x.neg(), yt);
+        let accept_hyp_true = mgr.or(accept_hyp_true, accept_hyp_true_tmp);
+        debug!("accept_hyp_true:  {}", accept_hyp_true.print_bdd());
+
+        let accept_hyp_false = mgr.and(x, yt.neg());
+        let accept_hyp_false_tmp = mgr.and(x.neg(), yt.neg());
+        let accept_hyp_false = mgr.or(accept_hyp_false, accept_hyp_false_tmp);
+        debug!("accept_hyp_false:  {}", accept_hyp_false.print_bdd());
+
+        let w_hyp_t = calculate_wmc_prob_f(
+            &mut mgr,
+            &params,
+            &var_order,
+            dist_hyp_true,
+            accept_hyp_true,
+        );
+        debug!("w_hyp_t:   {:.3}", w_hyp_t);
+
+        let w_hyp_f = calculate_wmc_prob_f(
+            &mut mgr,
+            &params,
+            &var_order,
+            dist_hyp_false,
+            accept_hyp_false,
+        );
+        debug!("w_hyp_f:   {:.3}", w_hyp_f);
+        debug!(
+            "1*w_hyp_t + 2*w_hyp_f / 3 == 0.3?   {:.4}",
+            (1.0 * w_hyp_t + 2.0 * w_hyp_f) / 03.0
+        );
+        // let (out, mgr) =
+        //     formula::eval_with("(x & yt) | (!x & T)".to_string(), mgr, out.names).unwrap();
+        // let accept_true_comp = out.circuit;
+        // debug!("accept_true_comp:  {}", accept_true_comp.print_bdd());
+
         todo!()
 
-        // let accept_true =
-        // let dist_false =
-        // let accept_false =
-
-        // let mk = |ret: ExprTyped| {
-        //     program!(lets![
-        //         "x" ; b!() ;= flip!(3/5);
-        //         "y" ; b!() ;= ite!(
-        //             if ( var!("x") )
-        //             then { sample!(flip!(1/3)) }
-        //             else { flip!(1/4) });
-        //         ...? ret ; b!()
-        //     ])
-        // };
-        // let n = 10000;
-        // // debug_approx1("ite_3/x", 0.6, &mk(b!("x")), n); // works!
-        // debug_approx1("ite_3/y", 0.3, &mk(b!("y")), n); // broken!
-        //                                                 // debug_approx1("ite_3/x|y", 0.7, &mk(b!("x" || "y")), n); // broken!
-        //                                                 // debug_approx1("ite_3/x&y", 0.2, &mk(b!("x" && "y")), n); // broken!
-        //                                                 // debug_approx("ite_3/x*y", vec![0.6, 0.3, 0.7, 0.2], &mk(q!("x" x "y")), n); // broken!
+        // debug_approx1("ite_3/x|y", 0.7, &mk(b!("x" || "y")), n); // broken!
+        // debug_approx1("ite_3/x&y", 0.2, &mk(b!("x" && "y")), n); // broken!
+        // debug_approx("ite_3/x*y", vec![0.6, 0.3, 0.7, 0.2], &mk(q!("x" x "y")), n); // broken!
     }
 
     #[test]

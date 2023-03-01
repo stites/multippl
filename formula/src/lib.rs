@@ -7,6 +7,7 @@ use tree_sitter::*;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum Formula {
+    Bool(bool),
     Var(String),
     Neg(Box<Formula>),
     And(Box<Formula>, Box<Formula>),
@@ -42,6 +43,8 @@ fn get_var(src: &[u16], n: &Node) -> Result<Formula, String> {
 fn as_ast(src: &[u16], n: &Node) -> Result<Formula, String> {
     let k = n.kind();
     match k {
+        "true" => Ok(Formula::Bool(true)),
+        "false" => Ok(Formula::Bool(false)),
         "var" => get_var(src, n),
         "neg" => {
             let mut c = n.walk();
@@ -94,6 +97,11 @@ pub struct Output {
 fn compile<T: LruTable<BddPtr>>(ctx: &mut Context<T>, f: &Formula) -> Result<Output, String> {
     use Formula::*;
     match f {
+        Bool(b) => Ok(Output {
+            circuit: BddPtr::from_bool(*b),
+            variables: HashMap::new(),
+            names: HashMap::new(),
+        }),
         Var(s) => match ctx.names.get(s) {
             None => {
                 let (l, p) = ctx.mgr.new_pos();
