@@ -11,6 +11,14 @@
       "members": [
         {
           "type": "SYMBOL",
+          "name": "true"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "false"
+        },
+        {
+          "type": "SYMBOL",
           "name": "var"
         },
         {
@@ -41,6 +49,40 @@
               "value": ")"
             }
           ]
+        }
+      ]
+    },
+    "false": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "false"
+        },
+        {
+          "type": "STRING",
+          "value": "F"
+        },
+        {
+          "type": "STRING",
+          "value": "False"
+        }
+      ]
+    },
+    "true": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "true"
+        },
+        {
+          "type": "STRING",
+          "value": "T"
+        },
+        {
+          "type": "STRING",
+          "value": "True"
         }
       ]
     },

@@ -5,11 +5,23 @@ module.exports = grammar({
   rules: {
     source_file: $ => $._expr,
     _expr: $ => choice(
+      $.true,
+      $.false,
       $.var,
       $.neg,
       $.and,
       $.or,
       seq('(', $._expr, ')')
+    ),
+    false: $ => choice(
+      'false',
+      'F',
+      'False',
+    ),
+    true: $ => choice(
+      'true',
+      'T',
+      'True',
     ),
     neg: $ => choice(
       prec.left(5, seq('!', $._expr)),
