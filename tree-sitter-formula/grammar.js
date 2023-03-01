@@ -6,19 +6,19 @@ module.exports = grammar({
     source_file: $ => $._expr,
     _expr: $ => choice(
       $.var,
+      $.neg,
       $.and,
       $.or,
-      $.neg,
       seq('(', $._expr, ')')
     ),
     neg: $ => choice(
-      prec.left(1, seq('!', $._expr)),
-      prec.left(1, seq('¬', $._expr)),
+      prec.left(5, seq('!', $._expr)),
+      prec.left(5, seq('¬', $._expr)),
     ),
     and: $ => choice(
-      prec.left(2, seq($._expr, '&', $._expr)),
-      prec.left(2, seq($._expr, '&&', $._expr)),
-      prec.left(2, seq($._expr, '∧', $._expr)),
+      prec.left(4, seq($._expr, '&', $._expr)),
+      prec.left(4, seq($._expr, '&&', $._expr)),
+      prec.left(4, seq($._expr, '∧', $._expr)),
     ),
     or: $ => choice(
       prec.left(3, seq($._expr, '|', $._expr)),
