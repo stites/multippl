@@ -7,6 +7,9 @@ pub struct Weight {
     pub hi: f64,
 }
 impl Weight {
+    pub fn new(lo: f64, hi: f64) -> Weight {
+        Weight { lo, hi }
+    }
     pub fn as_tuple(&self) -> (f64, f64) {
         (self.lo, self.hi)
     }

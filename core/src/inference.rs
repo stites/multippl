@@ -17,6 +17,17 @@ use std::collections::HashMap;
 use std::iter::Sum;
 use tracing::debug;
 
+pub fn calculate_wmc_prob_f<T: Copy + std::fmt::Debug + num_traits::Num + std::fmt::Display>(
+    mgr: &mut Mgr,
+    params: &WmcParams<T>,
+    var_order: &VarOrder,
+    dist: BddPtr,
+    accept: BddPtr,
+) -> T {
+    let (a, z) = calculate_wmc_prob(mgr, params, var_order, dist, accept);
+    a / z
+}
+
 pub fn calculate_wmc_prob<T: Copy + std::fmt::Debug + num_traits::Num + std::fmt::Display>(
     mgr: &mut Mgr,
     params: &WmcParams<T>,

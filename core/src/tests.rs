@@ -42,6 +42,18 @@ pub fn check_inference(
     fs: Vec<f64>,
     p: &ProgramTyped,
 ) {
+    check_inference_h(infname, inf, precision, s, fs, p, true)
+}
+
+pub fn check_inference_h(
+    infname: &str,
+    inf: &dyn Fn(&ProgramTyped) -> Vec<f64>,
+    precision: f64,
+    s: &str,
+    fs: Vec<f64>,
+    p: &ProgramTyped,
+    do_assert: bool,
+) {
     let prs = inf(p);
     assert_eq!(
         prs.len(),
@@ -56,10 +68,14 @@ pub fn check_inference(
     izip!(prs, fs).enumerate().for_each(|(i, (pr, f))| {
         let ret = (f - pr).abs() < precision;
         let i = i + 1;
-        assert!(
-            ret,
-            "[check_{infname}][{s}#{i}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"
-        );
+        if do_assert {
+            assert!(
+                ret,
+                "[check_{infname}][{s}#{i}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"
+            );
+        } else {
+            debug!("[check_{infname}][{s}#{i}][{ret}]((expected: {f}) - (actual: {pr})).abs < {precision}: {ret}");
+        }
     });
 }
 
@@ -89,6 +105,20 @@ pub fn debug_approx(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize) {
 }
 pub fn debug_approx1(s: &str, f: f64, p: &ProgramTyped, n: usize) {
     debug_approx(s, vec![f], p, n)
+}
+pub fn nfail_approx(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize) {
+    check_inference_h(
+        "debug",
+        &|p| importance_weighting_inf_h(n, p, &Options::debug()),
+        0.01,
+        s,
+        f,
+        p,
+        false,
+    );
+}
+pub fn nfail_approx1(s: &str, f: f64, p: &ProgramTyped, n: usize) {
+    nfail_approx(s, vec![f], p, n)
 }
 // pub fn check_approx_conc(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize) {
 //     let env_args = EnvArgs::default_args(None);
