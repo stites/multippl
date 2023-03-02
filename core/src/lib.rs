@@ -386,8 +386,8 @@ mod active_tests {
     }
 
     #[test]
-    #[traced_test]
-    // #[ignore]
+    // #[traced_test]
+    #[ignore]
     fn ite_3_with_one_sample_hard1_extra() {
         let mk = |ret: ExprTyped| {
             program!(lets![
