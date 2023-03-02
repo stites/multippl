@@ -139,8 +139,6 @@ mod active_tests {
     use tracing_test::traced_test;
 
     #[test]
-    #[traced_test]
-    #[ignore]
     fn ite_3_with_one_sample_hard1_simplified_more() {
         let mk = |ret: ExprTyped| {
             program!(lets![
@@ -152,9 +150,10 @@ mod active_tests {
                 ...? ret ; b!()
             ])
         };
-        let n = 10000;
+        let n = 5000;
         // debug_approx1("ite_3/x", 0.6, &mk(b!("x")), n); // works!
-        debug_approx1("ite_3/y", 0.3, &mk(b!("y")), n); // broken!
+        // debug_approx1("ite_3/y", 0.3, &mk(b!("y")), n); // broken!
+        check_approx1("ite_3/y", 0.3, &mk(b!("y")), n); // broken!
 
         // debug_approx1("ite_3/x|y", 0.7, &mk(b!("x" || "y")), n); // broken!
         // debug_approx1("ite_3/x&y", 0.2, &mk(b!("x" && "y")), n); // broken!
@@ -163,6 +162,7 @@ mod active_tests {
 
     use std::collections::HashMap;
     #[test]
+    #[ignore]
     #[traced_test]
     fn manual_ite() {
         let mk = |ret: ExprTyped| {
@@ -234,9 +234,10 @@ mod active_tests {
         ] {
             params.set_weight(lbl, weight.lo, weight.hi);
         }
-        let w_true = calculate_wmc_prob_f(&mut mgr, &params, &var_order, dist_true, accept_true);
+        let w_true = calculate_wmc_prob_hf64(&mut mgr, &params, &var_order, dist_true, accept_true);
         debug!("w_true:   {:.3}", w_true);
-        let w_false = calculate_wmc_prob_f(&mut mgr, &params, &var_order, dist_false, accept_false);
+        let w_false =
+            calculate_wmc_prob_hf64(&mut mgr, &params, &var_order, dist_false, accept_false);
         debug!("w_false:   {:.3}", w_false);
         debug!(
             "1*w_true + 2*w_false / 3  == 0.3?   {:.4}",
@@ -247,11 +248,11 @@ mod active_tests {
         debug!("=======================================================================================");
 
         let w_exact_t =
-            calculate_wmc_prob_f(&mut mgr, &params, &var_order, dist_true, BddPtr::PtrTrue);
+            calculate_wmc_prob_hf64(&mut mgr, &params, &var_order, dist_true, BddPtr::PtrTrue);
         debug!("w_exact_t:   {:.3}", w_exact_t);
 
         let w_exact_f =
-            calculate_wmc_prob_f(&mut mgr, &params, &var_order, dist_false, BddPtr::PtrTrue);
+            calculate_wmc_prob_hf64(&mut mgr, &params, &var_order, dist_false, BddPtr::PtrTrue);
         debug!("w_exact_f:   {:.3}", w_exact_f);
         debug!(
             "1*w_exact_t + 2*w_exact_f / 3 == 0.3?   {:.4}",
@@ -275,7 +276,7 @@ mod active_tests {
         let accept_hyp_false = mgr.or(accept_hyp_false, accept_hyp_false_tmp);
         debug!("accept_hyp_false:  {}", accept_hyp_false.print_bdd());
 
-        let w_hyp_t = calculate_wmc_prob_f(
+        let w_hyp_t = calculate_wmc_prob_hf64(
             &mut mgr,
             &params,
             &var_order,
@@ -284,7 +285,7 @@ mod active_tests {
         );
         debug!("w_hyp_t:   {:.3}", w_hyp_t);
 
-        let w_hyp_f = calculate_wmc_prob_f(
+        let w_hyp_f = calculate_wmc_prob_hf64(
             &mut mgr,
             &params,
             &var_order,
@@ -309,7 +310,7 @@ mod active_tests {
     }
 
     #[test]
-    #[ignore]
+    // #[ignore]
     // #[traced_test]
     fn ite_3_with_one_sample_hard1_simplified() {
         let mk = |ret: ExprTyped| {
@@ -336,7 +337,7 @@ mod active_tests {
     }
 
     #[test]
-    #[ignore]
+    // #[ignore]
     fn ite_3_with_one_sample_easy_x() {
         let mk = |ret: ExprTyped| {
             program!(lets![
@@ -355,7 +356,7 @@ mod active_tests {
     /// represents another semantic bug, still need to grapple how this all works, though
     #[test]
     // #[traced_test]
-    #[ignore]
+    //#[ignore]
     fn ite_3_with_one_sample_hard1() {
         let mk = |ret: ExprTyped| {
             program!(lets![
@@ -369,7 +370,44 @@ mod active_tests {
             ])
         };
         let n = 50000;
-        check_approx1("ite_3/y-sample1/4 ", 0.464285714, &mk(b!("y")), n);
+        check_approx1("ite_3/observe/x  ", 0.909090909, &mk(b!("x")), n);
+        check_approx1("ite_3/observe/y  ", 0.318181818, &mk(b!("y")), n);
+        check_approx1("ite_3/observe/x|y", 1.000000000, &mk(b!("x" || "y")), n);
+        check_approx1("ite_3/observe/x&y", 0.227272727, &mk(b!("x" && "y")), n);
+
+        // dice's answer for 2/4 @ sample site
+        // check_approx1("ite_3/y-sample2/4  ", 0.545454545, &mk(b!("y")), n);
+        // dice's answer for 3/4 @ sample site
+        // check_approx1("ite_3/y-sample3/4 ", 0.772727273, &mk(b!("y")), n);
+
+        // last one to tackle:
+        // dice's answer for 1/4 @ sample site
+        // check_approx1("ite_3/x&y", 0.227272727, &mk(b!("x" && "y")), n * n * n);
+    }
+
+    #[test]
+    #[traced_test]
+    // #[ignore]
+    fn ite_3_with_one_sample_hard1_extra() {
+        let mk = |ret: ExprTyped| {
+            program!(lets![
+                "x" ; b!() ;= flip!(2/3);
+                "w" ; b!() ;= flip!(2/7);
+                "y" ; b!() ;= ite!(
+                    if ( var!("x") )
+                        then { sample!(lets![
+                                 "q" ; b!() ;= flip!(1/4);
+                                 "_" ; b!() ;= observe!(b!("q" || "w"));
+                                 ...? b!("q") ; b!()
+                        ]) }
+                    else { flip!(1/5) });
+                "_" ; b!() ;= observe!(b!("x" || "y"));
+                ...? ret ; b!()
+            ])
+        };
+        let n = 50000;
+        debug_approx1("ite_3/observe/y  ", 0.620253165, &mk(b!("y")), n);
+
         // dice's answer for 2/4 @ sample site
         // check_approx1("ite_3/y-sample2/4  ", 0.545454545, &mk(b!("y")), n);
         // dice's answer for 3/4 @ sample site
@@ -382,7 +420,7 @@ mod active_tests {
 
     /// passing
     #[test]
-    #[ignore]
+    // #[ignore]
     fn ite_3_with_one_sample_easy_x_or_y() {
         let mk = |ret: ExprTyped| {
             program!(lets![

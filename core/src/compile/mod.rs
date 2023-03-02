@@ -266,6 +266,7 @@ impl<'a> Env<'a> {
                 let o = Output {
                     dists,
                     accept: ctx.accept,
+                    samples: ctx.samples,
                     weightmap: ctx.weightmap.clone(),
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0); flen],
@@ -314,6 +315,7 @@ impl<'a> Env<'a> {
                                 let _enter = span.enter();
 
                                 let accept = self.mgr.and(body.accept, ctx.accept);
+                                let samples = self.mgr.and(body.samples, ctx.samples);
 
                                 let probabilities =
                                     izip!(bound.probabilities.clone(), body.probabilities)
@@ -325,6 +327,7 @@ impl<'a> Env<'a> {
                                 let c = Output {
                                     dists: body.dists,
                                     accept,
+                                    samples,
                                     substitutions: body.substitutions.clone(),
                                     weightmap: body.weightmap,
                                     probabilities,
@@ -371,23 +374,25 @@ impl<'a> Env<'a> {
                 let var_order = self.order.clone();
                 let wmc_params = ctx.weightmap.as_params(self.max_label);
 
-                let (a, z) = crate::inference::calculate_wmc_prob(
+                let wmc_true = crate::inference::calculate_wmc_prob(
                     self.mgr,
                     &wmc_params,
                     &var_order,
                     pred_dist,
                     ctx.accept,
+                    ctx.samples,
                 );
-                let wmc_true = Probability::new(a / z);
-                let (a, z) = crate::inference::calculate_wmc_prob(
+                let wmc_true = Probability::new(wmc_true);
+                let wmc_false = crate::inference::calculate_wmc_prob(
                     self.mgr,
                     &wmc_params,
                     &var_order,
                     pred_dist.neg(),
                     ctx.accept,
+                    ctx.samples,
                 );
+                let wmc_false = Probability::new(wmc_false);
 
-                let wmc_false = Probability::new(a / z);
                 debug!("=============================");
                 debug!("wmc_true {}, wmc_false {}", wmc_true, wmc_false);
                 debug!("=============================");
@@ -426,6 +431,8 @@ impl<'a> Env<'a> {
                                   })
                                   .collect_vec();
 
+                            let samples = self.mgr.and(truthy.samples, falsey.samples);
+
                             let accept_l = self.mgr.and(pred_dist, truthy.accept);
                             let accept_r = self.mgr.and(pred_dist.neg(), falsey.accept);
                             let accept = self.mgr.or(accept_l, accept_r);
@@ -452,6 +459,7 @@ impl<'a> Env<'a> {
                             let c = Output {
                                   dists,
                                   accept,
+                                  samples,
                                   weightmap,
                                   substitutions,
                                   probabilities,
@@ -488,6 +496,7 @@ impl<'a> Env<'a> {
                 let o = Output {
                     dists: vec![self.mgr.var(var.label.unwrap(), true)],
                     accept: ctx.accept,
+                    samples: ctx.samples,
                     weightmap,
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0)],
@@ -520,19 +529,21 @@ impl<'a> Env<'a> {
                 debug!("WMCParams  {:?}", wmc_params);
                 debug!("VarOrder   {:?}", var_order);
                 debug!("Accept     {}", dist.print_bdd());
-                let (a, z) = crate::inference::calculate_wmc_prob(
+                let wmc = crate::inference::calculate_wmc_prob(
                     self.mgr,
                     &wmc_params,
                     &var_order,
                     dist,
                     ctx.accept,
+                    ctx.samples,
                 );
-                let importance = I::Weight(a / z);
+                let importance = I::Weight(wmc);
                 debug!("IWeight    {}", importance.weight());
 
                 let o = Output {
                     dists: vec![BddPtr::PtrTrue],
                     accept: dist,
+                    samples: ctx.samples,
                     weightmap: ctx.weightmap.clone(),
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0)],
@@ -567,6 +578,7 @@ impl<'a> Env<'a> {
                         debug!("weight_map {:?}", &comp.weightmap);
                         debug!("WMCParams  {:?}", wmc_params);
                         debug!("VarOrder   {:?}", var_order);
+                        let accept = comp.accept;
 
                         let mut fin = vec![];
 
@@ -579,17 +591,17 @@ impl<'a> Env<'a> {
                             };
                             let _enter = span.enter();
 
-                            let (mut accept, mut qs, mut dists) = (comp.accept, vec![], vec![]);
+                            let (mut samples, mut qs, mut dists) = (comp.samples, vec![], vec![]);
                             for dist in comp.dists.iter() {
-                                let sample_dist = self.mgr.and(accept, *dist);
-                                let (a, z) = crate::inference::calculate_wmc_prob(
+                                let sample_dist = self.mgr.and(samples, *dist);
+                                let theta_q = crate::inference::calculate_wmc_prob(
                                     self.mgr,
                                     &wmc_params,
                                     &var_order,
                                     sample_dist,
                                     accept,
+                                    samples,
                                 );
-                                let theta_q = a / z;
 
                                 let sample = match self.rng.as_mut() {
                                     Some(rng) => {
@@ -610,14 +622,15 @@ impl<'a> Env<'a> {
                                 // all samples of a multi-rooted BDD, but I need to futz
                                 // with rsdd's fold
                                 let dist_holds = self.mgr.iff(*dist, sampled_value);
-                                accept = self.mgr.and(accept, dist_holds);
+                                samples = self.mgr.and(samples, dist_holds);
                             }
-                            debug!("final samples: {}", renderbdds(&dists));
-                            debug!("final accept : {}", accept.print_bdd());
+                            debug!("final dists:   {}", renderbdds(&dists));
+                            debug!("final samples: {}", samples.print_bdd());
 
                             let c = Output {
                                 dists,
                                 accept,
+                                samples,
                                 // weightmap: ctx.weightmap.clone(), // FIXME
                                 // substitutions: ctx.substitutions.clone(), // TODO any dangling references will be treated as constant and, thus, ignored -- information about this will live only in the propagated weight
                                 weightmap: comp.weightmap.clone(), // FIXME

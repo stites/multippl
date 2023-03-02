@@ -17,24 +17,13 @@ use std::collections::HashMap;
 use std::iter::Sum;
 use tracing::debug;
 
-pub fn calculate_wmc_prob_f<T: Copy + std::fmt::Debug + num_traits::Num + std::fmt::Display>(
+pub fn calculate_wmc_prob_h(
     mgr: &mut Mgr,
-    params: &WmcParams<T>,
+    params: &WmcParams<f64>,
     var_order: &VarOrder,
     dist: BddPtr,
     accept: BddPtr,
-) -> T {
-    let (a, z) = calculate_wmc_prob(mgr, params, var_order, dist, accept);
-    a / z
-}
-
-pub fn calculate_wmc_prob<T: Copy + std::fmt::Debug + num_traits::Num + std::fmt::Display>(
-    mgr: &mut Mgr,
-    params: &WmcParams<T>,
-    var_order: &VarOrder,
-    dist: BddPtr,
-    accept: BddPtr,
-) -> (T, T) {
+) -> (f64, f64) {
     let num = mgr.and(dist, accept);
     debug!(
         "{} /\\ {} = {}",
@@ -53,7 +42,34 @@ pub fn calculate_wmc_prob<T: Copy + std::fmt::Debug + num_traits::Num + std::fmt
     (a, z)
 }
 
-pub fn wmc_prob(mgr: &mut Mgr, c: &Output) -> Vec<(f64, f64)> {
+pub fn calculate_wmc_prob_hf64(
+    mgr: &mut Mgr,
+    params: &WmcParams<f64>,
+    var_order: &VarOrder,
+    dist: BddPtr,
+    accept: BddPtr,
+) -> f64 {
+    let (a, z) = calculate_wmc_prob_h(mgr, params, var_order, dist, accept);
+    if a == z && a == 0.0 {
+        0.0
+    } else {
+        a / z
+    }
+}
+
+pub fn calculate_wmc_prob(
+    mgr: &mut Mgr,
+    params: &WmcParams<f64>,
+    var_order: &VarOrder,
+    dist: BddPtr,
+    accept: BddPtr,
+    samples: BddPtr,
+) -> f64 {
+    let accept = mgr.and(samples, accept);
+    calculate_wmc_prob_hf64(mgr, params, var_order, dist, accept)
+}
+
+pub fn wmc_prob(mgr: &mut Mgr, c: &Output) -> Vec<f64> {
     c.dists
         .iter()
         .map(|d| {
@@ -63,6 +79,7 @@ pub fn wmc_prob(mgr: &mut Mgr, c: &Output) -> Vec<(f64, f64)> {
                 &mgr.get_order().clone(),
                 *d,
                 c.accept,
+                c.samples,
             )
         })
         .collect_vec()
@@ -82,15 +99,7 @@ pub fn get_or_else<T: Copy>(v: Vec<T>, i: usize, d: T) -> T {
 }
 pub fn exact_inf(p: &ProgramTyped) -> Vec<f64> {
     match crate::run(p) {
-        Ok((mut mgr, c)) => {
-            let azs = wmc_prob(&mut mgr, &c);
-            azs.into_iter()
-                .map(|(a, z)| {
-                    //   debug!(a = a, z = z);
-                    a / z
-                })
-                .collect_vec()
-        }
+        Ok((mut mgr, c)) => wmc_prob(&mut mgr, &c),
         Err(e) => panic!(
             "\nCompiler Error!!!\n==============\n{}\n==============\n",
             e
@@ -176,24 +185,7 @@ pub fn importance_weighting_inf_h(
                     }
                 };
                 cs.into_iter().for_each(|c| {
-                    let azs = wmc_prob(&mut mgr, &c);
-                    let ps = azs
-                        .into_iter()
-                        .map(|(a, z)| {
-                            debug!(
-                                a = a,
-                                z = z,
-                                accept = c.accept.print_bdd(),
-                                dists = renderbdds(&c.dists)
-                            );
-                            if a == z && a == 0.0 {
-                                0.0
-                            } else {
-                                a / z
-                            }
-                        })
-                        .collect_vec();
-
+                    let ps = wmc_prob(&mut mgr, &c);
                     let w = c.importance.weight();
                     debug!("{}", c.accept.print_bdd());
                     debug!("{}", renderbdds(&c.dists));
@@ -262,7 +254,7 @@ pub fn importance_weighting_inf_h(
             .fold(vec![0.0; compilations[0].probabilities.len()], |agg, c| {
                 let azs = wmc_prob(&mut mgr, c);
                 izip!(agg, c.probabilities.clone(), azs)
-                    .map(|(fin, q, (a, z))| fin + q.as_f64() * c.importance.weight() * a / z)
+                    .map(|(fin, q, wmc)| fin + q.as_f64() * c.importance.weight() * wmc)
                     .collect_vec()
             })
     } else {

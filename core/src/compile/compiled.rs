@@ -13,11 +13,19 @@ pub type SubstMap = HashMap<UniqueId, (Vec<BddPtr>, Var)>;
 
 #[derive(Debug, Clone)]
 pub struct Output {
+    /// compiled distributions
     pub dists: Vec<BddPtr>,
+    /// acceptance criteria
     pub accept: BddPtr,
+    /// sample consistency
+    pub samples: BddPtr,
+    /// (unused, unnormalized) probabilities of the compiled distributions
     pub probabilities: Vec<Probability>,
+    /// compiled weightmap
     pub weightmap: WeightMap,
+    /// substitution environment
     pub substitutions: SubstMap,
+    /// compiled importance weight
     pub importance: Importance,
 }
 
@@ -27,6 +35,7 @@ impl Output {
         Output {
             dists,
             accept: ctx.accept,
+            samples: ctx.samples,
             substitutions: ctx.substitutions.clone(),
             weightmap: ctx.weightmap.clone(),
             probabilities,
