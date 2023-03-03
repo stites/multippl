@@ -55,6 +55,7 @@
               alejandra.enable = true; # nix formatter
               # statix.enable = true; # lints for nix, but apparently borked
               rustfmt.enable = true;
+              typos.enable = true;
             };
           }
           {
