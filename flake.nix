@@ -20,8 +20,41 @@
     flklib.eachSystem (with flklib.system; [x86_64-linux]) (system: let
       pkgs = import nixpkgs {
         inherit system;
+        overlays = [
+        ];
       };
-      craneLib = inputs.crane.lib.${system};
+      craneLib = (inputs.crane.mkLib pkgs).overrideScope' (final: prev: let
+        mk-sys-package = name: _pkg:
+          prev.rustBuilder.rustLib.makeOverride {
+            inherit name;
+            overrideAttrs = drv: {
+              propagatedBuildInputs =
+                drv.propagatedBuildInputs
+                ++ (with prev; [
+                  cmake
+                  pkg-config
+                  _pkg
+                ]);
+              propagatedNativeBuildInputs =
+                (
+                  if builtins.hasAttr drv "propagatedNativeBuildInputs"
+                  then drv.propagatedNativeBuildInputs
+                  else []
+                )
+                ++ (with prev; [
+                  cmake
+                  pkg-config
+                  _pkg
+                ]);
+            };
+          };
+      in {
+        # for plotters
+        expat-sys = mk-sys-package "expat-sys" prev.expat;
+        freetype-sys = mk-sys-package "freetype-sys" prev.freetype;
+        fontconfig-sys = mk-sys-package "fontconfig-sys" prev.fontconfig;
+      });
+
       my-crate = craneLib.buildPackage {
         src = craneLib.cleanCargoSource ./.;
         buildInputs =
@@ -71,6 +104,9 @@
             # rust dev block
             languages.rust.enable = true;
 
+            # add a rust-repl
+            scripts.repl.exec = "${pkgs.evcxr}/bin/evcxr";
+
             # https://devenv.sh/reference/options/
             packages =
               with pkgs;
@@ -88,6 +124,15 @@
                   cargo-llvm-lines # count number of lines of LLVM IR of a generic function
                   cargo-inspect
                   cargo-criterion
+                  evcxr # make sure repl is in a gc-root
+                  cargo-play # quickly run a rust file that has a maint function
+
+                  # for plotters / servo-fontconfig-sys. Helps to symlink /etc/profiles/per-user/$USER/bin/file to /usr/bin/file
+                  cmake
+                  pkg-config
+                  freetype
+                  expat
+                  fontconfig
                 ]
                 ++ lib.optionals stdenv.isDarwin []
                 ++ lib.optionals stdenv.isLinux [
