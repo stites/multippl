@@ -7,6 +7,10 @@ edition = "2021"
 name = "data_flow"
 harness = false
 
+[[bench]]
+name = "grids"
+harness = false
+
 [dependencies]
 rand = "0.8.5"
 nalgebra = "0.30.1"
