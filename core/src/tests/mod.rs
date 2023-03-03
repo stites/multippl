@@ -11,6 +11,8 @@ use std::ops::Range;
 use tracing::*;
 use tracing_test::*;
 
+mod grids;
+
 pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &ProgramTyped) {
     let precision = precision.unwrap_or_else(|| 0.01);
     let n = n.unwrap_or_else(|| 10000);
