@@ -3,12 +3,14 @@
     # nixpkgs.url = "github:NixOS/nixpkgs/nixos-22.11";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     devenv.url = "github:cachix/devenv";
-    crane.url = "github:ipetkov/crane";
+    crane.url = "github:ipetkov/crane/v0.11.3";
     crane.inputs.nixpkgs.follows = "nixpkgs";
     flake-utils.url = "github:numtide/flake-utils";
     dice.url = "github:stites/dice.nix";
     # rsdd.url = "github:stites/rsdd/yodel-additions?dir=nix";
     rsdd.url = "path:/home/stites/git/rust/rsdd/nix";
+    advisory-db.url = "github:rustsec/advisory-db";
+    advisory-db.flake = false;
   };
 
   outputs = {
@@ -18,59 +20,111 @@
     ...
   } @ inputs: let
     flklib = inputs.flake-utils.lib;
+    mk-sys-package = prev: name: _pkg:
+      prev.rustBuilder.rustLib.makeOverride {
+        inherit name;
+        overrideAttrs = drv: {
+          propagatedBuildInputs =
+            drv.propagatedBuildInputs
+            ++ (with prev; [
+              cmake
+              pkg-config
+              _pkg
+            ]);
+          propagatedNativeBuildInputs =
+            (
+              if builtins.hasAttr drv "propagatedNativeBuildInputs"
+              then drv.propagatedNativeBuildInputs
+              else []
+            )
+            ++ (with prev; [
+              cmake
+              pkg-config
+              _pkg
+            ]);
+        };
+      };
   in
     flklib.eachSystem (with flklib.system; [x86_64-linux]) (system: let
-      pkgs = import nixpkgs {
-        inherit system;
-        overlays = [
-        ];
-      };
-      craneLib = (inputs.crane.mkLib pkgs).overrideScope' (final: prev: let
-        mk-sys-package = name: _pkg:
-          prev.rustBuilder.rustLib.makeOverride {
-            inherit name;
-            overrideAttrs = drv: {
-              propagatedBuildInputs =
-                drv.propagatedBuildInputs
-                ++ (with prev; [
-                  cmake
-                  pkg-config
-                  _pkg
-                ]);
-              propagatedNativeBuildInputs =
-                (
-                  if builtins.hasAttr drv "propagatedNativeBuildInputs"
-                  then drv.propagatedNativeBuildInputs
-                  else []
-                )
-                ++ (with prev; [
-                  cmake
-                  pkg-config
-                  _pkg
-                ]);
-            };
-          };
-      in {
+      pkgs = import nixpkgs {inherit system;};
+      craneLib = (inputs.crane.mkLib pkgs).overrideScope' (final: prev: {
+        rsdd = inputs.rsdd.packages.${system}.rsdd;
         # for plotters
-        expat-sys = mk-sys-package "expat-sys" prev.expat;
-        freetype-sys = mk-sys-package "freetype-sys" prev.freetype;
-        fontconfig-sys = mk-sys-package "fontconfig-sys" prev.fontconfig;
+        expat-sys = mk-sys-package prev "expat-sys" prev.expat;
+        freetype-sys = mk-sys-package prev "freetype-sys" prev.freetype;
+        fontconfig-sys = mk-sys-package prev "fontconfig-sys" prev.fontconfig;
       });
+      inherit (pkgs) lib;
+      src = builtins.filterSource (path: type:
+        (pkgs.lib.any (suffix: pkgs.lib.hasSuffix suffix (baseNameOf "${path}")) [
+          # tree sitter files
+          ".json"
+          ".js"
+          ".c"
+          ".cc"
+          ".gyp"
+          ".h"
+        ])
+        || (craneLib.filterCargoSources path type))
+      ./.;
 
-      my-crate = craneLib.buildPackage {
-        src = craneLib.cleanCargoSource ./.;
-        buildInputs =
+      commonArgs = {
+        inherit src;
+        buildInputs = with pkgs;
           [
+            tree-sitter
+            # plotters needs this for the sys packages
+            cmake
+            pkg-config
+            fontconfig
+            freetype
+            expat
           ]
-          ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
-            # Additional darwin specific inputs can be set here
+          ++ lib.optionals pkgs.stdenv.isDarwin [
             pkgs.libiconv
           ];
       };
+      # Build *just* the cargo dependencies, so we can reuse
+      # all of that work (e.g. via cachix) when running in CI
+      cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+      my-crate = craneLib.buildPackage (commonArgs
+        // {
+          NIX_DEBUG = 0;
+          doCheck = false; # use nextest in `nix flake check` for tests
+        });
     in {
-      checks = {
-        inherit my-crate;
-      };
+      checks =
+        {
+          inherit my-crate;
+          my-crate-clippy = craneLib.cargoClippy (commonArgs
+            // {
+              inherit cargoArtifacts;
+              cargoClippyExtraArgs = "--all-targets -- --deny warnings";
+            });
+          my-crate-doc = craneLib.cargoDoc (commonArgs
+            // {
+              inherit cargoArtifacts;
+            });
+          my-crate-fmt = craneLib.cargoFmt {
+            inherit src;
+          };
+          my-crate-audit = craneLib.cargoAudit {
+            inherit src;
+            inherit (inputs) advisory-db;
+          };
+          my-crate-nextest = craneLib.cargoNextest (commonArgs
+            // {
+              inherit cargoArtifacts;
+              partitions = 1;
+              partitionType = "count";
+            });
+        }
+        // lib.optionalAttrs (system == flklib.system.x86_64-linux) {
+          my-crate-coverage = craneLib.cargoTarpaulin (commonArgs
+            // {
+              inherit cargoArtifacts;
+            });
+        };
 
       packages.default = my-crate;
 
@@ -78,7 +132,7 @@
         drv = my-crate;
       };
 
-      devShell = devenv.lib.mkShell {
+      devShells.default = devenv.lib.mkShell {
         inherit inputs pkgs;
         modules = [
           {
@@ -96,13 +150,16 @@
           {
             # ad-hoc dev stuff for new graphviz cli in rsdd
             packages = with pkgs; [
+              # dice cli:
+              inputs.dice.packages.${system}.default
+              # rsdd visualizer
               (python3.withPackages (p:
                 with p; [
                   graphviz
                 ]))
             ];
           }
-          {
+          rec {
             # rust dev block
             languages.rust.enable = true;
 
@@ -135,6 +192,8 @@
                   freetype
                   expat
                   fontconfig
+                  # tree-sitter-specific
+                  tree-sitter
                 ]
                 ++ lib.optionals stdenv.isDarwin []
                 ++ lib.optionals stdenv.isLinux [
@@ -143,20 +202,21 @@
                 ]
               # ++ builtins.attrValues self.checks
               ;
-          }
-          {
-            # tree-sitter specific block
-            packages = with pkgs; [tree-sitter];
-          }
-          {
-            packages = [inputs.dice.packages.${system}.default];
-          }
-          {
             # shell block
             env.DEVSHELL = "devshell+flake.nix";
-            enterShell = ''
-              echo "hello from $DEVSHELL!"
-            '';
+            enterShell = pkgs.lib.strings.concatStringsSep "\n" ([
+                ''
+                  echo ""
+                  echo "Hello from $DEVSHELL!"
+                  echo "Some tools this environment is equipped with:"
+                  echo ""
+                ''
+              ]
+              ++ (builtins.map (
+                  p: "echo \"${p.pname}\t\t-- ${p.meta.description}\""
+                )
+                packages)
+              ++ ["echo \"\""]);
           }
         ];
       };
