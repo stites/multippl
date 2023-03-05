@@ -5,12 +5,24 @@
     devenv.url = "github:cachix/devenv";
     crane.url = "github:ipetkov/crane/v0.11.3";
     crane.inputs.nixpkgs.follows = "nixpkgs";
-    flake-utils.url = "github:numtide/flake-utils";
     dice.url = "github:stites/dice.nix";
     # rsdd.url = "github:stites/rsdd/yodel-additions?dir=nix";
     rsdd.url = "path:/home/stites/git/rust/rsdd/nix";
     advisory-db.url = "github:rustsec/advisory-db";
     advisory-db.flake = false;
+
+    # clean up dependencies
+    flake-utils.follows = "crane/flake-utils";
+    devenv.inputs.flake-compat.follows = "crane/flake-compat";
+    devenv.inputs.nixpkgs.follows = "nixpkgs";
+    devenv.inputs.pre-commit-hooks.follows = "pre-commit-hooks";
+    pre-commit-hooks.url = "github:cachix/pre-commit-hooks.nix";
+    pre-commit-hooks.inputs.flake-utils.follows = "crane/flake-utils";
+    pre-commit-hooks.inputs.flake-compat.follows = "crane/flake-compat";
+    pre-commit-hooks.inputs.nixpkgs.follows = "nixpkgs";
+    rsdd.inputs.devenv.follows = "devenv";
+    rsdd.inputs.flake-utils.follows = "crane/flake-utils";
+    rsdd.inputs.nixpkgs.follows = "nixpkgs";
   };
 
   outputs = {
