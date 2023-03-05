@@ -79,45 +79,46 @@ fn get_parents(ix: Ix, size: usize) -> Parents<()> {
     }
 }
 
-pub fn make_grid_schema(spec: GridSpec) -> GridSchema {
-    let mut flips = HashMap::new();
-    let mut parents = HashMap::new();
-    let mut diagonal = HashSet::new();
-    let mut tril = HashSet::new();
-    let mut triu = HashSet::new();
-    let sampled = spec.sampled;
-    let query = spec.query;
-
-    for tuple in iproduct!((0..spec.size), (0..spec.size)) {
-        let i = Ix::new(tuple.0, tuple.1);
-        flips.insert(i, (spec.probability)(i, Parents::Zero));
-        let ps = get_parents(i, spec.size);
-        parents.insert(i, ps);
-        if (i.0 + i.1) < (spec.size - 1) {
-            triu.insert(i);
-        } else if (i.0 + i.1) > (spec.size - 1) {
-            tril.insert(i);
-        } else {
-            diagonal.insert(i);
-        }
-    }
-
-    GridSchema {
-        flips,
-        parents,
-        tril,
-        triu,
-        diagonal,
-        sampled,
-        query,
-        size: spec.size,
-        probability: spec.probability,
-    }
-}
-
 #[rustfmt::skip]
 mod make {
     use super::*;
+    const DIAG : &str = "diag";
+    pub fn schema(spec: GridSpec) -> GridSchema {
+        let mut flips = HashMap::new();
+        let mut parents = HashMap::new();
+        let mut diagonal = HashSet::new();
+        let mut tril = HashSet::new();
+        let mut triu = HashSet::new();
+        let sampled = spec.sampled;
+        let query = spec.query;
+
+        for tuple in iproduct!((0..spec.size), (0..spec.size)) {
+            let i = Ix::new(tuple.0, tuple.1);
+            flips.insert(i, (spec.probability)(i, Parents::Zero));
+            let ps = get_parents(i, spec.size);
+            parents.insert(i, ps);
+            if (i.0 + i.1) < (spec.size - 1) {
+                triu.insert(i);
+            } else if (i.0 + i.1) > (spec.size - 1) {
+                tril.insert(i);
+            } else {
+                diagonal.insert(i);
+            }
+        }
+
+        GridSchema {
+            flips,
+            parents,
+            tril,
+            triu,
+            diagonal,
+            sampled,
+            query,
+            size: spec.size,
+            probability: spec.probability,
+        }
+    }
+
     pub fn no_parents(schema: &GridSchema, ix: Ix, rest: ExprTyped) -> ExprTyped {
         let pr = (schema.probability)(ix, Parents::Zero).as_f64();
         ELetIn(
@@ -170,7 +171,7 @@ mod make {
         ELetIn(
             LetInTypes {bindee: b!(), body: b!(),},
             ix.as_string(),
-            Box::new(EPrj(b!(), prj, Box::new(var!(@ "diag")))),
+            Box::new(EPrj(b!(), prj, Box::new(var!(@ DIAG)))),
             Box::new(rest),
         )
     }
@@ -203,37 +204,50 @@ mod make {
     pub fn sample_diag(prg: ExprTyped, tril: ExprTyped) -> ExprTyped {
         ELetIn(
             LetInTypes {bindee: b!(), body: b!(),},
-            "diag".to_string(),
+            DIAG.to_string(),
             Box::new(ESample((), Box::new(prg))),
             Box::new(tril),
         )
     }
-
-    pub fn grid(schema: GridSchema) -> ExprTyped {
+    pub fn fill_schema(schema: &GridSchema, seen: HashSet<Ix>, build: Vec<Ix>, prg: ExprTyped) -> (ExprTyped, HashSet<Ix>, Vec<Ix>) {
         use Parents::*;
-        let ix = Ix::new(schema.size - 1, schema.size - 1);
-        let mut seen = HashSet::from([ix]);
-        let mut prg = make::no_parents(&schema, ix, schema.query.clone());
-        let mut next_tril = VecDeque::from(schema.get_parents_vec(ix));
-        let mut next_diag = VecDeque::new();
-        let mut next_triu = VecDeque::new();
-        while let Some(ix) = next_tril.pop_front() {
+        let mut q = VecDeque::from(build.clone());
+        let mut seen = seen.clone();
+        let mut next = vec![];
+        let mut prg = prg.clone();
+        let buildset : HashSet<Ix> = build.iter().cloned().collect();
+
+        while let Some(ix) = q.pop_front() {
             if seen.contains(&ix) {
                 continue;
-            } else if !schema.tril.contains(&ix) {
-                next_diag.push_back(ix);
+            } else if !buildset.contains(&ix) {
+                next.push(ix);
             } else {
                 let parents = schema.parents.get(&ix).unwrap();
                 prg = match parents {
-                    Zero => todo!(),
+                    Zero => {
+                        println!("{:?}", ix);
+                        println!("{:?}", q);
+                        todo!();
+                    },
                     One(p, _) => make::one_parents(&schema, ix, *p, prg),
                     Two((l, _), (r, _)) => make::two_parents(&schema, ix, (*l, *r), prg),
                 };
                 seen.insert(ix);
                 let mut nxt_parents = parents.to_vec().into();
-                next_tril.append(&mut nxt_parents);
+                q.append(&mut nxt_parents);
             }
         }
+
+        (prg, seen, next)
+    }
+
+    pub fn grid(schema: GridSchema) -> ExprTyped {
+        let ix = Ix::new(schema.size - 1, schema.size - 1);
+        let seen = HashSet::from([ix]);
+        let prg = make::no_parents(&schema, ix, schema.query.clone());
+        let build = schema.get_parents_vec(ix);
+        let (mut prg, seen, next_diag) = fill_schema(&schema, seen, build, prg);
         let mut tril_prg : Option<ExprTyped> = None;
         if schema.sampled {
             prg = all_diag_aliases(&schema, prg);
@@ -241,54 +255,28 @@ mod make {
             let ixs = make::diag_ixs(&schema);
             prg = make::product_of(ixs);
         }
-        while let Some(ix) = next_diag.pop_front() {
-            if seen.contains(&ix) {
-                continue;
-            } else if !schema.diagonal.contains(&ix) {
-                next_triu.push_back(ix);
-            } else {
-                let parents = schema.parents.get(&ix).unwrap();
-                prg = match parents {
-                    Zero => todo!(),
-                    One(p, _) => make::one_parents(&schema, ix, *p, prg),
-                    Two((l, _), (r, _)) => make::two_parents(&schema, ix, (*l, *r), prg),
-                };
-                seen.insert(ix);
-                let mut nxt_parents = parents.to_vec().into();
-                next_diag.append(&mut nxt_parents);
-            }
-        }
+        let (mut prg, seen, next_triu) = fill_schema(&schema, seen, next_diag, prg);
         if schema.sampled {
             prg = make::sample_diag(prg, tril_prg.unwrap());
         }
-        while let Some(ix) = next_triu.pop_front() {
-            if seen.contains(&ix) {
-                continue;
-            } else {
-                let parents = schema.parents.get(&ix).unwrap();
-                prg = match parents {
-                    Zero => todo!(),
-                    One(p, _) => make::one_parents(&schema, ix, *p, prg),
-                    Two((l, _), (r, _)) => make::two_parents(&schema, ix, (*l, *r), prg),
-                };
-                seen.insert(ix);
-                let mut nxt_parents = parents.to_vec().into();
-                next_triu.append(&mut nxt_parents);
-            }
-        }
+        let (prg, seen, remainder) = fill_schema(&schema, seen, next_triu, prg);
+        assert_eq!(remainder.len(), 0);
         prg
     }
 }
 
 #[test]
+#[ignore]
 #[traced_test]
 fn test_grid_schema() {
-    let x = make_grid_schema(GridSpec {
+    let spec = GridSpec {
         size: 2,
         sampled: true,
         query: b!("x"),
         probability: &|_, _| Probability::new(1.0),
-    });
+    };
+    let schema = make::schema(spec);
+    let grid = make::grid(schema);
 }
 
 // #[test]
