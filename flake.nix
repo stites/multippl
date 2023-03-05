@@ -7,6 +7,8 @@
     crane.inputs.nixpkgs.follows = "nixpkgs";
     flake-utils.url = "github:numtide/flake-utils";
     dice.url = "github:stites/dice.nix";
+    # rsdd.url = "github:stites/rsdd/yodel-additions?dir=nix";
+    rsdd.url = "path:/home/stites/git/rust/rsdd/nix";
   };
 
   outputs = {

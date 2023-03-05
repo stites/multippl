@@ -513,7 +513,8 @@
         "devenv": "devenv",
         "dice": "dice",
         "flake-utils": "flake-utils_5",
-        "nixpkgs": "nixpkgs_4"
+        "nixpkgs": "nixpkgs_4",
+        "rsdd": "rsdd_2"
       }
     },
     "rsdd": {
@@ -531,6 +532,23 @@
         "repo": "rsdd",
         "rev": "4363f659b33d21575eebfe0e96c773afe4bcc6a5",
         "type": "github"
+      }
+    },
+    "rsdd_2": {
+      "inputs": {
+        "devenv": "devenv_2",
+        "flake-utils": "flake-utils_7",
+        "nixpkgs": "nixpkgs_6"
+      },
+      "locked": {
+        "lastModified": 1677903715,
+        "narHash": "sha256-eTX9/VW9wtttzWGFfIljK2Db7TSBt5oVzHtXd0EwXUs=",
+        "path": "/home/stites/git/rust/rsdd/nix",
+        "type": "path"
+      },
+      "original": {
+        "path": "/home/stites/git/rust/rsdd/nix",
+        "type": "path"
       }
     },
     "rust-overlay": {

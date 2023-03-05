@@ -2,7 +2,7 @@
 members = [
   "tree-sitter",
   "core",
-  "rsdd",
+#  "rsdd",
   "tree-sitter-formula",
   "formula",
 ]
@@ -25,4 +25,4 @@ codegen-units = 16
 rpath = false
 
 [profile.release]
-lto = true              # +++ whole-program optimization: true for a "fat" LTO program, "thin" for a less agressive form
+lto = true              # +++ whole-program optimization: true for a "fat" LTO program, "thin" for a less aggressive form

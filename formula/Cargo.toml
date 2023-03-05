@@ -10,7 +10,8 @@ tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
 tracing-test = "0.2.4"
 
-rsdd = { path = "../rsdd" }
+rsdd = { git = "https://github.com/stites/rsdd", branch = "yodel-additions" }
+#rsdd = { path = "../rsdd" }
 tree-sitter = "0.20.9"
 tree-sitter-formula = { path = "../tree-sitter-formula" }
 clap = { version = "4.1.8", features = ["derive"] }
