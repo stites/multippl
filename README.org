@@ -1,1 +1,3 @@
-* Weight for me, BDD
+* Yodel
+
+Initially because yodeling might cause avalanches (which feels a lot like collapsing big mountains of BDDs), but more that, as if by magic, yodeling brings all of the cows come home and none of them get lost.
