@@ -120,10 +120,11 @@
           my-crate-fmt = craneLib.cargoFmt {
             inherit src;
           };
-          my-crate-audit = craneLib.cargoAudit {
-            inherit src;
-            inherit (inputs) advisory-db;
-          };
+          # maybe in the far far future this can be uncommented
+          # my-crate-audit = craneLib.cargoAudit {
+          #   inherit src;
+          #   inherit (inputs) advisory-db;
+          # };
           my-crate-nextest = craneLib.cargoNextest (commonArgs
             // {
               inherit cargoArtifacts;
