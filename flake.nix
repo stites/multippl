@@ -58,13 +58,33 @@
       };
   in
     flklib.eachSystem (with flklib.system; [x86_64-linux]) (system: let
-      pkgs = import nixpkgs {inherit system;};
+      pkgs = import nixpkgs {
+        inherit system;
+        overlays = [
+          (final: prev: {
+            fontconfig = with prev;
+              fontconfig.overrideAttrs (old: {
+                propagatedNativeBuildInputs =
+                  (
+                    lib.optionals (builtins.hasAttr "propagatedNativeBuildInputs" old)
+                    old.propagatedNativeBuildInputs
+                  )
+                  ++ [
+                    zlib.dev
+                    bzip2.dev
+                    libpng.dev
+                    brotli.dev
+                  ];
+              });
+          })
+        ];
+      };
       craneLib = (inputs.crane.mkLib pkgs).overrideScope' (final: prev: {
         rsdd = inputs.rsdd.packages.${system}.rsdd;
         # for plotters
         expat-sys = mk-sys-package prev "expat-sys" prev.expat;
         freetype-sys = mk-sys-package prev "freetype-sys" prev.freetype;
-        fontconfig-sys = mk-sys-package prev "fontconfig-sys" prev.fontconfig;
+        fontconfig-sys = mk-sys-package prev "fontconfig-sys" final.fontconfig;
       });
       inherit (pkgs) lib;
       src = builtins.filterSource (path: type:
@@ -161,15 +181,25 @@
             };
           }
           {
-            # ad-hoc dev stuff for new graphviz cli in rsdd
+            # ad-hoc dev packages
             packages = with pkgs; [
               # dice cli:
               inputs.dice.packages.${system}.default
-              # rsdd visualizer
+              # python for the rsdd visualizer
               (python3.withPackages (p:
                 with p; [
                   graphviz
                 ]))
+              # plotters dependencies
+              zlib.dev
+              bzip2.dev
+              libpng.dev
+              brotli.dev
+              cmake
+              pkg-config
+              freetype
+              expat
+              fontconfig
             ];
           }
           rec {
@@ -197,14 +227,8 @@
                   cargo-inspect
                   cargo-criterion
                   evcxr # make sure repl is in a gc-root
-                  cargo-play # quickly run a rust file that has a maint function
+                  cargo-play # quickly run a rust file that has a main function
 
-                  # for plotters / servo-fontconfig-sys. Helps to symlink /etc/profiles/per-user/$USER/bin/file to /usr/bin/file
-                  cmake
-                  pkg-config
-                  freetype
-                  expat
-                  fontconfig
                   # tree-sitter-specific
                   tree-sitter
                 ]
