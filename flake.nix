@@ -203,7 +203,7 @@
             # Optional as we already set substituters above
             # "${pkgs.cachix}/bin/cachix use ${cache}"
             "nix build" # build with cachix
-            "nix develop --profile dev-profile" # build dev shell with cachix
+            "nix develop --profile dev-profile --command 'exit 0'" # build dev shell with cachix
             # this last line is important for bootstrapping, especially if you use nix-direnv
           ]);
         in {
