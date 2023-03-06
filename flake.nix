@@ -1,4 +1,7 @@
 {
+  nixConfig.extra-substituters = "https://stites.cachix.org";
+  nixConfig.extra-trusted-public-keys = "stites.cachix.org-1:JN1rOOglf6VA+2aFsZnpkGUFfutdBIP1LbANgiJ940s=";
+
   inputs = {
     # nixpkgs.url = "github:NixOS/nixpkgs/nixos-22.11";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
@@ -161,8 +164,52 @@
 
       packages.default = my-crate;
 
-      apps.default = inputs.flake-utils.lib.mkApp {
-        drv = my-crate;
+      apps = let
+        cache = "stites";
+      in {
+        default = inputs.flake-utils.lib.mkApp {
+          drv = my-crate;
+        };
+        cachix-push = with pkgs;
+        with lib.strings; let
+          script = writeScriptBin "cachix-push" (concatStringsSep "\n" [
+            # Push flake inputs: as flake inputs are downloaded from the
+            # internet, they can disappear
+            ''
+              nix flake archive --json \
+                | jq -r '.path,(.inputs|to_entries[].value.path)' \
+                | ${pkgs.cachix}/bin/cachix push ${cache}
+            ''
+            # Pushing runtime closure of all packages in a flake:
+            ''
+              nix build --json \
+                | jq -r '.[].outputs | to_entries[].value' \
+                | ${pkgs.cachix}/bin/cachix push ${cache}
+            ''
+            # Pushing shell environment
+            ''
+              nix develop --profile dev-profile
+              ${pkgs.cachix}/bin/cachix push mycache dev-profile
+            ''
+          ]);
+        in {
+          type = "app";
+          program = "${script}/bin/cachix-push";
+        };
+
+        cachix-pull = with pkgs;
+        with lib.strings; let
+          script = writeScriptBin "cachix-pull" (concatStringsSep "\n" [
+            # Optional as we already set substituters above
+            # "${pkgs.cachix}/bin/cachix use ${cache}"
+            "nix build" # build with cachix
+            "nix develop --profile dev-profile" # build dev shell with cachix
+            # this last line is important for bootstrapping, especially if you use nix-direnv
+          ]);
+        in {
+          type = "app";
+          program = "${script}/bin/cachix-pull";
+        };
       };
 
       devShells.default = devenv.lib.mkShell {
