@@ -126,7 +126,7 @@ mod make {
                 Two((p1, _), (p2, _)) => {
                     for (b1, b2) in [(true,  true), (true, false), (false, true), (false, false)] {
                         let par = Two((p1, b1), (p2, b2));
-                        let par_inv = Two((p1, b1), (p2, b2));
+                        let par_inv = Two((p2, b2), (p1, b1));
                         let pr = (spec.probability)(i, par);
                         let pr_inv = (spec.probability)(i, par_inv);
                         assert_eq!(pr, pr_inv, "error! probability function needs to account for symmetry in {:?} with parents: {:?}, {:?}", i, p1, p2);
