@@ -27,7 +27,7 @@ impl Ix {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Eq, Hash, Clone, Copy, Debug)]
 pub enum Parents<X> {
     Zero,
     One(Ix, X),
@@ -43,8 +43,26 @@ impl<X> Parents<X> {
         }
     }
 }
+impl<X: PartialEq> PartialEq for Parents<X> {
+    fn eq(&self, o: &Self) -> bool {
+        use Parents::*;
+        match (self, o) {
+            (Zero, Zero) => true,
+            (One(il, l), One(ir, r)) => il == ir && l == r,
+            (Two((il1, l1), (il2, l2)), Two((ir1, r1), (ir2, r2))) => {
+                match (il1 == ir1, il2 == ir2, il1 == ir2, il2 == ir1) {
+                    (true, true, _, _) => l1 == r1 && l2 == r2,
+                    (_, _, true, true) => l1 == r2 && l2 == r1,
+                    _ => false,
+                }
+            }
+            _ => false,
+        }
+    }
+}
 
-pub struct GridSchema<'a> {
+#[derive(Debug)]
+pub struct GridSchema {
     tril: HashSet<Ix>,
     triu: HashSet<Ix>,
     diagonal: HashSet<Ix>,
