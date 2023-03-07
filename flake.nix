@@ -122,6 +122,16 @@
       # Build *just* the cargo dependencies, so we can reuse
       # all of that work (e.g. via cachix) when running in CI
       cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+      cargoDevArtifacts = craneLib.buildDepsOnly (commonArgs
+        // {
+          CARGO_PROFILE = "dev";
+        });
+      my-dev-crate = craneLib.buildPackage (commonArgs
+        // {
+          CARGO_PROFILE = "dev";
+          NIX_DEBUG = 0;
+          doCheck = false; # use nextest in `nix flake check` for tests
+        });
       my-crate = craneLib.buildPackage (commonArgs
         // {
           NIX_DEBUG = 0;
@@ -163,6 +173,15 @@
         };
 
       packages.default = my-crate;
+      packages.dev = my-dev-crate;
+      packages.dev-test = craneLib.cargoNextest (commonArgs
+        // {
+          cargoArtifacts = cargoDevArtifacts;
+          CARGO_PROFILE = "dev";
+          cargoNextestExtraArgs = "test_current --nocapture";
+          partitions = 1;
+          partitionType = "count";
+        });
 
       apps = let
         cache = "stites";
