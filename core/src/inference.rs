@@ -6,8 +6,6 @@ use crate::typecheck::grammar::ProgramTyped;
 use crate::uniquify::grammar::*;
 use crate::*;
 use itertools::*;
-use rayon::iter::*;
-use rayon::prelude::*;
 use rsdd::repr::bdd::*;
 use rsdd::repr::ddnnf::DDNNFPtr;
 use rsdd::repr::var_order::VarOrder;
@@ -246,7 +244,7 @@ pub fn importance_weighting_inf_h(
             debug_compiled!(c);
         }
         debug!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-        debug!("~ WARNING! DEBUG WILL NOT PRUNE UNNESSECARY SAMPLES!!! ~");
+        debug!("~ WARNING! DEBUG WILL NOT PRUNE UNNECESSARY SAMPLES!!! ~");
         debug!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
 
         compilations

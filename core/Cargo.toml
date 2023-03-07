@@ -3,34 +3,37 @@ name = "weight4me"
 version = "0.1.0"
 edition = "2021"
 
-[[bench]]
-name = "data_flow"
-harness = false
+# [[bench]]
+# name = "grids"
+# harness = false
+# required-features = ["criterion"]
 
-[[bench]]
-name = "grids"
-harness = false
+# [[bench]]
+# name = "data_flow"
+# harness = false
+# required-features = ["criterion"]
+
+# [[bin]]
+# name = "plot-grids"
+# path = "src/plot/grids.rs"
+# required-features = ["plotters"]
 
 [dependencies]
-rand = "0.8.5"
-nalgebra = "0.30.1"
-itertools = "0.10.3"
-tracing = "0.1.37"
-tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
-tracing-test = "0.2.4"
-
-# rsdd = { path = "../rsdd" }
-rsdd = { git = "https://github.com/stites/rsdd", branch = "yodel-additions" }
-tree-sitter = "0.20.9"
+rsdd = { workspace = true }
+rand = { workspace = true }
+itertools = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tracing-test = { workspace = true }
+tree-sitter = { workspace = true }
 tree-sitter-weight4me = { path = "../tree-sitter" }
-rayon = "1.6.1"
 
-#[dev-dependencies]
-quickcheck = "1"
-quickcheck_macros = "1"
-num-traits = "0.2.15"
-plotters = "0.3.4"
+num-traits = "0.2"
+
+plotters = { version = "0.3.4", optional = true }
+criterion = { version = "0.4", optional = true }
 
 [dev-dependencies]
-criterion = "0.4"
 formula = { path = "../formula" }
+quickcheck = "1"
+quickcheck_macros = "1"
