@@ -75,10 +75,16 @@ pub struct GridSchema {
 }
 impl GridSchema {
     pub fn get_flip(&self, ix: Ix, p: Parents<bool>) -> f64 {
-        self.flips.get(&(ix, p)).unwrap().as_f64()
+        self.flips
+            .get(&(ix, p))
+            .unwrap_or_else(|| panic!("get_flip failed to find {ix:?} with parents {p:?}!"))
+            .as_f64()
     }
     pub fn get_parents(&self, ix: Ix) -> Parents<()> {
-        *self.parents.get(&ix).unwrap()
+        *self
+            .parents
+            .get(&ix)
+            .expect("get_parents failed to find {ix:?}!")
     }
     pub fn get_parents_vec(&self, ix: Ix) -> Vec<Ix> {
         self.get_parents(ix).to_vec()
@@ -300,156 +306,149 @@ mod make {
     }
 }
 
-macro_rules! pkey {
-    (=> $i:literal $j:literal) => {{
-        (Ix::new($i, $j), Parents::Zero)
-    }};
-    ($pi:literal $pj:literal $pbool:literal => $i:literal $j:literal) => {{
-        (Ix::new($i, $j), Parents::One(Ix::new($pi, $pj), $pbool))
-    }};
-    (($p1i:literal $p1j:literal $p1bool:literal, $p2i:literal $p2j:literal $p2bool:literal)  => $i:literal $j:literal) => {{
-        (
-            Ix::new($i, $j),
-            Parents::Two(
-                (Ix::new($p1i, $p1j), $p1bool),
-                (Ix::new($p2i, $p2j), $p2bool),
-            ),
-        )
-    }};
-}
+#[cfg(test)]
+mod test {
+    use super::*;
+    macro_rules! pkey {
+        (=> $i:literal $j:literal) => {{
+            (Ix::new($i, $j), Parents::Zero)
+        }};
+        ($pi:literal $pj:literal $pbool:literal => $i:literal $j:literal) => {{
+            (Ix::new($i, $j), Parents::One(Ix::new($pi, $pj), $pbool))
+        }};
+        (($p1i:literal $p1j:literal $p1bool:literal, $p2i:literal $p2j:literal $p2bool:literal)  => $i:literal $j:literal) => {{
+            (
+                Ix::new($i, $j),
+                Parents::Two(
+                    (Ix::new($p1i, $p1j), $p1bool),
+                    (Ix::new($p2i, $p2j), $p2bool),
+                ),
+            )
+        }};
+    }
 
-macro_rules! pr {
-    ($p:literal) => {{
-        Probability::new($p)
-    }};
-    ($n:literal / $d:literal) => {{
-        Probability::new(($n as f64) / ($d as f64))
-    }};
-}
+    macro_rules! pr {
+        ($p:literal) => {{
+            Probability::new($p)
+        }};
+        ($n:literal / $d:literal) => {{
+            Probability::new(($n as f64) / ($d as f64))
+        }};
+    }
 
-macro_rules! pmap {
-    ( $(($key:expr , $val:expr)),*) => {{
-        let mut probmap: HashMap<(Ix, Parents<bool>), Probability> = HashMap::new();
-        $(
-            probmap.insert($key, $val);
-        )*
-        probmap
-    }};
-    ( $($p:literal @ $key:expr),* ) => {{
-        let mut probmap: HashMap<(Ix, Parents<bool>), Probability> = HashMap::new();
-        $(
-            probmap.insert($key, pr!($val));
-        )*
-        probmap
-    }};
-    ( $($n:literal / $d:literal @ $key:expr),* ) => {{
-        let mut probmap: HashMap<(Ix, Parents<bool>), Probability> = HashMap::new();
-        $(
-            probmap.insert($key, pr!($n / $d));
-            let (i, p) = $key;
-            match p {
-                Parents::Two((li, l), (ri, r)) => {
-                    probmap.insert((i, Parents::Two((ri, r), (li, l))), pr!($n / $d));
+    macro_rules! pmap {
+        ( $(($key:expr , $val:expr)),*) => {{
+            let mut probmap: HashMap<(Ix, Parents<bool>), Probability> = HashMap::new();
+            $(
+                probmap.insert($key, $val);
+            )*
+            probmap
+        }};
+        ( $($p:literal @ $key:expr),* ) => {{
+            let mut probmap: HashMap<(Ix, Parents<bool>), Probability> = HashMap::new();
+            $(
+                probmap.insert($key, pr!($val));
+            )*
+            probmap
+        }};
+        ( $($n:literal / $d:literal @ $key:expr),* ) => {{
+            let mut probmap: HashMap<(Ix, Parents<bool>), Probability> = HashMap::new();
+            $(
+                probmap.insert($key, pr!($n / $d));
+                let (i, p) = $key;
+                match p {
+                    Parents::Two((li, l), (ri, r)) => {
+                        probmap.insert((i, Parents::Two((ri, r), (li, l))), pr!($n / $d));
+                    }
+                    _ => {},
                 }
-                _ => {},
-            }
-        )*
-        probmap
-    }};
-}
-#[test]
-#[traced_test]
-fn test_current_grid_2x2_schema() {
-    use Parents::*;
-    let query = b!("11");
-    let ix = |l, r| Ix::new(l, r);
-    let probmap = pmap![
-        1 / 2 @ pkey!(=> 0 0),
-
-        1 / 3 @ pkey!(0 0 true  => 0 1),
-        1 / 4 @ pkey!(0 0 false => 0 1),
-
-        1 / 6 @ pkey!(0 0 true  => 1 0),
-        1 / 5 @ pkey!(0 0 false => 1 0),
-
-        1 /  7 @ pkey!((1 0 true, 0 1 true)   => 1 1),
-        1 /  8 @ pkey!((1 0 true, 0 1 false)  => 1 1),
-        1 /  9 @ pkey!((1 0 false, 0 1 true)  => 1 1),
-        1 / 11 @ pkey!((1 0 false, 0 1 false) => 1 1)
-    ];
-    let cprob = pr!(0.0);
-    let prob = |ix, p| probmap.get(&(ix, p)).unwrap_or_else(|| &cprob).clone();
-    let schema = make::schema(GridSpec {
-        query,
-        size: 2,
-        sampled: false,
-        probability: &prob,
-    });
-
-    println!("{:?}", schema);
-    assert_eq!(schema.size, 2, "size");
-    assert_eq!(schema.tril, HashSet::from([ix(1, 1)]), "tril");
-    assert_eq!(schema.triu, HashSet::from([ix(0, 0)]), "triu");
-    assert_eq!(schema.diagonal, HashSet::from([ix(0, 1), ix(1, 0)]), "diag");
-
-    let parents = HashMap::from([
-        (ix(0, 0), Zero),
-        (ix(1, 0), One(ix(0, 0), ())),
-        (ix(0, 1), One(ix(0, 0), ())),
-        (ix(1, 1), Two((ix(1, 0), ()), (ix(0, 1), ()))),
-    ]);
-    assert_eq!(schema.parents.len(), parents.len());
-    for (k, v) in parents.iter() {
-        assert!(
-            schema.parents.contains_key(k),
-            "{k:?} missing from {:?}",
-            schema.parents.keys()
-        );
-        assert_eq!(schema.parents.get(k).unwrap(), v);
+            )*
+            probmap
+        }};
     }
-    assert_eq!(schema.flips.len(), probmap.len());
-    for (k, v) in probmap.iter() {
-        assert!(
-            schema.flips.contains_key(k),
-            "{k:?} missing from {:?}",
-            schema.flips.keys()
-        );
-        assert_eq!(schema.flips.get(k).unwrap(), v);
+    fn make_2x2_pmap() -> HashMap<(Ix, Parents<bool>), Probability> {
+        pmap![
+            1 / 2 @ pkey!(=> 0 0),
+
+            1 / 3 @ pkey!(0 0 true  => 0 1),
+            1 / 4 @ pkey!(0 0 false => 0 1),
+
+            1 / 6 @ pkey!(0 0 true  => 1 0),
+            1 / 5 @ pkey!(0 0 false => 1 0),
+
+            1 /  7 @ pkey!((1 0 true, 0 1 true)   => 1 1),
+            1 /  8 @ pkey!((1 0 true, 0 1 false)  => 1 1),
+            1 /  9 @ pkey!((1 0 false, 0 1 true)  => 1 1),
+            1 / 11 @ pkey!((1 0 false, 0 1 false) => 1 1)
+        ]
     }
-}
-#[test]
-#[traced_test]
-fn test_grid_2x2_schema_compiles() {
-    use crate::grammar::Anf::*;
-    use crate::grammar::Expr::*;
-    let probmap = pmap![
-        1 / 2 @ pkey!(=> 0 0),
+    fn make_2x2_schema(
+        query: &ExprTyped,
+        probmap: &HashMap<(Ix, Parents<bool>), Probability>,
+    ) -> GridSchema {
+        use Parents::*;
+        let ix = |l, r| Ix::new(l, r);
+        let cprob = pr!(0.0);
+        let prob = |ix, p| probmap.get(&(ix, p)).unwrap_or_else(|| &cprob).clone();
+        make::schema(GridSpec {
+            query: query.clone(),
+            size: 2,
+            sampled: false,
+            probability: &prob,
+        })
+    }
+    fn ix(l: usize, r: usize) -> Ix {
+        Ix::new(l, r)
+    }
+    #[test]
+    fn test_grid_2x2_schema() {
+        use Parents::*;
+        let query = b!("11");
+        let probmap = make_2x2_pmap();
+        let schema = make_2x2_schema(&query, &probmap);
+        println!("{:?}", schema);
+        assert_eq!(schema.size, 2, "size");
+        assert_eq!(schema.tril, HashSet::from([ix(1, 1)]), "tril");
+        assert_eq!(schema.triu, HashSet::from([ix(0, 0)]), "triu");
+        assert_eq!(schema.diagonal, HashSet::from([ix(0, 1), ix(1, 0)]), "diag");
 
-        1 / 3 @ pkey!(0 0 true  => 0 1),
-        1 / 4 @ pkey!(0 0 false => 0 1),
+        let parents = HashMap::from([
+            (ix(0, 0), Zero),
+            (ix(1, 0), One(ix(0, 0), ())),
+            (ix(0, 1), One(ix(0, 0), ())),
+            (ix(1, 1), Two((ix(1, 0), ()), (ix(0, 1), ()))),
+        ]);
+        assert_eq!(schema.parents.len(), parents.len());
+        for (k, v) in parents.iter() {
+            assert!(
+                schema.parents.contains_key(k),
+                "{k:?} missing from {:?}",
+                schema.parents.keys()
+            );
+            assert_eq!(schema.parents.get(k).unwrap(), v);
+        }
+        assert_eq!(schema.flips.len(), probmap.len());
+        for (k, v) in probmap.iter() {
+            assert!(
+                schema.flips.contains_key(k),
+                "{k:?} missing from {:?}",
+                schema.flips.keys()
+            );
+            assert_eq!(schema.flips.get(k).unwrap(), v);
+        }
+    }
 
-        1 / 6 @ pkey!(0 0 true  => 1 0),
-        1 / 5 @ pkey!(0 0 false => 1 0),
+    #[test]
+    #[traced_test]
+    fn test_current_grid_2x2_schema_compiles() {
+        use crate::grammar::Anf::*;
+        use crate::grammar::Expr::*;
+        let query = b!("11");
+        let probmap = make_2x2_pmap();
+        let schema = make_2x2_schema(&query, &probmap);
+        let grid = make::grid(schema);
 
-        1 /  7 @ pkey!((1 0 true, 0 1 true)   => 1 1),
-        1 /  8 @ pkey!((1 0 true, 0 1 false)  => 1 1),
-        1 /  9 @ pkey!((1 0 false, 0 1 true)  => 1 1),
-        1 / 11 @ pkey!((1 0 false, 0 1 false) => 1 1)
-    ];
-    let cpr = pr!(0.0);
-    let query = b!("11");
-
-    let spec = GridSpec {
-        query,
-        size: 2,
-        sampled: false,
-        probability: &|ix, p| *probmap.get(&(ix, p)).unwrap_or_else(|| &cpr),
-    };
-    let schema = make::schema(spec);
-    let grid = make::grid(schema);
-
-    let mk = |ret: ExprTyped| {
-        Program::Body(lets![
+        let expected = Program::Body(lets![
             "00" ; B!() ;= flip!(1/2);
             "01" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
             "10" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
@@ -458,228 +457,228 @@ fn test_grid_2x2_schema_compiles() {
                 ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
                 ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
                                                           flip!(1/11) ))))));
-           ...? ret ; B!()
-        ])
-    };
+           ...? query.clone() ; B!()
+        ]);
 
-    //  LetIn { var: "10", bindee: Ite { predicate: Var 00, truthy: Flip 0.16666666666666666, falsey: Flip 0.16666666666666666 }, body: LetIn { var: "01", bindee: Ite { predicate: Var 00, truthy: Flip 0.3333333333333333, falsey: Flip 0.3333333333333333 }, body: LetIn { var: "11", bindee: Flip 0.0, body: Anf(Var x) } } }
-    println!("{:?}", grid);
-    match &grid {
-        ELetIn(_, var, _, _) => assert_eq!(var, &"00".to_string()),
-        _ => assert!(false, "expected a let-in binding!"),
+        //  LetIn { var: "10", bindee: Ite { predicate: Var 00, truthy: Flip 0.16666666666666666, falsey: Flip 0.16666666666666666 }, body: LetIn { var: "01", bindee: Ite { predicate: Var 00, truthy: Flip 0.3333333333333333, falsey: Flip 0.3333333333333333 }, body: LetIn { var: "11", bindee: Flip 0.0, body: Anf(Var x) } } }
+        println!("{:?}", grid);
+        match &grid {
+            ELetIn(_, var, _, _) => assert_eq!(var, &"00".to_string()),
+            _ => assert!(false, "expected a let-in binding!"),
+        }
+        match &grid.query() {
+            EAnf(_, a) => assert_eq!(*a, Box::new(b!(@anf "11"))),
+            _ => assert!(false, "expected an anf statement!"),
+        }
     }
-    match &grid.query() {
-        EAnf(_, a) => assert_eq!(*a, Box::new(b!(@anf "11"))),
-        _ => assert!(false, "expected an anf statement!"),
+
+    #[test]
+    // #[traced_test]
+    fn test_grid2x2() {
+        let mk = |ret: ExprTyped| {
+            Program::Body(lets![
+                "00" ; B!() ;= flip!(1/2);
+                "01" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+                "10" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
+                "11" ; B!() ;=
+                    ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+                    ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+                    ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+                                                              flip!(1/11) ))))));
+                ...? ret ; B!()
+            ])
+        };
+        crate::tests::check_exact1("grid2x2/3/00", 1.0 / 2.0, &mk(b!("00")));
+        crate::tests::check_exact1("grid2x2/3/01", 0.291666667, &mk(b!("01")));
+        crate::tests::check_exact1("grid2x2/3/10", 0.183333333, &mk(b!("10")));
+        crate::tests::check_exact1("grid2x2/3/11", 0.102927589, &mk(b!("11")));
+
+        // let mut probmap : HashMap<(Ix, Parents<bool>), Probability> = HashMap::new();
+        // probmap.push((Ix::new(0,0), Parents::Zero), Probability::new(0.5));
+        // probmap.push((Ix::new(0,1), Parents::One(Ix::new(0,0), true)), Probability::new(1.0/3.0));
+        // probmap.push((Ix::new(0,1), Parents::One(Ix::new(0,0), false)), Probability::new(1.0/4.0));
+        // probmap.push((Ix::new(1,0), Parents::One(Ix::new(0,0), false)), Probability::new(1.0/4.0));
+
+        //         "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+        //         "11" ; B!() ;=
+        //             ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+        //             ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+        //             ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+        //                                                       flip!(1/11) ))))));
+
+        // let spec = GridSpec {
+        //     size: 2,
+        //     sampled: false,
+        //     query: b!("x"),
+        //     probability: &|_, _| Probability::new(1.0),
+        // };
+
+        // let schema = make::schema(spec);
+        // let grid = make::grid(schema);
     }
+
+    // #[test]
+    // // #[traced_test]
+    // fn grid2x2_sampled() {
+    //     let mk = |ret: ExprTyped| {
+    //         Program::Body(lets![
+    //             "00" ; B!() ;= flip!(1/2);
+    //             "01_10" ; b!(B, B) ;= sample!(
+    //                 lets![
+    //                     "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+    //                     "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+    //                     ...? b!("01", "10") ; b!(B, B)
+    //                 ]);
+    //             "01" ; B!() ;= fst!("01_10");
+    //             "10" ; B!() ;= snd!("01_10");
+    // "11" ; B!() ;=
+    //     ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+    //     ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+    //     ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+    //                                               flip!(1/11) ))))));
+    //             ...? ret ; B!()
+    //         ])
+    //     };
+    //     // check_approx1("grid2x2/approx_diag/00", 1.0 / 2.0, &mk(b!("00")), 10000);
+    //     // check_approx1("grid2x2/approx_diag/01", 0.291666667, &mk(b!("01")), 10000);
+    //     // check_approx1("grid2x2/approx_diag/10", 0.183333333, &mk(b!("10")), 10000);
+    //     // check_approx1("grid2x2/approx_diag/11", 0.102927589, &mk(b!("11")), 10000);
+
+    //     check_approx(
+    //         "grid2x2/approx_diag/00,01,10,11",
+    //         vec![1.0 / 2.0, 0.291666667, 0.183333333, 0.102927589],
+    //         &mk(b!("00", "01", "10", "11")),
+    //         20000,
+    //     );
+    // }
+
+    // /// a directed 3x3 grid test where we place samples according to various policies
+    // ///   (0,0) -> (0,1) -> (0,2)
+    // ///     v        v        v
+    // ///   (1,0) -> (1,1) -> (1,2)
+    // ///     v        v        v
+    // ///   (2,0) -> (2,1) -> (2,2)
+    // #[test]
+    // // #[traced_test]
+    // fn grid3x3_sampled_diag() {
+    //     let mk = |ret: ExprTyped| {
+    //         Program::Body(lets![
+    //             "00" ; B!() ;= flip!(1/2);
+    //             "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+    //             "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+
+    //             "20_11_02" ; b!(B, B) ;= sample!(
+    //                 lets![
+    //                   "20" ; B!() ;= ite!( ( not!("10") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+    //                   "11" ; B!() ;=
+    //                       ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+    //                       ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+    //                       ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+    //                                                                 flip!(1/11) ))))));
+    //                   "02" ; B!() ;= ite!( ( b!(@anf "01")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+    //                           ...? b!("20", "11", "02") ; b!(B, B, B)
+    //                 ]);
+    //             "20" ; B!() ;= fst!("20_11_02");
+    //             "11" ; B!() ;= snd!("20_11_02");
+    //             "02" ; B!() ;= thd!("20_11_02");
+
+    //             "21" ; B!() ;=
+    //                 ite!(( b!((  b!(@anf "20")) && (  b!(@anf "11"))) ) ? ( flip!(2/7) ) : (
+    //                 ite!(( b!((  b!(@anf "20")) && (not!("11"))) ) ? ( flip!(2/8) ) : (
+    //                 ite!(( b!((  not!("20")) && (  b!(@anf "11"))) ) ? ( flip!(2/9) ) : (
+    //                                                           flip!(2/11) ))))));
+
+    //             "12" ; B!() ;=
+    //                 ite!(( b!((  b!(@anf "11")) && (  b!(@anf "02"))) ) ? ( flip!(6/7) ) : (
+    //                 ite!(( b!((  b!(@anf "11")) && (not!("02"))) ) ? ( flip!(6/8) ) : (
+    //                 ite!(( b!((  not!("11")) && (  b!(@anf "02"))) ) ? ( flip!(6/9) ) : (
+    //                                                           flip!(6/11) ))))));
+
+    //             "22" ; B!() ;=
+    //                 ite!(( b!((  b!(@anf "21")) && (  b!(@anf "12"))) ) ? ( flip!(3/7) ) : (
+    //                 ite!(( b!((  b!(@anf "21")) && (not!("12"))) ) ? ( flip!(3/8) ) : (
+    //                 ite!(( b!((  not!("21")) && (  b!(@anf "12"))) ) ? ( flip!(8/9) ) : (
+    //                                                           flip!(9/11) ))))));
+    //             ...? ret ; B!()
+    //         ])
+    //     };
+    //     // check_approx1("grid3x3/approx/00", 0.500000000, &mk(b!("00")), 10000);
+    //     // check_approx1("grid3x3/approx/01", 0.291666667, &mk(b!("01")), 10000);
+    //     // check_approx1("grid3x3/approx/10", 0.183333333, &mk(b!("10")), 10000);
+    //     // check_approx1("grid3x3/approx/02", 0.274305556, &mk(b!("02")), 10000);
+    //     // check_approx1("grid3x3/approx/20", 0.193888889, &mk(b!("20")), 10000);
+    //     // check_approx1("grid3x3/approx/11", 0.102927589, &mk(b!("11")), 10000);
+    //     // check_approx1("grid3x3/approx/12", 0.599355085, &mk(b!("12")), 10000);
+    //     // check_approx1("grid3x3/approx/21", 0.199103758, &mk(b!("21")), 10000);
+    //     // check_approx1("grid3x3/approx/22", 0.770263904, &mk(b!("22")), 10000);
+    //     check_approx(
+    //         "grid3x3/approx/[00,01,10,02,20,11,12,21,22]",
+    //         vec![
+    //             0.500000000,
+    //             0.291666667,
+    //             0.183333333,
+    //             0.274305556,
+    //             0.193888889,
+    //             0.102927589,
+    //             0.599355085,
+    //             0.199103758,
+    //             0.770263904,
+    //         ],
+    //         &mk(b!("00", "01", "10", "02", "20", "11", "12", "21", "22")),
+    //         20000,
+    //     );
+    // }
+
+    // /// a directed 3x3 grid test where we place samples according to various policies
+    // ///   (0,0) -> (0,1) -> (0,2)
+    // ///     v        v        v
+    // ///   (1,0) -> (1,1) -> (1,2)
+    // ///     v        v        v
+    // ///   (2,0) -> (2,1) -> (2,2)
+    // #[test]
+    // fn grid3x3() {
+    //     let mk = |ret: ExprTyped| {
+    //         Program::Body(lets![
+    //             "00" ; B!() ;= flip!(1/2);
+    //             "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+    //             "02" ; B!() ;= ite!( ( b!(@anf "01")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+    //             "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+    //             "20" ; B!() ;= ite!( ( not!("10") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+
+    //             "11" ; B!() ;=
+    //                 ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+    //                 ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+    //                 ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+    //                                                           flip!(1/11) ))))));
+
+    //             "21" ; B!() ;=
+    //                 ite!(( b!((  b!(@anf "20")) && (  b!(@anf "11"))) ) ? ( flip!(2/7) ) : (
+    //                 ite!(( b!((  b!(@anf "20")) && (not!("11"))) ) ? ( flip!(2/8) ) : (
+    //                 ite!(( b!((  not!("20")) && (  b!(@anf "11"))) ) ? ( flip!(2/9) ) : (
+    //                                                           flip!(2/11) ))))));
+
+    //             "12" ; B!() ;=
+    //                 ite!(( b!((  b!(@anf "11")) && (  b!(@anf "02"))) ) ? ( flip!(6/7) ) : (
+    //                 ite!(( b!((  b!(@anf "11")) && (not!("02"))) ) ? ( flip!(6/8) ) : (
+    //                 ite!(( b!((  not!("11")) && (  b!(@anf "02"))) ) ? ( flip!(6/9) ) : (
+    //                                                           flip!(6/11) ))))));
+
+    //             "22" ; B!() ;=
+    //                 ite!(( b!((  b!(@anf "21")) && (  b!(@anf "12"))) ) ? ( flip!(3/7) ) : (
+    //                 ite!(( b!((  b!(@anf "21")) && (not!("12"))) ) ? ( flip!(3/8) ) : (
+    //                 ite!(( b!((  not!("21")) && (  b!(@anf "12"))) ) ? ( flip!(8/9) ) : (
+    //                                                           flip!(9/11) ))))));
+    //             ...? ret ; B!()
+    //         ])
+    //     };
+    //     check_exact1("grid3x3/exact/00", 0.500000000, &mk(b!("00")));
+    //     check_exact1("grid3x3/exact/01", 0.291666667, &mk(b!("01")));
+    //     check_exact1("grid3x3/exact/10", 0.183333333, &mk(b!("10")));
+    //     check_exact1("grid3x3/exact/02", 0.274305556, &mk(b!("02")));
+    //     check_exact1("grid3x3/exact/20", 0.193888889, &mk(b!("20")));
+    //     check_exact1("grid3x3/exact/11", 0.102927589, &mk(b!("11")));
+    //     check_exact1("grid3x3/exact/12", 0.599355085, &mk(b!("12")));
+    //     check_exact1("grid3x3/exact/21", 0.199103758, &mk(b!("21")));
+    //     check_exact1("grid3x3/exact/22", 0.770263904, &mk(b!("22")));
+    // }
 }
-
-#[test]
-// #[traced_test]
-fn test_grid2x2() {
-    let mk = |ret: ExprTyped| {
-        Program::Body(lets![
-            "00" ; B!() ;= flip!(1/2);
-            "01" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-            "10" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
-            "11" ; B!() ;=
-                ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
-                ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
-                ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
-                                                          flip!(1/11) ))))));
-            ...? ret ; B!()
-        ])
-    };
-    crate::tests::check_exact1("grid2x2/3/00", 1.0 / 2.0, &mk(b!("00")));
-    crate::tests::check_exact1("grid2x2/3/01", 0.291666667, &mk(b!("01")));
-    crate::tests::check_exact1("grid2x2/3/10", 0.183333333, &mk(b!("10")));
-    crate::tests::check_exact1("grid2x2/3/11", 0.102927589, &mk(b!("11")));
-
-    // let mut probmap : HashMap<(Ix, Parents<bool>), Probability> = HashMap::new();
-    // probmap.push((Ix::new(0,0), Parents::Zero), Probability::new(0.5));
-    // probmap.push((Ix::new(0,1), Parents::One(Ix::new(0,0), true)), Probability::new(1.0/3.0));
-    // probmap.push((Ix::new(0,1), Parents::One(Ix::new(0,0), false)), Probability::new(1.0/4.0));
-    // probmap.push((Ix::new(1,0), Parents::One(Ix::new(0,0), false)), Probability::new(1.0/4.0));
-
-    //         "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-    //         "11" ; B!() ;=
-    //             ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
-    //             ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
-    //             ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
-    //                                                       flip!(1/11) ))))));
-
-    // let spec = GridSpec {
-    //     size: 2,
-    //     sampled: false,
-    //     query: b!("x"),
-    //     probability: &|_, _| Probability::new(1.0),
-    // };
-
-    // let schema = make::schema(spec);
-    // let grid = make::grid(schema);
-}
-
-// #[test]
-// // #[traced_test]
-// fn grid2x2_sampled() {
-//     let mk = |ret: ExprTyped| {
-//         Program::Body(lets![
-//             "00" ; B!() ;= flip!(1/2);
-//             "01_10" ; b!(B, B) ;= sample!(
-//                 lets![
-//                     "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-//                     "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-//                     ...? b!("01", "10") ; b!(B, B)
-//                 ]);
-//             "01" ; B!() ;= fst!("01_10");
-//             "10" ; B!() ;= snd!("01_10");
-// "11" ; B!() ;=
-//     ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
-//     ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
-//     ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
-//                                               flip!(1/11) ))))));
-//             ...? ret ; B!()
-//         ])
-//     };
-//     // check_approx1("grid2x2/approx_diag/00", 1.0 / 2.0, &mk(b!("00")), 10000);
-//     // check_approx1("grid2x2/approx_diag/01", 0.291666667, &mk(b!("01")), 10000);
-//     // check_approx1("grid2x2/approx_diag/10", 0.183333333, &mk(b!("10")), 10000);
-//     // check_approx1("grid2x2/approx_diag/11", 0.102927589, &mk(b!("11")), 10000);
-
-//     check_approx(
-//         "grid2x2/approx_diag/00,01,10,11",
-//         vec![1.0 / 2.0, 0.291666667, 0.183333333, 0.102927589],
-//         &mk(b!("00", "01", "10", "11")),
-//         20000,
-//     );
-// }
-
-// /// a directed 3x3 grid test where we place samples according to various policies
-// ///   (0,0) -> (0,1) -> (0,2)
-// ///     v        v        v
-// ///   (1,0) -> (1,1) -> (1,2)
-// ///     v        v        v
-// ///   (2,0) -> (2,1) -> (2,2)
-// #[test]
-// // #[traced_test]
-// fn grid3x3_sampled_diag() {
-//     let mk = |ret: ExprTyped| {
-//         Program::Body(lets![
-//             "00" ; B!() ;= flip!(1/2);
-//             "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-//             "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-
-//             "20_11_02" ; b!(B, B) ;= sample!(
-//                 lets![
-//                   "20" ; B!() ;= ite!( ( not!("10") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-//                   "11" ; B!() ;=
-//                       ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
-//                       ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
-//                       ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
-//                                                                 flip!(1/11) ))))));
-//                   "02" ; B!() ;= ite!( ( b!(@anf "01")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-//                           ...? b!("20", "11", "02") ; b!(B, B, B)
-//                 ]);
-//             "20" ; B!() ;= fst!("20_11_02");
-//             "11" ; B!() ;= snd!("20_11_02");
-//             "02" ; B!() ;= thd!("20_11_02");
-
-//             "21" ; B!() ;=
-//                 ite!(( b!((  b!(@anf "20")) && (  b!(@anf "11"))) ) ? ( flip!(2/7) ) : (
-//                 ite!(( b!((  b!(@anf "20")) && (not!("11"))) ) ? ( flip!(2/8) ) : (
-//                 ite!(( b!((  not!("20")) && (  b!(@anf "11"))) ) ? ( flip!(2/9) ) : (
-//                                                           flip!(2/11) ))))));
-
-//             "12" ; B!() ;=
-//                 ite!(( b!((  b!(@anf "11")) && (  b!(@anf "02"))) ) ? ( flip!(6/7) ) : (
-//                 ite!(( b!((  b!(@anf "11")) && (not!("02"))) ) ? ( flip!(6/8) ) : (
-//                 ite!(( b!((  not!("11")) && (  b!(@anf "02"))) ) ? ( flip!(6/9) ) : (
-//                                                           flip!(6/11) ))))));
-
-//             "22" ; B!() ;=
-//                 ite!(( b!((  b!(@anf "21")) && (  b!(@anf "12"))) ) ? ( flip!(3/7) ) : (
-//                 ite!(( b!((  b!(@anf "21")) && (not!("12"))) ) ? ( flip!(3/8) ) : (
-//                 ite!(( b!((  not!("21")) && (  b!(@anf "12"))) ) ? ( flip!(8/9) ) : (
-//                                                           flip!(9/11) ))))));
-//             ...? ret ; B!()
-//         ])
-//     };
-//     // check_approx1("grid3x3/approx/00", 0.500000000, &mk(b!("00")), 10000);
-//     // check_approx1("grid3x3/approx/01", 0.291666667, &mk(b!("01")), 10000);
-//     // check_approx1("grid3x3/approx/10", 0.183333333, &mk(b!("10")), 10000);
-//     // check_approx1("grid3x3/approx/02", 0.274305556, &mk(b!("02")), 10000);
-//     // check_approx1("grid3x3/approx/20", 0.193888889, &mk(b!("20")), 10000);
-//     // check_approx1("grid3x3/approx/11", 0.102927589, &mk(b!("11")), 10000);
-//     // check_approx1("grid3x3/approx/12", 0.599355085, &mk(b!("12")), 10000);
-//     // check_approx1("grid3x3/approx/21", 0.199103758, &mk(b!("21")), 10000);
-//     // check_approx1("grid3x3/approx/22", 0.770263904, &mk(b!("22")), 10000);
-//     check_approx(
-//         "grid3x3/approx/[00,01,10,02,20,11,12,21,22]",
-//         vec![
-//             0.500000000,
-//             0.291666667,
-//             0.183333333,
-//             0.274305556,
-//             0.193888889,
-//             0.102927589,
-//             0.599355085,
-//             0.199103758,
-//             0.770263904,
-//         ],
-//         &mk(b!("00", "01", "10", "02", "20", "11", "12", "21", "22")),
-//         20000,
-//     );
-// }
-
-// /// a directed 3x3 grid test where we place samples according to various policies
-// ///   (0,0) -> (0,1) -> (0,2)
-// ///     v        v        v
-// ///   (1,0) -> (1,1) -> (1,2)
-// ///     v        v        v
-// ///   (2,0) -> (2,1) -> (2,2)
-// #[test]
-// fn grid3x3() {
-//     let mk = |ret: ExprTyped| {
-//         Program::Body(lets![
-//             "00" ; B!() ;= flip!(1/2);
-//             "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-//             "02" ; B!() ;= ite!( ( b!(@anf "01")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-//             "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-//             "20" ; B!() ;= ite!( ( not!("10") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-
-//             "11" ; B!() ;=
-//                 ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
-//                 ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
-//                 ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
-//                                                           flip!(1/11) ))))));
-
-//             "21" ; B!() ;=
-//                 ite!(( b!((  b!(@anf "20")) && (  b!(@anf "11"))) ) ? ( flip!(2/7) ) : (
-//                 ite!(( b!((  b!(@anf "20")) && (not!("11"))) ) ? ( flip!(2/8) ) : (
-//                 ite!(( b!((  not!("20")) && (  b!(@anf "11"))) ) ? ( flip!(2/9) ) : (
-//                                                           flip!(2/11) ))))));
-
-//             "12" ; B!() ;=
-//                 ite!(( b!((  b!(@anf "11")) && (  b!(@anf "02"))) ) ? ( flip!(6/7) ) : (
-//                 ite!(( b!((  b!(@anf "11")) && (not!("02"))) ) ? ( flip!(6/8) ) : (
-//                 ite!(( b!((  not!("11")) && (  b!(@anf "02"))) ) ? ( flip!(6/9) ) : (
-//                                                           flip!(6/11) ))))));
-
-//             "22" ; B!() ;=
-//                 ite!(( b!((  b!(@anf "21")) && (  b!(@anf "12"))) ) ? ( flip!(3/7) ) : (
-//                 ite!(( b!((  b!(@anf "21")) && (not!("12"))) ) ? ( flip!(3/8) ) : (
-//                 ite!(( b!((  not!("21")) && (  b!(@anf "12"))) ) ? ( flip!(8/9) ) : (
-//                                                           flip!(9/11) ))))));
-//             ...? ret ; B!()
-//         ])
-//     };
-//     check_exact1("grid3x3/exact/00", 0.500000000, &mk(b!("00")));
-//     check_exact1("grid3x3/exact/01", 0.291666667, &mk(b!("01")));
-//     check_exact1("grid3x3/exact/10", 0.183333333, &mk(b!("10")));
-//     check_exact1("grid3x3/exact/02", 0.274305556, &mk(b!("02")));
-//     check_exact1("grid3x3/exact/20", 0.193888889, &mk(b!("20")));
-//     check_exact1("grid3x3/exact/11", 0.102927589, &mk(b!("11")));
-//     check_exact1("grid3x3/exact/12", 0.599355085, &mk(b!("12")));
-//     check_exact1("grid3x3/exact/21", 0.199103758, &mk(b!("21")));
-//     check_exact1("grid3x3/exact/22", 0.770263904, &mk(b!("22")));
-// }
