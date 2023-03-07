@@ -67,16 +67,15 @@ pub struct GridSchema {
     triu: HashSet<Ix>,
     diagonal: HashSet<Ix>,
 
-    flips: HashMap<Ix, Probability>,
+    flips: HashMap<(Ix, Parents<bool>), Probability>,
     parents: HashMap<Ix, Parents<()>>,
     size: usize,
     sampled: bool,
     query: ExprTyped,
-    probability: &'a dyn Fn(Ix, Parents<bool>) -> Probability,
 }
-impl<'a> GridSchema<'a> {
-    pub fn get_flip(&self, ix: Ix) -> f64 {
-        self.flips.get(&ix).unwrap().as_f64()
+impl GridSchema {
+    pub fn get_flip(&self, ix: Ix, p: Parents<bool>) -> f64 {
+        self.flips.get(&(ix, p)).unwrap().as_f64()
     }
     pub fn get_parents(&self, ix: Ix) -> Parents<()> {
         *self.parents.get(&ix).unwrap()
@@ -102,6 +101,10 @@ mod make {
     use super::*;
     const DIAG : &str = "diag";
     pub fn schema(spec: GridSpec) -> GridSchema {
+        use Parents::*;
+        if spec.size < 2 {
+            panic!("grid size too small and I don't want to make this typesafe yet");
+        }
         let mut flips = HashMap::new();
         let mut parents = HashMap::new();
         let mut diagonal = HashSet::new();
@@ -112,9 +115,26 @@ mod make {
 
         for tuple in iproduct!((0..spec.size), (0..spec.size)) {
             let i = Ix::new(tuple.0, tuple.1);
-            flips.insert(i, (spec.probability)(i, Parents::Zero));
             let ps = get_parents(i, spec.size);
             parents.insert(i, ps);
+            match ps {
+                Zero => {flips.insert((i, Zero), (spec.probability)(i, Zero)); },
+                One(p, _) => {
+                    flips.insert((i, One(p, true)), (spec.probability)(i, One(p, true)));
+                    flips.insert((i, One(p, false)), (spec.probability)(i, One(p, false)));
+                },
+                Two((p1, _), (p2, _)) => {
+                    for (b1, b2) in [(true,  true), (true, false), (false, true), (false, false)] {
+                        let par = Two((p1, b1), (p2, b2));
+                        let par_inv = Two((p1, b1), (p2, b2));
+                        let pr = (spec.probability)(i, par);
+                        let pr_inv = (spec.probability)(i, par_inv);
+                        assert_eq!(pr, pr_inv, "error! probability function needs to account for symmetry in {:?} with parents: {:?}, {:?}", i, p1, p2);
+                        flips.insert((i, par), pr);
+                        flips.insert((i, par_inv), pr);
+                    }
+                },
+            }
             if (i.0 + i.1) < (spec.size - 1) {
                 triu.insert(i);
             } else if (i.0 + i.1) > (spec.size - 1) {
@@ -133,12 +153,11 @@ mod make {
             sampled,
             query,
             size: spec.size,
-            probability: spec.probability,
         }
     }
 
     pub fn no_parents(schema: &GridSchema, ix: Ix, rest: ExprTyped) -> ExprTyped {
-        let pr = (schema.probability)(ix, Parents::Zero).as_f64();
+        let pr = schema.get_flip(ix, Parents::Zero);
         ELetIn(
             LetInTypes {
                 bindee: b!(),
@@ -151,9 +170,8 @@ mod make {
     }
 
     pub fn one_parents(schema: &GridSchema, ix: Ix, parent: Ix, rest: ExprTyped) -> ExprTyped {
-        let prob = schema.probability;
-        let p_t = prob(ix, Parents::One(parent, true)).as_f64();
-        let p_f = prob(ix, Parents::One(parent, false)).as_f64();
+        let p_t = schema.get_flip(ix, Parents::One(parent, true));
+        let p_f = schema.get_flip(ix, Parents::One(parent, false));
         let p = parent.as_string();
 
         ELetIn(
@@ -165,13 +183,12 @@ mod make {
     }
 
     pub fn two_parents(schema: &GridSchema, ix: Ix, parents: (Ix, Ix), rest: ExprTyped) -> ExprTyped {
-        let prob = schema.probability;
         let (pl, pr) = parents;
         let (pl, pr) = (pl.as_string(), pr.as_string());
-        let p_t_t = prob(ix, Parents::Two((parents.0, true), (parents.1, true))).as_f64();
-        let p_f_t = prob(ix, Parents::Two((parents.0, false), (parents.1, true))).as_f64();
-        let p_t_f = prob(ix, Parents::Two((parents.0, true), (parents.1, false))).as_f64();
-        let p_f_f = prob(ix, Parents::Two((parents.0, false), (parents.1, false))).as_f64();
+        let p_t_t = schema.get_flip(ix, Parents::Two((parents.0, true), (parents.1, true)));
+        let p_f_t = schema.get_flip(ix, Parents::Two((parents.0, false), (parents.1, true)));
+        let p_t_f = schema.get_flip(ix, Parents::Two((parents.0, true), (parents.1, false)));
+        let p_f_f = schema.get_flip(ix, Parents::Two((parents.0, false), (parents.1, false)));
         ELetIn(
             LetInTypes {bindee: b!(), body: b!(),},
             ix.as_string(),
@@ -246,7 +263,7 @@ mod make {
                     Zero => {
                         println!("{:?}", ix);
                         println!("{:?}", q);
-                        todo!();
+                        break; // nothing to do, and root may not be last in queue
                     },
                     One(p, _) => make::one_parents(&schema, ix, *p, prg),
                     Two((l, _), (r, _)) => make::two_parents(&schema, ix, (*l, *r), prg),
@@ -283,41 +300,224 @@ mod make {
     }
 }
 
+macro_rules! pkey {
+    (=> $i:literal $j:literal) => {{
+        (Ix::new($i, $j), Parents::Zero)
+    }};
+    ($pi:literal $pj:literal $pbool:literal => $i:literal $j:literal) => {{
+        (Ix::new($i, $j), Parents::One(Ix::new($pi, $pj), $pbool))
+    }};
+    (($p1i:literal $p1j:literal $p1bool:literal, $p2i:literal $p2j:literal $p2bool:literal)  => $i:literal $j:literal) => {{
+        (
+            Ix::new($i, $j),
+            Parents::Two(
+                (Ix::new($p1i, $p1j), $p1bool),
+                (Ix::new($p2i, $p2j), $p2bool),
+            ),
+        )
+    }};
+}
+
+macro_rules! pr {
+    ($p:literal) => {{
+        Probability::new($p)
+    }};
+    ($n:literal / $d:literal) => {{
+        Probability::new(($n as f64) / ($d as f64))
+    }};
+}
+
+macro_rules! pmap {
+    ( $(($key:expr , $val:expr)),*) => {{
+        let mut probmap: HashMap<(Ix, Parents<bool>), Probability> = HashMap::new();
+        $(
+            probmap.insert($key, $val);
+        )*
+        probmap
+    }};
+    ( $($p:literal @ $key:expr),* ) => {{
+        let mut probmap: HashMap<(Ix, Parents<bool>), Probability> = HashMap::new();
+        $(
+            probmap.insert($key, pr!($val));
+        )*
+        probmap
+    }};
+    ( $($n:literal / $d:literal @ $key:expr),* ) => {{
+        let mut probmap: HashMap<(Ix, Parents<bool>), Probability> = HashMap::new();
+        $(
+            probmap.insert($key, pr!($n / $d));
+            let (i, p) = $key;
+            match p {
+                Parents::Two((li, l), (ri, r)) => {
+                    probmap.insert((i, Parents::Two((ri, r), (li, l))), pr!($n / $d));
+                }
+                _ => {},
+            }
+        )*
+        probmap
+    }};
+}
 #[test]
-#[ignore]
 #[traced_test]
-fn test_grid_schema() {
-    let spec = GridSpec {
+fn test_current_grid_2x2_schema() {
+    use Parents::*;
+    let query = b!("11");
+    let ix = |l, r| Ix::new(l, r);
+    let probmap = pmap![
+        1 / 2 @ pkey!(=> 0 0),
+
+        1 / 3 @ pkey!(0 0 true  => 0 1),
+        1 / 4 @ pkey!(0 0 false => 0 1),
+
+        1 / 6 @ pkey!(0 0 true  => 1 0),
+        1 / 5 @ pkey!(0 0 false => 1 0),
+
+        1 /  7 @ pkey!((1 0 true, 0 1 true)   => 1 1),
+        1 /  8 @ pkey!((1 0 true, 0 1 false)  => 1 1),
+        1 /  9 @ pkey!((1 0 false, 0 1 true)  => 1 1),
+        1 / 11 @ pkey!((1 0 false, 0 1 false) => 1 1)
+    ];
+    let cprob = pr!(0.0);
+    let prob = |ix, p| probmap.get(&(ix, p)).unwrap_or_else(|| &cprob).clone();
+    let schema = make::schema(GridSpec {
+        query,
         size: 2,
-        sampled: true,
-        query: b!("x"),
-        probability: &|_, _| Probability::new(1.0),
+        sampled: false,
+        probability: &prob,
+    });
+
+    println!("{:?}", schema);
+    assert_eq!(schema.size, 2, "size");
+    assert_eq!(schema.tril, HashSet::from([ix(1, 1)]), "tril");
+    assert_eq!(schema.triu, HashSet::from([ix(0, 0)]), "triu");
+    assert_eq!(schema.diagonal, HashSet::from([ix(0, 1), ix(1, 0)]), "diag");
+
+    let parents = HashMap::from([
+        (ix(0, 0), Zero),
+        (ix(1, 0), One(ix(0, 0), ())),
+        (ix(0, 1), One(ix(0, 0), ())),
+        (ix(1, 1), Two((ix(1, 0), ()), (ix(0, 1), ()))),
+    ]);
+    assert_eq!(schema.parents.len(), parents.len());
+    for (k, v) in parents.iter() {
+        assert!(
+            schema.parents.contains_key(k),
+            "{k:?} missing from {:?}",
+            schema.parents.keys()
+        );
+        assert_eq!(schema.parents.get(k).unwrap(), v);
+    }
+    assert_eq!(schema.flips.len(), probmap.len());
+    for (k, v) in probmap.iter() {
+        assert!(
+            schema.flips.contains_key(k),
+            "{k:?} missing from {:?}",
+            schema.flips.keys()
+        );
+        assert_eq!(schema.flips.get(k).unwrap(), v);
+    }
+}
+#[test]
+#[traced_test]
+fn test_grid_2x2_schema_compiles() {
+    use crate::grammar::Anf::*;
+    use crate::grammar::Expr::*;
+    let probmap = pmap![
+        1 / 2 @ pkey!(=> 0 0),
+
+        1 / 3 @ pkey!(0 0 true  => 0 1),
+        1 / 4 @ pkey!(0 0 false => 0 1),
+
+        1 / 6 @ pkey!(0 0 true  => 1 0),
+        1 / 5 @ pkey!(0 0 false => 1 0),
+
+        1 /  7 @ pkey!((1 0 true, 0 1 true)   => 1 1),
+        1 /  8 @ pkey!((1 0 true, 0 1 false)  => 1 1),
+        1 /  9 @ pkey!((1 0 false, 0 1 true)  => 1 1),
+        1 / 11 @ pkey!((1 0 false, 0 1 false) => 1 1)
+    ];
+    let cpr = pr!(0.0);
+    let query = b!("11");
+
+    let spec = GridSpec {
+        query,
+        size: 2,
+        sampled: false,
+        probability: &|ix, p| *probmap.get(&(ix, p)).unwrap_or_else(|| &cpr),
     };
     let schema = make::schema(spec);
     let grid = make::grid(schema);
+
+    let mk = |ret: ExprTyped| {
+        Program::Body(lets![
+            "00" ; B!() ;= flip!(1/2);
+            "01" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+            "10" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
+            "11" ; B!() ;=
+                ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+                ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+                ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+                                                          flip!(1/11) ))))));
+           ...? ret ; B!()
+        ])
+    };
+
+    //  LetIn { var: "10", bindee: Ite { predicate: Var 00, truthy: Flip 0.16666666666666666, falsey: Flip 0.16666666666666666 }, body: LetIn { var: "01", bindee: Ite { predicate: Var 00, truthy: Flip 0.3333333333333333, falsey: Flip 0.3333333333333333 }, body: LetIn { var: "11", bindee: Flip 0.0, body: Anf(Var x) } } }
+    println!("{:?}", grid);
+    match &grid {
+        ELetIn(_, var, _, _) => assert_eq!(var, &"00".to_string()),
+        _ => assert!(false, "expected a let-in binding!"),
+    }
+    match &grid.query() {
+        EAnf(_, a) => assert_eq!(*a, Box::new(b!(@anf "11"))),
+        _ => assert!(false, "expected an anf statement!"),
+    }
 }
 
-// #[test]
-// // #[traced_test]
-// fn grid2x2() {
-//     let mk = |ret: ExprTyped| {
-//         Program::Body(lets![
-//             "00" ; B!() ;= flip!(1/2);
-//             "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-//             "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-//             "11" ; B!() ;=
-//                 ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
-//                 ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
-//                 ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
-//                                                           flip!(1/11) ))))));
-//             ...? ret ; B!()
-//         ])
-//     };
-//     check_exact1("grid2x2/3/00", 1.0 / 2.0, &mk(b!("00")));
-//     check_exact1("grid2x2/3/01", 0.291666667, &mk(b!("01")));
-//     check_exact1("grid2x2/3/10", 0.183333333, &mk(b!("10")));
-//     check_exact1("grid2x2/3/11", 0.102927589, &mk(b!("11")));
-// }
+#[test]
+// #[traced_test]
+fn test_grid2x2() {
+    let mk = |ret: ExprTyped| {
+        Program::Body(lets![
+            "00" ; B!() ;= flip!(1/2);
+            "01" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+            "10" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
+            "11" ; B!() ;=
+                ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+                ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+                ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+                                                          flip!(1/11) ))))));
+            ...? ret ; B!()
+        ])
+    };
+    crate::tests::check_exact1("grid2x2/3/00", 1.0 / 2.0, &mk(b!("00")));
+    crate::tests::check_exact1("grid2x2/3/01", 0.291666667, &mk(b!("01")));
+    crate::tests::check_exact1("grid2x2/3/10", 0.183333333, &mk(b!("10")));
+    crate::tests::check_exact1("grid2x2/3/11", 0.102927589, &mk(b!("11")));
+
+    // let mut probmap : HashMap<(Ix, Parents<bool>), Probability> = HashMap::new();
+    // probmap.push((Ix::new(0,0), Parents::Zero), Probability::new(0.5));
+    // probmap.push((Ix::new(0,1), Parents::One(Ix::new(0,0), true)), Probability::new(1.0/3.0));
+    // probmap.push((Ix::new(0,1), Parents::One(Ix::new(0,0), false)), Probability::new(1.0/4.0));
+    // probmap.push((Ix::new(1,0), Parents::One(Ix::new(0,0), false)), Probability::new(1.0/4.0));
+
+    //         "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+    //         "11" ; B!() ;=
+    //             ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+    //             ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+    //             ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+    //                                                       flip!(1/11) ))))));
+
+    // let spec = GridSpec {
+    //     size: 2,
+    //     sampled: false,
+    //     query: b!("x"),
+    //     probability: &|_, _| Probability::new(1.0),
+    // };
+
+    // let schema = make::schema(spec);
+    // let grid = make::grid(schema);
+}
 
 // #[test]
 // // #[traced_test]

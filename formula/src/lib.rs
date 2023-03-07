@@ -188,7 +188,6 @@ pub fn eval_with(
 #[cfg(test)]
 mod parser_tests {
     use super::*;
-    use crate::*;
     use tracing_test::traced_test;
     use Formula::*;
 
