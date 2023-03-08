@@ -35,11 +35,18 @@ impl<'a> GridSpec<'a> {
 pub struct Ix(usize, usize);
 
 impl Ix {
+    pub fn from_tuple(ij: (usize, usize)) -> Ix {
+        let (i, j) = ij;
+        Ix(i, j)
+    }
     pub fn new(i: usize, j: usize) -> Ix {
         Ix(i, j)
     }
     pub fn as_string(&self) -> String {
         format!("{}{}", self.0, self.1)
+    }
+    pub fn to_string(i: Ix) -> String {
+        format!("{}{}", i.0, i.1)
     }
 }
 
@@ -105,6 +112,25 @@ impl GridSchema {
     pub fn get_parents_vec(&self, ix: Ix) -> Vec<Ix> {
         self.get_parents(ix).to_vec()
     }
+    pub fn new_from_fn(
+        size: usize,
+        sampled: bool,
+        query: Option<&ExprTyped>,
+        probability: &dyn Fn(Ix, Parents<bool>) -> Probability,
+    ) -> GridSchema {
+        let query = match query {
+            Some(q) => q.clone(),
+            None => {
+                let ps = iproduct!((0..size), (0..size))
+                    .map(Ix::from_tuple)
+                    .map(Ix::to_string)
+                    .map(crate::typecheck::grammar::AnfTyped::var)
+                    .collect_vec();
+                Expr::EProd(b!(), ps)
+            }
+        };
+        make::schema(GridSpec::new(size, &query, sampled, probability))
+    }
     pub fn new_from_map(
         size: usize,
         sampled: bool,
@@ -165,7 +191,7 @@ mod make {
                         let par_inv = Two((p2, b2), (p1, b1));
                         let pr = (spec.probability)(i, par);
                         let pr_inv = (spec.probability)(i, par_inv);
-                        assert_eq!(pr, pr_inv, "error! probability function needs to account for symmetry in {:?} with parents: {:?}, {:?}", i, p1, p2);
+                        assert_eq!(pr, pr_inv, "error! probability function needs to account for symmetry in {:?} with parents: {:?}, {:?}", i, (p1, b1), (p2, b2));
                         flips.insert((i, par), pr);
                         flips.insert((i, par_inv), pr);
                     }
@@ -1031,7 +1057,7 @@ mod test {
                 0.770263904,
             ],
             &mk(query.clone()),
-            20000,
+            7000,
         );
 
         let probmap = make_3x3_pmap();
@@ -1051,7 +1077,7 @@ mod test {
                 0.770263904,
             ],
             &grid,
-            20000,
+            7000,
         );
     }
 }

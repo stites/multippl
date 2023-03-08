@@ -63,6 +63,9 @@ pub mod grammar {
         pub fn is_type(&self, ty: &Ty) -> bool {
             self.as_type() == *ty
         }
+        pub fn var(s: String) -> AnfTyped {
+            Anf::AVar(Ty::Bool, s)
+        }
     }
 }
 
