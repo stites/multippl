@@ -3,30 +3,16 @@
 #![allow(mixed_script_confusables)] // for Gamma : )
 // temporary as I convert to using types
 #![allow(unused_variables)]
-// #![allow(clippy::clone_on_copy)]
-// #![allow(clippy::type_complexity)]
-// #![allow(clippy::redundant_clone)]
-// #![allow(clippy::useless_format)]
-// #![allow(clippy::needless_return)]
-// #![allow(clippy::upper_case_acronyms)]
-// #![allow(clippy::single_component_path_imports)]
-// #![allow(clippy::enum_variant_names)]
-// #![allow(clippy::match_like_matches_macro)]
-// #![allow(clippy::let_and_return)]
-// #![allow(clippy::len_zero)]
-// #![allow(clippy::assign_op_pattern)]
-// #![allow(clippy::unnecessary_cast)]
-// #![allow(clippy::unnecessary_lazy_evaluations)]
-// #![allow(clippy::too_many_arguments)]
-// #![allow(clippy::ptr_arg)]
-mod grammar;
-mod grammar_macros;
-mod grids;
+
+pub use rsdd::sample::probability::Probability;
+pub mod grammar;
+pub mod grammar_macros;
+pub mod grids;
+pub mod inference;
 
 mod annotate;
 // mod collect_weightmap;
 mod compile;
-mod inference;
 mod parser;
 mod render;
 #[cfg(test)]

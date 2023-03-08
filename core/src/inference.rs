@@ -95,7 +95,7 @@ pub fn get_vec<T: Copy>(v: Vec<T>, i: usize) -> Option<T> {
 pub fn get_or_else<T: Copy>(v: Vec<T>, i: usize, d: T) -> T {
     get_vec(v, i).unwrap_or(d)
 }
-pub fn exact_inf(p: &ProgramTyped) -> Vec<f64> {
+pub fn exact(p: &ProgramTyped) -> Vec<f64> {
     match crate::run(p) {
         Ok((mut mgr, c)) => wmc_prob(&mut mgr, &c),
         Err(e) => panic!(
@@ -150,15 +150,11 @@ fn debug_importance_weighting(
         debug!("");
     });
 }
-pub fn importance_weighting_inf(steps: usize, p: &ProgramTyped) -> Vec<f64> {
-    importance_weighting_inf_h(steps, p, &Default::default())
+pub fn importance_weighting(steps: usize, p: &ProgramTyped) -> Vec<f64> {
+    importance_weighting_h(steps, p, &Default::default())
 }
 #[allow(unused_mut)]
-pub fn importance_weighting_inf_h(
-    steps: usize,
-    p: &ProgramTyped,
-    opt: &crate::Options,
-) -> Vec<f64> {
+pub fn importance_weighting_h(steps: usize, p: &ProgramTyped, opt: &crate::Options) -> Vec<f64> {
     let mut e = Expectations::empty();
     let mut ws: Vec<f64> = vec![];
     let mut qss: Vec<Vec<Probability>> = vec![];
@@ -356,7 +352,7 @@ impl Sum for Expectations {
     }
 }
 
-// pub fn importance_weighting_inf_conc(
+// pub fn importance_weighting_conc(
 //     _envargs: &EnvArgs,
 //     steps: usize,
 //     p: &ProgramTyped,
@@ -424,7 +420,7 @@ impl Sum for Expectations {
 //         .collect_vec()
 // }
 
-// pub fn importance_weighting_inf_seeded(
+// pub fn importance_weighting_seeded(
 //     seeds: Vec<u64>,
 //     steps: usize,
 //     p: &ProgramTyped,

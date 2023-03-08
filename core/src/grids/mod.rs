@@ -182,7 +182,7 @@ fn get_parents(ix: Ix, size: usize) -> Parents<()> {
 }
 
 #[rustfmt::skip]
-mod make {
+pub mod make {
     use super::*;
     const DIAG : &str = "diag";
     pub fn schema(spec: GridSpec) -> GridSchema {

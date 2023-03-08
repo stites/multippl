@@ -1,16 +1,34 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion, SamplingMode};
+use yodel::grids::*;
+use yodel::inference::*;
+use yodel::*;
 
-fn fibonacci(n: u64) -> u64 {
-    match n {
-        0 => 1,
-        1 => 1,
-        n => fibonacci(n - 1) + fibonacci(n - 2),
+macro_rules! grid_benchmarks {
+    (sizes: $($size:expr, )*) => {
+        pub fn all_benchmarks(c: &mut Criterion) {
+            $(
+                let mk_probability = |_ix, _p| Probability::new(0.5);
+                let schema = GridSchema::new_from_fn($size, false, None, &mk_probability);
+                let grid = make::grid(schema);
+                let approx = importance_weighting;
+                let mut group = c.benchmark_group(format!("grid-{}x{}", $size, $size));
+                group.sampling_mode(SamplingMode::Flat);
+                group.sample_size(10);
+                group.measurement_time(std::time::Duration::new($size * $size * 10, 0));
+
+                group.bench_function("exact", |b| b.iter(|| exact(&grid)));
+                group.bench_function("approx/1", |b| b.iter(|| approx(1, &grid)));
+                // group.bench_function("approx/10", |b| b.iter(|| approx(10, &grid)));
+                // group.bench_function("approx/100", |b| b.iter(|| approx(100, &grid)));
+                group.finish();
+            )*
+        }
     }
 }
 
-fn criterion_benchmark(c: &mut Criterion) {
-    c.bench_function("fib 20", |b| b.iter(|| fibonacci(black_box(20))));
+grid_benchmarks! {
+  size: 2, 3, 4, 5, 10,
 }
 
-criterion_group!(benches, criterion_benchmark);
+criterion_group!(benches, all_benchmarks);
 criterion_main!(benches);

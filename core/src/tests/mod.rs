@@ -16,8 +16,8 @@ mod arbitrary;
 pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &ProgramTyped) {
     let precision = precision.unwrap_or_else(|| 0.01);
     let n = n.unwrap_or_else(|| 10000);
-    let exact = exact_inf(&p.strip_samples());
-    let approx = importance_weighting_inf(n, p);
+    let exact = inference::exact(&p.strip_samples());
+    let approx = importance_weighting(n, p);
     assert_eq!(
         exact.len(),
         approx.len(),
@@ -84,13 +84,13 @@ pub fn check_inference_h(
 pub fn check_exact(s: &str, f: Vec<f64>, p: &ProgramTyped) {
     let p = p.strip_samples();
     debug!("program: {:#?}", &p);
-    check_inference("exact", &exact_inf, 0.000001, s, f, &p);
+    check_inference("exact", &inference::exact, 0.000001, s, f, &p);
 }
 pub fn check_exact1(s: &str, f: f64, p: &ProgramTyped) {
     check_exact(s, vec![f], p)
 }
 pub fn check_approx(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize) {
-    check_inference("approx", &|p| importance_weighting_inf(n, p), 0.01, s, f, p);
+    check_inference("approx", &|p| importance_weighting(n, p), 0.01, s, f, p);
 }
 pub fn check_approx1(s: &str, f: f64, p: &ProgramTyped, n: usize) {
     check_approx(s, vec![f], p, n)
@@ -98,7 +98,7 @@ pub fn check_approx1(s: &str, f: f64, p: &ProgramTyped, n: usize) {
 pub fn debug_approx(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize) {
     check_inference(
         "debug",
-        &|p| importance_weighting_inf_h(n, p, &Options::debug()),
+        &|p| importance_weighting_h(n, p, &Options::debug()),
         0.01,
         s,
         f,
@@ -111,7 +111,7 @@ pub fn debug_approx1(s: &str, f: f64, p: &ProgramTyped, n: usize) {
 pub fn nfail_approx(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize) {
     check_inference_h(
         "debug",
-        &|p| importance_weighting_inf_h(n, p, &Options::debug()),
+        &|p| importance_weighting_h(n, p, &Options::debug()),
         0.01,
         s,
         f,
@@ -128,7 +128,7 @@ pub fn nfail_approx1(s: &str, f: f64, p: &ProgramTyped, n: usize) {
 //     let precision = 0.01;
 //     let fs = f;
 //     let i = "approx";
-//     let prs = importance_weighting_inf_conc(&env_args, n, p);
+//     let prs = importance_weighting_conc(&env_args, n, p);
 //     assert_eq!(
 //         prs.len(),
 //         fs.len(),
@@ -150,7 +150,7 @@ pub fn nfail_approx1(s: &str, f: f64, p: &ProgramTyped, n: usize) {
 // pub fn check_approx_seeded(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize, seeds: &Vec<u64>) {
 //     check_inference(
 //         "approx",
-//         &|env, p| importance_weighting_inf_seeded(seeds.clone(), n, p),
+//         &|env, p| importance_weighting_seeded(seeds.clone(), n, p),
 //         0.01,
 //         s,
 //         f,
