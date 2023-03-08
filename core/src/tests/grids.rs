@@ -81,7 +81,7 @@ impl<X: PartialEq> PartialEq for Parents<X> {
 pub struct GridSchema {
     tril: HashSet<Ix>,
     triu: HashSet<Ix>,
-    diagonal: HashSet<Ix>,
+    diag: HashSet<Ix>,
 
     flips: HashMap<(Ix, Parents<bool>), Probability>,
     parents: HashMap<Ix, Parents<()>>,
@@ -143,7 +143,7 @@ mod make {
         }
         let mut flips = HashMap::new();
         let mut parents = HashMap::new();
-        let mut diagonal = HashSet::new();
+        let mut diag = HashSet::new();
         let mut tril = HashSet::new();
         let mut triu = HashSet::new();
         let sampled = spec.sampled;
@@ -176,7 +176,7 @@ mod make {
             } else if (i.0 + i.1) > (spec.size - 1) {
                 tril.insert(i);
             } else {
-                diagonal.insert(i);
+                diag.insert(i);
             }
         }
 
@@ -185,7 +185,7 @@ mod make {
             parents,
             tril,
             triu,
-            diagonal,
+            diag,
             sampled,
             query,
             size: spec.size,
@@ -281,19 +281,24 @@ mod make {
             Box::new(tril),
         )
     }
-    pub fn fill_schema(schema: &GridSchema, seen: HashSet<Ix>, build: Vec<Ix>, prg: ExprTyped) -> (ExprTyped, HashSet<Ix>, Vec<Ix>) {
+    pub fn fill_schema(schema: &GridSchema, region: &HashSet<Ix>, seen: HashSet<Ix>, seed: Vec<Ix>, prg: ExprTyped) -> (ExprTyped, HashSet<Ix>, Vec<Ix>) {
         use Parents::*;
-        let mut q = VecDeque::from(build.clone());
+        let mut q = VecDeque::from(seed.clone());
         let mut seen = seen.clone();
         let mut next = vec![];
         let mut prg = prg.clone();
-        let buildset : HashSet<Ix> = build.iter().cloned().collect();
+        debug!("seen: {seen:?}");
+        debug!("seed: {seed:?}");
+        debug!("region: {region:?}");
 
         while let Some(ix) = q.pop_front() {
             if seen.contains(&ix) {
-                continue;
-            } else if !buildset.contains(&ix) {
+                debug!("{ix:?} seen");
+                // continue;
+            } else if !region.contains(&ix) {
+                debug!("{ix:?} belongs in next queue");
                 next.push(ix);
+                // continue;
             } else {
                 let parents = schema.get_parents(ix);
                 prg = match parents {
@@ -303,6 +308,8 @@ mod make {
                 };
                 seen.insert(ix);
                 let mut nxt_parents = parents.to_vec().into();
+                debug!("{ix:?} added");
+                debug!("queuing: {nxt_parents:?}");
                 q.append(&mut nxt_parents);
             }
         }
@@ -311,13 +318,16 @@ mod make {
     }
 
     pub fn tril(schema: &GridSchema) -> (ExprTyped, HashSet<Ix>, Vec<Ix>) {
-        let seen = HashSet::from([]);
-        let prg = schema.query.clone();
-        let build = vec![Ix::new(schema.size - 1, schema.size - 1)];
-        fill_schema(&schema, seen, build, prg)
+        let span = tracing::span!(tracing::Level::DEBUG, "tril");
+        let _enter = span.enter();
+
+        fill_schema(&schema, &schema.tril, HashSet::from([]), vec![Ix::new(schema.size-1, schema.size-1)], schema.query.clone())
     }
 
     pub fn diag(schema: &GridSchema, prg:ExprTyped, seen:HashSet<Ix>, build_diag:Vec<Ix>) -> (ExprTyped, HashSet<Ix>, Vec<Ix>) {
+        let span = tracing::span!(tracing::Level::DEBUG, "diag");
+        let _enter = span.enter();
+
         let mut prg = prg;
         let mut tril_prg : Option<ExprTyped> = None;
         if schema.sampled {
@@ -326,7 +336,7 @@ mod make {
             let ixs = make::diag_ixs(&schema);
             prg = make::product_of(ixs);
         }
-        let (mut prg, seen, next_triu) = fill_schema(&schema, seen, build_diag, prg);
+        let (mut prg, seen, next_triu) = fill_schema(&schema, &schema.diag, seen, build_diag, prg);
         if schema.sampled {
             prg = make::sample_diag(prg, tril_prg.unwrap());
         }
@@ -334,15 +344,17 @@ mod make {
     }
 
     pub fn triu(schema: &GridSchema, prg:ExprTyped, seen:HashSet<Ix>, build_triu:Vec<Ix>) -> (ExprTyped, HashSet<Ix>, Vec<Ix>) {
-        fill_schema(&schema, seen, build_triu, prg)
+        let span = tracing::span!(tracing::Level::DEBUG, "triu");
+        let _enter = span.enter();
+        fill_schema(&schema, &schema.triu, seen, build_triu, prg)
     }
 
-    pub fn grid(schema: GridSchema) -> ExprTyped {
+    pub fn grid(schema: GridSchema) -> ProgramTyped {
         let (prg, seen, next_diag) = tril(&schema);
         let (prg, seen, next_triu) = diag(&schema, prg, seen, next_diag);
         let (prg, seen, remainder) = triu(&schema, prg, seen, next_triu);
-        assert_eq!(remainder.len(), 0);
-        prg
+        assert_eq!(remainder, vec![], "grid construction incomplete! found remaining nodes on the left");
+        program!(prg)
     }
 }
 
@@ -438,7 +450,7 @@ mod test {
         assert_eq!(schema.size, 2, "size");
         assert_eq!(schema.tril, HashSet::from([ix(1, 1)]), "tril");
         assert_eq!(schema.triu, HashSet::from([ix(0, 0)]), "triu");
-        assert_eq!(schema.diagonal, HashSet::from([ix(0, 1), ix(1, 0)]), "diag");
+        assert_eq!(schema.diag, HashSet::from([ix(0, 1), ix(1, 0)]), "diag");
 
         let parents = HashMap::from([
             (ix(0, 0), Zero),
@@ -467,7 +479,7 @@ mod test {
     }
 
     #[test]
-    fn test_make_tril() {
+    fn test_make_2x2_tril() {
         use crate::grammar::Anf::*;
         use crate::grammar::Expr::*;
         use Parents::*;
@@ -503,7 +515,7 @@ mod test {
     }
 
     #[test]
-    fn test_make_diag() {
+    fn test_make_2x2_diag() {
         use crate::grammar::Anf::*;
         use crate::grammar::Expr::*;
         use Parents::*;
@@ -567,7 +579,7 @@ mod test {
         let schema = GridSchema::new_from_map(2, false, &query, &probmap);
         let grid = make::grid(schema);
 
-        let expected = lets![
+        let expected = program!(lets![
             "00" ; B!() ;= flip!(1/2);
             "10" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
             "01" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -577,11 +589,11 @@ mod test {
                 ite!(( b!((  not!("01")) && (  b!(@anf "10"))) ) ? ( flip!(1/8) ) : (
                                                                      flip!(1/11) ))))));
             ...? query.clone() ; B!()
-        ];
+        ]);
 
         println!("{:?}", grid);
         match &grid {
-            ELetIn(_, var, _, _) => assert_eq!(var, &"00".to_string()),
+            Program::Body(ELetIn(_, var, _, _)) => assert_eq!(var, &"00".to_string()),
             _ => assert!(false, "expected a let-in binding!"),
         }
         match &grid.query() {
@@ -592,7 +604,7 @@ mod test {
         let schema = GridSchema::new_from_map(2, true, &query, &probmap);
         let grid = make::grid(schema);
 
-        let expected = lets![
+        let expected = program!(lets![
             "00" ; B!() ;= flip!(1/2);
             "diag" ; B!() ;= sample!(lets![
                 "10" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
@@ -607,7 +619,7 @@ mod test {
                 ite!(( b!((  not!("01")) && (  b!(@anf "10"))) ) ? ( flip!(1/8) ) : (
                                                           flip!(1/11) ))))));
             ...? query.clone() ; B!()
-        ];
+        ]);
         assert_eq!(grid, expected);
     }
 
@@ -635,7 +647,6 @@ mod test {
         let probmap = make_2x2_pmap();
         let schema = GridSchema::new_from_map(2, false, &query, &probmap);
         let grid = make::grid(schema);
-        let grid = program!(grid);
         crate::tests::check_exact(
             "grid2x2/all",
             vec![1.0 / 2.0, 0.291666667, 0.183333333, 0.102927589],
@@ -656,7 +667,6 @@ mod test {
         let probmap = make_2x2_pmap();
         let schema = GridSchema::new_from_map(2, true, &query, &probmap);
         let grid = make::grid(schema);
-        let grid = program!(grid);
         check_approx(
             "grid2x2/all",
             vec![1.0 / 2.0, 0.291666667, 0.183333333, 0.102927589],
@@ -671,15 +681,15 @@ mod test {
             1 / 3 @ pkey!(0 0 true  => 0 1),
             1 / 4 @ pkey!(0 0 false => 0 1),
 
-            1 / 3 @ pkey!(0 0 true  => 0 2),
-            1 / 4 @ pkey!(0 0 false => 0 2),
+            1 / 3 @ pkey!(0 1 true  => 0 2),
+            1 / 4 @ pkey!(0 1 false => 0 2),
 
 
             1 / 6 @ pkey!(0 0 true  => 1 0),
             1 / 5 @ pkey!(0 0 false => 1 0),
 
-            1 / 6 @ pkey!(0 0 true  => 2 0),
-            1 / 5 @ pkey!(0 0 false => 2 0),
+            1 / 6 @ pkey!(1 0 true  => 2 0),
+            1 / 5 @ pkey!(1 0 false => 2 0),
 
 
             1 /  7 @ pkey!((1 0 true,  0 1 true)  => 1 1),
@@ -703,6 +713,179 @@ mod test {
             9 / 11 @ pkey!((2 1 false, 1 2 false) => 2 2)
         ]
     }
+
+    #[test]
+    fn test_grid_3x3_schema() {
+        use Parents::*;
+        let query = b!("11");
+        let probmap = make_3x3_pmap();
+        let schema = GridSchema::new_from_map(3, false, &query, &probmap);
+        println!("{:?}", schema);
+        assert_eq!(schema.size, 3, "size");
+        assert_eq!(
+            schema.triu,
+            HashSet::from([ix(0, 0), ix(0, 1), ix(1, 0)]),
+            "triu"
+        );
+        assert_eq!(
+            schema.tril,
+            HashSet::from([ix(2, 2), ix(2, 1), ix(1, 2)]),
+            "tril"
+        );
+        assert_eq!(
+            schema.diag,
+            HashSet::from([ix(0, 2), ix(1, 1), ix(2, 0)]),
+            "diag"
+        );
+
+        let parents = HashMap::from([
+            (ix(0, 0), Zero),
+            (ix(1, 0), One(ix(0, 0), ())),
+            (ix(0, 1), One(ix(0, 0), ())),
+            (ix(2, 0), One(ix(1, 0), ())),
+            (ix(0, 2), One(ix(0, 1), ())),
+            (ix(1, 1), Two((ix(1, 0), ()), (ix(0, 1), ()))),
+            (ix(2, 1), Two((ix(2, 0), ()), (ix(1, 1), ()))),
+            (ix(1, 2), Two((ix(1, 1), ()), (ix(0, 2), ()))),
+            (ix(2, 2), Two((ix(2, 1), ()), (ix(1, 2), ()))),
+        ]);
+        assert_eq!(schema.parents.len(), parents.len());
+        for (k, v) in parents.iter() {
+            assert!(
+                schema.parents.contains_key(k),
+                "expected key {k:?}, but missing from {:?}",
+                schema.parents.keys()
+            );
+            assert_eq!(schema.parents.get(k).unwrap(), v);
+        }
+        assert_eq!(schema.flips.len(), probmap.len());
+        for (k, v) in probmap.iter() {
+            assert!(
+                schema.flips.contains_key(k),
+                "expected key {k:?}, but missing from {:?}",
+                schema.flips.keys()
+            );
+            assert_eq!(schema.flips.get(k).unwrap(), v);
+        }
+    }
+
+    #[test]
+    #[traced_test]
+    fn test_make_3x3_tril() {
+        let query = b!("11");
+        let probmap = make_3x3_pmap();
+        let schema = GridSchema::new_from_map(3, false, &query, &probmap);
+
+        let (prg, seen, next_diag) = make::tril(&schema);
+        let seen: HashSet<Ix> = seen.into_iter().collect();
+        let next_diag: HashSet<Ix> = next_diag.into_iter().collect();
+        assert_eq!(seen, HashSet::from([ix(2, 2), ix(2, 1), ix(1, 2)]));
+        assert_eq!(next_diag, HashSet::from([ix(0, 2), ix(1, 1), ix(2, 0)]));
+        let expected = lets![
+                "21" ; B!() ;=
+                    ite!(( b!((  b!(@anf "11")) && (  b!(@anf "20"))) ) ? ( flip!(2/7) ) : (
+                    ite!(( b!((  b!(@anf "11")) && (not!("20"))) ) ? ( flip!(2/9) ) : (
+                    ite!(( b!((  not!("11")) && (  b!(@anf "20"))) ) ? ( flip!(2/8) ) : (
+                                                              flip!(2/11) ))))));
+
+                "12" ; B!() ;=
+                    ite!(( b!((  b!(@anf "02")) && (  b!(@anf "11"))) ) ? ( flip!(6/7) ) : (
+                    ite!(( b!((  b!(@anf "02")) && (not!("11"))) ) ? ( flip!(6/9) ) : (
+                    ite!(( b!((  not!("02")) && (  b!(@anf "11"))) ) ? ( flip!(6/8) ) : (
+                                                              flip!(6/11) ))))));
+
+                "22" ; B!() ;=
+                    ite!(( b!((  b!(@anf "12")) && (  b!(@anf "21"))) ) ? ( flip!(3/7) ) : (
+                    ite!(( b!((  b!(@anf "12")) && (not!("21"))) ) ? ( flip!(8/9) ) : (
+                    ite!(( b!((  not!("12")) && (  b!(@anf "21"))) ) ? ( flip!(3/8) ) : (
+                                                              flip!(9/11) ))))));
+                ...? query.clone() ; B!()
+        ];
+        assert_eq!(prg, expected);
+    }
+
+    #[test]
+    fn test_make_3x3_diag() {
+        use crate::grammar::Anf::*;
+        use crate::grammar::Expr::*;
+        use Parents::*;
+        let query = b!("11");
+        let probmap = make_3x3_pmap();
+        let schema = GridSchema::new_from_map(3, false, &query, &probmap);
+
+        let (prg, seen, next_triu) = make::diag(
+            &schema,
+            query.clone(),
+            HashSet::from([ix(2, 2), ix(2, 1), ix(1, 2)]),
+            vec![ix(0, 2), ix(1, 1), ix(2, 0)],
+        );
+        let seen: HashSet<Ix> = seen.into_iter().collect();
+        let next_triu: HashSet<Ix> = next_triu.into_iter().collect();
+        assert_eq!(
+            seen,
+            HashSet::from([ix(2, 2), ix(2, 1), ix(1, 2), ix(0, 2), ix(1, 1), ix(2, 0)])
+        );
+        assert_eq!(next_triu, HashSet::from([ix(0, 1), ix(1, 0)]));
+        let expected = lets![
+            "20" ; B!() ;= ite!( ( b!(@anf "10") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
+
+            "11" ; B!() ;=
+                ite!(( b!((  b!(@anf "01")) && (  b!(@anf "10"))) ) ? ( flip!(1/7) ) : (
+                ite!(( b!((  b!(@anf "01")) && (not!("10"))) ) ? ( flip!(1/9) ) : (
+                ite!(( b!((  not!("01")) && (  b!(@anf "10"))) ) ? ( flip!(1/8) ) : (
+                                                          flip!(1/11) ))))));
+
+            "02" ; B!() ;= ite!( ( b!(@anf "01") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+           ...? query.clone() ; B!()
+        ];
+        assert_eq!(prg, expected);
+    }
+    #[test]
+    fn test_grid_3x3_compiles() {
+        use crate::grammar::Anf::*;
+        use crate::grammar::Expr::*;
+        let query = b!("11");
+        let probmap = make_3x3_pmap();
+        let schema = GridSchema::new_from_map(3, false, &query, &probmap);
+        let grid = make::grid(schema);
+
+        let expected = program!(lets![
+            "00" ; B!() ;= flip!(1/2);
+            "10" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
+            "01" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+            "20" ; B!() ;= ite!( ( b!(@anf "10") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
+
+            "11" ; B!() ;=
+                ite!(( b!((  b!(@anf "01")) && (  b!(@anf "10"))) ) ? ( flip!(1/7) ) : (
+                ite!(( b!((  b!(@anf "01")) && (not!("10"))) ) ? ( flip!(1/9) ) : (
+                ite!(( b!((  not!("01")) && (  b!(@anf "10"))) ) ? ( flip!(1/8) ) : (
+                                                          flip!(1/11) ))))));
+
+            "02" ; B!() ;= ite!( ( b!(@anf "01") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+
+            "21" ; B!() ;=
+                ite!(( b!((  b!(@anf "11")) && (  b!(@anf "20"))) ) ? ( flip!(2/7) ) : (
+                ite!(( b!((  b!(@anf "11")) && (not!("20"))) ) ? ( flip!(2/9) ) : (
+                ite!(( b!((  not!("11")) && (  b!(@anf "20"))) ) ? ( flip!(2/8) ) : (
+                                                          flip!(2/11) ))))));
+
+            "12" ; B!() ;=
+                ite!(( b!((  b!(@anf "02")) && (  b!(@anf "11"))) ) ? ( flip!(6/7) ) : (
+                ite!(( b!((  b!(@anf "02")) && (not!("11"))) ) ? ( flip!(6/9) ) : (
+                ite!(( b!((  not!("02")) && (  b!(@anf "11"))) ) ? ( flip!(6/8) ) : (
+                                                          flip!(6/11) ))))));
+
+            "22" ; B!() ;=
+                ite!(( b!((  b!(@anf "12")) && (  b!(@anf "21"))) ) ? ( flip!(3/7) ) : (
+                ite!(( b!((  b!(@anf "12")) && (not!("21"))) ) ? ( flip!(8/9) ) : (
+                ite!(( b!((  not!("12")) && (  b!(@anf "21"))) ) ? ( flip!(3/8) ) : (
+                                                          flip!(9/11) ))))));
+            ...? query.clone() ; B!()
+        ]);
+
+        assert_eq!(grid, expected);
+    }
+
     /// a directed 3x3 grid test where we place samples according to various policies
     ///   (0,0) -> (0,1) -> (0,2)
     ///     v        v        v
@@ -710,7 +893,8 @@ mod test {
     ///     v        v        v
     ///   (2,0) -> (2,1) -> (2,2)
     #[test]
-    fn test_current_grid3x3_inference() {
+    // #[traced_test]
+    fn test_grid3x3_inference() {
         let mk = |ret: ExprTyped| {
             Program::Body(lets![
                 "00" ; B!() ;= flip!(1/2);
@@ -745,21 +929,26 @@ mod test {
                 ...? ret ; B!()
             ])
         };
-        check_exact1("grid3x3/exact/00", 0.500000000, &mk(b!("00")));
-        check_exact1("grid3x3/exact/01", 0.291666667, &mk(b!("01")));
-        check_exact1("grid3x3/exact/10", 0.183333333, &mk(b!("10")));
-        check_exact1("grid3x3/exact/02", 0.274305556, &mk(b!("02")));
-        check_exact1("grid3x3/exact/20", 0.193888889, &mk(b!("20")));
-        check_exact1("grid3x3/exact/11", 0.102927589, &mk(b!("11")));
-        check_exact1("grid3x3/exact/12", 0.599355085, &mk(b!("12")));
-        check_exact1("grid3x3/exact/21", 0.199103758, &mk(b!("21")));
-        check_exact1("grid3x3/exact/22", 0.770263904, &mk(b!("22")));
-
         let query = b!("00", "01", "10", "02", "20", "11", "12", "21", "22");
+        check_exact(
+            "grid3x3/exact/manual",
+            vec![
+                0.500000000,
+                0.291666667,
+                0.183333333,
+                0.274305556,
+                0.193888889,
+                0.102927589,
+                0.599355085,
+                0.199103758,
+                0.770263904,
+            ],
+            &mk(query.clone()),
+        );
+
         let probmap = make_3x3_pmap();
         let schema = GridSchema::new_from_map(3, false, &query, &probmap);
         let grid = make::grid(schema);
-        let grid = program!(grid);
         check_exact(
             "grid3x3/all",
             vec![
@@ -848,7 +1037,6 @@ mod test {
         let probmap = make_3x3_pmap();
         let schema = GridSchema::new_from_map(3, true, &query, &probmap);
         let grid = make::grid(schema);
-        let grid = program!(grid);
         check_approx(
             "grid3x3/approx/gen",
             vec![

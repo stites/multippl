@@ -445,7 +445,7 @@ where
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Program<X>
 where
     EAnfExt: ξ<X>,
@@ -458,20 +458,20 @@ where
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
-    <EAnfExt as ξ<X>>::Ext: Debug + Clone,
-    <EFstExt as ξ<X>>::Ext: Debug + Clone,
-    <ESndExt as ξ<X>>::Ext: Debug + Clone,
-    <EPrjExt as ξ<X>>::Ext: Debug + Clone,
-    <EProdExt as ξ<X>>::Ext: Debug + Clone,
-    <ELetInExt as ξ<X>>::Ext: Debug + Clone,
-    <EIteExt as ξ<X>>::Ext: Debug + Clone,
-    <EFlipExt as ξ<X>>::Ext: Debug + Clone,
-    <EObserveExt as ξ<X>>::Ext: Debug + Clone,
-    <ESampleExt as ξ<X>>::Ext: Debug + Clone,
+    <EAnfExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <EFstExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <ESndExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <EPrjExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <EProdExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <ELetInExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <EIteExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <EFlipExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <EObserveExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <ESampleExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
-    <AVarExt as ξ<X>>::Ext: Debug + Clone,
-    <AValExt as ξ<X>>::Ext: Debug + Clone,
+    <AVarExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <AValExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
 {
     Body(Expr<X>),
     // TODO

@@ -87,14 +87,20 @@ pub fn runner(p: &ProgramTyped, opt: &Options) -> Result<(Mgr, Compiled)> {
     Ok((mgr, c))
 }
 
-pub fn make_mgr(p: &ProgramTyped) -> Mgr {
-    let Ok(p) = typecheck(p) else { todo!() };
+pub fn make_mgr_h(p: &ProgramTyped) -> Result<Mgr> {
+    let p = typecheck(p)?;
     let mut senv = SymEnv::default();
-    let Ok(p) = senv.uniquify(&p) else { todo!() };
+    let p = senv.uniquify(&p)?;
     let mut lenv = LabelEnv::new();
-    let Ok((p, vo, varmap, inv, mxlbl)) = lenv.annotate(&p) else { todo!() };
+    let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
 
-    Mgr::new_default_order(mxlbl as usize)
+    Ok(Mgr::new_default_order(mxlbl as usize))
+}
+pub fn make_mgr(p: &ProgramTyped) -> Mgr {
+    match make_mgr_h(p) {
+        Ok(m) => m,
+        Err(e) => panic!("{}", e),
+    }
 }
 
 pub fn runner_h(p: &ProgramTyped, mgr: &mut Mgr, opt: &Options) -> Result<Compiled> {

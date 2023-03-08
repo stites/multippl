@@ -180,6 +180,15 @@ macro_rules! not {
 }
 
 #[macro_export]
+macro_rules! prj {
+    ( $i:literal, $x:literal ) => {{
+        prj!($i, b!(@anf $x))
+    }};
+    ( $i:literal, $x:expr ) => {{
+        $crate::grammar::Expr::<$crate::typecheck::grammar::Typed>::EPrj(b!(), $i, Box::new($x))
+    }};
+}
+#[macro_export]
 macro_rules! fst {
     ( $x:literal ) => {{
         fst!(b!(@anf $x))

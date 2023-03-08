@@ -318,6 +318,36 @@ fn sample_tuple() {
     check_invariant("sharedtuple ", None, None, &p);
 }
 
+#[test]
+// #[traced_test]
+fn test_big_tuple() {
+    let p = program!(lets![
+        "a" ; b!() ;= flip!(1/2);
+        "b" ; b!() ;= flip!(1/2);
+        "c" ; b!() ;= flip!(1/2);
+        "d" ; b!() ;= flip!(1/2);
+        "e" ; b!() ;= flip!(1/2);
+        "z" ; b!() ;= b!("a", "b", "c", "d", "e");
+        ...? b!("z") ; b!()
+    ]);
+    check_exact("3-tuple", vec![0.5, 0.5, 0.5, 0.5, 0.5], &p);
+    let p = program!(lets![
+        "a" ; b!() ;= flip!(1/2);
+        "b" ; b!() ;= flip!(1/2);
+        "c" ; b!() ;= flip!(1/2);
+        "d" ; b!() ;= flip!(1/2);
+        "e" ; b!() ;= flip!(1/2);
+        "z" ; b!() ;= b!("a", "b", "c", "d", "e");
+        "q" ; b!() ;= prj!(0, "z");
+        "r" ; b!() ;= prj!(1, "z");
+        "s" ; b!() ;= prj!(2, "z");
+        "t" ; b!() ;= prj!(3, "z");
+        "u" ; b!() ;= prj!(4, "z");
+        ...? b!("q", "r", "s", "t", "u") ; b!()
+    ]);
+    check_exact("3-tuple", vec![0.5, 0.5, 0.5, 0.5, 0.5], &p);
+}
+
 // ===================================================================== //
 //                          free variable tests                          //
 // ===================================================================== //
