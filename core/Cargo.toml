@@ -13,10 +13,10 @@ required-features = ["criterion"]
 # harness = false
 # required-features = ["criterion"]
 
-# [[bin]]
-# name = "plot-grids"
-# path = "src/plot/grids.rs"
-# required-features = ["plotters"]
+[[bin]]
+name = "plot-grids"
+path = "plots/grids.rs"
+required-features = ["plots"]
 
 [dependencies]
 rsdd = { workspace = true }
@@ -32,8 +32,12 @@ num-traits = "0.2"
 
 plotters = { version = "0.3.4", optional = true }
 criterion = { version = "0.4", optional = true }
+csv = { version = "1.2.1", optional = true }
 
 [dev-dependencies]
 formula = { path = "../formula" }
 quickcheck = "1"
 quickcheck_macros = "1"
+
+[features]
+plots = ["plotters", "csv"]
