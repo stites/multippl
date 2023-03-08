@@ -1,10 +1,10 @@
 [package]
-name = "tree-sitter-weight4me"
-description = "BDDIS grammar for the tree-sitter parsing library"
+name = "tree-sitter-yodel"
+description = "Yodel grammar for the tree-sitter parsing library"
 version = "0.0.1"
 keywords = ["incremental", "parsing", "BDDIS"]
 categories = ["parsing", "text-editors"]
-repository = "https://github.com/stites/weight-for-me"
+repository = "https://github.com/stites/yodel"
 edition = "2018"
 license = "MIT"
 

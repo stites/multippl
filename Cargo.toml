@@ -2,7 +2,6 @@
 members = [
   "tree-sitter",
   "core",
-#  "rsdd",
   "tree-sitter-formula",
   "formula",
 ]
