@@ -14,7 +14,7 @@ macro_rules! grid_benchmarks {
                 let mut group = c.benchmark_group(format!("grid-{}x{}", $size, $size));
                 group.sampling_mode(SamplingMode::Flat);
                 group.sample_size(10);
-                group.measurement_time(std::time::Duration::new($size * $size * 10, 0));
+                group.measurement_time(std::time::Duration::new($size * $size * 100, 0));
 
                 group.bench_function("exact", |b| b.iter(|| exact(&grid)));
                 group.bench_function("approx/1", |b| b.iter(|| approx(1, &grid)));
