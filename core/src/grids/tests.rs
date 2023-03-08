@@ -620,7 +620,7 @@ fn test_grid3x3_inference() {
 ///   (2,0) -> (2,1) -> (2,2)
 #[test]
 // #[traced_test]
-fn test_current_grid3x3_sampled_inference() {
+fn test_grid3x3_sampled_inference() {
     let mk = |ret: ExprTyped| {
         Program::Body(lets![
             "00" ; B!() ;= flip!(1/2);

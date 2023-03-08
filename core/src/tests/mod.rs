@@ -7,6 +7,7 @@ use crate::*;
 use itertools::*;
 use rsdd::sample::probability::*;
 use std::any::{Any, TypeId};
+use std::collections::HashMap;
 use std::ops::Range;
 use tracing::*;
 use tracing_test::*;
@@ -162,13 +163,11 @@ pub fn nfail_approx1(s: &str, f: f64, p: &ProgramTyped, n: usize) {
 // }
 
 #[test]
-//#[traced_test]
 fn program00() {
     let p00 = lets!["x" : bool := val!(true); in var!("x") ; bool];
     check_exact("p00", vec![1.0], &Program::Body(p00));
 }
 #[test]
-// #[traced_test]
 fn program01() {
     let p01 = lets![
         "x" ; B!() ;= flip!(1.0/3.0);
@@ -177,7 +176,6 @@ fn program01() {
     check_exact1("p01", 1.0 / 3.0, &Program::Body(p01));
 }
 #[test]
-// #[traced_test]
 fn program02() {
     let mk02 = |ret: ExprTyped| {
         Program::Body(lets![
@@ -193,7 +191,6 @@ fn program02() {
 }
 
 #[test]
-// #[traced_test]
 fn program03() {
     let mk03 = |ret: ExprTyped| {
         Program::Body(lets![
@@ -230,7 +227,6 @@ fn program03() {
 // }
 
 #[test]
-// #[traced_test]
 fn program04_approx() {
     let mk04 = |ret: ExprTyped| {
         Program::Body(lets![
@@ -257,7 +253,6 @@ fn program04_approx() {
 }
 
 #[test]
-// #[traced_test]
 fn tuple0() {
     let p = {
         Program::Body(lets![
@@ -303,7 +298,6 @@ fn tuple1() {
     check_exact("tuple1/ ,y", vec![1.0 / 4.0], &mk(snd!(b!(@anf "z"))));
 }
 #[test]
-// #[traced_test]
 fn sample_tuple() {
     let p = Program::Body(lets![
         "z" ; b!(B, B) ;= sample!(lets![
@@ -318,7 +312,6 @@ fn sample_tuple() {
 }
 
 #[test]
-// #[traced_test]
 fn test_big_tuple() {
     let p = program!(lets![
         "a" ; b!() ;= flip!(1/2);
@@ -437,7 +430,6 @@ fn free_variables_shared_tuple() {
 // ===================================================================== //
 
 #[test]
-// #[traced_test]
 fn ite_00() {
     let mk = |p: ExprTyped| {
         Program::Body(ite!(
@@ -450,7 +442,6 @@ fn ite_00() {
 }
 
 #[test]
-// #[traced_test]
 fn ite_0() {
     let mk = |ret: ExprTyped| {
         Program::Body(lets![
@@ -484,7 +475,6 @@ fn ite_1() {
 }
 
 #[test]
-// #[traced_test]
 fn ite_2() {
     let mk = |ret: ExprTyped| {
         Program::Body(lets![
@@ -516,7 +506,6 @@ fn ite_3_with_one_sample_hard1_simplified_even_more_true() {
     // check_approx1("ite_3/y-sample1/4-simpl", 0.2, &mk(b!("x")), n);
 }
 #[test]
-// #[traced_test]
 fn ite_3_with_one_sample_hard1_simplified_even_more_false() {
     let p = {
         program!(ite!(
@@ -610,7 +599,6 @@ fn grid2x2_warmup0() {
     check_exact1("grid2x2/0/10", 0.183333333, &mk(b!("10")));
 }
 #[test]
-// #[traced_test]
 fn grid2x2_warmup1() {
     let mk = |ret: ExprTyped| {
         Program::Body(lets![
@@ -631,7 +619,6 @@ fn grid2x2_warmup1() {
 ///     v        v
 ///   (1,0) -> (1,1)
 #[test]
-// #[traced_test]
 fn grid2x2() {
     let mk = |ret: ExprTyped| {
         Program::Body(lets![
@@ -653,7 +640,6 @@ fn grid2x2() {
 }
 
 #[test]
-// #[traced_test]
 fn grid2x2_sampled() {
     let mk = |ret: ExprTyped| {
         Program::Body(lets![
@@ -694,7 +680,6 @@ fn grid2x2_sampled() {
 ///     v        v        v
 ///   (2,0) -> (2,1) -> (2,2)
 #[test]
-// #[traced_test]
 fn grid3x3_sampled_diag() {
     let mk = |ret: ExprTyped| {
         Program::Body(lets![
@@ -815,4 +800,324 @@ fn grid3x3() {
     check_exact1("grid3x3/exact/12", 0.599355085, &mk(b!("12")));
     check_exact1("grid3x3/exact/21", 0.199103758, &mk(b!("21")));
     check_exact1("grid3x3/exact/22", 0.770263904, &mk(b!("22")));
+}
+
+#[test]
+fn ite_3_with_one_sample_hard1_simplified_more() {
+    let mk = |ret: ExprTyped| {
+        program!(lets![
+            "x" ; b!() ;= flip!(3/5);
+            "y" ; b!() ;= ite!(
+                if ( var!("x") )
+                then { sample!(flip!(1/3)) }
+                else { flip!(1/4) });
+            ...? ret ; b!()
+        ])
+    };
+    let n = 5000;
+    // debug_approx1("ite_3/x", 0.6, &mk(b!("x")), n); // works!
+    // debug_approx1("ite_3/y", 0.3, &mk(b!("y")), n); // broken!
+    check_approx1("ite_3/y", 0.3, &mk(b!("y")), n); // broken!
+
+    // debug_approx1("ite_3/x|y", 0.7, &mk(b!("x" || "y")), n); // broken!
+    // debug_approx1("ite_3/x&y", 0.2, &mk(b!("x" && "y")), n); // broken!
+    // debug_approx("ite_3/x*y", vec![0.6, 0.3, 0.7, 0.2], &mk(q!("x" x "y")), n); // broken!
+}
+
+#[test]
+#[ignore = "not actually a test, just a hand-crafted exploration"]
+#[traced_test]
+fn manual_ite() {
+    use rsdd::builder::bdd_builder::*;
+    use rsdd::repr::wmc::*;
+    let mk = |ret: ExprTyped| {
+        program!(lets![
+            "x" ; b!() ;= flip!(3/5);
+            "y" ; b!() ;= ite!(
+                if ( var!("x") )
+                then { sample!(flip!(1/3)) }
+                else { flip!(1/4) });
+            ...? ret ; b!()
+        ])
+    };
+    let n = 10000;
+    // debug_approx1("ite_3/x", 0.6, &mk(b!("x")), n); // works!
+    nfail_approx1("ite_3/y", 0.3, &mk(b!("y")), n); // broken!
+
+    let mgr = Mgr::new_default_order(0);
+    let names = HashMap::new();
+    let (out, mgr) = formula::eval_with("x".to_string(), mgr, names).unwrap();
+    // hand-derived
+    let x = out.circuit;
+    let (out, mut mgr) =
+        formula::eval_with("(x & yt) | (!x & yf)".to_string(), mgr, out.names).unwrap();
+    let y = out.circuit;
+    let x_label = *out.names.get("x").unwrap();
+    let yt_label = *out.names.get("yt").unwrap();
+    let yf_label = *out.names.get("yf").unwrap();
+    let yt = mgr.var(yt_label, true);
+    let yf = mgr.var(yf_label, true);
+    debug!(
+        "======================================================================================="
+    );
+    debug!(
+        " current                                                                               "
+    );
+    debug!(
+        "======================================================================================="
+    );
+
+    debug!("x:  {}", x.print_bdd());
+    debug!("y:  {}", y.print_bdd());
+    debug!("yt: {}", yt.print_bdd());
+    debug!("yf: {}", yf.print_bdd());
+
+    let accept_true = mgr.and(x, yt);
+    let accept_true = mgr.or(accept_true, x.neg());
+
+    let dist_true = mgr.and(x.neg(), yf);
+    let dist_true = mgr.or(x, dist_true);
+    // conjoin query
+    debug!("dist_true:    {}", dist_true.print_bdd());
+    debug!("accept_true:  {}", accept_true.print_bdd());
+
+    let accept_false = mgr.and(x, yt.neg());
+    let accept_false = mgr.or(accept_false, x.neg());
+    let dist_false = mgr.and(x.neg(), yf);
+    // conjoin query
+    debug!("dist_false:   {}", dist_false.print_bdd());
+    debug!("accept_false: {}", accept_false.print_bdd());
+    // let (out, mgr) =
+    //     formula::eval_with("(x & F) | (!x & yf)".to_string(), mgr, out.names).unwrap();
+    // let dist_false_comp = out.circuit;
+    // debug!("dist_false_comp:   {}", dist_false_comp.print_bdd());
+    // let (out, mgr) =
+    //     formula::eval_with("(x & !yt) | (!x & T)".to_string(), mgr, out.names).unwrap();
+    // let accept_false_comp = out.circuit;
+    // debug!("accept_false_comp: {}", accept_false_comp.print_bdd());
+
+    let var_order = mgr.get_order().clone();
+    let mut params = WmcParams::new(0.0, 1.0);
+    for (lbl, weight) in [
+        (yf_label, Weight::new(0.7500, 0.2500)),
+        (yt_label, Weight::new(0.6667, 0.3333)),
+        (x_label, Weight::new(0.4000, 0.6000)),
+    ] {
+        params.set_weight(lbl, weight.lo, weight.hi);
+    }
+    let w_true = calculate_wmc_prob_hf64(&mut mgr, &params, &var_order, dist_true, accept_true);
+    debug!("w_true:   {:.3}", w_true);
+    let w_false = calculate_wmc_prob_hf64(&mut mgr, &params, &var_order, dist_false, accept_false);
+    debug!("w_false:   {:.3}", w_false);
+    debug!(
+        "1*w_true + 2*w_false / 3  == 0.3?   {:.4}",
+        (1.0 * w_true + 2.0 * w_false) / 3.0
+    );
+    debug!("=========================================");
+    debug!(" exact                                   ");
+    debug!("=========================================");
+
+    let w_exact_t =
+        calculate_wmc_prob_hf64(&mut mgr, &params, &var_order, dist_true, BddPtr::PtrTrue);
+    debug!("w_exact_t:   {:.3}", w_exact_t);
+
+    let w_exact_f =
+        calculate_wmc_prob_hf64(&mut mgr, &params, &var_order, dist_false, BddPtr::PtrTrue);
+    debug!("w_exact_f:   {:.3}", w_exact_f);
+    debug!(
+        "1*w_exact_t + 2*w_exact_f / 3 == 0.3?   {:.4}",
+        (1.0 * w_exact_t + 2.0 * w_exact_f) / 03.0
+    );
+    debug!("=========================================");
+    debug!(" hypothesized                            ");
+    debug!("=========================================");
+    let dist_hyp_true = dist_true.clone();
+    let dist_hyp_false = dist_false.clone();
+    debug!("dist_hyp_true:    {}", dist_hyp_true.print_bdd());
+    debug!("dist_hyp_false:   {}", dist_hyp_false.print_bdd());
+
+    let accept_hyp_true = mgr.and(x, yt);
+    let accept_hyp_true_tmp = mgr.and(x.neg(), yt);
+    let accept_hyp_true = mgr.or(accept_hyp_true, accept_hyp_true_tmp);
+    debug!("accept_hyp_true:  {}", accept_hyp_true.print_bdd());
+
+    let accept_hyp_false = mgr.and(x, yt.neg());
+    let accept_hyp_false_tmp = mgr.and(x.neg(), yt.neg());
+    let accept_hyp_false = mgr.or(accept_hyp_false, accept_hyp_false_tmp);
+    debug!("accept_hyp_false:  {}", accept_hyp_false.print_bdd());
+
+    let w_hyp_t = calculate_wmc_prob_hf64(
+        &mut mgr,
+        &params,
+        &var_order,
+        dist_hyp_true,
+        accept_hyp_true,
+    );
+    debug!("w_hyp_t:   {:.3}", w_hyp_t);
+
+    let w_hyp_f = calculate_wmc_prob_hf64(
+        &mut mgr,
+        &params,
+        &var_order,
+        dist_hyp_false,
+        accept_hyp_false,
+    );
+    debug!("w_hyp_f:   {:.3}", w_hyp_f);
+    debug!(
+        "1*w_hyp_t + 2*w_hyp_f / 3 == 0.3?   {:.4}",
+        (1.0 * w_hyp_t + 2.0 * w_hyp_f) / 03.0
+    );
+    // let (out, mgr) =
+    //     formula::eval_with("(x & yt) | (!x & T)".to_string(), mgr, out.names).unwrap();
+    // let accept_true_comp = out.circuit;
+    // debug!("accept_true_comp:  {}", accept_true_comp.print_bdd());
+
+    todo!()
+
+    // debug_approx1("ite_3/x|y", 0.7, &mk(b!("x" || "y")), n); // broken!
+    // debug_approx1("ite_3/x&y", 0.2, &mk(b!("x" && "y")), n); // broken!
+    // debug_approx("ite_3/x*y", vec![0.6, 0.3, 0.7, 0.2], &mk(q!("x" x "y")), n); // broken!
+}
+
+#[test]
+fn ite_3_with_one_sample_hard1_simplified() {
+    let mk = |ret: ExprTyped| {
+        program!(lets![
+            "x" ; b!() ;= flip!(1/5);
+            "y" ; b!() ;= ite!(
+                if ( var!("x") )
+                then { sample!(flip!(1/3)) }
+                else { flip!(1/4) });
+            ...? ret ; b!()
+        ])
+    };
+    let n = 5000;
+    // check_exact1("ite_3/y-sample1/4-simpl", 0.266666667, &mk(b!("y")));
+    check_approx1("ite_3/y-sample1/4-simpl", 0.266666667, &mk(b!("y")), n);
+    // dice's answer for 2/4 @ sample site
+    // check_approx1("ite_3/y-sample2/4  ", 0.545454545, &mk(b!("y")), n);
+    // dice's answer for 3/4 @ sample site
+    // check_approx1("ite_3/y-sample3/4 ", 0.772727273, &mk(b!("y")), n);
+
+    // last one to tackle:
+    // dice's answer for 1/4 @ sample site
+    // check_approx1("ite_3/x&y", 0.227272727, &mk(b!("x" && "y")), n * n * n);
+}
+
+#[test]
+fn ite_3_with_one_sample_easy_x() {
+    let mk = |ret: ExprTyped| {
+        program!(lets![
+            "x" ; b!() ;= flip!(2/3);
+            "y" ; b!() ;= ite!(
+                if ( var!("x") )
+                then { sample!(flip!(1/4)) }
+                else { flip!(1/5) });
+            "_" ; b!() ;= observe!(b!("x" || "y"));
+            ...? ret ; b!()
+        ])
+    };
+    check_approx1("ite_3/x  ", 0.909090909, &mk(b!("x")), 1000);
+}
+
+#[test]
+fn ite_3_with_one_sample_hard1() {
+    let mk = |ret: ExprTyped| {
+        program!(lets![
+            "x" ; b!() ;= flip!(2/3);
+            "y" ; b!() ;= ite!(
+                if ( var!("x") )
+                then { sample!(flip!(1/4)) }
+                else { flip!(1/5) });
+            "_" ; b!() ;= observe!(b!("x" || "y"));
+            ...? ret ; b!()
+        ])
+    };
+    let n = 50000;
+    check_approx1("ite_3/observe/x  ", 0.909090909, &mk(b!("x")), n);
+    check_approx1("ite_3/observe/y  ", 0.318181818, &mk(b!("y")), n);
+    check_approx1("ite_3/observe/x|y", 1.000000000, &mk(b!("x" || "y")), n);
+    check_approx1("ite_3/observe/x&y", 0.227272727, &mk(b!("x" && "y")), n);
+
+    // dice's answer for 2/4 @ sample site
+    // check_approx1("ite_3/y-sample2/4  ", 0.545454545, &mk(b!("y")), n);
+    // dice's answer for 3/4 @ sample site
+    // check_approx1("ite_3/y-sample3/4 ", 0.772727273, &mk(b!("y")), n);
+
+    // last one to tackle:
+    // dice's answer for 1/4 @ sample site
+    // check_approx1("ite_3/x&y", 0.227272727, &mk(b!("x" && "y")), n * n * n);
+}
+
+#[test]
+fn ite_3_with_one_sample_easy_x_or_y() {
+    let mk = |ret: ExprTyped| {
+        program!(lets![
+            "x" ; b!() ;= flip!(2/3);
+            "y" ; b!() ;= ite!(
+                if ( var!("x") )
+                then { sample!(flip!(1/4)) }
+                else { flip!(1/5) });
+            "_" ; b!() ;= observe!(b!("x" || "y"));
+            ...? ret ; b!()
+        ])
+    };
+    check_approx1("ite_3/x|y", 1.000000000, &mk(b!("x" || "y")), 1000);
+}
+
+#[test]
+fn free_variable_2_approx_again() {
+    let mk = |ret: ExprTyped| {
+        program!(lets![
+            "x" ; b!() ;= flip!(1/3);
+            "y" ; b!() ;= sample!(
+                lets![
+                    "x0" ; b!() ;= flip!(1/5);
+                    ...? b!("x0" || "x") ; b!()
+                ]);
+           "_" ; b!() ;= observe!(b!("x" || "y")); // is this a problem?
+           ...? ret ; b!()
+        ])
+    };
+    check_approx(
+        "free2/x*y",
+        vec![0.714285714, 1.0, 1.0, 0.714285714],
+        &mk(q!("x" x "y")),
+        10000,
+    );
+    check_approx1("free2/x", 0.714285714, &mk(b!("x")), 10000);
+    check_approx1("free2/x&y", 0.714285714, &mk(b!("x" && "y")), 10000);
+}
+
+#[test]
+// #[traced_test]
+#[ignore]
+fn ite_3_with_one_sample_hard1_extra() {
+    let mk = |ret: ExprTyped| {
+        program!(lets![
+            "x" ; b!() ;= flip!(2/3);
+            "w" ; b!() ;= flip!(2/7);
+            "y" ; b!() ;= ite!(
+                if ( var!("x") )
+                    then { sample!(lets![
+                             "q" ; b!() ;= flip!(1/4);
+                             "_" ; b!() ;= observe!(b!("q" || "w"));
+                             ...? b!("q") ; b!()
+                    ]) }
+                else { flip!(1/5) });
+            "_" ; b!() ;= observe!(b!("x" || "y"));
+            ...? ret ; b!()
+        ])
+    };
+    let n = 50000;
+    debug_approx1("ite_3/observe/y  ", 0.620253165, &mk(b!("y")), n);
+
+    // dice's answer for 2/4 @ sample site
+    // check_approx1("ite_3/y-sample2/4  ", 0.545454545, &mk(b!("y")), n);
+    // dice's answer for 3/4 @ sample site
+    // check_approx1("ite_3/y-sample3/4 ", 0.772727273, &mk(b!("y")), n);
+
+    // last one to tackle:
+    // dice's answer for 1/4 @ sample site
+    // check_approx1("ite_3/x&y", 0.227272727, &mk(b!("x" && "y")), n * n * n);
 }

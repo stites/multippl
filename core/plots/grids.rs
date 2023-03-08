@@ -37,12 +37,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .y_labels(5)
         .y_desc("grid size")
         .axis_desc_style(text_style_right_top)
-        // We can also change the format of the label text
         .y_label_formatter(&|x| format!("{:.2}", x))
         .x_label_formatter(&|x| format!("{:.0}", x))
         .draw()?;
 
-    // And we can draw something in the drawing area
+    // Where we actually draw the series
     chart.draw_series(LineSeries::new(
         vec![(0.0, 0.0), (5.0, 5.0), (8.0, 7.0)],
         &RED,
