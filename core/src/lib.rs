@@ -10,16 +10,17 @@ pub mod grammar_macros;
 pub mod grids;
 pub mod inference;
 
+mod analysis;
 mod annotate;
-// mod collect_weightmap;
 mod compile;
 mod parser;
 mod render;
-#[cfg(test)]
-mod tests;
 mod typecheck;
 mod uniquify;
 mod utils;
+
+#[cfg(test)]
+mod tests;
 
 #[derive(Default)]
 pub struct Options {
@@ -58,6 +59,7 @@ impl Options {
     }
 }
 
+use crate::analysis::AnalysisEnv;
 use crate::annotate::LabelEnv;
 use crate::compile::{compile, CompileError, Compiled, Env, Mgr, Output, Result};
 use crate::typecheck::{
@@ -104,6 +106,11 @@ pub fn runner_h(p: &ProgramTyped, mgr: &mut Mgr, opt: &Options) -> Result<Compil
     let p = senv.uniquify(&p)?;
     let mut lenv = LabelEnv::new();
     let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
+    if opt.opt {
+        let mut aenv = AnalysisEnv::new();
+        let p = aenv.analyze(&p)?;
+        let ig = aenv.interaction_graph()?;
+    }
 
     let mut rng = opt.rng();
     let orng = if opt.debug { None } else { Some(&mut rng) };
