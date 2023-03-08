@@ -21,6 +21,7 @@
 // #![allow(clippy::ptr_arg)]
 mod grammar;
 mod grammar_macros;
+mod grids;
 
 mod annotate;
 // mod collect_weightmap;

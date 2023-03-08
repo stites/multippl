@@ -12,7 +12,6 @@ use tracing::*;
 use tracing_test::*;
 
 mod arbitrary;
-mod grids;
 
 pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &ProgramTyped) {
     let precision = precision.unwrap_or_else(|| 0.01);
