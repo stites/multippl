@@ -107,7 +107,7 @@ pub fn runner_h(p: &ProgramTyped, mgr: &mut Mgr, opt: &Options) -> Result<Compil
     let mut lenv = LabelEnv::new();
     let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
     if opt.opt {
-        let mut aenv = AnalysisEnv::new();
+        let mut aenv = AnalysisEnv::default();
         let p = aenv.analyze(&p)?;
         let ig = aenv.interaction_graph()?;
     }
