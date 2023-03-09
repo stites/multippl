@@ -4,6 +4,7 @@ use crate::typecheck::grammar::*;
 use crate::ExprTyped;
 use crate::*;
 use itertools::*;
+use rand::rngs::StdRng;
 use rsdd::sample::probability::*;
 use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -17,6 +18,8 @@ pub struct GridSpec<'a> {
     size: usize,
     sampled: bool,
     query: ExprTyped,
+    seed: StdRng,
+    determinism: Probability,
     probability: &'a dyn Fn(Ix, Parents<bool>) -> Probability,
 }
 
@@ -25,13 +28,27 @@ impl<'a> GridSpec<'a> {
         size: usize,
         query: &ExprTyped,
         sampled: bool,
+        seed: Option<u64>,
+        determinism: f64,
         probability: &'a dyn Fn(Ix, Parents<bool>) -> Probability,
     ) -> Self {
-        GridSpec {
-            size,
-            query: query.clone(),
-            sampled,
-            probability,
+        match seed {
+            None => GridSpec {
+                size,
+                query: query.clone(),
+                seed: rand::SeedableRng::from_entropy(),
+                sampled,
+                determinism: Probability::new(determinism),
+                probability,
+            },
+            Some(s) => GridSpec {
+                size,
+                query: query.clone(),
+                seed: rand::SeedableRng::seed_from_u64(s),
+                sampled,
+                determinism: Probability::new(determinism),
+                probability,
+            },
         }
     }
 }
@@ -119,6 +136,8 @@ pub struct GridSchema {
     tril: HashSet<Ix>,
     triu: HashSet<Ix>,
     diag: HashSet<Ix>,
+    determinism: Probability,
+    rng: StdRng,
 
     flips: HashMap<(Ix, Parents<bool>), Probability>,
     parents: HashMap<Ix, Parents<()>>,
@@ -145,6 +164,8 @@ impl GridSchema {
     pub fn new_from_fn(
         size: usize,
         sampled: bool,
+        seed: Option<u64>,
+        determinism: Option<f64>,
         query: Option<&ExprTyped>,
         probability: &dyn Fn(Ix, Parents<bool>) -> Probability,
     ) -> GridSchema {
@@ -152,11 +173,21 @@ impl GridSchema {
             Some(q) => q.clone(),
             None => make::full_query(size),
         };
-        make::schema(GridSpec::new(size, &query, sampled, probability))
+        let determinism = determinism.unwrap_or_else(|| 0.0);
+        make::schema(GridSpec::new(
+            size,
+            &query,
+            sampled,
+            seed,
+            determinism,
+            probability,
+        ))
     }
     pub fn new_from_map(
         size: usize,
         sampled: bool,
+        seed: Option<u64>,
+        determinism: Option<f64>,
         query: &ExprTyped,
         probmap: &HashMap<(Ix, Parents<bool>), Probability>,
     ) -> GridSchema {
@@ -166,7 +197,15 @@ impl GridSchema {
                 .cloned()
                 .unwrap_or_else(|| Probability::new(0.0))
         };
-        make::schema(GridSpec::new(size, query, sampled, &prob))
+        let determinism = determinism.unwrap_or_else(|| 0.0);
+        make::schema(GridSpec::new(
+            size,
+            query,
+            sampled,
+            seed,
+            determinism,
+            &prob,
+        ))
     }
 }
 fn get_parents(ix: Ix, size: usize) -> Parents<()> {
@@ -232,6 +271,8 @@ pub mod make {
             parents,
             tril,
             triu,
+            rng: spec.seed.clone(),
+            determinism: spec.determinism.clone(),
             diag,
             sampled,
             query,
@@ -256,7 +297,6 @@ pub mod make {
         let p_t = schema.get_flip(ix, Parents::One(parent, true));
         let p_f = schema.get_flip(ix, Parents::One(parent, false));
         let p = parent.as_string();
-
         ELetIn(
             LetInTypes {bindee: b!(), body: b!(),},
             ix.as_string(),

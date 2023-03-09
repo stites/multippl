@@ -88,7 +88,7 @@ fn test_grid_2x2_schema() {
     use Parents::*;
     let query = b!("11");
     let probmap = make_2x2_pmap();
-    let schema = GridSchema::new_from_map(2, false, &query, &probmap);
+    let schema = GridSchema::new_from_map(2, false, None, None, &query, &probmap);
     println!("{:?}", schema);
     assert_eq!(schema.size, 2, "size");
     assert_eq!(schema.tril, HashSet::from([ix(1, 1)]), "tril");
@@ -128,7 +128,7 @@ fn test_make_2x2_tril() {
     use Parents::*;
     let query = b!("11");
     let probmap = make_2x2_pmap();
-    let schema = GridSchema::new_from_map(2, false, &query, &probmap);
+    let schema = GridSchema::new_from_map(2, false, None, None, &query, &probmap);
 
     let (prg, seen, next_diag) = make::tril(&schema);
     let seen: HashSet<Ix> = seen.into_iter().collect();
@@ -164,7 +164,7 @@ fn test_make_2x2_diag() {
     use Parents::*;
     let query = b!("11");
     let probmap = make_2x2_pmap();
-    let schema = GridSchema::new_from_map(2, false, &query, &probmap);
+    let schema = GridSchema::new_from_map(2, false, None, None, &query, &probmap);
 
     let (prg, seen, next_diag) = make::tril(&schema);
     let (prg, seen, next_triu) = make::diag(&schema, prg, seen, next_diag);
@@ -219,7 +219,7 @@ fn test_grid_2x2_compiles() {
     use crate::grammar::Expr::*;
     let query = b!("11");
     let probmap = make_2x2_pmap();
-    let schema = GridSchema::new_from_map(2, false, &query, &probmap);
+    let schema = GridSchema::new_from_map(2, false, None, None, &query, &probmap);
     let grid = make::grid(schema);
 
     let expected = program!(lets![
@@ -244,7 +244,7 @@ fn test_grid_2x2_compiles() {
         _ => assert!(false, "expected an anf statement!"),
     }
     assert_eq!(grid, expected);
-    let schema = GridSchema::new_from_map(2, true, &query, &probmap);
+    let schema = GridSchema::new_from_map(2, true, None, None, &query, &probmap);
     let grid = make::grid(schema);
 
     let expected = program!(lets![
@@ -288,7 +288,7 @@ fn test_grid2x2_inference() {
 
     let query = b!("00", "01", "10", "11");
     let probmap = make_2x2_pmap();
-    let schema = GridSchema::new_from_map(2, false, &query, &probmap);
+    let schema = GridSchema::new_from_map(2, false, None, None, &query, &probmap);
     let grid = make::grid(schema);
     crate::tests::check_exact(
         "grid2x2/all",
@@ -308,7 +308,7 @@ fn test_grid2x2_inference() {
 fn test_grid2x2_sampled_inference() {
     let query = b!("00", "01", "10", "11");
     let probmap = make_2x2_pmap();
-    let schema = GridSchema::new_from_map(2, true, &query, &probmap);
+    let schema = GridSchema::new_from_map(2, true, None, None, &query, &probmap);
     let grid = make::grid(schema);
     check_approx(
         "grid2x2/all",
@@ -365,7 +365,7 @@ fn test_grid_3x3_schema() {
     use Parents::*;
     let query = b!("11");
     let probmap = make_3x3_pmap();
-    let schema = GridSchema::new_from_map(3, false, &query, &probmap);
+    let schema = GridSchema::new_from_map(3, false, None, None, &query, &probmap);
     println!("{:?}", schema);
     assert_eq!(schema.size, 3, "size");
     assert_eq!(
@@ -420,7 +420,7 @@ fn test_grid_3x3_schema() {
 fn test_make_3x3_tril() {
     let query = b!("11");
     let probmap = make_3x3_pmap();
-    let schema = GridSchema::new_from_map(3, false, &query, &probmap);
+    let schema = GridSchema::new_from_map(3, false, None, None, &query, &probmap);
 
     let (prg, seen, next_diag) = make::tril(&schema);
     let seen: HashSet<Ix> = seen.into_iter().collect();
@@ -457,7 +457,7 @@ fn test_make_3x3_diag() {
     use Parents::*;
     let query = b!("11");
     let probmap = make_3x3_pmap();
-    let schema = GridSchema::new_from_map(3, false, &query, &probmap);
+    let schema = GridSchema::new_from_map(3, false, None, None, &query, &probmap);
 
     let (prg, seen, next_triu) = make::diag(
         &schema,
@@ -492,7 +492,7 @@ fn test_grid_3x3_compiles() {
     use crate::grammar::Expr::*;
     let query = b!("11");
     let probmap = make_3x3_pmap();
-    let schema = GridSchema::new_from_map(3, false, &query, &probmap);
+    let schema = GridSchema::new_from_map(3, false, None, None, &query, &probmap);
     let grid = make::grid(schema);
 
     let expected = program!(lets![
@@ -593,7 +593,7 @@ fn test_grid3x3_inference() {
     );
 
     let probmap = make_3x3_pmap();
-    let schema = GridSchema::new_from_map(3, false, &query, &probmap);
+    let schema = GridSchema::new_from_map(3, false, None, None, &query, &probmap);
     let grid = make::grid(schema);
     check_exact(
         "grid3x3/all",
@@ -681,7 +681,7 @@ fn test_grid3x3_sampled_inference() {
     );
 
     let probmap = make_3x3_pmap();
-    let schema = GridSchema::new_from_map(3, true, &query, &probmap);
+    let schema = GridSchema::new_from_map(3, true, None, None, &query, &probmap);
     let grid = make::grid(schema);
     check_approx(
         "grid3x3/approx/gen",
