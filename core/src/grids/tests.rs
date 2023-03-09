@@ -677,7 +677,7 @@ fn test_grid3x3_sampled_inference() {
             0.770263904,
         ],
         &mk(query.clone()),
-        7000,
+        15000,
     );
 
     let probmap = make_3x3_pmap();
@@ -697,6 +697,6 @@ fn test_grid3x3_sampled_inference() {
             0.770263904,
         ],
         &grid,
-        7000,
+        15000,
     );
 }
