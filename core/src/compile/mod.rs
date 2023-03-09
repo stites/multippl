@@ -4,7 +4,8 @@ pub mod errors;
 pub mod importance;
 pub mod weighting;
 
-use crate::annotate::grammar::*;
+use crate::analysis::grammar::*;
+use crate::annotate::grammar::Var;
 use crate::grammar::*;
 use crate::render::*;
 use crate::uniquify::grammar::UniqueId;
@@ -41,32 +42,6 @@ pub mod grammar {
     use super::*;
     use std::fmt;
     use std::fmt::*;
-
-    #[derive(Clone, Hash, Eq, PartialEq, Debug)]
-    pub struct Var {
-        pub id: UniqueId,               // associated unique ids
-        pub label: Option<VarLabel>,    // only hold values in the final formula
-        pub provenance: Option<String>, // when None, this indicates that the variable is in the final formula
-    }
-    impl Var {
-        pub fn new(id: UniqueId, label: Option<VarLabel>, provenance: Option<String>) -> Self {
-            Self {
-                id,
-                label,
-                provenance,
-            }
-        }
-    }
-
-    impl fmt::Display for Var {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(
-                f,
-                "Var({:?}->{:?}: {:?}, ",
-                self.id, self.label, self.provenance
-            )
-        }
-    }
 
     #[derive(Debug, PartialEq, Clone)]
     pub struct Trace;
@@ -145,8 +120,8 @@ impl<'a> Env<'a> {
     pub fn eval_anf_binop(
         &mut self,
         ctx: &Context,
-        bl: &AnfAnn,
-        br: &AnfAnn,
+        bl: &AnfAnlys,
+        br: &AnfAnlys,
         op: &dyn Fn(&mut Mgr, BddPtr, BddPtr) -> BddPtr,
     ) -> Result<(AnfTr, AnfTr, Output)> {
         let (l, ltr) = self.eval_anf(ctx, bl)?;
@@ -168,10 +143,10 @@ impl<'a> Env<'a> {
         }
     }
 
-    pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnn) -> Result<(Output, AnfTr)> {
+    pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnlys) -> Result<(Output, AnfTr)> {
         use Anf::*;
         match a {
-            AVar(var, s) => match ctx.substitutions.get(&var.id) {
+            AVar(d, s) => match ctx.substitutions.get(&d.var.id) {
                 None => Err(Generic(format!(
                     "variable {} does not reference known substitution",
                     s
@@ -208,7 +183,7 @@ impl<'a> Env<'a> {
             None => Compiled::Output(c),
         })
     }
-    pub fn eval_expr(&mut self, ctx: &Context, e: &ExprAnn) -> Result<(Compiled, ExprTr)> {
+    pub fn eval_expr(&mut self, ctx: &Context, e: &ExprAnlys) -> Result<(Compiled, ExprTr)> {
         use Expr::*;
         match e {
             EAnf(_, a) => {
@@ -277,11 +252,11 @@ impl<'a> Env<'a> {
                 let c = Compiled::Output(o);
                 Ok((c.clone(), EProd(Box::new(c), atrs)))
             }
-            ELetIn(var, s, ebound, ebody) => {
+            ELetIn(d, s, ebound, ebody) => {
                 let let_in_span = tracing::span!(Level::DEBUG, "let", var = s);
                 let _enter = let_in_span.enter();
 
-                let lbl = var.label;
+                let lbl = d.var.label;
                 // if we produce multiple worlds, we must account for them all
                 let (cbound, eboundtr) = self.eval_expr(ctx, ebound)?;
                 let (outs, mbody) = cbound
@@ -300,7 +275,7 @@ impl<'a> Env<'a> {
                         let mut newctx = Context::from_compiled(&bound);
                         newctx
                             .substitutions
-                            .insert(var.id, (bound.dists.clone(), var.clone()));
+                            .insert(d.var.id, (bound.dists.clone(), d.var.clone()));
 
                         let (bodies, bodiestr) = self.eval_expr(&newctx, ebody)?;
                         let cbodies = bodies
@@ -486,15 +461,15 @@ impl<'a> Env<'a> {
                     EIte(Box::new(outs), Box::new(atr), Box::new(ttr), Box::new(ftr)),
                 ))
             }
-            EFlip(var, param) => {
+            EFlip(d, param) => {
                 let flip = (param * 100.0).round() / 100.0;
                 let span = tracing::span!(tracing::Level::DEBUG, "", flip);
                 let _enter = span.enter();
 
                 let mut weightmap = ctx.weightmap.clone();
-                weightmap.insert(var.label.unwrap(), *param);
+                weightmap.insert(d.var.label.unwrap(), *param);
                 let o = Output {
-                    dists: vec![self.mgr.var(var.label.unwrap(), true)],
+                    dists: vec![self.mgr.var(d.var.label.unwrap(), true)],
                     accept: ctx.accept,
                     samples: ctx.samples,
                     weightmap,
@@ -655,7 +630,7 @@ impl<'a> Env<'a> {
         }
     }
 }
-pub fn debug(env: &mut Env, p: &ProgramAnn) -> Result<(Compiled, ExprTr)> {
+pub fn debug(env: &mut Env, p: &ProgramAnlys) -> Result<(Compiled, ExprTr)> {
     match p {
         Program::Body(e) => {
             debug!("========================================================");
@@ -664,6 +639,6 @@ pub fn debug(env: &mut Env, p: &ProgramAnn) -> Result<(Compiled, ExprTr)> {
     }
 }
 
-pub fn compile(env: &mut Env, p: &ProgramAnn) -> Result<Compiled> {
+pub fn compile(env: &mut Env, p: &ProgramAnlys) -> Result<Compiled> {
     Ok(debug(env, p)?.0)
 }

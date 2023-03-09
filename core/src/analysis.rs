@@ -20,6 +20,15 @@ pub mod grammar {
         pub above: HashSet<Var>,
         pub below: HashSet<Var>,
     }
+    impl DecoratedVar {
+        pub fn from_var(var: &Var) -> DecoratedVar {
+            DecoratedVar {
+                var: var.clone(),
+                above: HashSet::new(),
+                below: HashSet::new(),
+            }
+        }
+    }
 
     #[derive(Debug, PartialEq, Clone)]
     pub struct Analysis;
@@ -67,7 +76,6 @@ pub mod grammar {
     pub type ProgramAnlys = Program<Analysis>;
 }
 
-#[derive(Default)]
 pub struct AnalysisEnv {
     seen: HashSet<Var>,
     above: HashMap<Var, HashSet<Var>>,
@@ -75,6 +83,19 @@ pub struct AnalysisEnv {
 }
 
 impl AnalysisEnv {
+    /// ids from annotate pipeline
+    pub fn new(ids: &HashMap<UniqueId, Var>) -> AnalysisEnv {
+        let decor: HashMap<Var, DecoratedVar> = ids
+            .iter()
+            .map(|(_, v)| (v.clone(), DecoratedVar::from_var(v)))
+            .collect();
+        AnalysisEnv {
+            seen: HashSet::new(),
+            above: HashMap::new(),
+            decor,
+        }
+    }
+
     pub fn analyze_anf(&mut self, a: &AnfAnn) -> Result<(), CompileError> {
         use crate::grammar::Anf::*;
         match a {
@@ -196,16 +217,6 @@ impl AnalysisEnv {
         }
     }
 
-    pub fn analyze(&mut self, p: &ProgramAnn) -> Result<ProgramAnlys, CompileError> {
-        match p {
-            Program::Body(e) => {
-                self.analyze_expr(e)?;
-                self.compile_decorations();
-                let fin = self.decorate_expr(e)?;
-                Ok(Program::Body(fin))
-            }
-        }
-    }
     pub fn compile_decorations(&mut self) {
         for var in self.seen.clone() {
             let above = self.above.get(&var).expect("variable must exist").clone();
@@ -218,8 +229,26 @@ impl AnalysisEnv {
             self.decor.insert(var, dv);
         }
     }
+
     pub fn interaction_graph(&mut self) -> Result<(), CompileError> {
         Ok(())
+    }
+
+    pub fn decorate(
+        &mut self,
+        p: &ProgramAnn,
+        analyze: bool,
+    ) -> Result<ProgramAnlys, CompileError> {
+        match p {
+            Program::Body(e) => {
+                if analyze {
+                    self.analyze_expr(e)?;
+                    self.compile_decorations();
+                }
+                let fin = self.decorate_expr(e)?;
+                Ok(Program::Body(fin))
+            }
+        }
     }
 }
 
