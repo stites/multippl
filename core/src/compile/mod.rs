@@ -365,9 +365,22 @@ impl<'a> Env<'a> {
                         ctx.samples, // TODO if switching to samples_opt, no need to use ctx.
                     ))
                 };
+                let mut wmc_opt_h = |pred_dist| {
+                    Probability::new(crate::inference::calculate_wmc_prob_opt(
+                        self.mgr,
+                        &wmc_params,
+                        &var_order,
+                        pred_dist,
+                        ctx.accept,
+                        &ctx.samples_opt,
+                    ))
+                };
 
-                let wmc_true = wmc_h(pred_dist);
-                let wmc_false = wmc_h(pred_dist.neg());
+                // let wmc_true = wmc_h(pred_dist);
+                // let wmc_false = wmc_h(pred_dist.neg());
+
+                let wmc_true = wmc_opt_h(pred_dist);
+                let wmc_false = wmc_opt_h(pred_dist.neg());
 
                 debug!("=============================");
                 debug!("wmc_true {}, wmc_false {}", wmc_true, wmc_false);
@@ -508,14 +521,23 @@ impl<'a> Env<'a> {
                 debug!("WMCParams  {:?}", wmc_params);
                 debug!("VarOrder   {:?}", var_order);
                 debug!("Accept     {}", dist.print_bdd());
-                let wmc = crate::inference::calculate_wmc_prob(
+                // let wmc = crate::inference::calculate_wmc_prob(
+                //     self.mgr,
+                //     &wmc_params,
+                //     &var_order,
+                //     dist,
+                //     ctx.accept,
+                //     ctx.samples,
+                // );
+                let wmc = crate::inference::calculate_wmc_prob_opt(
                     self.mgr,
                     &wmc_params,
                     &var_order,
                     dist,
                     ctx.accept,
-                    ctx.samples,
+                    &ctx.samples_opt,
                 );
+
                 let importance = I::Weight(wmc);
                 debug!("IWeight    {}", importance.weight());
 
@@ -576,13 +598,21 @@ impl<'a> Env<'a> {
                             let (mut qs, mut dists) = (vec![], vec![]);
                             for dist in comp.dists.iter() {
                                 let sample_dist = self.mgr.and(samples, *dist);
-                                let theta_q = crate::inference::calculate_wmc_prob(
+                                // let theta_q = crate::inference::calculate_wmc_prob(
+                                //     self.mgr,
+                                //     &wmc_params,
+                                //     &var_order,
+                                //     sample_dist, // TODO switch from *dist
+                                //     accept,
+                                //     samples, // TODO &samples
+                                // );
+                                let theta_q = crate::inference::calculate_wmc_prob_opt(
                                     self.mgr,
                                     &wmc_params,
                                     &var_order,
-                                    sample_dist, // TODO switch from *dist
+                                    *dist,
                                     accept,
-                                    samples, // TODO &samples
+                                    &samples_opt,
                                 );
 
                                 let sample = match self.rng.as_mut() {
