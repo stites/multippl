@@ -97,11 +97,15 @@ pub struct Env<'a> {
     pub order: VarOrder,
     pub max_label: u64,
 
+    // in progress
+    pub sampling_context: Option<DecoratedVar>,
+
+    // static
+    pub varmap: Option<HashMap<UniqueId, Var>>,
+
     // ignored
     pub weightmap: Option<WmcParams<f64>>,
     pub inv: Option<HashMap<VarLabel, Var>>,
-    pub varmap: Option<HashMap<UniqueId, Var>>,
-    pub samples: HashMap<UniqueId, Vec<bool>>,
 }
 impl<'a> Env<'a> {
     pub fn new(mgr: &'a mut BddManager<AllTable<BddPtr>>, rng: Option<&'a mut StdRng>) -> Env<'a> {
@@ -113,7 +117,7 @@ impl<'a> Env<'a> {
             inv: None,
             mgr,
             rng,
-            samples: HashMap::new(),
+            sampling_context: None,
         }
     }
 
@@ -215,7 +219,6 @@ impl<'a> Env<'a> {
                 let _enter = span.enter();
                 debug!("{:?}", a);
                 let c = self.eval_expr(ctx, &EPrj((), 0, a.clone()))?;
-                // debug_step!("fst", ctx, c);
                 Ok(c)
             }
             ESnd(_, a) => {
@@ -223,7 +226,6 @@ impl<'a> Env<'a> {
                 let _enter = span.enter();
                 debug!("{:?}", a);
                 let c = self.eval_expr(ctx, &EPrj((), 1, a.clone()))?;
-                // debug_step!("snd", ctx, c);
                 Ok(c)
             }
             EProd(_, anfs) => {
@@ -242,6 +244,7 @@ impl<'a> Env<'a> {
                     dists,
                     accept: ctx.accept,
                     samples: ctx.samples,
+                    samples_opt: ctx.samples_opt.clone(),
                     weightmap: ctx.weightmap.clone(),
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0); flen],
@@ -255,6 +258,7 @@ impl<'a> Env<'a> {
             ELetIn(d, s, ebound, ebody) => {
                 let let_in_span = tracing::span!(Level::DEBUG, "let", var = s);
                 let _enter = let_in_span.enter();
+                self.sampling_context = Some(d.clone());
 
                 let lbl = d.var.label;
                 // if we produce multiple worlds, we must account for them all
@@ -291,6 +295,8 @@ impl<'a> Env<'a> {
 
                                 let accept = self.mgr.and(body.accept, ctx.accept);
                                 let samples = self.mgr.and(body.samples, ctx.samples);
+                                // TODO see if I need to include both body and ctx samples.
+                                let samples_opt = body.samples_opt.clone();
 
                                 let probabilities =
                                     izip!(bound.probabilities.clone(), body.probabilities)
@@ -303,6 +309,7 @@ impl<'a> Env<'a> {
                                     dists: body.dists,
                                     accept,
                                     samples,
+                                    samples_opt,
                                     substitutions: body.substitutions.clone(),
                                     weightmap: body.weightmap,
                                     probabilities,
@@ -355,7 +362,7 @@ impl<'a> Env<'a> {
                     &var_order,
                     pred_dist,
                     ctx.accept,
-                    ctx.samples,
+                    ctx.samples, // TODO if switching to samples_opt, no need to use ctx.
                 );
                 let wmc_true = Probability::new(wmc_true);
                 let wmc_false = crate::inference::calculate_wmc_prob(
@@ -364,7 +371,7 @@ impl<'a> Env<'a> {
                     &var_order,
                     pred_dist.neg(),
                     ctx.accept,
-                    ctx.samples,
+                    ctx.samples, // TODO if switching to samples_opt, no need to use ctx.
                 );
                 let wmc_false = Probability::new(wmc_false);
 
@@ -407,6 +414,8 @@ impl<'a> Env<'a> {
                                   .collect_vec();
 
                             let samples = self.mgr.and(truthy.samples, falsey.samples);
+                            let mut samples_opt = truthy.samples_opt.clone();
+                            samples_opt.extend(falsey.samples_opt.clone());
 
                             let accept_l = self.mgr.and(pred_dist, truthy.accept);
                             let accept_r = self.mgr.and(pred_dist.neg(), falsey.accept);
@@ -435,6 +444,7 @@ impl<'a> Env<'a> {
                                   dists,
                                   accept,
                                   samples,
+                                  samples_opt,
                                   weightmap,
                                   substitutions,
                                   probabilities,
@@ -472,6 +482,7 @@ impl<'a> Env<'a> {
                     dists: vec![self.mgr.var(d.var.label.unwrap(), true)],
                     accept: ctx.accept,
                     samples: ctx.samples,
+                    samples_opt: ctx.samples_opt.clone(),
                     weightmap,
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0)],
@@ -500,7 +511,6 @@ impl<'a> Env<'a> {
                 for (i, var) in avars.iter().enumerate() {
                     debug!("{}@{:?}: {:?}", i, var, wmc_params.get_var_weight(*var));
                 }
-                // debug!("[observe] max_var    {}", max_var);
                 debug!("WMCParams  {:?}", wmc_params);
                 debug!("VarOrder   {:?}", var_order);
                 debug!("Accept     {}", dist.print_bdd());
@@ -519,6 +529,7 @@ impl<'a> Env<'a> {
                     dists: vec![BddPtr::PtrTrue],
                     accept: dist,
                     samples: ctx.samples,
+                    samples_opt: ctx.samples_opt.clone(),
                     weightmap: ctx.weightmap.clone(),
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0)],
@@ -565,17 +576,19 @@ impl<'a> Env<'a> {
                                 tracing::span!(tracing::Level::DEBUG, "", s)
                             };
                             let _enter = span.enter();
-
-                            let (mut samples, mut qs, mut dists) = (comp.samples, vec![], vec![]);
+                            let sampling_context = self.sampling_context.clone();
+                            let mut samples = comp.samples;
+                            let mut samples_opt = comp.samples_opt.clone();
+                            let (mut qs, mut dists) = (vec![], vec![]);
                             for dist in comp.dists.iter() {
                                 let sample_dist = self.mgr.and(samples, *dist);
                                 let theta_q = crate::inference::calculate_wmc_prob(
                                     self.mgr,
                                     &wmc_params,
                                     &var_order,
-                                    sample_dist,
+                                    sample_dist, // TODO switch from *dist
                                     accept,
-                                    samples,
+                                    samples, // TODO &samples
                                 );
 
                                 let sample = match self.rng.as_mut() {
@@ -598,6 +611,9 @@ impl<'a> Env<'a> {
                                 // with rsdd's fold
                                 let dist_holds = self.mgr.iff(*dist, sampled_value);
                                 samples = self.mgr.and(samples, dist_holds);
+
+                                let dv = sampling_context.clone();
+                                samples_opt.insert(*dist, (dv, sample));
                             }
                             debug!("final dists:   {}", renderbdds(&dists));
                             debug!("final samples: {}", samples.print_bdd());
@@ -606,10 +622,13 @@ impl<'a> Env<'a> {
                                 dists,
                                 accept,
                                 samples,
-                                // weightmap: ctx.weightmap.clone(), // FIXME
-                                // substitutions: ctx.substitutions.clone(), // TODO any dangling references will be treated as constant and, thus, ignored -- information about this will live only in the propagated weight
-                                weightmap: comp.weightmap.clone(), // FIXME
-                                substitutions: comp.substitutions.clone(), // TODO any dangling references will be treated as constant and, thus, ignored -- information about this will live only in the propagated weight
+                                samples_opt: samples_opt.clone(),
+                                weightmap: comp.weightmap.clone(),
+                                // any dangling references will be treated as
+                                // constant and, thus, ignored -- information
+                                // about this will live only in the propagated
+                                // weight
+                                substitutions: comp.substitutions.clone(),
                                 probabilities: qs,
                                 importance: I::Weight(1.0),
                             };

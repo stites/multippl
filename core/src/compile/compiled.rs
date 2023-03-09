@@ -1,3 +1,4 @@
+use crate::analysis::grammar::DecoratedVar;
 use crate::annotate::grammar::Var;
 use crate::compile::context::Context;
 use crate::compile::importance::{Importance, I};
@@ -19,8 +20,9 @@ pub struct Output {
     pub accept: BddPtr,
     /// sample consistency
     pub samples: BddPtr,
+    pub samples_opt: HashMap<BddPtr, (Option<DecoratedVar>, bool)>, // TODO
     /// (unused, unnormalized) probabilities of the compiled distributions
-    pub probabilities: Vec<Probability>,
+    pub probabilities: Vec<Probability>, // FIXME: the more I think about this the more I think this is fundamentally broken in the presence of observe statements.
     /// compiled weightmap
     pub weightmap: WeightMap,
     /// substitution environment
@@ -36,6 +38,7 @@ impl Output {
             dists,
             accept: ctx.accept,
             samples: ctx.samples,
+            samples_opt: ctx.samples_opt.clone(),
             substitutions: ctx.substitutions.clone(),
             weightmap: ctx.weightmap.clone(),
             probabilities,

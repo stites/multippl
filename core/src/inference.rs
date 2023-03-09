@@ -1,3 +1,4 @@
+use crate::analysis::grammar::DecoratedVar;
 use crate::compile::*;
 use crate::grammar::*;
 use crate::render::*;
@@ -67,6 +68,28 @@ pub fn calculate_wmc_prob(
     calculate_wmc_prob_hf64(mgr, params, var_order, dist, accept)
 }
 
+pub fn calculate_wmc_prob_opt(
+    mgr: &mut Mgr,
+    params: &WmcParams<f64>,
+    var_order: &VarOrder,
+    dist: BddPtr,
+    accept: BddPtr,
+    samples_opt: &HashMap<BddPtr, (Option<DecoratedVar>, bool)>,
+) -> f64 {
+    let compiled_samples = samples_opt.iter().fold(
+        BddPtr::PtrTrue,
+        |full, (bdd, (dv, sampled_value))| match dv {
+            None => full,
+            Some(dv) => {
+                let dist_holds = mgr.iff(*bdd, BddPtr::from_bool(*sampled_value));
+                mgr.and(full, dist_holds)
+            }
+        },
+    );
+    let accept = mgr.and(compiled_samples, accept);
+    calculate_wmc_prob_hf64(mgr, params, var_order, dist, accept)
+}
+
 pub fn wmc_prob(mgr: &mut Mgr, c: &Output) -> Vec<f64> {
     c.dists
         .iter()
@@ -78,6 +101,22 @@ pub fn wmc_prob(mgr: &mut Mgr, c: &Output) -> Vec<f64> {
                 *d,
                 c.accept,
                 c.samples,
+            )
+        })
+        .collect_vec()
+}
+
+pub fn wmc_prob_opt(mgr: &mut Mgr, c: &Output) -> Vec<f64> {
+    c.dists
+        .iter()
+        .map(|d| {
+            calculate_wmc_prob_opt(
+                mgr,
+                &c.weightmap.as_params(mgr.get_order().num_vars() as u64),
+                &mgr.get_order().clone(),
+                *d,
+                c.accept,
+                &c.samples_opt,
             )
         })
         .collect_vec()
