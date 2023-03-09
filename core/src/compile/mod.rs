@@ -355,25 +355,19 @@ impl<'a> Env<'a> {
                 let pred_dist = pred.dists[0];
                 let var_order = self.order.clone();
                 let wmc_params = ctx.weightmap.as_params(self.max_label);
+                let mut wmc_h = |pred_dist| {
+                    Probability::new(crate::inference::calculate_wmc_prob(
+                        self.mgr,
+                        &wmc_params,
+                        &var_order,
+                        pred_dist,
+                        ctx.accept,
+                        ctx.samples, // TODO if switching to samples_opt, no need to use ctx.
+                    ))
+                };
 
-                let wmc_true = crate::inference::calculate_wmc_prob(
-                    self.mgr,
-                    &wmc_params,
-                    &var_order,
-                    pred_dist,
-                    ctx.accept,
-                    ctx.samples, // TODO if switching to samples_opt, no need to use ctx.
-                );
-                let wmc_true = Probability::new(wmc_true);
-                let wmc_false = crate::inference::calculate_wmc_prob(
-                    self.mgr,
-                    &wmc_params,
-                    &var_order,
-                    pred_dist.neg(),
-                    ctx.accept,
-                    ctx.samples, // TODO if switching to samples_opt, no need to use ctx.
-                );
-                let wmc_false = Probability::new(wmc_false);
+                let wmc_true = wmc_h(pred_dist);
+                let wmc_false = wmc_h(pred_dist.neg());
 
                 debug!("=============================");
                 debug!("wmc_true {}, wmc_false {}", wmc_true, wmc_false);
