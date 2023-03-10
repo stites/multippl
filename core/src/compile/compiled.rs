@@ -20,7 +20,7 @@ pub struct Output {
     pub accept: BddPtr,
     /// sample consistency
     pub samples: BddPtr,
-    pub samples_opt: HashMap<BddPtr, (Option<DecoratedVar>, bool)>, // TODO
+    pub samples_opt: HashMap<BddPtr, (Option<Var>, bool)>, // TODO
     /// (unused, unnormalized) probabilities of the compiled distributions
     pub probabilities: Vec<Probability>, // FIXME: the more I think about this the more I think this is fundamentally broken in the presence of observe statements.
     /// compiled weightmap

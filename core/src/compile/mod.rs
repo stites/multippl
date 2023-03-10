@@ -373,6 +373,7 @@ impl<'a> Env<'a> {
                         pred_dist,
                         ctx.accept,
                         &ctx.samples_opt,
+                        self.sampling_context.clone(),
                     ))
                 };
 
@@ -536,6 +537,7 @@ impl<'a> Env<'a> {
                     dist,
                     ctx.accept,
                     &ctx.samples_opt,
+                    self.sampling_context.clone(),
                 );
 
                 let importance = I::Weight(wmc);
@@ -613,6 +615,7 @@ impl<'a> Env<'a> {
                                     *dist,
                                     accept,
                                     &samples_opt,
+                                    sampling_context.clone(),
                                 );
 
                                 let sample = match self.rng.as_mut() {
@@ -637,7 +640,7 @@ impl<'a> Env<'a> {
                                 samples = self.mgr.and(samples, dist_holds);
 
                                 let dv = sampling_context.clone();
-                                samples_opt.insert(*dist, (dv, sample));
+                                samples_opt.insert(*dist, (dv.map(|x| x.var), sample));
                             }
                             debug!("final dists:   {}", renderbdds(&dists));
                             debug!("final samples: {}", samples.print_bdd());

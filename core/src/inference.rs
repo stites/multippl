@@ -1,4 +1,5 @@
 use crate::analysis::grammar::DecoratedVar;
+use crate::annotate::grammar::Var;
 use crate::compile::*;
 use crate::grammar::*;
 use crate::render::*;
@@ -74,15 +75,23 @@ pub fn calculate_wmc_prob_opt(
     var_order: &VarOrder,
     dist: BddPtr,
     accept: BddPtr,
-    samples_opt: &HashMap<BddPtr, (Option<DecoratedVar>, bool)>,
+    samples_opt: &HashMap<BddPtr, (Option<Var>, bool)>,
+    sampling_context: Option<DecoratedVar>,
 ) -> f64 {
+    let removable = sampling_context
+        .map(|dv| dv.below.difference(&dv.above).cloned().collect())
+        .unwrap_or(std::collections::HashSet::new());
     let compiled_samples = samples_opt.iter().fold(
         BddPtr::PtrTrue,
-        |full, (bdd, (dv, sampled_value))| match dv {
-            None => full,
-            Some(dv) => {
-                let dist_holds = mgr.iff(*bdd, BddPtr::from_bool(*sampled_value));
-                mgr.and(full, dist_holds)
+        |formula, (bdd, (dv, sampled_value))| match dv {
+            None => formula,
+            Some(var) => {
+                if removable.contains(&var) {
+                    formula
+                } else {
+                    let dist_holds = mgr.iff(*bdd, BddPtr::from_bool(*sampled_value));
+                    mgr.and(formula, dist_holds)
+                }
             }
         },
     );
@@ -106,7 +115,7 @@ pub fn wmc_prob(mgr: &mut Mgr, c: &Output) -> Vec<f64> {
         .collect_vec()
 }
 
-pub fn wmc_prob_opt(mgr: &mut Mgr, c: &Output) -> Vec<f64> {
+pub fn wmc_prob_opt(mgr: &mut Mgr, c: &Output, sampling_context: Option<DecoratedVar>) -> Vec<f64> {
     c.dists
         .iter()
         .map(|d| {
@@ -117,6 +126,7 @@ pub fn wmc_prob_opt(mgr: &mut Mgr, c: &Output) -> Vec<f64> {
                 *d,
                 c.accept,
                 &c.samples_opt,
+                sampling_context.clone(),
             )
         })
         .collect_vec()
