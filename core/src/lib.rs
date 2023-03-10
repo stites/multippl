@@ -24,9 +24,9 @@ mod tests;
 
 #[derive(Default)]
 pub struct Options {
-    seed: Option<u64>,
-    debug: bool, // overrides seed
-    opt: bool,   // use optimizations
+    pub seed: Option<u64>,
+    pub debug: bool, // overrides seed
+    pub opt: bool,   // use optimizations
 }
 impl Options {
     pub fn rng(&self) -> StdRng {

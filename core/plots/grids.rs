@@ -13,6 +13,7 @@ use yodel::compile::grammar::*;
 use yodel::grids::{make, GridSchema, Selection};
 use yodel::inference::exact;
 use yodel::inference::importance_weighting;
+use yodel::inference::importance_weighting_h;
 use yodel::typecheck::grammar::*;
 use yodel::*;
 
@@ -129,7 +130,7 @@ fn run_all_grids(path: &str) -> Vec<Row> {
     let mut rows: Vec<Row> = vec![];
     let specs: Vec<_> = iproduct!(
         [2, 3, 4, 5, 7, 9, 12, 15, 20, 25_usize],
-        [Exact, Approx], // OptApprox],
+        [Exact, Approx, OptApprox],
         (1..=5_u64),
         [0.25, 0.5, 0.75, 1.0_f64]
     )
@@ -148,8 +149,11 @@ fn run_all_grids(path: &str) -> Vec<Row> {
                     importance_weighting(1, &prg);
                 }
                 OptApprox => {
-                    todo!();
-                    // importance_weighting_opt(1, &prg);
+                    let opts = yodel::Options {
+                        opt: true,
+                        ..Default::default()
+                    };
+                    importance_weighting_h(1, &prg, &opts);
                 }
             }
             let stop = Instant::now();
@@ -229,7 +233,6 @@ fn build_chart(rows: Vec<SummaryRow>) -> MyResult<()> {
 }
 
 fn main() -> MyResult<()> {
-    todo!();
     fs::create_dir_all("out/plots/")?;
     let rows = run_all_grids("out/plots/grids.csv");
     // build_chart(rows);
