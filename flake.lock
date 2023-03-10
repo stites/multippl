@@ -495,14 +495,20 @@
         ]
       },
       "locked": {
-        "lastModified": 1677903715,
-        "narHash": "sha256-eTX9/VW9wtttzWGFfIljK2Db7TSBt5oVzHtXd0EwXUs=",
-        "path": "/home/stites/git/rust/rsdd/nix",
-        "type": "path"
+        "dir": "nix",
+        "lastModified": 1678421952,
+        "narHash": "sha256-3en+/slnQxGk+ZQXyxy3BQTE7emPwq4SIRnEx5zNbd4=",
+        "owner": "stites",
+        "repo": "rsdd",
+        "rev": "0c5c01526713c87188df4783925b2d834fa14f7e",
+        "type": "github"
       },
       "original": {
-        "path": "/home/stites/git/rust/rsdd/nix",
-        "type": "path"
+        "dir": "nix",
+        "owner": "stites",
+        "ref": "yodel-additions",
+        "repo": "rsdd",
+        "type": "github"
       }
     },
     "rust-overlay": {

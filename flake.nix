@@ -9,8 +9,8 @@
     crane.url = "github:ipetkov/crane/v0.11.3";
     crane.inputs.nixpkgs.follows = "nixpkgs";
     dice.url = "github:stites/dice.nix";
-    # rsdd.url = "github:stites/rsdd/yodel-additions?dir=nix";
-    rsdd.url = "path:/home/stites/git/rust/rsdd/nix";
+    rsdd.url = "github:stites/rsdd/yodel-additions?dir=nix";
+    # rsdd.url = "path:/home/stites/git/rust/rsdd/nix";
     advisory-db.url = "github:rustsec/advisory-db";
     advisory-db.flake = false;
 
