@@ -355,7 +355,7 @@ impl<'a> Env<'a> {
                 let pred_dist = pred.dists[0];
                 let var_order = self.order.clone();
                 let wmc_params = ctx.weightmap.as_params(self.max_label);
-                let mut wmc_h = |pred_dist| {
+                let wmc_h = |pred_dist| {
                     Probability::new(crate::inference::calculate_wmc_prob(
                         self.mgr,
                         &wmc_params,

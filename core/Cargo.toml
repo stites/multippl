@@ -8,11 +8,6 @@ name = "grids"
 harness = false
 required-features = ["criterion"]
 
-# [[bench]]
-# name = "data_flow"
-# harness = false
-# required-features = ["criterion"]
-
 [[bin]]
 name = "plot-grids"
 path = "plots/grids.rs"
