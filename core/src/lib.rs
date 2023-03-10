@@ -113,7 +113,7 @@ pub fn runner_h(p: &ProgramTyped, mgr: &mut Mgr, opt: &Options) -> Result<Compil
 
     let mut rng = opt.rng();
     let orng = if opt.debug { None } else { Some(&mut rng) };
-    let mut env = Env::new(mgr, orng);
+    let mut env = Env::new(mgr, orng, opt.opt); // technically don't need this if I use the decorated vars in a clever way
 
     env.varmap = Some(varmap);
     env.inv = Some(inv);
