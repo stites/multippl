@@ -4,6 +4,8 @@ use crate::typecheck::grammar::*;
 use crate::ExprTyped;
 use crate::*;
 use itertools::*;
+use rand::distributions::WeightedIndex;
+use rand::distributions::{Bernoulli, Distribution};
 use rand::rngs::StdRng;
 use rsdd::sample::probability::*;
 use std::cmp::Ordering;
@@ -14,12 +16,39 @@ use tracing_test::traced_test;
 #[cfg(test)]
 mod tests;
 
+#[derive(Debug, Clone, Copy)]
+pub enum Selection {
+    Random,
+    // OrOnly,
+    // AndOnly,
+    // TrueOnly,
+}
+#[derive(Debug, Clone, Copy)]
+pub enum OneParentStrategy {
+    True,
+    False,
+    Pos,
+    Neg,
+}
+#[derive(Debug, Clone, Copy)]
+pub enum TwoParentStrategy {
+    True,
+    False,
+    Conjunct,
+    Disjunct,
+}
+impl Default for Selection {
+    fn default() -> Self {
+        Selection::Random
+    }
+}
 pub struct GridSpec<'a> {
     size: usize,
     sampled: bool,
     query: ExprTyped,
     seed: StdRng,
     determinism: Probability,
+    determinism_selection: Selection,
     probability: &'a dyn Fn(Ix, Parents<bool>) -> Probability,
 }
 
@@ -30,6 +59,7 @@ impl<'a> GridSpec<'a> {
         sampled: bool,
         seed: Option<u64>,
         determinism: f64,
+        determinism_selection: Selection,
         probability: &'a dyn Fn(Ix, Parents<bool>) -> Probability,
     ) -> Self {
         match seed {
@@ -39,6 +69,7 @@ impl<'a> GridSpec<'a> {
                 seed: rand::SeedableRng::from_entropy(),
                 sampled,
                 determinism: Probability::new(determinism),
+                determinism_selection,
                 probability,
             },
             Some(s) => GridSpec {
@@ -47,6 +78,7 @@ impl<'a> GridSpec<'a> {
                 seed: rand::SeedableRng::seed_from_u64(s),
                 sampled,
                 determinism: Probability::new(determinism),
+                determinism_selection,
                 probability,
             },
         }
@@ -137,6 +169,7 @@ pub struct GridSchema {
     triu: HashSet<Ix>,
     diag: HashSet<Ix>,
     determinism: Probability,
+    determinism_selection: Selection,
     rng: StdRng,
 
     flips: HashMap<(Ix, Parents<bool>), Probability>,
@@ -146,6 +179,24 @@ pub struct GridSchema {
     query: ExprTyped,
 }
 impl GridSchema {
+    pub fn flip_deterministic(&mut self) -> bool {
+        let bern = Bernoulli::new(self.determinism.as_f64()).unwrap();
+        bern.sample(&mut self.rng)
+    }
+    pub fn choose_strategy_h<X: Copy>(&mut self, choices: [X; 4]) -> X {
+        use OneParentStrategy::*;
+        let weights = [1, 1, 1, 1];
+        let dist = WeightedIndex::new(&weights).unwrap();
+        choices[dist.sample(&mut self.rng)]
+    }
+    pub fn choose_strategy_one(&mut self) -> OneParentStrategy {
+        use OneParentStrategy::*;
+        self.choose_strategy_h([True, False, Pos, Neg])
+    }
+    pub fn choose_strategy_two(&mut self) -> TwoParentStrategy {
+        use TwoParentStrategy::*;
+        self.choose_strategy_h([True, False, Conjunct, Disjunct])
+    }
     pub fn get_flip(&self, ix: Ix, p: Parents<bool>) -> f64 {
         self.flips
             .get(&(ix, p))
@@ -166,6 +217,7 @@ impl GridSchema {
         sampled: bool,
         seed: Option<u64>,
         determinism: Option<f64>,
+        determinism_selection: Selection,
         query: Option<&ExprTyped>,
         probability: &dyn Fn(Ix, Parents<bool>) -> Probability,
     ) -> GridSchema {
@@ -180,6 +232,7 @@ impl GridSchema {
             sampled,
             seed,
             determinism,
+            determinism_selection,
             probability,
         ))
     }
@@ -188,6 +241,7 @@ impl GridSchema {
         sampled: bool,
         seed: Option<u64>,
         determinism: Option<f64>,
+        determinism_selection: Selection,
         query: &ExprTyped,
         probmap: &HashMap<(Ix, Parents<bool>), Probability>,
     ) -> GridSchema {
@@ -204,6 +258,7 @@ impl GridSchema {
             sampled,
             seed,
             determinism,
+            determinism_selection,
             &prob,
         ))
     }
@@ -273,6 +328,7 @@ pub mod make {
             triu,
             rng: spec.seed.clone(),
             determinism: spec.determinism.clone(),
+            determinism_selection: spec.determinism_selection,
             diag,
             sampled,
             query,
@@ -280,7 +336,7 @@ pub mod make {
         }
     }
 
-    pub fn no_parents(schema: &GridSchema, ix: Ix, rest: ExprTyped) -> ExprTyped {
+    pub fn make_with_no_parents(schema: &GridSchema, ix: Ix, rest: ExprTyped) -> ExprTyped {
         let pr = schema.get_flip(ix, Parents::Zero);
         ELetIn(
             LetInTypes {
@@ -293,7 +349,44 @@ pub mod make {
         )
     }
 
-    pub fn one_parents(schema: &GridSchema, ix: Ix, parent: Ix, rest: ExprTyped) -> ExprTyped {
+    pub fn choose_with_one_parent(schema: &mut GridSchema, ix: Ix, parent: Ix, rest: ExprTyped) -> ExprTyped {
+        if schema.flip_deterministic() {
+            one_parent_det(schema, ix, parent, rest)
+        } else {
+            one_parent_stoch(schema, ix, parent, rest)
+        }
+    }
+
+    pub fn one_parent_det(schema: &mut GridSchema, ix: Ix, parent: Ix, rest: ExprTyped) -> ExprTyped {
+        let bindee = match schema.determinism_selection {
+            Selection::Random => {
+                use OneParentStrategy::*;
+                match schema.choose_strategy_one() {
+                    True => {
+                        Expr::EAnf((), Box::new(Anf::AVal((), Val::Bool(true))))
+                    },
+                    False => {
+                        Expr::EAnf((), Box::new(Anf::AVal((), Val::Bool(false))))
+                    },
+                    Pos => {
+                        Expr::EAnf((), Box::new(Anf::AVar(b!(), parent.as_string())))
+                    },
+                    Neg => {
+                        let var = Anf::AVar(b!(), parent.as_string());
+                        Expr::EAnf((), Box::new(Anf::Neg(Box::new(var))))
+                    }
+                }
+            },
+        };
+        ELetIn(
+            LetInTypes {bindee: b!(), body: b!(),},
+            ix.as_string(),
+            Box::new(bindee),
+            Box::new(rest),
+        )
+    }
+
+    pub fn one_parent_stoch(schema: &GridSchema, ix: Ix, parent: Ix, rest: ExprTyped) -> ExprTyped {
         let p_t = schema.get_flip(ix, Parents::One(parent, true));
         let p_f = schema.get_flip(ix, Parents::One(parent, false));
         let p = parent.as_string();
@@ -305,7 +398,51 @@ pub mod make {
         )
     }
 
-    pub fn two_parents(schema: &GridSchema, ix: Ix, parents: (Ix, Ix), rest: ExprTyped) -> ExprTyped {
+    pub fn choose_with_two_parents(schema: &mut GridSchema, ix: Ix, parents: (Ix, Ix), rest: ExprTyped) -> ExprTyped {
+        let make_deterministic = schema.flip_deterministic();
+        if schema.flip_deterministic() {
+            two_parents_det(schema, ix, parents, rest)
+        } else {
+            two_parents_stoch(schema, ix, parents, rest)
+        }
+    }
+
+    pub fn two_parents_det(schema: &mut GridSchema, ix: Ix, parents: (Ix, Ix), rest: ExprTyped) -> ExprTyped {
+        let (p1s, p2s) = parents;
+        let (p1s, p2s) = (p1s.as_string(), p2s.as_string());
+
+        let bindee = match schema.determinism_selection {
+            Selection::Random => {
+                use TwoParentStrategy::*;
+                match schema.choose_strategy_two() {
+                    True => {
+                        Expr::EAnf((), Box::new(Anf::AVal((), Val::Bool(true))))
+                    },
+                    False => {
+                        Expr::EAnf((), Box::new(Anf::AVal((), Val::Bool(false))))
+                    },
+                    Conjunct => {
+                        let p1 = Anf::AVar(b!(), p1s);
+                        let p2 = Anf::AVar(b!(), p2s);
+                        Expr::EAnf((), Box::new(Anf::And(Box::new(p1), Box::new(p2))))
+                    },
+                    Disjunct => {
+                        let p1 = Anf::AVar(b!(), p1s);
+                        let p2 = Anf::AVar(b!(), p2s);
+                        Expr::EAnf((), Box::new(Anf::Or(Box::new(p1), Box::new(p2))))
+                    }
+                }
+            },
+        };
+        ELetIn(
+            LetInTypes {bindee: b!(), body: b!(),},
+            ix.as_string(),
+            Box::new(bindee),
+            Box::new(rest),
+        )
+    }
+
+    pub fn two_parents_stoch(schema: &mut GridSchema, ix: Ix, parents: (Ix, Ix), rest: ExprTyped) -> ExprTyped {
         let (pl, pr) = parents;
         let (pl, pr) = (pl.as_string(), pr.as_string());
         let p_t_t = schema.get_flip(ix, Parents::Two((parents.0, true), (parents.1, true)));
@@ -368,7 +505,7 @@ pub mod make {
             Box::new(tril),
         )
     }
-    pub fn fill_schema(schema: &GridSchema, region: &HashSet<Ix>, seen: HashSet<Ix>, seed: Vec<Ix>, prg: ExprTyped) -> (ExprTyped, HashSet<Ix>, Vec<Ix>) {
+    pub fn fill_schema(mut schema: GridSchema, region: &HashSet<Ix>, seen: HashSet<Ix>, seed: Vec<Ix>, prg: ExprTyped) -> (ExprTyped, HashSet<Ix>, Vec<Ix>, GridSchema) {
         use Parents::*;
         let mut q = VecDeque::from(seed.clone());
         let mut seen = seen;
@@ -389,9 +526,9 @@ pub mod make {
             } else {
                 let parents = schema.get_parents(ix);
                 prg = match parents {
-                    Zero => make::no_parents(schema, ix, prg),
-                    One(p, _) => make::one_parents(schema, ix, p, prg),
-                    Two((l, _), (r, _)) => make::two_parents(schema, ix, (l, r), prg),
+                    Zero => make::make_with_no_parents(&mut schema, ix, prg),
+                    One(p, _) => make::choose_with_one_parent(&mut schema, ix, p, prg),
+                    Two((l, _), (r, _)) => make::choose_with_two_parents(&mut schema, ix, (l, r), prg),
                 };
                 seen.insert(ix);
                 let mut nxt_parents = parents.to_vec().into();
@@ -401,45 +538,49 @@ pub mod make {
             }
         }
 
-        (prg, seen, next)
+        (prg, seen, next, schema)
     }
 
-    pub fn tril(schema: &GridSchema) -> (ExprTyped, HashSet<Ix>, Vec<Ix>) {
+    pub fn tril(schema: GridSchema) -> (ExprTyped, HashSet<Ix>, Vec<Ix>, GridSchema) {
         let span = tracing::span!(tracing::Level::DEBUG, "tril");
         let _enter = span.enter();
-
-        fill_schema(schema, &schema.tril, HashSet::from([]), vec![Ix::new(schema.size-1, schema.size-1)], schema.query.clone())
+        let tril =  schema.tril.clone();
+        let query = schema.query.clone();
+        let size = schema.size - 1;
+        fill_schema(schema, &tril, HashSet::from([]), vec![Ix::new(size, size)], query)
     }
 
-    pub fn diag(schema: &GridSchema, prg:ExprTyped, seen:HashSet<Ix>, build_diag:Vec<Ix>) -> (ExprTyped, HashSet<Ix>, Vec<Ix>) {
+    pub fn diag(schema: GridSchema, prg:ExprTyped, seen:HashSet<Ix>, build_diag:Vec<Ix>) -> (ExprTyped, HashSet<Ix>, Vec<Ix>, GridSchema) {
         let span = tracing::span!(tracing::Level::DEBUG, "diag");
         let _enter = span.enter();
 
         let mut prg = prg;
         let mut tril_prg : Option<ExprTyped> = None;
         if schema.sampled {
-            prg = all_diag_aliases(schema, prg);
+            prg = all_diag_aliases(&schema, prg);
             tril_prg = Some(prg);
-            let ixs = make::diag_ixs(schema);
+            let ixs = make::diag_ixs(&schema);
             prg = make::product_of(ixs);
         }
-        let (mut prg, seen, next_triu) = fill_schema(schema, &schema.diag, seen, build_diag, prg);
+        let diag = schema.diag.clone();
+        let (mut prg, seen, next_triu, schema) = fill_schema(schema, &diag, seen, build_diag, prg);
         if schema.sampled {
             prg = make::sample_diag(prg, tril_prg.unwrap());
         }
-        (prg, seen, next_triu)
+        (prg, seen, next_triu, schema)
     }
 
-    pub fn triu(schema: &GridSchema, prg:ExprTyped, seen:HashSet<Ix>, build_triu:Vec<Ix>) -> (ExprTyped, HashSet<Ix>, Vec<Ix>) {
+    pub fn triu(schema: GridSchema, prg:ExprTyped, seen:HashSet<Ix>, build_triu:Vec<Ix>) -> (ExprTyped, HashSet<Ix>, Vec<Ix>, GridSchema) {
         let span = tracing::span!(tracing::Level::DEBUG, "triu");
         let _enter = span.enter();
-        fill_schema(schema, &schema.triu, seen, build_triu, prg)
+        let triu = schema.triu.clone();
+        fill_schema(schema, &triu, seen, build_triu, prg)
     }
 
     pub fn grid(schema: GridSchema) -> ProgramTyped {
-        let (prg, seen, next_diag) = tril(&schema);
-        let (prg, seen, next_triu) = diag(&schema, prg, seen, next_diag);
-        let (prg, seen, remainder) = triu(&schema, prg, seen, next_triu);
+        let (prg, seen, next_diag, schema) = tril(schema);
+        let (prg, seen, next_triu, schema) = diag(schema, prg, seen, next_diag);
+        let (prg, seen, remainder, schema) = triu(schema, prg, seen, next_triu);
         assert_eq!(remainder, vec![], "grid construction incomplete! found remaining nodes on the left");
         program!(prg)
     }
