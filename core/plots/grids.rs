@@ -68,7 +68,13 @@ fn run_one_grid(sp: &mut Spinner, size: usize, determinism: f64) -> Row {
 }
 
 fn write_csv_header(path: &str) -> Result<(), Box<dyn Error>> {
-    let mut wtr = Writer::from_path(path)?;
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .append(true)
+        .create_new(!std::path::Path::new(&path).exists())
+        .open(path)
+        .unwrap();
+    let mut wtr = Writer::from_writer(file);
     wtr.write_record(&["grid size", "exact(µs)", "approx(µs)"])?;
     wtr.flush()?;
     Ok(())
@@ -77,7 +83,6 @@ fn write_csv_row(path: &str, row: &Row) -> Result<(), Box<dyn Error>> {
     let mut file = fs::OpenOptions::new()
         .write(true)
         .append(true)
-        .create_new(true)
         .open(path)
         .unwrap();
     let mut wtr = Writer::from_writer(file);
