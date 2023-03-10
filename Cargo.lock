@@ -2178,6 +2178,7 @@ dependencies = [
  "rand 0.8.5",
  "rayon",
  "rsdd",
+ "serde",
  "spinoff",
  "tracing",
  "tracing-subscriber",

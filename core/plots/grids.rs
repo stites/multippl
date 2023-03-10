@@ -1,9 +1,9 @@
-use csv::Writer;
+use csv::{Reader, Writer};
 use itertools::*;
-// use plotters::coord::types::*;
-// use plotters::coord::*;
-// use plotters::prelude::*;
-// use plotters::style::text_anchor::{HPos, Pos, VPos};
+use plotters::coord::types::*;
+use plotters::coord::*;
+use plotters::prelude::*;
+use plotters::style::text_anchor::{HPos, Pos, VPos};
 use rayon::prelude::*;
 use rsdd::sample::probability::Probability;
 use std::error::Error;
@@ -16,8 +16,10 @@ use yodel::inference::importance_weighting;
 use yodel::typecheck::grammar::*;
 use yodel::*;
 
+type MyResult<X> = Result<X, Box<dyn Error>>;
 macro_rules! zoom_and_enhance {
     (struct $name:ident { $($fname:ident : $ftype:ty,)* }) => {
+        #[derive(Debug, Clone, serde::Deserialize)]
         struct $name {
             $($fname : $ftype),*
         }
@@ -31,7 +33,7 @@ macro_rules! zoom_and_enhance {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, serde::Deserialize)]
 enum CompileType {
     Exact,
     Approx,
@@ -83,7 +85,7 @@ fn define_program(size: usize, sampled: bool, prg_seed: u64, determinism: f64) -
     make::grid(schema)
 }
 
-fn write_csv_header(path: &str) -> Result<(), Box<dyn Error>> {
+fn write_csv_header(path: &str) -> MyResult<()> {
     let mut file = fs::OpenOptions::new()
         .write(true)
         .append(true)
@@ -95,7 +97,7 @@ fn write_csv_header(path: &str) -> Result<(), Box<dyn Error>> {
     wtr.flush()?;
     Ok(())
 }
-fn write_csv_row(path: &str, row: &Row) -> Result<(), Box<dyn Error>> {
+fn write_csv_row(path: &str, row: &Row) -> MyResult<()> {
     let mut file = fs::OpenOptions::new()
         .write(true)
         .append(true)
@@ -107,6 +109,19 @@ fn write_csv_row(path: &str, row: &Row) -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
+fn read_csv(path: &str) -> MyResult<Vec<Row>> {
+    let mut file = fs::OpenOptions::new().open(path).unwrap();
+    let mut rdr = Reader::from_reader(file);
+    let mut rows = vec![];
+    for result in rdr.deserialize() {
+        // The iterator yields MyResult<StringRecord, Error>, so we check the
+        // error here.
+        let record: Row = result?;
+        println!("{:?}", record);
+        rows.push(record);
+    }
+    Ok(rows)
+}
 fn run_all_grids(path: &str) -> Vec<Row> {
     use CompileType::*;
 
@@ -120,7 +135,7 @@ fn run_all_grids(path: &str) -> Vec<Row> {
     )
     .collect_vec();
     let answers: Vec<Row> = specs
-        .par_iter()
+        .iter()
         .map(|(gridsize, comptype, ix, determinism)| {
             let seed = ix;
             let prg = define_program(*gridsize, comptype.use_sampled(), *seed, *determinism);
@@ -154,54 +169,67 @@ fn run_all_grids(path: &str) -> Vec<Row> {
     answers
 }
 
-// // type ChartScaffold<DB> = Result<(plotters::chart::ChartBuilder<'static, 'static, DB>, DrawingArea<plotters::prelude::BitMapBackend<'static>, Shift>), Box<(dyn std::error::Error + 'static)>>;
-// // type ChartScaffold = Result<(ChartContext<'static, BitMapBackend<'static>, Cartesian2d<RangedCoordf32, RangedCoordf32>>, DrawingArea<BitMapBackend<'static>, Shift>), Box<(dyn std::error::Error + 'static)>>;
-// type ChartScaffold = Result<(), Box<(dyn std::error::Error + 'static)>>;
+struct DataRow {
+    gridsize: usize,
+    exact: Duration,
+    approx: Duration,
+    approx_opt: Duration,
+    determinism: f64,
+    seed: u64,
+    ix: u64,
+}
+struct SummaryRow {
+    gridsize: usize,
+    exact: Duration,
+    approx: Duration,
+    approx_opt: Duration,
+    determinism: f64,
+}
+fn build_chart(rows: Vec<SummaryRow>) -> MyResult<()> {
+    let root = BitMapBackend::new("out/plots/grid.png", (640, 480)).into_drawing_area();
+    root.fill(&WHITE)?;
+    let root = root.margin(10, 10, 10, 10);
+    let mut chart = ChartBuilder::on(&root)
+        .caption("Grid construction", ("sans-serif", 40).into_font())
+        .x_label_area_size(20)
+        .y_label_area_size(40)
+        .build_cartesian_2d(0f32..10f32, 0f32..10f32)?;
+    let anchor_position = (200, 100);
+    let anchor_left_bottom = Pos::new(HPos::Left, VPos::Bottom);
+    let anchor_right_top = Pos::new(HPos::Right, VPos::Top);
+    let text_style_right_top = BLACK.with_anchor::<RGBColor>(anchor_right_top);
+    chart
+        .configure_mesh()
+        .x_labels(5)
+        .x_desc("duration (s)")
+        .y_labels(5)
+        .y_desc("grid size")
+        .axis_desc_style(text_style_right_top)
+        .y_label_formatter(&|x| format!("{:.2}", x))
+        .x_label_formatter(&|x| format!("{:.0}", x))
+        .draw()?;
 
-// fn build_chart(rows: Vec<Row>) -> ChartScaffold {
-//     let root = BitMapBackend::new("out/plots/grid.png", (640, 480)).into_drawing_area();
-//     root.fill(&WHITE)?;
-//     let root = root.margin(10, 10, 10, 10);
-//     let mut chart = ChartBuilder::on(&root)
-//         .caption("Grid construction", ("sans-serif", 40).into_font())
-//         .x_label_area_size(20)
-//         .y_label_area_size(40)
-//         .build_cartesian_2d(0f32..10f32, 0f32..10f32)?;
-//     let anchor_position = (200, 100);
-//     let anchor_left_bottom = Pos::new(HPos::Left, VPos::Bottom);
-//     let anchor_right_top = Pos::new(HPos::Right, VPos::Top);
-//     let text_style_right_top = BLACK.with_anchor::<RGBColor>(anchor_right_top);
-//     chart
-//         .configure_mesh()
-//         .x_labels(5)
-//         .x_desc("duration (s)")
-//         .y_labels(5)
-//         .y_desc("grid size")
-//         .axis_desc_style(text_style_right_top)
-//         .y_label_formatter(&|x| format!("{:.2}", x))
-//         .x_label_formatter(&|x| format!("{:.0}", x))
-//         .draw()?;
+    let as_f32 = |dur: Duration| dur.as_secs() as f32;
+    // exact
+    chart.draw_series(LineSeries::new(
+        rows.iter()
+            .map(|r| (r.gridsize as f32, as_f32(r.exact)))
+            .collect_vec(),
+        &BLUE,
+    ))?;
 
-//     let as_f32 = |dur: Duration| dur.as_secs() as f32;
-//     // exact
-//     chart.draw_series(LineSeries::new(
-//         rows.iter()
-//             .map(|r| (r.gridsize as f32, as_f32(r.exact)))
-//             .collect_vec(),
-//         &BLUE,
-//     ))?;
+    chart.draw_series(LineSeries::new(
+        rows.iter()
+            .map(|r| (r.gridsize as f32, as_f32(r.approx)))
+            .collect_vec(),
+        &BLUE,
+    ))?;
+    root.present()?;
+    Ok(())
+}
 
-//     chart.draw_series(LineSeries::new(
-//         rows.iter()
-//             .map(|r| (r.gridsize as f32, as_f32(r.approx)))
-//             .collect_vec(),
-//         &BLUE,
-//     ))?;
-//     root.present()?;
-//     Ok(())
-// }
-
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() -> MyResult<()> {
+    todo!();
     fs::create_dir_all("out/plots/")?;
     let rows = run_all_grids("out/plots/grids.csv");
     // build_chart(rows);
