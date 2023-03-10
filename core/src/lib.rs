@@ -5,17 +5,17 @@
 #![allow(unused_variables)]
 
 pub use rsdd::sample::probability::Probability;
+pub mod compile;
 pub mod grammar;
 pub mod grammar_macros;
 pub mod grids;
 pub mod inference;
+pub mod typecheck;
 
 mod analysis;
 mod annotate;
-mod compile;
 mod parser;
 mod render;
-mod typecheck;
 mod uniquify;
 mod utils;
 
