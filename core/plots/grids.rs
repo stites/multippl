@@ -94,7 +94,7 @@ fn make_spinner() -> Spinner {
     )
 }
 fn run_all_grids(sp: &mut Spinner, path: &str, determinism: f64) -> Vec<Row> {
-    write_csv_header(path: &str);
+    write_csv_header(path);
     let mut rows = vec![];
     for size in [2, 3, 4, 5, 7, 9, 12, 15, 20, 25] {
         let row = run_one_grid(sp, size, determinism);
