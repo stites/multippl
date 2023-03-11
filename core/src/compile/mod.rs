@@ -363,30 +363,38 @@ impl<'a> Env<'a> {
                 let wmc_params = ctx.weightmap.as_params(self.max_label);
                 let wmc_true;
                 let wmc_false;
+
+                // FIXME : should be adding stats somewhere
                 if self.sample_pruning {
                     let mut wmc_opt_h = |pred_dist| {
-                        Probability::new(crate::inference::calculate_wmc_prob_opt(
-                            self.mgr,
-                            &wmc_params,
-                            &var_order,
-                            pred_dist,
-                            ctx.accept,
-                            &ctx.samples_opt,
-                            self.sampling_context.clone(),
-                        ))
+                        Probability::new(
+                            crate::inference::calculate_wmc_prob_opt(
+                                self.mgr,
+                                &wmc_params,
+                                &var_order,
+                                pred_dist,
+                                ctx.accept,
+                                &ctx.samples_opt,
+                                self.sampling_context.clone(),
+                            )
+                            .0,
+                        )
                     };
                     wmc_true = wmc_opt_h(pred_dist);
                     wmc_false = wmc_opt_h(pred_dist.neg());
                 } else {
                     let mut wmc_h = |pred_dist| {
-                        Probability::new(crate::inference::calculate_wmc_prob(
-                            self.mgr,
-                            &wmc_params,
-                            &var_order,
-                            pred_dist,
-                            ctx.accept,
-                            ctx.samples, // TODO if switching to samples_opt, no need to use ctx.
-                        ))
+                        Probability::new(
+                            crate::inference::calculate_wmc_prob(
+                                self.mgr,
+                                &wmc_params,
+                                &var_order,
+                                pred_dist,
+                                ctx.accept,
+                                ctx.samples, // TODO if switching to samples_opt, no need to use ctx.
+                            )
+                            .0,
+                        )
                     };
                     wmc_true = wmc_h(pred_dist);
                     wmc_false = wmc_h(pred_dist.neg());
@@ -531,8 +539,9 @@ impl<'a> Env<'a> {
                 debug!("VarOrder   {:?}", var_order);
                 debug!("Accept     {}", dist.print_bdd());
                 let wmc;
+                // FIXME: should be aggregating these stats somewhere
                 if self.sample_pruning {
-                    wmc = crate::inference::calculate_wmc_prob_opt(
+                    (wmc, _) = crate::inference::calculate_wmc_prob_opt(
                         self.mgr,
                         &wmc_params,
                         &var_order,
@@ -542,7 +551,7 @@ impl<'a> Env<'a> {
                         self.sampling_context.clone(),
                     );
                 } else {
-                    wmc = crate::inference::calculate_wmc_prob(
+                    (wmc, _) = crate::inference::calculate_wmc_prob(
                         self.mgr,
                         &wmc_params,
                         &var_order,
@@ -613,8 +622,9 @@ impl<'a> Env<'a> {
                             for dist in comp.dists.iter() {
                                 let sample_dist = self.mgr.and(samples, *dist);
                                 let theta_q;
+                                // FIXME: should be aggregating the stats somewhere
                                 if self.sample_pruning {
-                                    theta_q = crate::inference::calculate_wmc_prob_opt(
+                                    (theta_q, _) = crate::inference::calculate_wmc_prob_opt(
                                         self.mgr,
                                         &wmc_params,
                                         &var_order,
@@ -624,7 +634,7 @@ impl<'a> Env<'a> {
                                         sampling_context.clone(),
                                     );
                                 } else {
-                                    theta_q = crate::inference::calculate_wmc_prob(
+                                    (theta_q, _) = crate::inference::calculate_wmc_prob(
                                         self.mgr,
                                         &wmc_params,
                                         &var_order,

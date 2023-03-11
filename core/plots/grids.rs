@@ -11,14 +11,12 @@ use rsdd::sample::probability::Probability;
 use std::error::Error;
 use std::fs;
 use std::time::{Duration, Instant};
-// use tracing::*;
-// use yodel::compile::grammar::*;
-use yodel::grids::{make, GridSchema, Selection};
-use yodel::inference::exact;
-use yodel::inference::importance_weighting;
-use yodel::inference::importance_weighting_h;
+use tracing::*;
+use tracing_subscriber::FmtSubscriber;
+use yodel::compile::grammar::*;
+use yodel::grids::*;
+use yodel::inference::*;
 use yodel::typecheck::grammar::*;
-// use yodel::*;
 
 type MyResult<X> = Result<X, Box<dyn Error>>;
 macro_rules! zoom_and_enhance {
@@ -112,26 +110,23 @@ fn write_csv_row(path: &str, row: &Row) -> MyResult<()> {
     wtr.flush()?;
     Ok(())
 }
-fn runner(gridsize: usize, comptype: CompileType, ix: u64, determinism: f64) -> Row {
+fn runner(gridsize: usize, comptype: CompileType, ix: u64, determinism: f64) -> (Row, WmcStats) {
+    debug!("begin running");
     use CompileType::*;
     let seed = 5;
     let prg = define_program(gridsize, comptype.use_sampled(), seed, determinism);
     let start = Instant::now();
-    match comptype {
-        Exact => {
-            exact(&prg);
-        }
-        Approx => {
-            importance_weighting(1, &prg);
-        }
+    let stats = match comptype {
+        Exact => exact_with(&prg).1,
+        Approx => importance_weighting_h(1, &prg, &Default::default()).1,
         OptApprox => {
             let opts = yodel::Options {
                 opt: true,
                 ..Default::default()
             };
-            importance_weighting_h(1, &prg, &opts);
+            importance_weighting_h(1, &prg, &opts).1
         }
-    }
+    };
     let stop = Instant::now();
     let duration = stop.duration_since(start);
     let row = Row {
@@ -142,28 +137,32 @@ fn runner(gridsize: usize, comptype: CompileType, ix: u64, determinism: f64) -> 
         ix: ix,
         seed: seed,
     };
-    row
+    (row, stats)
 }
-fn run_all_grids(path: &str) -> Vec<Row> {
+fn run_all_grids(path: &str) -> Vec<(Row, WmcStats)> {
+    debug!("begin running");
     use CompileType::*;
     let _ = write_csv_header(path);
 
     let specs: Vec<_> = iproduct!(
-        [2, 3, 4, 5, 7, 9, 12, 15, 20, 25_usize],
-        [OptApprox, Approx, Exact],
-        (1..=5_u64)
+        [2_usize],
+        // [2, 3, 4, 5, 7, 9, 12, 15, 20, 25_usize],
+        [Exact, OptApprox],
+        // [Exact, Approx, OptApprox],
+        (1..=1_u64)
     )
     .collect_vec();
 
     let mut all_answers = vec![];
-    for determinism in [0.75, 0.5, 0.25, 0.0_f64] {
-        let some_answers: Vec<Row> = specs
+    // for determinism in [0.75, 0.5, 0.25, 0.0_f64] {
+    for determinism in [0.0_f64] {
+        let some_answers: Vec<_> = specs
             .clone()
             .into_iter()
             .map(|(gridsize, comptype, ix)| {
-                let row = runner(gridsize, comptype, ix, determinism);
+                let (row, stats) = runner(gridsize, comptype, ix, determinism);
                 let _ = write_csv_row(path, &row);
-                row
+                (row, stats)
             })
             .collect();
         all_answers.extend(some_answers);
@@ -244,6 +243,14 @@ fn run_all_grids(path: &str) -> Vec<Row> {
 // }
 
 fn main() -> MyResult<()> {
+    debug!("begin running");
+    // let my_subscriber = FmtSubscriber::new();
+    // tracing::subscriber::set_global_default(my_subscriber).expect("setting tracing default failed");
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .with_target(false)
+        .init();
+
     fs::create_dir_all("out/plots/")?;
     let _rows = run_all_grids("out/plots/grids.csv");
     // build_chart(rows);

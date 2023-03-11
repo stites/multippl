@@ -13,17 +13,34 @@ use rsdd::repr::ddnnf::DDNNFPtr;
 use rsdd::repr::var_order::VarOrder;
 use rsdd::repr::wmc::WmcParams;
 use rsdd::sample::probability::Probability;
+use std::cmp;
 use std::collections::HashMap;
 use std::iter::Sum;
 use tracing::debug;
 
+pub struct WmcStats {
+    pub dist: usize,
+    pub accept: usize,
+    pub dist_accept: usize,
+    pub mgr_recursive_calls: usize,
+}
+impl WmcStats {
+    fn largest_of(&self, o: &WmcStats) -> WmcStats {
+        WmcStats {
+            dist: cmp::max(self.dist, o.dist),
+            accept: cmp::max(self.accept, o.accept),
+            dist_accept: cmp::max(self.dist_accept, o.dist_accept),
+            mgr_recursive_calls: cmp::max(self.mgr_recursive_calls, o.mgr_recursive_calls),
+        }
+    }
+}
 pub fn calculate_wmc_prob_h(
     mgr: &mut Mgr,
     params: &WmcParams<f64>,
     var_order: &VarOrder,
     dist: BddPtr,
     accept: BddPtr,
-) -> (f64, f64) {
+) -> (f64, f64, WmcStats) {
     let num = mgr.and(dist, accept);
     debug!(
         "{} /\\ {} = {}",
@@ -39,7 +56,16 @@ pub fn calculate_wmc_prob_h(
     debug!("{}", a);
     debug!("----------- = {}", a / z);
     debug!("{}", z);
-    (a, z)
+    (
+        a,
+        z,
+        WmcStats {
+            dist: dist.count_nodes(),
+            dist_accept: num.count_nodes(),
+            accept: accept.count_nodes(),
+            mgr_recursive_calls: mgr.num_recursive_calls(),
+        },
+    )
 }
 
 pub fn calculate_wmc_prob_hf64(
@@ -48,12 +74,12 @@ pub fn calculate_wmc_prob_hf64(
     var_order: &VarOrder,
     dist: BddPtr,
     accept: BddPtr,
-) -> f64 {
-    let (a, z) = calculate_wmc_prob_h(mgr, params, var_order, dist, accept);
+) -> (f64, WmcStats) {
+    let (a, z, stats) = calculate_wmc_prob_h(mgr, params, var_order, dist, accept);
     if a == z && a == 0.0 {
-        0.0
+        (0.0, stats)
     } else {
-        a / z
+        (a / z, stats)
     }
 }
 
@@ -64,7 +90,7 @@ pub fn calculate_wmc_prob(
     dist: BddPtr,
     accept: BddPtr,
     samples: BddPtr,
-) -> f64 {
+) -> (f64, WmcStats) {
     let accept = mgr.and(samples, accept);
     calculate_wmc_prob_hf64(mgr, params, var_order, dist, accept)
 }
@@ -77,7 +103,7 @@ pub fn calculate_wmc_prob_opt(
     accept: BddPtr,
     samples_opt: &HashMap<BddPtr, (Option<Var>, bool)>,
     sampling_context: Option<DecoratedVar>,
-) -> f64 {
+) -> (f64, WmcStats) {
     let removable = sampling_context
         .map(|dv| dv.below.difference(&dv.above).cloned().collect())
         .unwrap_or(std::collections::HashSet::new());
@@ -99,27 +125,38 @@ pub fn calculate_wmc_prob_opt(
     calculate_wmc_prob_hf64(mgr, params, var_order, dist, accept)
 }
 
-pub fn wmc_prob(mgr: &mut Mgr, c: &Output) -> Vec<f64> {
-    c.dists
+pub fn wmc_prob(mgr: &mut Mgr, c: &Output) -> (Vec<f64>, WmcStats) {
+    let mut last_stats = None;
+    let probs = c
+        .dists
         .iter()
         .map(|d| {
-            calculate_wmc_prob(
+            let (p, stats) = calculate_wmc_prob(
                 mgr,
                 &c.weightmap.as_params(mgr.get_order().num_vars() as u64),
                 &mgr.get_order().clone(),
                 *d,
                 c.accept,
                 c.samples,
-            )
+            );
+            last_stats = Some(stats);
+            p
         })
-        .collect_vec()
+        .collect_vec();
+    (probs, last_stats.expect("output dists should be non-empty"))
 }
 
-pub fn wmc_prob_opt(mgr: &mut Mgr, c: &Output, sampling_context: Option<DecoratedVar>) -> Vec<f64> {
-    c.dists
+pub fn wmc_prob_opt(
+    mgr: &mut Mgr,
+    c: &Output,
+    sampling_context: Option<DecoratedVar>,
+) -> (Vec<f64>, WmcStats) {
+    let mut prev = None;
+    let probs = c
+        .dists
         .iter()
         .map(|d| {
-            calculate_wmc_prob_opt(
+            let (p, stats) = calculate_wmc_prob_opt(
                 mgr,
                 &c.weightmap.as_params(mgr.get_order().num_vars() as u64),
                 &mgr.get_order().clone(),
@@ -127,9 +164,15 @@ pub fn wmc_prob_opt(mgr: &mut Mgr, c: &Output, sampling_context: Option<Decorate
                 c.accept,
                 &c.samples_opt,
                 sampling_context.clone(),
-            )
+            );
+            prev = prev
+                .as_ref()
+                .map(|prv: &WmcStats| prv.largest_of(&stats))
+                .or_else(|| Some(stats));
+            p
         })
-        .collect_vec()
+        .collect_vec();
+    (probs, prev.expect("must include at least one output"))
 }
 
 #[inline]
@@ -144,7 +187,7 @@ pub fn get_vec<T: Copy>(v: Vec<T>, i: usize) -> Option<T> {
 pub fn get_or_else<T: Copy>(v: Vec<T>, i: usize, d: T) -> T {
     get_vec(v, i).unwrap_or(d)
 }
-pub fn exact(p: &ProgramTyped) -> Vec<f64> {
+pub fn exact_with(p: &ProgramTyped) -> (Vec<f64>, WmcStats) {
     match crate::run(p) {
         Ok((mut mgr, c)) => wmc_prob(&mut mgr, &c),
         Err(e) => panic!(
@@ -152,6 +195,10 @@ pub fn exact(p: &ProgramTyped) -> Vec<f64> {
             e
         ),
     }
+}
+
+pub fn exact(p: &ProgramTyped) -> Vec<f64> {
+    exact_with(p).0
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -200,10 +247,14 @@ fn debug_importance_weighting(
     });
 }
 pub fn importance_weighting(steps: usize, p: &ProgramTyped) -> Vec<f64> {
-    importance_weighting_h(steps, p, &Default::default())
+    importance_weighting_h(steps, p, &Default::default()).0
 }
 #[allow(unused_mut)]
-pub fn importance_weighting_h(steps: usize, p: &ProgramTyped, opt: &crate::Options) -> Vec<f64> {
+pub fn importance_weighting_h(
+    steps: usize,
+    p: &ProgramTyped,
+    opt: &crate::Options,
+) -> (Vec<f64>, WmcStats) {
     let mut e = Expectations::empty();
     let mut ws: Vec<f64> = vec![];
     let mut qss: Vec<Vec<Probability>> = vec![];
@@ -216,8 +267,7 @@ pub fn importance_weighting_h(steps: usize, p: &ProgramTyped, opt: &crate::Optio
     let mut compilations_ws = vec![];
     let mut compilations_prs = vec![];
     let mut compilations_qs = vec![];
-    // println!("{:?}", p);
-    // println!("{:?}", opt);
+    let mut stats_max = None;
 
     for _step in 1..=steps {
         match crate::runner_h(p, &mut mgr, opt) {
@@ -230,7 +280,15 @@ pub fn importance_weighting_h(steps: usize, p: &ProgramTyped, opt: &crate::Optio
                     }
                 };
                 cs.into_iter().for_each(|c| {
-                    let ps = wmc_prob(&mut mgr, &c);
+                    let ps;
+                    let stats;
+                    // if opt.opt {
+                    //     (ps, stats) = wmc_prob_opt(&mut mgr, &c);
+                    // } else {
+                    //     (ps, stats) = wmc_prob(&mut mgr, &c);
+                    // }
+                    (ps, stats) = wmc_prob(&mut mgr, &c);
+
                     let w = c.importance.weight();
                     debug!("{}", c.accept.print_bdd());
                     debug!("{}", renderbdds(&c.dists));
@@ -242,6 +300,10 @@ pub fn importance_weighting_h(steps: usize, p: &ProgramTyped, opt: &crate::Optio
                     prs.push(ps);
                     // sss.push(env.samples.clone());
                     qss.push(c.probabilities);
+                    stats_max = stats_max
+                        .as_ref()
+                        .map(|prv: &WmcStats| prv.largest_of(&stats))
+                        .or_else(|| Some(stats));
 
                     if is_debug {
                         compilations_ws.push(ws.clone());
@@ -294,18 +356,21 @@ pub fn importance_weighting_h(steps: usize, p: &ProgramTyped, opt: &crate::Optio
         debug!("~ WARNING! DEBUG WILL NOT PRUNE UNNECESSARY SAMPLES!!! ~");
         debug!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
 
-        compilations
-            .iter()
-            .fold(vec![0.0; compilations[0].probabilities.len()], |agg, c| {
-                let azs = wmc_prob(&mut mgr, c);
-                izip!(agg, c.probabilities.clone(), azs)
-                    .map(|(fin, q, wmc)| fin + q.as_f64() * c.importance.weight() * wmc)
-                    .collect_vec()
-            })
+        let x =
+            compilations
+                .iter()
+                .fold(vec![0.0; compilations[0].probabilities.len()], |agg, c| {
+                    let (azs, _) = wmc_prob(&mut mgr, c);
+                    izip!(agg, c.probabilities.clone(), azs)
+                        .map(|(fin, q, wmc)| fin + q.as_f64() * c.importance.weight() * wmc)
+                        .collect_vec()
+                });
+        (x, stats_max.expect("at least one sample"))
     } else {
         debug_importance_weighting(true, steps, &ws, &[], &prs, &sss, &exp, &expw);
         // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
-        izip!(exp, expw).map(|(exp, expw)| exp / expw).collect_vec()
+        let x = izip!(exp, expw).map(|(exp, expw)| exp / expw).collect_vec();
+        (x, stats_max.expect("at least one sample"))
     }
 }
 
