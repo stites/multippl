@@ -77,7 +77,6 @@ impl Row {
 
 fn define_program(size: usize, sampled: bool, prg_seed: u64, determinism: f64) -> ProgramTyped {
     let mk_probability = |_ix, _p| Probability::new(0.5);
-    println!("{}", sampled);
     let schema = GridSchema::new_from_fn(
         size,
         sampled,
@@ -146,13 +145,11 @@ fn run_all_grids(path: &str) -> Vec<Row> {
                         opt: true,
                         ..Default::default()
                     };
-                    // println!("opt");
                     importance_weighting_h(1, &prg, &opts);
                 }
             }
             let stop = Instant::now();
             let duration = stop.duration_since(start);
-            println!("duration: {}", duration.as_millis());
             let row = Row {
                 gridsize: *gridsize,
                 comptype: *comptype,
