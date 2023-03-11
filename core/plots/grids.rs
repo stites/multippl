@@ -9,6 +9,7 @@ use rsdd::sample::probability::Probability;
 use std::error::Error;
 use std::fs;
 use std::time::{Duration, Instant};
+use tracing::*;
 use yodel::compile::grammar::*;
 use yodel::grids::{make, GridSchema, Selection};
 use yodel::inference::exact;
@@ -129,17 +130,20 @@ fn run_all_grids(path: &str) -> Vec<Row> {
     write_csv_header(path);
     let mut rows: Vec<Row> = vec![];
     let specs: Vec<_> = iproduct!(
-        [2, 3, 4, 5, 7, 9, 12, 15, 20, 25_usize],
-        [Exact, Approx, OptApprox],
-        (1..=5_u64),
-        [0.25, 0.5, 0.75, 1.0_f64]
+        [4_usize],
+        // [2, 3, 4, 5, 7, 9, 12, 15, 20, 25_usize],
+        [Exact, OptApprox],
+        // [Exact, Approx, OptApprox],
+        [1_u64],
+        // (1..=5_u64),
+        [0.25_f64] // [0.25, 0.5, 0.75, 1.0_f64]
     )
     .collect_vec();
     let answers: Vec<Row> = specs
         .iter()
         .map(|(gridsize, comptype, ix, determinism)| {
-            let seed = ix;
-            let prg = define_program(*gridsize, comptype.use_sampled(), *seed, *determinism);
+            let seed = 5;
+            let prg = define_program(*gridsize, comptype.use_sampled(), seed, *determinism);
             let start = Instant::now();
             match comptype {
                 Exact => {
@@ -158,13 +162,14 @@ fn run_all_grids(path: &str) -> Vec<Row> {
             }
             let stop = Instant::now();
             let duration = stop.duration_since(start);
+            debug!("duration: {}", duration.as_millis());
             let row = Row {
                 gridsize: *gridsize,
                 comptype: *comptype,
                 duration,
                 determinism: *determinism,
                 ix: *ix,
-                seed: *seed,
+                seed: seed,
             };
             write_csv_row(path, &row);
             row
