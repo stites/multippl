@@ -112,57 +112,63 @@ fn write_csv_row(path: &str, row: &Row) -> MyResult<()> {
     wtr.flush()?;
     Ok(())
 }
-
+fn runner(gridsize: usize, comptype: CompileType, ix: u64, determinism: f64) -> Row {
+    use CompileType::*;
+    let seed = 5;
+    let prg = define_program(gridsize, comptype.use_sampled(), seed, determinism);
+    let start = Instant::now();
+    match comptype {
+        Exact => {
+            exact(&prg);
+        }
+        Approx => {
+            importance_weighting(1, &prg);
+        }
+        OptApprox => {
+            let opts = yodel::Options {
+                opt: true,
+                ..Default::default()
+            };
+            importance_weighting_h(1, &prg, &opts);
+        }
+    }
+    let stop = Instant::now();
+    let duration = stop.duration_since(start);
+    let row = Row {
+        gridsize: gridsize,
+        comptype: comptype,
+        duration,
+        determinism: determinism,
+        ix: ix,
+        seed: seed,
+    };
+    row
+}
 fn run_all_grids(path: &str) -> Vec<Row> {
     use CompileType::*;
-
     let _ = write_csv_header(path);
+
     let specs: Vec<_> = iproduct!(
-        [4_usize],
-        // [2, 3, 4, 5, 7, 9, 12, 15, 20, 25_usize],
-        [Exact, OptApprox],
-        // [Exact, Approx, OptApprox],
-        [1_u64],
-        // (1..=5_u64),
-        [0.0_f64] // [0.25, 0.5, 0.75, 1.0_f64]
+        [2, 3, 4, 5, 7, 9, 12, 15, 20, 25_usize],
+        [OptApprox, Approx, Exact],
+        (1..=5_u64)
     )
     .collect_vec();
-    let answers: Vec<Row> = specs
-        .iter()
-        .map(|(gridsize, comptype, ix, determinism)| {
-            let seed = 5;
-            let prg = define_program(*gridsize, comptype.use_sampled(), seed, *determinism);
-            let start = Instant::now();
-            match comptype {
-                Exact => {
-                    exact(&prg);
-                }
-                Approx => {
-                    importance_weighting(1, &prg);
-                }
-                OptApprox => {
-                    let opts = yodel::Options {
-                        opt: true,
-                        ..Default::default()
-                    };
-                    importance_weighting_h(1, &prg, &opts);
-                }
-            }
-            let stop = Instant::now();
-            let duration = stop.duration_since(start);
-            let row = Row {
-                gridsize: *gridsize,
-                comptype: *comptype,
-                duration,
-                determinism: *determinism,
-                ix: *ix,
-                seed: seed,
-            };
-            let _ = write_csv_row(path, &row);
-            row
-        })
-        .collect();
-    answers
+
+    let mut all_answers = vec![];
+    for determinism in [0.75, 0.5, 0.25, 0.0_f64] {
+        let some_answers: Vec<Row> = specs
+            .clone()
+            .into_iter()
+            .map(|(gridsize, comptype, ix)| {
+                let row = runner(gridsize, comptype, ix, determinism);
+                let _ = write_csv_row(path, &row);
+                row
+            })
+            .collect();
+        all_answers.extend(some_answers);
+    }
+    all_answers
 }
 
 // fn read_csv(path: &str) -> MyResult<Vec<Row>> {
