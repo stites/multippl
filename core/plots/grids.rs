@@ -1,21 +1,24 @@
+#![allow(unused_imports)]
+
 use csv::{Reader, Writer};
 use itertools::*;
-use plotters::coord::types::*;
-use plotters::coord::*;
-use plotters::prelude::*;
-use plotters::style::text_anchor::{HPos, Pos, VPos};
+// use plotters::coord::types::*;
+// use plotters::coord::*;
+// use plotters::prelude::*;
+// use plotters::style::text_anchor::{HPos, Pos, VPos};
 use rayon::prelude::*;
 use rsdd::sample::probability::Probability;
 use std::error::Error;
 use std::fs;
 use std::time::{Duration, Instant};
-use yodel::compile::grammar::*;
+// use tracing::*;
+// use yodel::compile::grammar::*;
 use yodel::grids::{make, GridSchema, Selection};
 use yodel::inference::exact;
 use yodel::inference::importance_weighting;
 use yodel::inference::importance_weighting_h;
 use yodel::typecheck::grammar::*;
-use yodel::*;
+// use yodel::*;
 
 type MyResult<X> = Result<X, Box<dyn Error>>;
 macro_rules! zoom_and_enhance {
@@ -43,7 +46,7 @@ enum CompileType {
 impl CompileType {
     fn use_sampled(&self) -> bool {
         match self {
-            Exact => false,
+            CompileType::Exact => false,
             _ => true,
         }
     }
@@ -74,6 +77,7 @@ impl Row {
 
 fn define_program(size: usize, sampled: bool, prg_seed: u64, determinism: f64) -> ProgramTyped {
     let mk_probability = |_ix, _p| Probability::new(0.5);
+    println!("{}", sampled);
     let schema = GridSchema::new_from_fn(
         size,
         sampled,
@@ -87,7 +91,7 @@ fn define_program(size: usize, sampled: bool, prg_seed: u64, determinism: f64) -
 }
 
 fn write_csv_header(path: &str) -> MyResult<()> {
-    let mut file = fs::OpenOptions::new()
+    let file = fs::OpenOptions::new()
         .write(true)
         .append(true)
         .create_new(!std::path::Path::new(&path).exists())
@@ -99,7 +103,7 @@ fn write_csv_header(path: &str) -> MyResult<()> {
     Ok(())
 }
 fn write_csv_row(path: &str, row: &Row) -> MyResult<()> {
-    let mut file = fs::OpenOptions::new()
+    let file = fs::OpenOptions::new()
         .write(true)
         .append(true)
         .open(path)
@@ -110,36 +114,25 @@ fn write_csv_row(path: &str, row: &Row) -> MyResult<()> {
     Ok(())
 }
 
-fn read_csv(path: &str) -> MyResult<Vec<Row>> {
-    let mut file = fs::OpenOptions::new().open(path).unwrap();
-    let mut rdr = Reader::from_reader(file);
-    let mut rows = vec![];
-    for result in rdr.deserialize() {
-        // The iterator yields MyResult<StringRecord, Error>, so we check the
-        // error here.
-        let record: Row = result?;
-        println!("{:?}", record);
-        rows.push(record);
-    }
-    Ok(rows)
-}
 fn run_all_grids(path: &str) -> Vec<Row> {
     use CompileType::*;
 
-    write_csv_header(path);
-    let mut rows: Vec<Row> = vec![];
+    let _ = write_csv_header(path);
     let specs: Vec<_> = iproduct!(
-        [2, 3, 4, 5, 7, 9, 12, 15, 20, 25_usize],
-        [Exact, Approx, OptApprox],
-        (1..=5_u64),
-        [0.25, 0.5, 0.75, 1.0_f64]
+        [4_usize],
+        // [2, 3, 4, 5, 7, 9, 12, 15, 20, 25_usize],
+        [Exact, OptApprox],
+        // [Exact, Approx, OptApprox],
+        [1_u64],
+        // (1..=5_u64),
+        [0.0_f64] // [0.25, 0.5, 0.75, 1.0_f64]
     )
     .collect_vec();
     let answers: Vec<Row> = specs
         .iter()
         .map(|(gridsize, comptype, ix, determinism)| {
-            let seed = ix;
-            let prg = define_program(*gridsize, comptype.use_sampled(), *seed, *determinism);
+            let seed = 5;
+            let prg = define_program(*gridsize, comptype.use_sampled(), seed, *determinism);
             let start = Instant::now();
             match comptype {
                 Exact => {
@@ -153,88 +146,103 @@ fn run_all_grids(path: &str) -> Vec<Row> {
                         opt: true,
                         ..Default::default()
                     };
+                    // println!("opt");
                     importance_weighting_h(1, &prg, &opts);
                 }
             }
             let stop = Instant::now();
             let duration = stop.duration_since(start);
+            println!("duration: {}", duration.as_millis());
             let row = Row {
                 gridsize: *gridsize,
                 comptype: *comptype,
                 duration,
                 determinism: *determinism,
                 ix: *ix,
-                seed: *seed,
+                seed: seed,
             };
-            write_csv_row(path, &row);
+            let _ = write_csv_row(path, &row);
             row
         })
         .collect();
     answers
 }
 
-struct DataRow {
-    gridsize: usize,
-    exact: Duration,
-    approx: Duration,
-    approx_opt: Duration,
-    determinism: f64,
-    seed: u64,
-    ix: u64,
-}
-struct SummaryRow {
-    gridsize: usize,
-    exact: Duration,
-    approx: Duration,
-    approx_opt: Duration,
-    determinism: f64,
-}
-fn build_chart(rows: Vec<SummaryRow>) -> MyResult<()> {
-    let root = BitMapBackend::new("out/plots/grid.png", (640, 480)).into_drawing_area();
-    root.fill(&WHITE)?;
-    let root = root.margin(10, 10, 10, 10);
-    let mut chart = ChartBuilder::on(&root)
-        .caption("Grid construction", ("sans-serif", 40).into_font())
-        .x_label_area_size(20)
-        .y_label_area_size(40)
-        .build_cartesian_2d(0f32..10f32, 0f32..10f32)?;
-    let anchor_position = (200, 100);
-    let anchor_left_bottom = Pos::new(HPos::Left, VPos::Bottom);
-    let anchor_right_top = Pos::new(HPos::Right, VPos::Top);
-    let text_style_right_top = BLACK.with_anchor::<RGBColor>(anchor_right_top);
-    chart
-        .configure_mesh()
-        .x_labels(5)
-        .x_desc("duration (s)")
-        .y_labels(5)
-        .y_desc("grid size")
-        .axis_desc_style(text_style_right_top)
-        .y_label_formatter(&|x| format!("{:.2}", x))
-        .x_label_formatter(&|x| format!("{:.0}", x))
-        .draw()?;
+// fn read_csv(path: &str) -> MyResult<Vec<Row>> {
+//     let file = fs::OpenOptions::new().open(path).unwrap();
+//     let mut rdr = Reader::from_reader(file);
+//     let mut rows = vec![];
+//     for result in rdr.deserialize() {
+//         // The iterator yields MyResult<StringRecord, Error>, so we check the
+//         // error here.
+//         let record: Row = result?;
+//         println!("{:?}", record);
+//         rows.push(record);
+//     }
+//     Ok(rows)
+// }
+// struct DataRow {
+//     gridsize: usize,
+//     exact: Duration,
+//     approx: Duration,
+//     approx_opt: Duration,
+//     determinism: f64,
+//     seed: u64,
+//     ix: u64,
+// }
+// struct SummaryRow {
+//     gridsize: usize,
+//     exact: Duration,
+//     approx: Duration,
+//     approx_opt: Duration,
+//     determinism: f64,
+// }
+// fn build_chart(rows: Vec<SummaryRow>) -> MyResult<()> {
+//     let root = BitMapBackend::new("out/plots/grid.png", (640, 480)).into_drawing_area();
+//     root.fill(&WHITE)?;
+//     let root = root.margin(10, 10, 10, 10);
+//     let mut chart = ChartBuilder::on(&root)
+//         .caption("Grid construction", ("sans-serif", 40).into_font())
+//         .x_label_area_size(20)
+//         .y_label_area_size(40)
+//         .build_cartesian_2d(0f32..10f32, 0f32..10f32)?;
+//     let anchor_position = (200, 100);
+//     let anchor_left_bottom = Pos::new(HPos::Left, VPos::Bottom);
+//     let anchor_right_top = Pos::new(HPos::Right, VPos::Top);
+//     let text_style_right_top = BLACK.with_anchor::<RGBColor>(anchor_right_top);
+//     chart
+//         .configure_mesh()
+//         .x_labels(5)
+//         .x_desc("duration (s)")
+//         .y_labels(5)
+//         .y_desc("grid size")
+//         .axis_desc_style(text_style_right_top)
+//         .y_label_formatter(&|x| format!("{:.2}", x))
+//         .x_label_formatter(&|x| format!("{:.0}", x))
+//         .draw()?;
 
-    let as_f32 = |dur: Duration| dur.as_secs() as f32;
-    // exact
-    chart.draw_series(LineSeries::new(
-        rows.iter()
-            .map(|r| (r.gridsize as f32, as_f32(r.exact)))
-            .collect_vec(),
-        &BLUE,
-    ))?;
+//     let as_f32 = |dur: Duration| dur.as_secs() as f32;
+//     // exact
+//     chart.draw_series(LineSeries::new(
+//         rows.iter()
+//             .map(|r| (r.gridsize as f32, as_f32(r.exact)))
+//             .collect_vec(),
+//         &BLUE,
+//     ))?;
 
-    chart.draw_series(LineSeries::new(
-        rows.iter()
-            .map(|r| (r.gridsize as f32, as_f32(r.approx)))
-            .collect_vec(),
-        &BLUE,
-    ))?;
-    root.present()?;
-    Ok(())
-}
+//     chart.draw_series(LineSeries::new(
+//         rows.iter()
+//             .map(|r| (r.gridsize as f32, as_f32(r.approx)))
+//             .collect_vec(),
+//         &BLUE,
+//     ))?;
+//     root.present()?;
+//     Ok(())
+// }
 
 fn main() -> MyResult<()> {
     fs::create_dir_all("out/plots/")?;
-    let rows = run_all_grids("out/plots/grids.csv");
+    let _rows = run_all_grids("out/plots/grids.csv");
     // build_chart(rows);
     Ok(())
 }

@@ -216,6 +216,8 @@ pub fn importance_weighting_h(steps: usize, p: &ProgramTyped, opt: &crate::Optio
     let mut compilations_ws = vec![];
     let mut compilations_prs = vec![];
     let mut compilations_qs = vec![];
+    // println!("{:?}", p);
+    // println!("{:?}", opt);
 
     for _step in 1..=steps {
         match crate::runner_h(p, &mut mgr, opt) {

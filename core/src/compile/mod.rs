@@ -660,6 +660,23 @@ impl<'a> Env<'a> {
                             }
                             debug!("final dists:   {}", renderbdds(&dists));
                             debug!("final samples: {}", samples.print_bdd());
+                            // println!("sample_pruning: {}", self.sample_pruning);
+                            if self.sample_pruning {
+                                let removable = sampling_context
+                                    .map(|dv| dv.above.difference(&dv.below).cloned().collect())
+                                    .unwrap_or(std::collections::HashSet::new());
+                                // println!("before: {:?}", samples_opt);
+
+                                samples_opt = samples_opt
+                                    .into_iter()
+                                    .filter(|(k, (ovar, bool))| {
+                                        ovar.as_ref()
+                                            .map(|var| !removable.contains(&var))
+                                            .unwrap_or(false)
+                                    })
+                                    .collect();
+                                // println!("after: {:?}", samples_opt);
+                            }
 
                             let c = Output {
                                 dists,
