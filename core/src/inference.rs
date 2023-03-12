@@ -18,6 +18,7 @@ use std::collections::HashMap;
 use std::iter::Sum;
 use tracing::debug;
 
+#[derive(Debug, Clone, Copy)]
 pub struct WmcStats {
     pub dist: usize,
     pub accept: usize,

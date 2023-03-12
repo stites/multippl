@@ -6,10 +6,13 @@ use itertools::*;
 // use plotters::coord::*;
 // use plotters::prelude::*;
 // use plotters::style::text_anchor::{HPos, Pos, VPos};
+use clap::Parser;
 use rayon::prelude::*;
 use rsdd::sample::probability::Probability;
+use std::collections::HashSet;
 use std::error::Error;
 use std::fs;
+use std::str::FromStr;
 use std::time::{Duration, Instant};
 use tracing::*;
 use tracing_subscriber::FmtSubscriber;
@@ -46,6 +49,26 @@ impl CompileType {
         match self {
             CompileType::Exact => false,
             _ => true,
+        }
+    }
+}
+impl FromStr for CompileType {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, <Self as FromStr>::Err> {
+        use CompileType::*;
+        let approx = HashSet::from(["approx", "sampling", "sample", "is"]);
+        let opt = HashSet::from(["approx-opt", "sampling-opt", "sample-opt", "opt"]);
+        if s == "exact" {
+            Ok(Exact)
+        } else if approx.contains(s) {
+            Ok(Approx)
+        } else if opt.contains(s) {
+            Ok(OptApprox)
+        } else {
+            Err(format!(
+                "{} is not a valid string. Choose one of \"approx\" \"exact\" \"opt\"",
+                s
+            ))
         }
     }
 }
@@ -137,6 +160,7 @@ fn runner(gridsize: usize, comptype: CompileType, ix: u64, determinism: f64) -> 
         ix: ix,
         seed: seed,
     };
+    info!("computed: {:?} {:?}", row, stats);
     (row, stats)
 }
 fn run_all_grids(path: &str) -> Vec<(Row, WmcStats)> {
@@ -145,7 +169,7 @@ fn run_all_grids(path: &str) -> Vec<(Row, WmcStats)> {
     let _ = write_csv_header(path);
 
     let specs: Vec<_> = iproduct!(
-        [2_usize],
+        [4_usize],
         // [2, 3, 4, 5, 7, 9, 12, 15, 20, 25_usize],
         [Exact, OptApprox],
         // [Exact, Approx, OptApprox],
@@ -242,17 +266,50 @@ fn run_all_grids(path: &str) -> Vec<(Row, WmcStats)> {
 //     Ok(())
 // }
 
-fn main() -> MyResult<()> {
-    debug!("begin running");
-    // let my_subscriber = FmtSubscriber::new();
-    // tracing::subscriber::set_global_default(my_subscriber).expect("setting tracing default failed");
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
-        .with_target(false)
-        .init();
+#[derive(Parser)] // requires `derive` feature
+#[command(author, version, about, long_about = None)]
+struct PlotGridsArgs {
+    #[arg(long)]
+    gridsize: usize,
+    #[arg(long)]
+    comptype: CompileType,
+    #[arg(long, short)]
+    determinism: f64,
+    #[arg(short, default_value_t = 0)]
+    verbosity: usize,
+    #[arg(short, default_value = None)]
+    csv: Option<String>,
+    #[arg(short, default_value = None)]
+    path: Option<String>,
+}
 
-    fs::create_dir_all("out/plots/")?;
-    let _rows = run_all_grids("out/plots/grids.csv");
+fn main() -> MyResult<()> {
+    let args = PlotGridsArgs::parse();
+
+    let verbosity = match args.verbosity {
+        0 => None,
+        1 => Some(tracing::Level::INFO),
+        2 => Some(tracing::Level::DEBUG),
+        _ => panic!("stop that!"),
+    };
+    match verbosity {
+        None => {}
+        Some(level) => tracing_subscriber::fmt()
+            .with_max_level(level)
+            .with_target(false)
+            .init(),
+    };
+    let csv = args.csv.unwrap_or_else(|| String::from("grids.csv"));
+    let path = args.path.unwrap_or_else(|| String::from("out/plots/"));
+    info!("gridsize   : {:?}x{:?}", args.gridsize, args.gridsize);
+    info!("comptype   : {:?}", args.comptype);
+    info!("determinism: {:?}", args.determinism);
+    info!("path       : {:?}", path);
+    info!("csv        : {:?}", csv);
+    info!("verbosity  : {:?}", verbosity);
+    todo!();
+    fs::create_dir_all(path)?;
+    let _rows = run_all_grids(&(path + &csv));
     // build_chart(rows);
     Ok(())
 }

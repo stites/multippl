@@ -31,6 +31,7 @@ csv = { version = "1.2.1", optional = true }
 spinoff = { version = "0.7.0", optional = true }
 rayon = { version = "1.7.0", optional = true }
 serde = { version = "1.0.154", optional = true, features = ["derive", "serde_derive"] }
+clap = { version = "4.1.8", optional = true }
 
 [dev-dependencies]
 formula = { path = "../formula" }
@@ -38,4 +39,4 @@ quickcheck = "1"
 quickcheck_macros = "1"
 
 [features]
-plots = ["plotters", "csv", "spinoff", "rayon", "dep:serde"]
+plots = ["dep:plotters", "dep:csv", "dep:spinoff", "dep:rayon", "dep:serde", "dep:clap"]
