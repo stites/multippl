@@ -61,9 +61,12 @@ pub fn calculate_wmc_prob_h(
         a,
         z,
         WmcStats {
-            dist: dist.count_nodes(),
-            dist_accept: num.count_nodes(),
-            accept: accept.count_nodes(),
+            // dist: dist.count_nodes(),
+            dist: 0,
+            // dist_accept: num.count_nodes(),
+            dist_accept: 0,
+            // accept: accept.count_nodes(),
+            accept: 0,
             mgr_recursive_calls: mgr.num_recursive_calls(),
         },
     )

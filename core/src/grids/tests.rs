@@ -318,7 +318,7 @@ fn test_grid2x2_sampled_inference() {
         "grid2x2/all",
         vec![1.0 / 2.0, 0.291666667, 0.183333333, 0.102927589],
         &grid,
-        2000,
+        7000,
     );
 }
 pub fn make_3x3_pmap() -> HashMap<(Ix, Parents<bool>), Probability> {
