@@ -266,7 +266,7 @@ fn run_all_grids(path: &str) -> Vec<(Row, WmcStats)> {
 //     Ok(())
 // }
 
-#[derive(Parser)] // requires `derive` feature
+#[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 struct PlotGridsArgs {
     #[arg(long)]
@@ -307,7 +307,7 @@ fn main() -> MyResult<()> {
     info!("path       : {:?}", path);
     info!("csv        : {:?}", csv);
     info!("verbosity  : {:?}", verbosity);
-    todo!();
+
     fs::create_dir_all(path)?;
     let _rows = run_all_grids(&(path + &csv));
     // build_chart(rows);

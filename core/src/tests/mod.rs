@@ -39,7 +39,7 @@ pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &Pr
 }
 pub fn check_inference(
     infname: &str,
-    inf: &dyn Fn(&ProgramTyped) -> Vec<f64>,
+    inf: &dyn Fn(&ProgramTyped) -> (Vec<f64>, WmcStats),
     precision: f64,
     s: &str,
     fs: Vec<f64>,
@@ -50,14 +50,14 @@ pub fn check_inference(
 
 pub fn check_inference_h(
     infname: &str,
-    inf: &dyn Fn(&ProgramTyped) -> Vec<f64>,
+    inf: &dyn Fn(&ProgramTyped) -> (Vec<f64>, WmcStats),
     precision: f64,
     s: &str,
     fs: Vec<f64>,
     p: &ProgramTyped,
     do_assert: bool,
 ) {
-    let prs = inf(p);
+    let prs = inf(p).0;
     assert_eq!(
         prs.len(),
         fs.len(),
@@ -85,13 +85,20 @@ pub fn check_inference_h(
 pub fn check_exact(s: &str, f: Vec<f64>, p: &ProgramTyped) {
     let p = p.strip_samples();
     debug!("program: {:#?}", &p);
-    check_inference("exact", &inference::exact, 0.000001, s, f, &p);
+    check_inference("exact", &inference::exact_with, 0.000001, s, f, &p);
 }
 pub fn check_exact1(s: &str, f: f64, p: &ProgramTyped) {
     check_exact(s, vec![f], p)
 }
 pub fn check_approx(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize) {
-    check_inference("approx", &|p| importance_weighting(n, p), 0.01, s, f, p);
+    check_inference(
+        "approx",
+        &|p| importance_weighting_h(n, p, &Default::default()),
+        0.01,
+        s,
+        f,
+        p,
+    );
 }
 pub fn check_approx1(s: &str, f: f64, p: &ProgramTyped, n: usize) {
     check_approx(s, vec![f], p, n)
@@ -905,9 +912,10 @@ fn manual_ite() {
     ] {
         params.set_weight(lbl, weight.lo, weight.hi);
     }
-    let w_true = calculate_wmc_prob_hf64(&mut mgr, &params, &var_order, dist_true, accept_true);
+    let w_true = calculate_wmc_prob_hf64(&mut mgr, &params, &var_order, dist_true, accept_true).0;
     debug!("w_true:   {:.3}", w_true);
-    let w_false = calculate_wmc_prob_hf64(&mut mgr, &params, &var_order, dist_false, accept_false);
+    let w_false =
+        calculate_wmc_prob_hf64(&mut mgr, &params, &var_order, dist_false, accept_false).0;
     debug!("w_false:   {:.3}", w_false);
     debug!(
         "1*w_true + 2*w_false / 3  == 0.3?   {:.4}",
@@ -918,11 +926,11 @@ fn manual_ite() {
     debug!("=========================================");
 
     let w_exact_t =
-        calculate_wmc_prob_hf64(&mut mgr, &params, &var_order, dist_true, BddPtr::PtrTrue);
+        calculate_wmc_prob_hf64(&mut mgr, &params, &var_order, dist_true, BddPtr::PtrTrue).0;
     debug!("w_exact_t:   {:.3}", w_exact_t);
 
     let w_exact_f =
-        calculate_wmc_prob_hf64(&mut mgr, &params, &var_order, dist_false, BddPtr::PtrTrue);
+        calculate_wmc_prob_hf64(&mut mgr, &params, &var_order, dist_false, BddPtr::PtrTrue).0;
     debug!("w_exact_f:   {:.3}", w_exact_f);
     debug!(
         "1*w_exact_t + 2*w_exact_f / 3 == 0.3?   {:.4}",
@@ -952,7 +960,8 @@ fn manual_ite() {
         &var_order,
         dist_hyp_true,
         accept_hyp_true,
-    );
+    )
+    .0;
     debug!("w_hyp_t:   {:.3}", w_hyp_t);
 
     let w_hyp_f = calculate_wmc_prob_hf64(
@@ -961,7 +970,8 @@ fn manual_ite() {
         &var_order,
         dist_hyp_false,
         accept_hyp_false,
-    );
+    )
+    .0;
     debug!("w_hyp_f:   {:.3}", w_hyp_f);
     debug!(
         "1*w_hyp_t + 2*w_hyp_f / 3 == 0.3?   {:.4}",
