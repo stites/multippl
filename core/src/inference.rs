@@ -251,7 +251,15 @@ fn debug_importance_weighting(
     });
 }
 pub fn importance_weighting(steps: usize, p: &ProgramTyped) -> Vec<f64> {
-    importance_weighting_h(steps, p, &Default::default()).0
+    importance_weighting_h(
+        steps,
+        p,
+        &crate::Options {
+            opt: true,
+            ..Default::default()
+        },
+    )
+    .0
 }
 #[allow(unused_mut)]
 pub fn importance_weighting_h(

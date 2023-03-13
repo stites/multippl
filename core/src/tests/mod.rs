@@ -430,7 +430,7 @@ fn free_variables_shared_tuple() {
        "z" ; b!(B, B) ;= sample!(b!("x", "x"));
        ...? b!("z" ; b!(B, B)); b!(B, B)
     ]);
-    check_approx("sharedtuple", vec![1.0 / 3.0, 1.0 / 3.0], &p, 10000);
+    check_approx("sharedtuple", vec![1.0 / 3.0, 1.0 / 3.0], &p, 15000);
 }
 // ===================================================================== //
 //                   START: deterministic if-then-else                   //
