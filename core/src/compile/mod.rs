@@ -90,6 +90,22 @@ pub mod grammar {
     pub type ProgramTr = Program<Trace>;
 }
 use grammar::*;
+
+#[derive(Clone, Debug)]
+pub enum SamplingContext {
+    Unset,
+    Set(DecoratedVar),
+    Nesting,
+}
+impl SamplingContext {
+    pub fn as_option(&self) -> Option<DecoratedVar> {
+        use SamplingContext::*;
+        match self {
+            Set(v) => Some(v.clone()),
+            _ => None,
+        }
+    }
+}
 pub struct Env<'a> {
     pub mgr: &'a mut BddManager<AllTable<BddPtr>>,
     pub rng: Option<&'a mut StdRng>, // None implies "debug mode"
@@ -99,7 +115,7 @@ pub struct Env<'a> {
     pub max_label: u64,
 
     // in progress
-    pub sampling_context: Option<DecoratedVar>,
+    pub sampling_context: SamplingContext,
     pub sample_pruning: bool,
     pub inv: HashMap<NamedVar, HashSet<BddVar>>,
 
@@ -124,7 +140,7 @@ impl<'a> Env<'a> {
             inv,
             mgr,
             rng,
-            sampling_context: None,
+            sampling_context: SamplingContext::Unset,
             sample_pruning,
         }
     }
@@ -264,9 +280,15 @@ impl<'a> Env<'a> {
                 Ok((c.clone(), EProd(Box::new(c), atrs)))
             }
             ELetIn(d, s, ebound, ebody) => {
+                use SamplingContext::*;
                 let let_in_span = tracing::span!(Level::DEBUG, "let", var = s);
                 let _enter = let_in_span.enter();
-                self.sampling_context = Some(d.clone());
+                match self.sampling_context {
+                    Nesting | Unset => {
+                        self.sampling_context = Set(d.clone());
+                    }
+                    Set(_) => {}
+                }
 
                 // let lbl = d.var.label;
                 // if we produce multiple worlds, we must account for them all
@@ -669,7 +691,7 @@ impl<'a> Env<'a> {
                                 let dist_holds = self.mgr.iff(*dist, sampled_value);
                                 samples = self.mgr.and(samples, dist_holds);
 
-                                let dv = sampling_context.clone();
+                                let dv = sampling_context.as_option();
                                 samples_opt.insert(*dist, (dv, sample));
                             }
                             debug!("final dists:   {}", renderbdds(&dists));
@@ -678,6 +700,7 @@ impl<'a> Env<'a> {
                             debug!("using optimizations: {}", self.sample_pruning);
                             if self.sample_pruning {
                                 let removable = sampling_context
+                                    .as_option()
                                     .map(|dv| {
                                         let x =
                                             dv.above().difference(&dv.below()).cloned().collect();
