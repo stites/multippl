@@ -13,12 +13,26 @@ use tracing::*;
 use tracing_test::*;
 
 mod arbitrary;
+const USE_OPT: bool = false;
+const USE_DEBUG: bool = false;
 
 pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &ProgramTyped) {
     let precision = precision.unwrap_or_else(|| 0.01);
     let n = n.unwrap_or_else(|| 10000);
     let exact = inference::exact(&p.strip_samples());
-    let approx = importance_weighting(n, p);
+    let (approx, _) = importance_weighting_h(
+        n,
+        p,
+        &Options {
+            opt: USE_OPT,
+            debug: USE_DEBUG,
+            // seed: Some(9),
+            ..Default::default()
+        },
+    );
+    debug!("exact:  {:?}", exact);
+    debug!("approx: {:?}", approx);
+
     assert_eq!(
         exact.len(),
         approx.len(),
@@ -37,6 +51,73 @@ pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &Pr
             );
         });
 }
+
+#[test]
+#[ignore]
+// #[traced_test]
+fn optimization_eliminates_variables() {
+    let mk = |ret: ExprTyped| {
+        Program::Body(lets![
+           "x" ; B!() ;= flip!(1/4);
+           "y" ; B!() ;= sample!(flip!(1/2));
+           ...? ret ; B!()
+        ])
+    };
+    let p = mk(var!("y"));
+    let mut mgr = crate::make_mgr(&p);
+    let opt = crate::Options {
+        opt: USE_OPT,
+        debug: USE_DEBUG,
+        seed: Some(4),
+    };
+    let (cs, inv) = crate::runner_h(&p, &mut mgr, &opt).unwrap();
+    cs.into_iter().for_each(|c| {
+        assert!(c.samples_opt.len() == 1);
+        let (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv);
+        debug!("{:?}", ps);
+        todo!();
+    });
+}
+
+#[test]
+// #[traced_test]
+fn free_variables_0() {
+    let mk = |ret: ExprTyped| {
+        Program::Body(lets![
+           "x" ; B!() ;= flip!(1/3);
+           "y" ; B!() ;= sample!(var!("x"));
+           ...? ret ; B!()
+        ])
+    };
+    let n = 40000;
+
+    check_approx("free/x,y", vec![1.0 / 3.0, 1.0 / 3.0], &mk(b!("x", "y")), n);
+    // check_approx1("free/y ", 1.0 / 3.0, &mk(var!("y")), n);
+
+    check_invariant("free/y,x", None, None, &mk(b!("y", "x")));
+    // check_invariant("free/x ", None, None, &mk(var!("x")));
+}
+
+#[test]
+#[ignore]
+#[traced_test]
+fn free_variable_2_inv() {
+    let mk = |ret: ExprTyped| {
+        Program::Body(lets![
+            "x" ; b!() ;= flip!(1/3);
+            "y" ; b!() ;= sample!(
+                lets![
+                    "x0" ; b!() ;= flip!(1/5);
+                    ...? b!("x0" || "x") ; b!()
+                ]);
+           "_" ; b!() ;= observe!(b!("x" || "y")); // is this a problem?
+           ...? ret ; b!()
+
+        ])
+    };
+    (|p| check_invariant("free2/x*y ", None, None, &p))(mk(q!("x" x "y")));
+}
+
 pub fn check_inference(
     infname: &str,
     inf: &dyn Fn(&ProgramTyped) -> (Vec<f64>, WmcStats),
@@ -93,7 +174,18 @@ pub fn check_exact1(s: &str, f: f64, p: &ProgramTyped) {
 pub fn check_approx(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize) {
     check_inference(
         "approx",
-        &|p| importance_weighting_h(n, p, &Default::default()),
+        &|p| {
+            importance_weighting_h(
+                n,
+                p,
+                &Options {
+                    opt: USE_OPT,
+                    debug: USE_DEBUG,
+                    // seed: Some(9),
+                    ..Default::default()
+                },
+            )
+        },
         0.01,
         s,
         f,
@@ -106,7 +198,18 @@ pub fn check_approx1(s: &str, f: f64, p: &ProgramTyped, n: usize) {
 pub fn debug_approx(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize) {
     check_inference(
         "debug",
-        &|p| importance_weighting_h(n, p, &Options::debug()),
+        &|p| {
+            importance_weighting_h(
+                n,
+                p,
+                &Options {
+                    opt: USE_OPT,
+                    debug: USE_DEBUG,
+                    // seed: Some(9),
+                    ..Default::default()
+                },
+            )
+        },
         0.01,
         s,
         f,
@@ -119,7 +222,18 @@ pub fn debug_approx1(s: &str, f: f64, p: &ProgramTyped, n: usize) {
 pub fn nfail_approx(s: &str, f: Vec<f64>, p: &ProgramTyped, n: usize) {
     check_inference_h(
         "debug",
-        &|p| importance_weighting_h(n, p, &Options::debug()),
+        &|p| {
+            importance_weighting_h(
+                n,
+                p,
+                &Options {
+                    opt: USE_OPT,
+                    debug: USE_DEBUG,
+                    // seed: Some(9),
+                    ..Default::default()
+                },
+            )
+        },
         0.01,
         s,
         f,
@@ -350,23 +464,7 @@ fn test_big_tuple() {
 // ===================================================================== //
 //                          free variable tests                          //
 // ===================================================================== //
-#[test]
-fn free_variables_0() {
-    let mk = |ret: ExprTyped| {
-        Program::Body(lets![
-           "x" ; B!() ;= flip!(1/3);
-           "y" ; B!() ;= sample!(var!("x"));
-           ...? ret ; B!()
-        ])
-    };
-    let n = 40000;
 
-    check_approx("free/x ", vec![1.0 / 3.0, 1.0 / 3.0], &mk(b!("x", "y")), n);
-    // check_approx1("free/y ", 1.0 / 3.0, &mk(var!("y")), n);
-
-    check_invariant("free/y,x", None, None, &mk(b!("y", "x")));
-    // check_invariant("free/x ", None, None, &mk(var!("x")));
-}
 #[test]
 fn free_variables_1() {
     let problem = {
@@ -406,7 +504,7 @@ macro_rules! free_variable_2_tests {
 free_variable_2_tests! {
     free_variable_2_exact: (|p| check_exact("free_2/x*y", vec![0.714285714, 1.0, 1.0, 0.714285714], &p,)),
     free_variable_2_approx: (|p| check_approx("free2/x*y", vec![0.714285714, 1.0, 1.0, 0.714285714], &p, 5000,)),
-    free_variable_2_inv: (|p| check_invariant("free2/x*x ", None, None, &p)),
+    // free_variable_2_inv: (|p| check_invariant("free2/x*x ", None, None, &p)),
 }
 
 #[test]

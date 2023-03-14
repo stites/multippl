@@ -47,6 +47,7 @@ impl Options {
     pub fn debug() -> Self {
         Self {
             debug: true,
+            opt: false,
             ..Default::default()
         }
     }
@@ -60,7 +61,7 @@ impl Options {
 }
 
 use crate::analysis::AnalysisEnv;
-use crate::annotate::LabelEnv;
+use crate::annotate::{InvMap, LabelEnv};
 use crate::compile::{compile, CompileError, Compiled, Env, Mgr, Output, Result};
 use crate::typecheck::{
     grammar::{ExprTyped, ProgramTyped},
@@ -75,12 +76,12 @@ pub fn run(p: &ProgramTyped) -> Result<(Mgr, Output)> {
 }
 pub fn run_h(p: &ProgramTyped, mgr: &mut Mgr) -> Result<Output> {
     let c = runner_h(p, mgr, &Default::default())?;
-    Ok(c.as_output().unwrap())
+    Ok(c.0.as_output().unwrap())
 }
 
 pub fn runner(p: &ProgramTyped, opt: &Options) -> Result<(Mgr, Compiled)> {
     let mut mgr = make_mgr(p);
-    let c = runner_h(p, &mut mgr, opt)?;
+    let (c, _) = runner_h(p, &mut mgr, opt)?;
     Ok((mgr, c))
 }
 
@@ -100,7 +101,7 @@ pub fn make_mgr(p: &ProgramTyped) -> Mgr {
     }
 }
 
-pub fn runner_h(p: &ProgramTyped, mgr: &mut Mgr, opt: &Options) -> Result<Compiled> {
+pub fn runner_h(p: &ProgramTyped, mgr: &mut Mgr, opt: &Options) -> Result<(Compiled, InvMap)> {
     let p = typecheck(p)?;
     let mut senv = SymEnv::default();
     let p = senv.uniquify(&p)?;
@@ -113,14 +114,13 @@ pub fn runner_h(p: &ProgramTyped, mgr: &mut Mgr, opt: &Options) -> Result<Compil
 
     let mut rng = opt.rng();
     let orng = if opt.debug { None } else { Some(&mut rng) };
-    let mut env = Env::new(mgr, orng, opt.opt); // technically don't need this if I use the decorated vars in a clever way
+    let mut env = Env::new(mgr, orng, opt.opt, inv.clone()); // technically don't need this if I use the decorated vars in a clever way
 
     env.varmap = Some(varmap);
-    env.inv = Some(inv);
 
     let c = compile(&mut env, &p)?;
     tracing::debug!("hurray!");
-    Ok(c)
+    Ok((c, inv))
 }
 
 #[cfg(test)]

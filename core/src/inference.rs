@@ -1,5 +1,5 @@
 use crate::analysis::grammar::DecoratedVar;
-use crate::annotate::grammar::Var;
+use crate::annotate::grammar::*;
 use crate::compile::*;
 use crate::grammar::*;
 use crate::render::*;
@@ -15,6 +15,7 @@ use rsdd::repr::wmc::WmcParams;
 use rsdd::sample::probability::Probability;
 use std::cmp;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::iter::Sum;
 use tracing::debug;
 
@@ -80,7 +81,7 @@ pub fn calculate_wmc_prob_hf64(
     accept: BddPtr,
 ) -> (f64, WmcStats) {
     let (a, z, stats) = calculate_wmc_prob_h(mgr, params, var_order, dist, accept);
-    if a == z && a == 0.0 {
+    if a == 0.0 {
         (0.0, stats)
     } else {
         (a / z, stats)
@@ -95,8 +96,58 @@ pub fn calculate_wmc_prob(
     accept: BddPtr,
     samples: BddPtr,
 ) -> (f64, WmcStats) {
+    let span = tracing::span!(tracing::Level::DEBUG, "calculate_wmc_prob");
+    let _enter = span.enter();
     let accept = mgr.and(samples, accept);
     calculate_wmc_prob_hf64(mgr, params, var_order, dist, accept)
+}
+
+pub fn removable_ids(
+    samples_opt: &HashMap<BddPtr, (Option<DecoratedVar>, bool)>,
+    inv: &HashMap<NamedVar, HashSet<BddVar>>,
+) -> HashSet<UniqueId> {
+    let mut removable = HashSet::new();
+    for (bdd, (odv, sample)) in samples_opt.clone() {
+        match odv {
+            None => continue,
+            Some(dv) => match dv.var {
+                Var::Named(ref nvar) => match inv.get(&nvar) {
+                    None => continue,
+                    Some(rs) => {
+                        removable.insert(dv.var.id());
+                        let xs: HashSet<UniqueId> = rs.iter().map(BddVar::id).collect();
+                        removable.extend(xs);
+                    }
+                },
+                Var::Bdd(bvar) => {}
+            },
+        }
+    }
+    removable
+}
+
+pub fn included_samples(
+    samples_opt: &HashMap<BddPtr, (Option<DecoratedVar>, bool)>,
+    inv: &HashMap<NamedVar, HashSet<BddVar>>,
+) -> HashMap<BddPtr, bool> {
+    let removable = removable_ids(samples_opt, inv);
+    debug!("removable   {:?}", removable);
+    samples_opt
+        .iter()
+        .filter(|(bdd, (odv, sampled_value))| match odv {
+            None => true, // keep: this is a top level bdd
+            Some(var) => {
+                debug!(
+                    "remove {:?}=={:?}? {}",
+                    var,
+                    sampled_value,
+                    removable.contains(&var.var.id())
+                );
+                !removable.contains(&var.var.id())
+            }
+        })
+        .map(|(k, (_, v))| (*k, *v))
+        .collect()
 }
 
 pub fn calculate_wmc_prob_opt(
@@ -105,31 +156,183 @@ pub fn calculate_wmc_prob_opt(
     var_order: &VarOrder,
     dist: BddPtr,
     accept: BddPtr,
-    samples_opt: &HashMap<BddPtr, (Option<Var>, bool)>,
-    sampling_context: Option<DecoratedVar>,
+    samples_opt: &HashMap<BddPtr, (Option<DecoratedVar>, bool)>,
+    inv: &HashMap<NamedVar, HashSet<BddVar>>,
 ) -> (f64, WmcStats) {
-    let removable = sampling_context
-        .map(|dv| dv.below.difference(&dv.above).cloned().collect())
-        .unwrap_or(std::collections::HashSet::new());
-    let compiled_samples = samples_opt.iter().fold(
-        BddPtr::PtrTrue,
-        |formula, (bdd, (dv, sampled_value))| match dv {
-            None => formula,
-            Some(var) => {
-                if removable.contains(&var) {
-                    formula
-                } else {
-                    let dist_holds = mgr.iff(*bdd, BddPtr::from_bool(*sampled_value));
-                    mgr.and(formula, dist_holds)
-                }
-            }
-        },
-    );
+    let span = tracing::span!(tracing::Level::DEBUG, "calculate_wmc_prob_opt");
+    let _enter = span.enter();
+
+    let samples = included_samples(&samples_opt, &inv);
+    debug!("samples_opt {:?}", samples_opt);
+    debug!("samples     {:?}", samples);
+
+    let compiled_samples = samples
+        .iter()
+        .fold(BddPtr::PtrTrue, |formula, (bdd, sampled_value)| {
+            let dist_holds = mgr.iff(*bdd, BddPtr::from_bool(*sampled_value));
+            mgr.and(formula, dist_holds)
+        });
+    debug!("compiled_samples {:?}", compiled_samples.print_bdd());
     let accept = mgr.and(compiled_samples, accept);
     calculate_wmc_prob_hf64(mgr, params, var_order, dist, accept)
 }
 
+#[cfg(test)]
+mod tests {
+    use crate::analysis::grammar::DecoratedVar;
+    use crate::annotate::grammar::Var;
+    use crate::inference::*;
+    use crate::*;
+    use std::collections::HashMap;
+    use std::collections::HashSet;
+    use tracing_test::*;
+    #[test]
+    #[traced_test]
+    pub fn test_wmc_opt() {
+        // let mut mgr = Mgr::new_default_order(2 as usize);
+        // let var_order = mgr.get_order().clone();
+        // let mut params = WmcParams::new(0.0, 1.0);
+        // let (lbl, ptr) = mgr.new_var(true);
+        // for (lbl, weight) in [(lbl, Weight::new(0.7500, 0.2500))] {
+        //     params.set_weight(lbl, weight.lo, weight.hi);
+        // }
+        // let var = Var {
+        //     id: UniqueId(0),
+        //     label: None,
+        //     provenance: Some("x".to_string()),
+        // };
+        // let flip = Var {
+        //     id: UniqueId(1),
+        //     label: Some(lbl),
+        //     provenance: None,
+        // };
+
+        // let dv_var = DecoratedVar {
+        //     var: var.clone(),
+        //     above: HashSet::from([flip.clone()]),
+        //     below: HashSet::from([]),
+        // };
+        // let sampleb = true;
+        // let sample = BddPtr::from_bool(sampleb);
+
+        // let dv_flip = DecoratedVar {
+        //     var: flip.clone(),
+        //     above: HashSet::from([var.clone()]),
+        //     below: HashSet::from([]),
+        // };
+
+        // let all_dv = HashMap::from([
+        //     (var.clone(), dv_var.clone()),
+        //     (flip.clone(), dv_flip.clone()),
+        // ]);
+
+        // let substitutions = HashMap::from([(UniqueId(0), ([sample], var.clone()))]);
+        // let samples_opt = HashMap::from([(ptr, (Some(dv_var), sampleb))]);
+
+        let prog = Program::Body(lets![
+           "x" ; B!() ;= sample!(flip!(1/4));
+           ...? var!("x") ; B!()
+        ]);
+        let mut mgr = crate::make_mgr(&prog);
+        let opt = crate::Options {
+            opt: true,
+            debug: false,
+            seed: Some(4),
+        };
+
+        let p = typecheck(&prog).unwrap();
+        let mut senv = SymEnv::default();
+        let p = senv.uniquify(&p).unwrap();
+        let mut lenv = LabelEnv::new();
+        let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p).unwrap();
+
+        let mut aenv = AnalysisEnv::new(&varmap);
+        let p = aenv.decorate(&p, opt.opt).unwrap();
+        let mut rng = opt.rng();
+        let orng = if opt.debug { None } else { Some(&mut rng) };
+        let env = Env::new(&mut mgr, orng, opt.opt, inv); // technically don't need this if I use the decorated vars in a clever way
+        debug!("{:?}", env.inv);
+
+        let mut mgr = Mgr::new_default_order(2 as usize);
+        let var_order = mgr.get_order().clone();
+        let mut params = WmcParams::new(0.0, 1.0);
+        let (lbl, ptr) = mgr.new_var(true);
+        for (lbl, weight) in [(lbl, Weight::new(0.7500, 0.2500))] {
+            params.set_weight(lbl, weight.lo, weight.hi);
+        }
+        let nvar = NamedVar {
+            id: UniqueId(0),
+            name: "x".to_string(),
+        };
+        let var = Var::Named(nvar.clone());
+        let bvar = BddVar {
+            id: UniqueId(1),
+            label: lbl,
+            provenance: Some(nvar.clone()),
+        };
+        let flip = Var::new_bdd(UniqueId(1), lbl, Some(nvar.clone()));
+
+        let dv_var = DecoratedVar {
+            var: var.clone(),
+            above: HashSet::from([flip.clone()]),
+            below: HashSet::from([]),
+        };
+        let sampleb = false;
+        let sample = BddPtr::from_bool(sampleb);
+
+        let dv_flip = DecoratedVar {
+            var: flip.clone(),
+            above: HashSet::from([var.clone()]),
+            below: HashSet::from([]),
+        };
+
+        let all_dv = HashMap::from([
+            (var.clone(), dv_var.clone()),
+            (flip.clone(), dv_flip.clone()),
+        ]);
+
+        // unnecessary, but exactly what the substitutions are
+        let substitutions = HashMap::from([(UniqueId(0), ([sample], var.clone()))]);
+        // sample distributions to their named let-bindings (and value)
+        let samples_opt = HashMap::from([(ptr, (Some(dv_var.clone()), sampleb))]);
+        // named let-bindings and all associated bdd pointers
+        let inv = HashMap::from([(nvar.clone(), HashSet::from([bvar.clone()]))]);
+        debug!("{:?}", inv);
+        debug!("{:?}", &dv_var);
+        // debug!("{:?}", inv.get(&dv_var.var));
+
+        let removable = removable_ids(&samples_opt, &inv);
+        debug!("{:?}", removable);
+
+        for (bdd, (odv, sample)) in samples_opt.clone() {
+            let include = match &odv {
+                None => false,
+                Some(dv) => removable.contains(&dv.var.id()),
+            };
+            debug!("remove {:?}? {}", odv.unwrap().var, include);
+        }
+        let w = calculate_wmc_prob_opt(
+            &mut mgr,
+            &params,
+            &var_order,
+            sample,
+            BddPtr::PtrTrue,
+            &samples_opt,
+            &inv,
+        )
+        .0;
+
+        if sampleb {
+            assert_eq!(w, 1.0);
+        } else {
+            assert_eq!(w, 0.0);
+        }
+    }
+}
+
 pub fn wmc_prob(mgr: &mut Mgr, c: &Output) -> (Vec<f64>, WmcStats) {
+    let span = tracing::span!(tracing::Level::DEBUG, "wmc_prob");
+    let _enter = span.enter();
     let mut last_stats = None;
     let probs = c
         .dists
@@ -153,8 +356,10 @@ pub fn wmc_prob(mgr: &mut Mgr, c: &Output) -> (Vec<f64>, WmcStats) {
 pub fn wmc_prob_opt(
     mgr: &mut Mgr,
     c: &Output,
-    sampling_context: Option<DecoratedVar>,
+    inv: &HashMap<NamedVar, HashSet<BddVar>>,
 ) -> (Vec<f64>, WmcStats) {
+    let span = tracing::span!(tracing::Level::DEBUG, "wmc_prob_opt");
+    let _enter = span.enter();
     let mut prev = None;
     let probs = c
         .dists
@@ -167,7 +372,7 @@ pub fn wmc_prob_opt(
                 *d,
                 c.accept,
                 &c.samples_opt,
-                sampling_context.clone(),
+                inv,
             );
             prev = prev
                 .as_ref()
@@ -280,10 +485,11 @@ pub fn importance_weighting_h(
     let mut compilations_prs = vec![];
     let mut compilations_qs = vec![];
     let mut stats_max = None;
+    debug!("running with options: {:#?}", opt);
 
     for _step in 1..=steps {
         match crate::runner_h(p, &mut mgr, opt) {
-            Ok(cs) => {
+            Ok((cs, inv)) => {
                 is_debug = match cs {
                     Compiled::Output(_) => false,
                     Compiled::Debug(_) => {
@@ -294,12 +500,11 @@ pub fn importance_weighting_h(
                 cs.into_iter().for_each(|c| {
                     let ps;
                     let stats;
-                    // if opt.opt {
-                    //     (ps, stats) = wmc_prob_opt(&mut mgr, &c);
-                    // } else {
-                    //     (ps, stats) = wmc_prob(&mut mgr, &c);
-                    // }
-                    (ps, stats) = wmc_prob(&mut mgr, &c);
+                    if opt.opt {
+                        (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv);
+                    } else {
+                        (ps, stats) = wmc_prob(&mut mgr, &c);
+                    }
 
                     let w = c.importance.weight();
                     debug!("{}", c.accept.print_bdd());
@@ -381,7 +586,9 @@ pub fn importance_weighting_h(
     } else {
         debug_importance_weighting(true, steps, &ws, &[], &prs, &sss, &exp, &expw);
         // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
-        let x = izip!(exp, expw).map(|(exp, expw)| exp / expw).collect_vec();
+        let x = izip!(exp, expw)
+            .map(|(exp, expw)| if exp == 0.0 { 0.0 } else { exp / expw })
+            .collect_vec();
         (x, stats_max.expect("at least one sample"))
     }
 }

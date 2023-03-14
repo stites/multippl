@@ -5,7 +5,7 @@ pub mod importance;
 pub mod weighting;
 
 use crate::analysis::grammar::*;
-use crate::annotate::grammar::Var;
+use crate::annotate::grammar::*;
 use crate::grammar::*;
 use crate::render::*;
 use crate::uniquify::grammar::UniqueId;
@@ -25,6 +25,7 @@ use rsdd::repr::var_order::VarOrder;
 use rsdd::repr::wmc::WmcParams;
 use rsdd::sample::probability::Probability;
 use std::collections::HashMap;
+use std::collections::HashSet;
 use std::fmt;
 use std::string::String;
 use tracing::*;
@@ -100,26 +101,27 @@ pub struct Env<'a> {
     // in progress
     pub sampling_context: Option<DecoratedVar>,
     pub sample_pruning: bool,
+    pub inv: HashMap<NamedVar, HashSet<BddVar>>,
 
     // static
     pub varmap: Option<HashMap<UniqueId, Var>>,
 
     // ignored
     pub weightmap: Option<WmcParams<f64>>,
-    pub inv: Option<HashMap<VarLabel, Var>>,
 }
 impl<'a> Env<'a> {
     pub fn new(
         mgr: &'a mut BddManager<AllTable<BddPtr>>,
         rng: Option<&'a mut StdRng>,
         sample_pruning: bool,
+        inv: HashMap<NamedVar, HashSet<BddVar>>,
     ) -> Env<'a> {
         Env {
             order: mgr.get_order().clone(),
             weightmap: None,
             varmap: None,
             max_label: mgr.get_order().num_vars() as u64,
-            inv: None,
+            inv,
             mgr,
             rng,
             sampling_context: None,
@@ -156,7 +158,7 @@ impl<'a> Env<'a> {
     pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnlys) -> Result<(Output, AnfTr)> {
         use Anf::*;
         match a {
-            AVar(d, s) => match ctx.substitutions.get(&d.var.id) {
+            AVar(d, s) => match ctx.substitutions.get(&d.var.id()) {
                 None => Err(Generic(format!(
                     "variable {} does not reference known substitution",
                     s
@@ -266,7 +268,7 @@ impl<'a> Env<'a> {
                 let _enter = let_in_span.enter();
                 self.sampling_context = Some(d.clone());
 
-                let lbl = d.var.label;
+                // let lbl = d.var.label;
                 // if we produce multiple worlds, we must account for them all
                 let (cbound, eboundtr) = self.eval_expr(ctx, ebound)?;
                 let (outs, mbody) = cbound
@@ -285,7 +287,7 @@ impl<'a> Env<'a> {
                         let mut newctx = Context::from_compiled(&bound);
                         newctx
                             .substitutions
-                            .insert(d.var.id, (bound.dists.clone(), d.var.clone()));
+                            .insert(d.var.id(), (bound.dists.clone(), d.var.clone()));
 
                         let (bodies, bodiestr) = self.eval_expr(&newctx, ebody)?;
                         let cbodies = bodies
@@ -375,7 +377,7 @@ impl<'a> Env<'a> {
                                 pred_dist,
                                 ctx.accept,
                                 &ctx.samples_opt,
-                                self.sampling_context.clone(),
+                                &self.inv,
                             )
                             .0,
                         )
@@ -501,9 +503,9 @@ impl<'a> Env<'a> {
                 let _enter = span.enter();
 
                 let mut weightmap = ctx.weightmap.clone();
-                weightmap.insert(d.var.label.unwrap(), *param);
+                weightmap.insert(d.var.unsafe_label(), *param);
                 let o = Output {
-                    dists: vec![self.mgr.var(d.var.label.unwrap(), true)],
+                    dists: vec![self.mgr.var(d.var.unsafe_label(), true)],
                     accept: ctx.accept,
                     samples: ctx.samples,
                     samples_opt: ctx.samples_opt.clone(),
@@ -540,6 +542,7 @@ impl<'a> Env<'a> {
                 debug!("Accept     {}", dist.print_bdd());
                 let wmc;
                 // FIXME: should be aggregating these stats somewhere
+                debug!("using optimizations: {}", self.sample_pruning);
                 if self.sample_pruning {
                     (wmc, _) = crate::inference::calculate_wmc_prob_opt(
                         self.mgr,
@@ -548,7 +551,7 @@ impl<'a> Env<'a> {
                         dist,
                         ctx.accept,
                         &ctx.samples_opt,
-                        self.sampling_context.clone(),
+                        &self.inv,
                     );
                 } else {
                     (wmc, _) = crate::inference::calculate_wmc_prob(
@@ -623,6 +626,7 @@ impl<'a> Env<'a> {
                                 let sample_dist = self.mgr.and(samples, *dist);
                                 let theta_q;
                                 // FIXME: should be aggregating the stats somewhere
+                                debug!("using optimizations: {}", self.sample_pruning);
                                 if self.sample_pruning {
                                     (theta_q, _) = crate::inference::calculate_wmc_prob_opt(
                                         self.mgr,
@@ -631,7 +635,7 @@ impl<'a> Env<'a> {
                                         *dist,
                                         accept,
                                         &samples_opt,
-                                        sampling_context.clone(),
+                                        &self.inv,
                                     );
                                 } else {
                                     (theta_q, _) = crate::inference::calculate_wmc_prob(
@@ -666,25 +670,35 @@ impl<'a> Env<'a> {
                                 samples = self.mgr.and(samples, dist_holds);
 
                                 let dv = sampling_context.clone();
-                                samples_opt.insert(*dist, (dv.map(|x| x.var), sample));
+                                samples_opt.insert(*dist, (dv, sample));
                             }
                             debug!("final dists:   {}", renderbdds(&dists));
                             debug!("final samples: {}", samples.print_bdd());
                             // println!("sample_pruning: {}", self.sample_pruning);
+                            debug!("using optimizations: {}", self.sample_pruning);
                             if self.sample_pruning {
                                 let removable = sampling_context
-                                    .map(|dv| dv.above.difference(&dv.below).cloned().collect())
+                                    .map(|dv| {
+                                        let x = dv.above.difference(&dv.below).cloned().collect();
+                                        debug!(
+                                            "\nabove: {:?}\nbelow: {:?}\nresult: {:?}",
+                                            dv.above, dv.below, x
+                                        );
+                                        x
+                                    })
                                     .unwrap_or(std::collections::HashSet::new());
                                 // println!("before: {:?}", samples_opt);
+                                debug!("removable: {:?}", removable);
 
                                 samples_opt = samples_opt
                                     .into_iter()
                                     .filter(|(k, (ovar, bool))| {
                                         ovar.as_ref()
-                                            .map(|var| !removable.contains(&var))
+                                            .map(|var| !removable.contains(&var.var))
                                             .unwrap_or(false)
                                     })
                                     .collect();
+                                debug!("samples_opt: {:?}", samples_opt);
                                 // println!("after: {:?}", samples_opt);
                             }
 

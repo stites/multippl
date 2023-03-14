@@ -8,9 +8,12 @@ use rsdd::repr::var_label::*;
 use rsdd::repr::var_order::VarOrder;
 use rsdd::repr::wmc::WmcParams;
 use std::collections::{HashMap, HashSet};
+use tracing::*;
 
 pub mod grammar {
     use super::*;
+    pub use crate::annotate::grammar::{BddVar, NamedVar, Var};
+    pub use crate::uniquify::grammar::UniqueId;
     use std::fmt;
     use std::fmt::*;
 
@@ -78,7 +81,7 @@ pub mod grammar {
 
 pub struct AnalysisEnv {
     seen: HashSet<Var>,
-    above: HashMap<Var, HashSet<Var>>,
+    above_below: HashMap<Var, (HashSet<Var>, HashSet<Var>)>,
     decor: HashMap<Var, DecoratedVar>,
 }
 
@@ -91,20 +94,48 @@ impl AnalysisEnv {
             .collect();
         AnalysisEnv {
             seen: HashSet::new(),
-            above: HashMap::new(),
+            above_below: HashMap::new(),
             decor,
         }
+    }
+
+    pub fn insert_below(&mut self, v: &Var) {
+        for (k, (a, b)) in self.above_below.iter_mut() {
+            if k != v {
+                b.insert(v.clone());
+            }
+        }
+    }
+
+    pub fn insert_above(&mut self, v: &Var) {
+        let above: HashSet<Var> = self.seen.iter().filter(|x| x != &v).cloned().collect();
+        match self.above_below.get(&v.clone()) {
+            Some((a, b)) => {
+                self.above_below.insert(v.clone(), (above, b.clone()));
+            }
+            None => {
+                self.above_below.insert(v.clone(), (above, HashSet::new()));
+            }
+        }
+        self.seen.insert(v.clone());
+        let (a, b) = self.above_below.get(&v.clone()).unwrap();
+        let above: HashSet<String> = a.iter().cloned().map(|v| v.debug_id()).collect();
+
+        let below: HashSet<String> = b.iter().cloned().map(|v| v.debug_id()).collect();
+
+        debug!("[{:?}]\t{:?}\t[{:?}]", above, &v.debug_id(), below);
     }
 
     pub fn analyze_anf(&mut self, a: &AnfAnn) -> Result<(), CompileError> {
         use crate::grammar::Anf::*;
         match a {
-            AVar(v, s) => match self.above.get(v) {
+            AVar(v, s) => match self.above_below.get(v) {
                 None => Err(Generic(
                     "impossible: variables should already be established".to_string(),
                 )),
-                Some(dv) => {
-                    self.above.insert(v.clone(), self.seen.clone());
+                Some(_) => {
+                    self.insert_below(v);
+                    self.insert_above(v);
                     Ok(())
                 }
             },
@@ -138,8 +169,7 @@ impl AnalysisEnv {
             ESnd(_, a) => self.analyze_anf(a),
             EProd(_, anfs) => self.analyze_anfs(anfs),
             ELetIn(v, s, ebound, ebody) => {
-                self.above.insert(v.clone(), self.seen.clone());
-                self.seen.insert(v.clone());
+                self.insert_above(v);
                 self.analyze_expr(ebound)?;
                 self.analyze_expr(ebody)?;
                 Ok(())
@@ -151,8 +181,7 @@ impl AnalysisEnv {
                 Ok(())
             }
             EFlip(v, param) => {
-                self.above.insert(v.clone(), self.seen.clone());
-                self.seen.insert(v.clone());
+                self.insert_above(v);
                 Ok(())
             }
             EObserve(_, a) => self.analyze_anf(a),
@@ -218,13 +247,11 @@ impl AnalysisEnv {
     }
 
     pub fn compile_decorations(&mut self) {
-        for var in self.seen.clone() {
-            let above = self.above.get(&var).expect("variable must exist").clone();
-            let below: HashSet<Var> = self.seen.difference(&above).cloned().collect();
+        for (var, (above, below)) in self.above_below.clone() {
             let dv = DecoratedVar {
                 var: var.clone(),
-                above,
-                below,
+                above: above.clone(),
+                below: below.clone(),
             };
             self.decor.insert(var, dv);
         }

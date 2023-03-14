@@ -1,3 +1,4 @@
+use crate::analysis::grammar::DecoratedVar;
 use crate::annotate::grammar::Var;
 use crate::compile::{Output, SubstMap, WeightMap};
 use rsdd::repr::bdd::BddPtr;
@@ -7,7 +8,7 @@ use std::collections::HashMap;
 pub struct Context {
     pub accept: BddPtr,
     pub samples: BddPtr,
-    pub samples_opt: HashMap<BddPtr, (Option<Var>, bool)>,
+    pub samples_opt: HashMap<BddPtr, (Option<DecoratedVar>, bool)>,
     pub substitutions: SubstMap,
     pub weightmap: WeightMap,
 }

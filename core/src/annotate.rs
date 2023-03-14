@@ -6,34 +6,72 @@ use rsdd::repr::var_label::*;
 use rsdd::repr::var_order::VarOrder;
 use rsdd::repr::wmc::WmcParams;
 use std::collections::HashMap;
+use std::collections::HashSet;
+
+pub type InvMap = HashMap<NamedVar, HashSet<BddVar>>;
+
 pub mod grammar {
     use super::*;
     use std::fmt;
     use std::fmt::*;
 
     #[derive(Clone, Hash, Eq, PartialEq, Debug)]
-    pub struct Var {
-        pub id: UniqueId,               // associated unique ids
-        pub label: Option<VarLabel>,    // only hold values in the final formula
-        pub provenance: Option<String>, // when None, this indicates that the variable is in the final formula
+    pub struct BddVar {
+        pub id: UniqueId,
+        pub label: VarLabel,
+        pub provenance: Option<NamedVar>,
     }
-    impl Var {
-        pub fn new(id: UniqueId, label: Option<VarLabel>, provenance: Option<String>) -> Self {
-            Self {
-                id,
-                label,
-                provenance,
-            }
+    impl BddVar {
+        pub fn id(&self) -> UniqueId {
+            self.id
         }
     }
 
-    impl fmt::Display for Var {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(
-                f,
-                "Var({:?}->{:?}: {:?}, ",
-                self.id, self.label, self.provenance
-            )
+    #[derive(Clone, Hash, Eq, PartialEq, Debug)]
+    pub struct NamedVar {
+        pub id: UniqueId,
+        pub name: String,
+    }
+    impl NamedVar {
+        pub fn id(&self) -> UniqueId {
+            self.id
+        }
+    }
+
+    // FIXME: this should be an enum of BddVar or NamedVar
+    #[derive(Clone, Hash, Eq, PartialEq, Debug)]
+    pub enum Var {
+        Bdd(BddVar),
+        Named(NamedVar),
+    }
+    impl Var {
+        pub fn new_bdd(id: UniqueId, label: VarLabel, provenance: Option<NamedVar>) -> Self {
+            Var::Bdd(BddVar {
+                id,
+                label,
+                provenance,
+            })
+        }
+        pub fn new_named(id: UniqueId, name: String) -> Self {
+            Var::Named(NamedVar { id, name })
+        }
+        pub fn debug_id(&self) -> String {
+            match self {
+                Var::Bdd(v) => format!("{}", v.id),
+                Var::Named(v) => v.name.clone(),
+            }
+        }
+        pub fn unsafe_label(&self) -> VarLabel {
+            match self {
+                Var::Bdd(v) => v.label,
+                Var::Named(_) => panic!("shame on you!"),
+            }
+        }
+        pub fn id(&self) -> UniqueId {
+            match self {
+                Var::Bdd(v) => v.id,
+                Var::Named(v) => v.id,
+            }
         }
     }
 
@@ -93,6 +131,7 @@ pub mod grammar {
 pub struct LabelEnv {
     lblsym: u64,
     subst_var: HashMap<UniqueId, Var>,
+    letpos: Option<NamedVar>,
 }
 
 impl LabelEnv {
@@ -100,6 +139,7 @@ impl LabelEnv {
         Self {
             lblsym: 0,
             subst_var: HashMap::new(),
+            letpos: None,
         }
     }
     pub fn max_varlabel_val(&self) -> u64 {
@@ -109,13 +149,23 @@ impl LabelEnv {
     pub fn linear_var_order(&self) -> rsdd::repr::var_order::VarOrder {
         rsdd::repr::var_order::VarOrder::linear_order(self.max_varlabel_val() as usize)
     }
-    pub fn get_inv(&self) -> HashMap<VarLabel, Var> {
-        let mut inv = HashMap::new();
+    pub fn get_inv(&self) -> HashMap<NamedVar, HashSet<BddVar>> {
+        let mut inv: HashMap<NamedVar, HashSet<BddVar>> = HashMap::new();
         for (_, var) in self.subst_var.iter() {
-            match var.label {
-                Some(label) => inv.insert(label, var.clone()),
-                None => continue,
-            };
+            match &var {
+                Var::Named(_) => continue,
+                Var::Bdd(v) => match &v.provenance {
+                    None => continue,
+                    Some(prov) => match inv.get_mut(&prov) {
+                        None => {
+                            inv.insert(prov.clone(), HashSet::from([v.clone()]));
+                        }
+                        Some(vs) => {
+                            vs.insert(v.clone());
+                        }
+                    },
+                },
+            }
         }
         inv
     }
@@ -161,8 +211,12 @@ impl LabelEnv {
             ESnd(_, a) => Ok(ESnd((), Box::new(self.annotate_anf(a)?))),
             EProd(_, anfs) => Ok(EProd((), self.annotate_anfs(anfs)?)),
             ELetIn(id, s, ebound, ebody) => {
-                // let lbl = self.fresh();
-                let var = Var::new(*id, None, Some(s.to_string()));
+                let nvar = NamedVar {
+                    id: *id,
+                    name: s.to_string(),
+                };
+                let var = Var::Named(nvar.clone());
+                self.letpos = Some(nvar);
                 // self.weights.insert(var.clone(), Weight::constant());
                 self.subst_var.insert(*id, var.clone());
                 Ok(ELetIn(
@@ -180,7 +234,7 @@ impl LabelEnv {
             )),
             EFlip(id, param) => {
                 let lbl = self.fresh();
-                let var = Var::new(*id, Some(lbl), None);
+                let var = Var::new_bdd(*id, lbl, self.letpos.clone());
                 self.subst_var.insert(*id, var.clone());
                 Ok(EFlip(var, *param))
             }
@@ -201,7 +255,7 @@ impl LabelEnv {
             ProgramAnn,
             VarOrder,
             HashMap<UniqueId, Var>,
-            HashMap<VarLabel, Var>,
+            HashMap<NamedVar, HashSet<BddVar>>,
             u64,
         ),
         CompileError,

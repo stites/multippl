@@ -23,10 +23,10 @@ pub fn renderbdds(fs: &[BddPtr]) -> String {
 
 pub fn rendervar(var: &Var) -> String {
     format!(
-        "({}{})",
-        var.id,
-        var.label
-            .map_or_else(|| "L-".to_string(), |l| format!("L{}", l.value())),
+        "({:?})",
+        var,
+        // var.label
+        //     .map_or_else(|| "L-".to_string(), |l| format!("L{}", l.value())),
     )
 }
 pub fn rendersubs(fs: &HashMap<UniqueId, (Vec<BddPtr>, Var)>) -> String {
