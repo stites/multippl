@@ -1002,7 +1002,7 @@ fn manual_ite() {
     // debug!("accept_false_comp: {}", accept_false_comp.print_bdd());
 
     let var_order = mgr.get_order().clone();
-    let mut params = WmcParams::new(0.0, 1.0);
+    let mut params = WmcParams::new(RealSemiring(0.0), RealSemiring(1.0));
     for (lbl, weight) in [
         (yf_label, Weight::new(0.7500, 0.2500)),
         (yt_label, Weight::new(0.6667, 0.3333)),

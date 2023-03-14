@@ -22,7 +22,7 @@ use rsdd::repr::bdd::*;
 use rsdd::repr::ddnnf::*;
 use rsdd::repr::var_label::*;
 use rsdd::repr::var_order::VarOrder;
-use rsdd::repr::wmc::WmcParams;
+use rsdd::repr::wmc::*;
 use rsdd::sample::probability::Probability;
 use std::collections::HashMap;
 use std::collections::HashSet;
@@ -107,7 +107,7 @@ pub struct Env<'a> {
     pub varmap: Option<HashMap<UniqueId, Var>>,
 
     // ignored
-    pub weightmap: Option<WmcParams<f64>>,
+    pub weightmap: Option<WmcParams<RealSemiring>>,
 }
 impl<'a> Env<'a> {
     pub fn new(

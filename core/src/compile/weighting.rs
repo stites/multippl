@@ -1,23 +1,33 @@
-use rsdd::repr::bdd::{VarLabel, WmcParams};
+use rsdd::repr::bdd::VarLabel;
+use rsdd::repr::wmc::{RealSemiring, WmcParams};
 use std::collections::HashMap;
 
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, Debug)]
 pub struct Weight {
-    pub lo: f64,
-    pub hi: f64,
+    pub lo: RealSemiring,
+    pub hi: RealSemiring,
 }
 impl Weight {
     pub fn new(lo: f64, hi: f64) -> Weight {
-        Weight { lo, hi }
+        Weight {
+            lo: RealSemiring(lo),
+            hi: RealSemiring(hi),
+        }
     }
-    pub fn as_tuple(&self) -> (f64, f64) {
+    pub fn as_tuple(&self) -> (RealSemiring, RealSemiring) {
         (self.lo, self.hi)
     }
     pub fn from_high(hi: f64) -> Weight {
-        Weight { lo: 1.0 - hi, hi }
+        Weight {
+            lo: RealSemiring(1.0 - hi),
+            hi: RealSemiring(hi),
+        }
     }
     pub fn constant() -> Weight {
-        Weight { lo: 1.0, hi: 1.0 }
+        Weight {
+            lo: RealSemiring(1.0),
+            hi: RealSemiring(1.0),
+        }
         // Self::from_high(0.5)
     }
 }
@@ -28,8 +38,8 @@ pub struct WeightMap {
 }
 
 impl WeightMap {
-    pub fn as_params(&self, max_label: u64) -> WmcParams<f64> {
-        let mut wmc_params = WmcParams::new(0.0, 1.0);
+    pub fn as_params(&self, max_label: u64) -> WmcParams<RealSemiring> {
+        let mut wmc_params = WmcParams::new(RealSemiring(0.0), RealSemiring(1.0));
         let cnst = Weight::constant();
         for ix in 0..max_label {
             let lbl = VarLabel::new(ix);

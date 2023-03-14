@@ -11,7 +11,7 @@ use itertools::*;
 use rsdd::repr::bdd::*;
 use rsdd::repr::ddnnf::DDNNFPtr;
 use rsdd::repr::var_order::VarOrder;
-use rsdd::repr::wmc::WmcParams;
+use rsdd::repr::wmc::{RealSemiring, WmcParams};
 use rsdd::sample::probability::Probability;
 use std::cmp;
 use std::collections::HashMap;
@@ -38,7 +38,7 @@ impl WmcStats {
 }
 pub fn calculate_wmc_prob_h(
     mgr: &mut Mgr,
-    params: &WmcParams<f64>,
+    params: &WmcParams<RealSemiring>,
     var_order: &VarOrder,
     dist: BddPtr,
     accept: BddPtr,
@@ -53,8 +53,8 @@ pub fn calculate_wmc_prob_h(
     debug!("-------------");
     debug!("{}", accept.print_bdd());
 
-    let a = num.wmc(var_order, params);
-    let z = accept.wmc(var_order, params);
+    let RealSemiring(a) = num.wmc(var_order, params);
+    let RealSemiring(z) = accept.wmc(var_order, params);
     debug!("{}", a);
     debug!("----------- = {}", a / z);
     debug!("{}", z);
@@ -75,7 +75,7 @@ pub fn calculate_wmc_prob_h(
 
 pub fn calculate_wmc_prob_hf64(
     mgr: &mut Mgr,
-    params: &WmcParams<f64>,
+    params: &WmcParams<RealSemiring>,
     var_order: &VarOrder,
     dist: BddPtr,
     accept: BddPtr,
@@ -90,7 +90,7 @@ pub fn calculate_wmc_prob_hf64(
 
 pub fn calculate_wmc_prob(
     mgr: &mut Mgr,
-    params: &WmcParams<f64>,
+    params: &WmcParams<RealSemiring>,
     var_order: &VarOrder,
     dist: BddPtr,
     accept: BddPtr,
@@ -152,7 +152,7 @@ pub fn included_samples(
 
 pub fn calculate_wmc_prob_opt(
     mgr: &mut Mgr,
-    params: &WmcParams<f64>,
+    params: &WmcParams<RealSemiring>,
     var_order: &VarOrder,
     dist: BddPtr,
     accept: BddPtr,
@@ -255,7 +255,7 @@ mod tests {
 
         let mut mgr = Mgr::new_default_order(2 as usize);
         let var_order = mgr.get_order().clone();
-        let mut params = WmcParams::new(0.0, 1.0);
+        let mut params = WmcParams::new(RealSemiring(0.0), RealSemiring(1.0));
         let (lbl, ptr) = mgr.new_var(true);
         for (lbl, weight) in [(lbl, Weight::new(0.7500, 0.2500))] {
             params.set_weight(lbl, weight.lo, weight.hi);
