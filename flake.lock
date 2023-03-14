@@ -496,11 +496,11 @@
       },
       "locked": {
         "dir": "nix",
-        "lastModified": 1678421952,
-        "narHash": "sha256-3en+/slnQxGk+ZQXyxy3BQTE7emPwq4SIRnEx5zNbd4=",
+        "lastModified": 1678811711,
+        "narHash": "sha256-36u51C43wRunglFuI32oSpFAt/g3QDKGYd9bvjon8tA=",
         "owner": "stites",
         "repo": "rsdd",
-        "rev": "0c5c01526713c87188df4783925b2d834fa14f7e",
+        "rev": "bccbd0d59d679f31ccccedf1408d77bb2f6b9650",
         "type": "github"
       },
       "original": {
