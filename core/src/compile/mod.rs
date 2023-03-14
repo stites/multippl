@@ -95,14 +95,16 @@ use grammar::*;
 pub enum SamplingContext {
     Unset,
     Set(DecoratedVar),
-    Nesting,
+    Sampling(DecoratedVar),
+    SamplingWithLet(DecoratedVar, DecoratedVar),
 }
 impl SamplingContext {
     pub fn as_option(&self) -> Option<DecoratedVar> {
         use SamplingContext::*;
         match self {
-            Set(v) => Some(v.clone()),
-            _ => None,
+            Unset => None,
+            Set(v) | Sampling(v) => Some(v.clone()),
+            SamplingWithLet(v, _) => Some(v.clone()),
         }
     }
 }
@@ -283,11 +285,16 @@ impl<'a> Env<'a> {
                 use SamplingContext::*;
                 let let_in_span = tracing::span!(Level::DEBUG, "let", var = s);
                 let _enter = let_in_span.enter();
-                match self.sampling_context {
-                    Nesting | Unset => {
+                match &self.sampling_context {
+                    Unset | Set(_) => {
                         self.sampling_context = Set(d.clone());
                     }
-                    Set(_) => {}
+                    Sampling(v) => {
+                        self.sampling_context = SamplingWithLet(v.clone(), d.clone());
+                    }
+                    SamplingWithLet(v, _) => {
+                        self.sampling_context = SamplingWithLet(v.clone(), d.clone());
+                    }
                 }
 
                 // let lbl = d.var.label;
@@ -604,8 +611,19 @@ impl<'a> Env<'a> {
                 Ok((c.clone(), EObserve(Box::new(c), Box::new(atr))))
             }
             ESample(_, e) => {
+                use SamplingContext::*;
                 let span = tracing::span!(tracing::Level::DEBUG, "sample");
                 let _enter = span.enter();
+
+                match &self.sampling_context {
+                    Sampling(_) | Unset => {}
+                    Set(v) => {
+                        self.sampling_context = Sampling(v.clone());
+                    }
+                    SamplingWithLet(ctx, lastlet) => {
+                        self.sampling_context = Sampling(lastlet.clone());
+                    }
+                }
 
                 let (comp, etr) = self.eval_expr(ctx, e)?;
                 let c: Compiled = comp
@@ -754,6 +772,7 @@ impl<'a> Env<'a> {
                     .into_iter()
                     .flatten()
                     .collect();
+
                 Ok((c.clone(), ESample(Box::new(c), Box::new(etr))))
             }
         }
