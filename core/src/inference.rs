@@ -474,6 +474,7 @@ pub fn importance_weighting_h(
     let mut compilations_qs = vec![];
     let mut stats_max = None;
     debug!("running with options: {:#?}", opt);
+    let mut debug_inv = None;
 
     for _step in 1..=steps {
         match crate::runner_h(p, &mut mgr, opt) {
@@ -482,6 +483,7 @@ pub fn importance_weighting_h(
                     Compiled::Output(_) => false,
                     Compiled::Debug(_) => {
                         compilations = cs.clone().into_iter().collect();
+                        debug_inv = Some(inv.clone());
                         true
                     }
                 };
@@ -565,7 +567,13 @@ pub fn importance_weighting_h(
             compilations
                 .iter()
                 .fold(vec![0.0; compilations[0].probabilities.len()], |agg, c| {
-                    let (azs, _) = wmc_prob(&mut mgr, c);
+                    let azs;
+                    if opt.opt {
+                        (azs, _) = wmc_prob_opt(&mut mgr, &c, &debug_inv.as_ref().unwrap());
+                    } else {
+                        (azs, _) = wmc_prob(&mut mgr, &c);
+                    }
+
                     izip!(agg, c.probabilities.clone(), azs)
                         .map(|(fin, q, wmc)| fin + q.as_f64() * c.importance.weight() * wmc)
                         .collect_vec()
