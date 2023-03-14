@@ -107,11 +107,11 @@ pub fn removable_ids(
     for (bdd, (odv, sample)) in samples_opt.clone() {
         match odv {
             None => continue,
-            Some(dv) => match dv.var {
+            Some(dv) => match dv.var() {
                 Var::Named(ref nvar) => match inv.get(&nvar) {
                     None => continue,
                     Some(rs) => {
-                        removable.insert(dv.var.id());
+                        removable.insert(dv.id());
                         let xs: HashSet<UniqueId> = rs.iter().map(BddVar::id).collect();
                         removable.extend(xs);
                     }
@@ -138,9 +138,9 @@ pub fn included_samples(
                     "remove {:?}=={:?}? {}",
                     var,
                     sampled_value,
-                    removable.contains(&var.var.id())
+                    removable.contains(&var.id())
                 );
-                !removable.contains(&var.var.id())
+                !removable.contains(&var.id())
             }
         })
         .map(|(k, (_, v))| (*k, *v))
@@ -269,20 +269,11 @@ mod tests {
         };
         let flip = Var::new_bdd(UniqueId(1), lbl, Some(nvar.clone()));
 
-        let dv_var = DecoratedVar {
-            var: var.clone(),
-            above: HashSet::from([flip.clone()]),
-            below: HashSet::from([]),
-        };
+        let dv_var = DecoratedVar::new(&var, HashSet::from([flip.clone()]), HashSet::from([]));
         let sampleb = false;
         let sample = BddPtr::from_bool(sampleb);
 
-        let dv_flip = DecoratedVar {
-            var: flip.clone(),
-            above: HashSet::from([var.clone()]),
-            below: HashSet::from([]),
-        };
-
+        let dv_flip = DecoratedVar::new(&flip, HashSet::from([var.clone()]), HashSet::from([]));
         let all_dv = HashMap::from([
             (var.clone(), dv_var.clone()),
             (flip.clone(), dv_flip.clone()),
@@ -304,9 +295,9 @@ mod tests {
         for (bdd, (odv, sample)) in samples_opt.clone() {
             let include = match &odv {
                 None => false,
-                Some(dv) => removable.contains(&dv.var.id()),
+                Some(dv) => removable.contains(&dv.id()),
             };
-            debug!("remove {:?}? {}", odv.unwrap().var, include);
+            debug!("remove {:?}? {}", odv.unwrap().var(), include);
         }
         let w = calculate_wmc_prob_opt(
             &mut mgr,

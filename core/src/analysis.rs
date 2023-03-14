@@ -18,18 +18,58 @@ pub mod grammar {
     use std::fmt::*;
 
     #[derive(Clone, Eq, PartialEq, Debug)]
-    pub struct DecoratedVar {
-        pub var: Var,
+    pub struct Decorated<X> {
+        pub var: X,
         pub above: HashSet<Var>,
         pub below: HashSet<Var>,
     }
+    pub type DecoratedNamedVar = Decorated<NamedVar>;
+    pub type DecoratedBddVar = Decorated<BddVar>;
+
+    #[derive(Clone, Eq, PartialEq, Debug)]
+    pub enum DecoratedVar {
+        Bdd(DecoratedBddVar),
+        Named(DecoratedNamedVar),
+    }
     impl DecoratedVar {
-        pub fn from_var(var: &Var) -> DecoratedVar {
-            DecoratedVar {
-                var: var.clone(),
-                above: HashSet::new(),
-                below: HashSet::new(),
+        pub fn new(v: &Var, above: HashSet<Var>, below: HashSet<Var>) -> Self {
+            match v {
+                Var::Named(var) => DecoratedVar::Named(Decorated {
+                    above,
+                    below,
+                    var: var.clone(),
+                }),
+                Var::Bdd(var) => DecoratedVar::Bdd(Decorated {
+                    above,
+                    below,
+                    var: var.clone(),
+                }),
             }
+        }
+        pub fn id(&self) -> UniqueId {
+            self.var().id()
+        }
+        pub fn below(&self) -> &HashSet<Var> {
+            match self {
+                DecoratedVar::Named(d) => &d.below,
+                DecoratedVar::Bdd(d) => &d.below,
+            }
+        }
+        pub fn above(&self) -> &HashSet<Var> {
+            match self {
+                DecoratedVar::Named(d) => &d.above,
+                DecoratedVar::Bdd(d) => &d.above,
+            }
+        }
+        pub fn var(&self) -> Var {
+            match self {
+                DecoratedVar::Named(d) => Var::Named(d.var.clone()),
+                DecoratedVar::Bdd(d) => Var::Bdd(d.var.clone()),
+            }
+        }
+
+        pub fn from_var(var: &Var) -> DecoratedVar {
+            DecoratedVar::new(var, HashSet::new(), HashSet::new())
         }
     }
 
@@ -248,11 +288,7 @@ impl AnalysisEnv {
 
     pub fn compile_decorations(&mut self) {
         for (var, (above, below)) in self.above_below.clone() {
-            let dv = DecoratedVar {
-                var: var.clone(),
-                above: above.clone(),
-                below: below.clone(),
-            };
+            let dv = DecoratedVar::new(&var, above, below);
             self.decor.insert(var, dv);
         }
     }

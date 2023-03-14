@@ -158,7 +158,7 @@ impl<'a> Env<'a> {
     pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnlys) -> Result<(Output, AnfTr)> {
         use Anf::*;
         match a {
-            AVar(d, s) => match ctx.substitutions.get(&d.var.id()) {
+            AVar(d, s) => match ctx.substitutions.get(&d.id()) {
                 None => Err(Generic(format!(
                     "variable {} does not reference known substitution",
                     s
@@ -287,7 +287,7 @@ impl<'a> Env<'a> {
                         let mut newctx = Context::from_compiled(&bound);
                         newctx
                             .substitutions
-                            .insert(d.var.id(), (bound.dists.clone(), d.var.clone()));
+                            .insert(d.id(), (bound.dists.clone(), d.var().clone()));
 
                         let (bodies, bodiestr) = self.eval_expr(&newctx, ebody)?;
                         let cbodies = bodies
@@ -503,9 +503,9 @@ impl<'a> Env<'a> {
                 let _enter = span.enter();
 
                 let mut weightmap = ctx.weightmap.clone();
-                weightmap.insert(d.var.unsafe_label(), *param);
+                weightmap.insert(d.var().unsafe_label(), *param);
                 let o = Output {
-                    dists: vec![self.mgr.var(d.var.unsafe_label(), true)],
+                    dists: vec![self.mgr.var(d.var().unsafe_label(), true)],
                     accept: ctx.accept,
                     samples: ctx.samples,
                     samples_opt: ctx.samples_opt.clone(),
@@ -679,10 +679,13 @@ impl<'a> Env<'a> {
                             if self.sample_pruning {
                                 let removable = sampling_context
                                     .map(|dv| {
-                                        let x = dv.above.difference(&dv.below).cloned().collect();
+                                        let x =
+                                            dv.above().difference(&dv.below()).cloned().collect();
                                         debug!(
                                             "\nabove: {:?}\nbelow: {:?}\nresult: {:?}",
-                                            dv.above, dv.below, x
+                                            dv.above(),
+                                            dv.below(),
+                                            x
                                         );
                                         x
                                     })
@@ -694,7 +697,7 @@ impl<'a> Env<'a> {
                                     .into_iter()
                                     .filter(|(k, (ovar, bool))| {
                                         ovar.as_ref()
-                                            .map(|var| !removable.contains(&var.var))
+                                            .map(|var| !removable.contains(&var.var()))
                                             .unwrap_or(false)
                                     })
                                     .collect();
