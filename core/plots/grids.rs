@@ -35,6 +35,28 @@ macro_rules! zoom_and_enhance {
                 static NAMES: &'static [&'static str] = &[$(stringify!($fname)),*];
                 NAMES
             }
+        //     fn write_row() -> Vec<String> {
+        //         let r = vec![];
+        //         $(
+        //             if stringify!($fname) == "duration" {
+        // r.pushformat!("{:.2}", self.determinism);
+        //             } else {
+        //               r.push(format!("{}", self.$fname));
+        //             }
+        // let c2 = format!("{:?}", self.comptype);
+        // let c3 = format!("{:.2}", self.determinism);
+        // let c4 = format!("{}", self.seed);
+        // let c5 = format!("{}", self.ix);
+        // let c6 = format!("{}", self.acceptsize);
+        // let c7 = format!("{}", self.distsize);
+        // let c8 = format!("{}", self.numsize);
+        // let c9 = format!("{}", self.calls);
+        // let c10 = format!("{}", self.duration.as_millis());
+        // [c1, c2, c3, c4, c5, c6, c7, c8, c9, c10]
+        //             )*
+        //         static NAMES: &'static [&'static str] = &[$(stringify!($fname)),*];
+        //         NAMES
+        //     }
         }
     }
 }
@@ -78,22 +100,30 @@ zoom_and_enhance! {
     struct Row {
         gridsize: usize,
         comptype: CompileType,
-        duration: Duration,
         determinism: f64,
         seed: u64,
         ix: u64,
+        acceptsize: usize,
+        distsize: usize,
+        numsize: usize,
+        calls: usize,
+        duration: Duration,
     }
 }
 
 impl Row {
-    fn csv_array(&self) -> [String; 6] {
+    fn csv_array(&self) -> [String; 10] {
         let c1 = format!("{}", self.gridsize);
         let c2 = format!("{:?}", self.comptype);
-        let c3 = format!("{}", self.duration.as_millis());
-        let c4 = format!("{:.2}", self.determinism);
-        let c5 = format!("{}", self.seed);
-        let c6 = format!("{}", self.ix);
-        [c1, c2, c3, c4, c5, c6]
+        let c3 = format!("{:.2}", self.determinism);
+        let c4 = format!("{}", self.seed);
+        let c5 = format!("{}", self.ix);
+        let c6 = format!("{}", self.acceptsize);
+        let c7 = format!("{}", self.distsize);
+        let c8 = format!("{}", self.numsize);
+        let c9 = format!("{}", self.calls);
+        let c10 = format!("{}", self.duration.as_millis());
+        [c1, c2, c3, c4, c5, c6, c7, c8, c9, c10]
     }
 }
 
@@ -160,6 +190,10 @@ fn runner(gridsize: usize, comptype: CompileType, ix: u64, determinism: f64) -> 
         determinism: determinism,
         ix: ix,
         seed: seed,
+        acceptsize: stats.accept,
+        distsize: stats.dist,
+        numsize: stats.dist_accept,
+        calls: stats.mgr_recursive_calls,
     };
     info!("computed: {:?} {:?}", row, stats);
     (row, stats)
@@ -268,27 +302,28 @@ fn run_all_grids(path: &str) -> Vec<(Row, WmcStats)> {
 //     Ok(())
 // }
 
-#[derive(Parser)]
-#[command(author, version, about, long_about = None)]
-struct PlotGridsArgs {
-    #[arg(long)]
-    gridsize: usize,
-    #[arg(long)]
-    comptype: CompileType,
-    #[arg(long, short)]
-    determinism: f64,
-    #[arg(short, default_value_t = 0)]
-    verbosity: usize,
-    #[arg(short, default_value = None)]
-    csv: Option<String>,
-    #[arg(short, default_value = None)]
-    path: Option<String>,
-}
+// #[derive(Parser)]
+// #[command(author, version, about, long_about = None)]
+// struct PlotGridsArgs {
+//     #[arg(long)]
+//     gridsize: usize,
+//     #[arg(long)]
+//     comptype: CompileType,
+//     #[arg(long, short)]
+//     determinism: f64,
+//     #[arg(short, default_value_t = 0)]
+//     verbosity: usize,
+//     #[arg(short, default_value = None)]
+//     csv: Option<String>,
+//     #[arg(short, default_value = None)]
+//     path: Option<String>,
+// }
 
 fn main() -> MyResult<()> {
-    let args = PlotGridsArgs::parse();
+    // let args = PlotGridsArgs::parse();
 
-    let verbosity = match args.verbosity {
+    // let verbosity = match args.verbosity {
+    let verbosity = match 0 {
         0 => None,
         1 => Some(tracing::Level::INFO),
         2 => Some(tracing::Level::DEBUG),
@@ -301,16 +336,18 @@ fn main() -> MyResult<()> {
             .with_target(false)
             .init(),
     };
-    let csv = args.csv.unwrap_or_else(|| String::from("grids.csv"));
-    let path = args.path.unwrap_or_else(|| String::from("out/plots/"));
-    info!("gridsize   : {:?}x{:?}", args.gridsize, args.gridsize);
-    info!("comptype   : {:?}", args.comptype);
-    info!("determinism: {:?}", args.determinism);
+    let csv = String::from("grids.csv");
+    let path = String::from("out/plots/");
+    // let csv = args.csv.unwrap_or_else(|| String::from("grids.csv"));
+    // let path = args.path.unwrap_or_else(|| String::from("out/plots/"));
+    // info!("gridsize   : {:?}x{:?}", args.gridsize, args.gridsize);
+    // info!("comptype   : {:?}", args.comptype);
+    // info!("determinism: {:?}", args.determinism);
     info!("path       : {:?}", path);
     info!("csv        : {:?}", csv);
     info!("verbosity  : {:?}", verbosity);
 
-    fs::create_dir_all(path)?;
+    fs::create_dir_all(path.clone())?;
     let _rows = run_all_grids(&(path + &csv));
     // build_chart(rows);
     Ok(())
