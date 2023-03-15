@@ -3,6 +3,7 @@
 #![allow(mixed_script_confusables)] // for Gamma : )
 // temporary as I convert to using types
 #![allow(unused_variables)]
+#![allow(clippy::all)]
 
 pub use rsdd::sample::probability::Probability;
 pub mod compile;
@@ -13,7 +14,7 @@ pub mod inference;
 pub mod typecheck;
 
 mod analysis;
-mod analysis2;
+// mod analysis2;
 mod annotate;
 mod parser;
 mod render;

@@ -334,10 +334,17 @@ impl<'a> Env<'a> {
                                 let _enter = span.enter();
 
                                 let accept = self.mgr.and(body.accept, ctx.accept);
-                                let samples = self.mgr.and(body.samples, ctx.samples);
-                                // TODO see if I need to include both body and ctx samples.
-                                let samples_opt = body.samples_opt.clone();
+                                let samples;
+                                let samples_opt;
 
+                                if self.sample_pruning {
+                                    samples = ctx.samples;
+                                    samples_opt = body.samples_opt;
+                                } else {
+                                    samples = self.mgr.and(body.samples, ctx.samples);
+                                    // TODO see if I need to include both body and ctx samples.
+                                    samples_opt = body.samples_opt.clone();
+                                }
                                 let probabilities =
                                     izip!(bound.probabilities.clone(), body.probabilities)
                                         .map(|(p1, p2)| p1 * p2)
@@ -472,9 +479,16 @@ impl<'a> Env<'a> {
                                   })
                                   .collect_vec();
 
-                            let samples = self.mgr.and(truthy.samples, falsey.samples);
-                            let mut samples_opt = truthy.samples_opt.clone();
-                            samples_opt.extend(falsey.samples_opt.clone());
+                            let samples; let samples_opt;
+                            if self.sample_pruning {
+                                samples = truthy.samples;
+                                samples_opt = falsey.samples_opt;
+                            } else {
+                                samples = self.mgr.and(truthy.samples, falsey.samples);
+                                let mut samples_opt_m = truthy.samples_opt.clone();
+                                samples_opt_m.extend(falsey.samples_opt.clone());
+                                samples_opt = samples_opt_m;
+                            }
 
                             let accept_l = self.mgr.and(pred_dist, truthy.accept);
                             let accept_r = self.mgr.and(pred_dist.neg(), falsey.accept);
@@ -577,15 +591,13 @@ impl<'a> Env<'a> {
                 // FIXME: should be aggregating these stats somewhere
                 debug!("using optimizations: {}", self.sample_pruning);
                 if self.sample_pruning {
-                    (wmc, _) = crate::inference::calculate_wmc_prob_opt(
+                    (wmc, _) = crate::inference::calculate_wmc_prob(
                         self.mgr,
                         &wmc_params,
                         &var_order,
                         dist,
                         ctx.accept,
-                        &ctx.samples_opt,
-                        &self.inv,
-                        &self.above_below,
+                        BddPtr::PtrTrue,
                     );
                 } else {
                     (wmc, _) = crate::inference::calculate_wmc_prob(
@@ -668,22 +680,20 @@ impl<'a> Env<'a> {
                             let mut samples_opt = comp.samples_opt.clone();
                             let (mut qs, mut dists) = (vec![], vec![]);
                             for dist in comp.dists.iter() {
-                                let sample_dist = self.mgr.and(samples, *dist);
                                 let theta_q;
                                 // FIXME: should be aggregating the stats somewhere
                                 debug!("using optimizations: {}", self.sample_pruning);
                                 if self.sample_pruning {
-                                    (theta_q, _) = crate::inference::calculate_wmc_prob_opt(
+                                    (theta_q, _) = crate::inference::calculate_wmc_prob(
                                         self.mgr,
                                         &wmc_params,
                                         &var_order,
-                                        *dist,
+                                        *dist, // TODO switch from *dist
                                         accept,
-                                        &samples_opt,
-                                        &self.inv,
-                                        &self.above_below,
+                                        BddPtr::PtrTrue, // TODO &samples
                                     );
                                 } else {
+                                    let sample_dist = self.mgr.and(samples, *dist);
                                     (theta_q, _) = crate::inference::calculate_wmc_prob(
                                         self.mgr,
                                         &wmc_params,
@@ -709,16 +719,18 @@ impl<'a> Env<'a> {
                                 let sampled_value = BddPtr::from_bool(sample);
                                 dists.push(sampled_value);
 
-                                // sample in sequence. A smarter sample would compile
-                                // all samples of a multi-rooted BDD, but I need to futz
-                                // with rsdd's fold
-                                let dist_holds = self.mgr.iff(*dist, sampled_value);
-                                samples = self.mgr.and(samples, dist_holds);
+                                if !self.sample_pruning {
+                                    // sample in sequence. A smarter sample would compile
+                                    // all samples of a multi-rooted BDD, but I need to futz
+                                    // with rsdd's fold
+                                    let dist_holds = self.mgr.iff(*dist, sampled_value);
+                                    samples = self.mgr.and(samples, dist_holds);
 
-                                let dv = sampling_context.as_option();
-                                // TODO technically we have static knowledge of whether or
-                                // not we need to include a sample.
-                                samples_opt.insert(*dist, (dv, sample));
+                                    let dv = sampling_context.as_option();
+                                    // TODO technically we have static knowledge of whether or
+                                    // not we need to include a sample.
+                                    samples_opt.insert(*dist, (dv, sample));
+                                }
                             }
                             debug!("final dists:   {}", renderbdds(&dists));
                             debug!("final samples: {}", samples.print_bdd());

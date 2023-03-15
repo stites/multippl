@@ -525,7 +525,8 @@ pub fn importance_weighting_h(
                     let ps;
                     let stats;
                     if opt.opt {
-                        (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
+                        (ps, stats) = wmc_prob(&mut mgr, &c);
+                        // (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
                     } else {
                         (ps, stats) = wmc_prob(&mut mgr, &c);
                     }
