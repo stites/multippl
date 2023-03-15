@@ -22,6 +22,7 @@ use yodel::inference::*;
 use yodel::typecheck::grammar::*;
 
 type MyResult<X> = Result<X, Box<dyn Error>>;
+
 macro_rules! zoom_and_enhance {
     (struct $name:ident { $($fname:ident : $ftype:ty,)* }) => {
         #[derive(Debug, Clone, serde::Deserialize)]
@@ -169,17 +170,18 @@ fn run_all_grids(path: &str) -> Vec<(Row, WmcStats)> {
     let _ = write_csv_header(path);
 
     let specs: Vec<_> = iproduct!(
-        [4_usize],
+        // [4_usize],
         // [2, 3, 4, 5, 7, 9, 12, 15, 20, 25_usize],
-        [Exact, OptApprox],
-        // [Exact, Approx, OptApprox],
+        [5, 7, 9_usize],
+        // [Exact, OptApprox],
+        [Exact, Approx, OptApprox],
         (1..=1_u64)
     )
     .collect_vec();
 
     let mut all_answers = vec![];
-    // for determinism in [0.75, 0.5, 0.25, 0.0_f64] {
-    for determinism in [0.0_f64] {
+    for determinism in [0.5, 0.25, 0.0_f64] {
+        // for determinism in [0.0_f64] {
         let some_answers: Vec<_> = specs
             .clone()
             .into_iter()
