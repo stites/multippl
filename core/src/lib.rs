@@ -14,6 +14,7 @@ pub mod inference;
 pub mod typecheck;
 
 mod analysis;
+mod interactions;
 // mod analysis2;
 mod annotate;
 mod parser;
