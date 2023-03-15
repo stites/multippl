@@ -65,7 +65,7 @@ macro_rules! zoom_and_enhance {
 enum CompileType {
     Exact,
     Approx,
-    OptApprox,
+    OptApx,
 }
 impl CompileType {
     fn use_sampled(&self) -> bool {
@@ -86,7 +86,7 @@ impl FromStr for CompileType {
         } else if approx.contains(s) {
             Ok(Approx)
         } else if opt.contains(s) {
-            Ok(OptApprox)
+            Ok(OptApx)
         } else {
             Err(format!(
                 "{} is not a valid string. Choose one of \"approx\" \"exact\" \"opt\"",
@@ -113,16 +113,16 @@ zoom_and_enhance! {
 
 impl Row {
     fn csv_array(&self) -> [String; 10] {
-        let c1 = format!("{}", self.gridsize);
-        let c2 = format!("{:?}", self.comptype);
-        let c3 = format!("{:.2}", self.determinism);
-        let c4 = format!("{}", self.seed);
-        let c5 = format!("{}", self.ix);
-        let c6 = format!("{}", self.acceptsize);
-        let c7 = format!("{}", self.distsize);
-        let c8 = format!("{}", self.numsize);
-        let c9 = format!("{}", self.calls);
-        let c10 = format!("{}", self.duration.as_millis());
+        let c1 = format!("{}\t", self.gridsize);
+        let c2 = format!("{:?}\t", self.comptype);
+        let c3 = format!("{:.2}\t", self.determinism);
+        let c4 = format!("{}\t", self.seed);
+        let c5 = format!("{}\t", self.ix);
+        let c6 = format!("{}\t", self.acceptsize);
+        let c7 = format!("{}\t", self.distsize);
+        let c8 = format!("{}\t", self.numsize);
+        let c9 = format!("{}\t", self.calls);
+        let c10 = format!("{}\t", self.duration.as_millis());
         [c1, c2, c3, c4, c5, c6, c7, c8, c9, c10]
     }
 }
@@ -170,16 +170,14 @@ fn runner(gridsize: usize, comptype: CompileType, ix: u64, determinism: f64) -> 
     let seed = 5;
     let prg = define_program(gridsize, comptype.use_sampled(), seed, determinism);
     let start = Instant::now();
+    let opts = yodel::Options {
+        seed: Some(<usize as TryInto<u64>>::try_into(gridsize).unwrap() + ix),
+        ..Default::default()
+    };
     let stats = match comptype {
         Exact => exact_with(&prg).1,
-        Approx => importance_weighting_h(1, &prg, &Default::default()).1,
-        OptApprox => {
-            let opts = yodel::Options {
-                opt: true,
-                ..Default::default()
-            };
-            importance_weighting_h(1, &prg, &opts).1
-        }
+        Approx => importance_weighting_h(1, &prg, &opts).1,
+        OptApx => importance_weighting_h(1, &prg, &yodel::Options { opt: true, ..opts }).1,
     };
     let stop = Instant::now();
     let duration = stop.duration_since(start);
@@ -204,15 +202,16 @@ fn run_all_grids(path: &str) -> Vec<(Row, WmcStats)> {
     let _ = write_csv_header(path);
 
     let specs: Vec<_> = iproduct!(
-        [2, 3, 4, 5, 7_usize], // , 9, 12, 15, 20, 25_usize],
-        [Exact, Approx, OptApprox],
-        (1..=3_u64)
+        [2, 3, 4, 5, 7_usize, 9, 12, 15, 20, 25_usize],
+        // [9_usize],
+        [Approx, OptApx], // Exact,],
+        (1..=1_u64)
     )
     .collect_vec();
 
     let mut all_answers = vec![];
-    // for determinism in [0.5, 0.25, 0.0_f64] {
-    for determinism in [0.0_f64] {
+    for determinism in [0.5, 0.25, 0.0_f64] {
+        // for determinism in [0.0_f64] {
         let some_answers: Vec<_> = specs
             .clone()
             .into_iter()
