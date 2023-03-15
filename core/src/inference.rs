@@ -102,21 +102,43 @@ pub fn calculate_wmc_prob(
 pub fn removable_ids(
     samples_opt: &HashMap<BddPtr, (Option<DecoratedVar>, bool)>,
     inv: &HashMap<NamedVar, HashSet<BddVar>>,
+    above_below: &HashMap<Var, (HashSet<Var>, HashSet<Var>)>,
 ) -> HashSet<UniqueId> {
     let mut removable = HashSet::new();
     for (bdd, (odv, sample)) in samples_opt.clone() {
+        debug!(
+            "checking: {:?}, {:?} == {}",
+            bdd,
+            odv.as_ref().map(DecoratedVar::debug_id),
+            sample
+        );
         match odv {
             None => continue,
             Some(dv) => match dv.var() {
-                Var::Named(ref nvar) => match inv.get(&nvar) {
-                    None => continue,
-                    Some(rs) => {
-                        removable.insert(dv.id());
-                        let xs: HashSet<UniqueId> = rs.iter().map(BddVar::id).collect();
-                        removable.extend(xs);
+                Var::Named(ref nvar) => match above_below.get(&dv.var()) {
+                    None => {
+                        // above_below might be empty if we are not running optimizations
+                        debug!("{:?}", above_below);
+                        panic!("missing {:?}", dv.var())
+                    }
+                    Some((above, below)) => {
+                        debug!("");
+                        debug!("above: {:?}", above.iter().map(Var::id).collect_vec());
+                        debug!("");
+                        debug!("below: {:?}", below.iter().map(Var::id).collect_vec());
+                        debug!("");
+
+                        // removable.insert(dv.id());
+                        // let xs: HashSet<UniqueId> = rs.iter().map(BddVar::id).collect();
+                        // removable.extend(xs);
+                        let diff: HashSet<_> = above.difference(&below).map(Var::id).collect();
+                        debug!("difference: {:?}", diff);
+                        removable.extend(diff);
                     }
                 },
-                Var::Bdd(bvar) => {}
+                Var::Bdd(bvar) => {
+                    panic!("pretty sure all vars in removable_ids will be namedvars");
+                }
             },
         }
     }
@@ -126,9 +148,15 @@ pub fn removable_ids(
 pub fn included_samples(
     samples_opt: &HashMap<BddPtr, (Option<DecoratedVar>, bool)>,
     inv: &HashMap<NamedVar, HashSet<BddVar>>,
+    above_below: &HashMap<Var, (HashSet<Var>, HashSet<Var>)>,
 ) -> HashMap<BddPtr, bool> {
-    let removable = removable_ids(samples_opt, inv);
+    let removable = removable_ids(samples_opt, inv, above_below);
     debug!("removable   {:?}", removable);
+    debug!(
+        "above_below_keys {:?}",
+        above_below.keys().map(Var::id).collect_vec()
+    );
+
     samples_opt
         .iter()
         .filter(|(bdd, (odv, sampled_value))| match odv {
@@ -155,11 +183,12 @@ pub fn calculate_wmc_prob_opt(
     accept: BddPtr,
     samples_opt: &HashMap<BddPtr, (Option<DecoratedVar>, bool)>,
     inv: &HashMap<NamedVar, HashSet<BddVar>>,
+    above_below: &HashMap<Var, (HashSet<Var>, HashSet<Var>)>,
 ) -> (f64, WmcStats) {
     let span = tracing::span!(tracing::Level::DEBUG, "calculate_wmc_prob_opt");
     let _enter = span.enter();
 
-    let samples = included_samples(&samples_opt, &inv);
+    let samples = included_samples(samples_opt, inv, above_below);
     debug!("samples_opt {:?}", samples_opt);
     debug!("samples     {:?}", samples);
 
@@ -244,10 +273,10 @@ mod tests {
         let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p).unwrap();
 
         let mut aenv = AnalysisEnv::new(&varmap);
-        let p = aenv.decorate(&p, opt.opt).unwrap();
+        let (p, sis) = aenv.decorate(&p, opt.opt).unwrap();
         let mut rng = opt.rng();
         let orng = if opt.debug { None } else { Some(&mut rng) };
-        let env = Env::new(&mut mgr, orng, opt.opt, inv); // technically don't need this if I use the decorated vars in a clever way
+        let env = Env::new(&mut mgr, orng, opt.opt, inv, sis.clone()); // technically don't need this if I use the decorated vars in a clever way
         debug!("{:?}", env.inv);
 
         let mut mgr = Mgr::new_default_order(2 as usize);
@@ -289,7 +318,7 @@ mod tests {
         debug!("{:?}", &dv_var);
         // debug!("{:?}", inv.get(&dv_var.var));
 
-        let removable = removable_ids(&samples_opt, &inv);
+        let removable = removable_ids(&samples_opt, &inv, &sis);
         debug!("{:?}", removable);
 
         for (bdd, (odv, sample)) in samples_opt.clone() {
@@ -307,6 +336,7 @@ mod tests {
             BddPtr::PtrTrue,
             &samples_opt,
             &inv,
+            &sis,
         )
         .0;
 
@@ -345,6 +375,7 @@ pub fn wmc_prob_opt(
     mgr: &mut Mgr,
     c: &Output,
     inv: &HashMap<NamedVar, HashSet<BddVar>>,
+    above_below: &HashMap<Var, (HashSet<Var>, HashSet<Var>)>,
 ) -> (Vec<f64>, WmcStats) {
     let span = tracing::span!(tracing::Level::DEBUG, "wmc_prob_opt");
     let _enter = span.enter();
@@ -361,6 +392,7 @@ pub fn wmc_prob_opt(
                 c.accept,
                 &c.samples_opt,
                 inv,
+                above_below,
             );
             prev = prev
                 .as_ref()
@@ -475,15 +507,17 @@ pub fn importance_weighting_h(
     let mut stats_max = None;
     debug!("running with options: {:#?}", opt);
     let mut debug_inv = None;
+    let mut debug_sis = None;
 
     for _step in 1..=steps {
         match crate::runner_h(p, &mut mgr, opt) {
-            Ok((cs, inv)) => {
+            Ok((cs, inv, sis)) => {
                 is_debug = match cs {
                     Compiled::Output(_) => false,
                     Compiled::Debug(_) => {
                         compilations = cs.clone().into_iter().collect();
                         debug_inv = Some(inv.clone());
+                        debug_sis = Some(sis.clone());
                         true
                     }
                 };
@@ -491,7 +525,7 @@ pub fn importance_weighting_h(
                     let ps;
                     let stats;
                     if opt.opt {
-                        (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv);
+                        (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
                     } else {
                         (ps, stats) = wmc_prob(&mut mgr, &c);
                     }
@@ -569,7 +603,12 @@ pub fn importance_weighting_h(
                 .fold(vec![0.0; compilations[0].probabilities.len()], |agg, c| {
                     let azs;
                     if opt.opt {
-                        (azs, _) = wmc_prob_opt(&mut mgr, &c, &debug_inv.as_ref().unwrap());
+                        (azs, _) = wmc_prob_opt(
+                            &mut mgr,
+                            &c,
+                            &debug_inv.as_ref().unwrap(),
+                            &debug_sis.as_ref().unwrap(),
+                        );
                     } else {
                         (azs, _) = wmc_prob(&mut mgr, &c);
                     }

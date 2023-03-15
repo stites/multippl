@@ -67,7 +67,9 @@ pub mod grammar {
                 DecoratedVar::Bdd(d) => Var::Bdd(d.var.clone()),
             }
         }
-
+        pub fn debug_id(&self) -> String {
+            self.var().debug_id()
+        }
         pub fn from_var(var: &Var) -> DecoratedVar {
             DecoratedVar::new(var, HashSet::new(), HashSet::new())
         }
@@ -119,10 +121,16 @@ pub mod grammar {
     pub type ProgramAnlys = Program<Analysis>;
 }
 
+enum State {
+    Declaration,
+    Dependence,
+    Alias,
+}
 pub struct AnalysisEnv {
     seen: HashSet<Var>,
     above_below: HashMap<Var, (HashSet<Var>, HashSet<Var>)>,
     decor: HashMap<Var, DecoratedVar>,
+    state: State,
 }
 
 impl AnalysisEnv {
@@ -136,6 +144,7 @@ impl AnalysisEnv {
             seen: HashSet::new(),
             above_below: HashMap::new(),
             decor,
+            state: State::Declaration,
         }
     }
 
@@ -148,7 +157,11 @@ impl AnalysisEnv {
     }
 
     pub fn insert_above(&mut self, v: &Var) {
-        let above: HashSet<Var> = self.seen.iter().filter(|x| x != &v).cloned().collect();
+        // we will only remove variables if they are referenced at- or above- the current
+        // note, but not below. to keep things simple, we just include the current variable
+        // in the `above` set.
+        self.seen.insert(v.clone());
+        let above: HashSet<Var> = self.seen.iter().cloned().collect();
         match self.above_below.get(&v.clone()) {
             Some((a, b)) => {
                 self.above_below.insert(v.clone(), (above, b.clone()));
@@ -157,7 +170,6 @@ impl AnalysisEnv {
                 self.above_below.insert(v.clone(), (above, HashSet::new()));
             }
         }
-        self.seen.insert(v.clone());
         let (a, b) = self.above_below.get(&v.clone()).unwrap();
         let above: HashSet<String> = a.iter().cloned().map(|v| v.debug_id()).collect();
 
@@ -174,23 +186,34 @@ impl AnalysisEnv {
                     "impossible: variables should already be established".to_string(),
                 )),
                 Some(_) => {
-                    self.insert_below(v);
-                    self.insert_above(v);
+                    match self.state {
+                        State::Declaration => panic!("impossible"),
+                        State::Dependence => {
+                            self.insert_below(v);
+                            self.insert_above(v);
+                        }
+                        State::Alias => {}
+                    }
                     Ok(())
                 }
             },
             AVal(_, b) => Ok(()),
             And(bl, br) => {
+                self.state = State::Dependence;
                 self.analyze_anf(bl)?;
                 self.analyze_anf(br)?;
                 Ok(())
             }
             Or(bl, br) => {
+                self.state = State::Dependence;
                 self.analyze_anf(bl)?;
                 self.analyze_anf(br)?;
                 Ok(())
             }
-            Neg(bl) => self.analyze_anf(bl),
+            Neg(bl) => {
+                self.state = State::Dependence;
+                self.analyze_anf(bl)
+            }
         }
     }
     /// FIXME: /technically/ this might mess up if there is a prod with many variable refs.
@@ -204,18 +227,34 @@ impl AnalysisEnv {
         use crate::grammar::Expr::*;
         match e {
             EAnf(_, a) => self.analyze_anf(a),
-            EPrj(_, i, a) => self.analyze_anf(a),
-            EFst(_, a) => self.analyze_anf(a),
-            ESnd(_, a) => self.analyze_anf(a),
-            EProd(_, anfs) => self.analyze_anfs(anfs),
+            EPrj(_, i, a) => {
+                self.state = State::Alias;
+                self.analyze_anf(a)
+            }
+            EFst(_, a) => {
+                self.state = State::Alias;
+                self.analyze_anf(a)
+            }
+            ESnd(_, a) => {
+                self.state = State::Alias;
+                self.analyze_anf(a)
+            }
+            EProd(_, anfs) => {
+                self.state = State::Alias;
+                self.analyze_anfs(anfs)
+            }
             ELetIn(v, s, ebound, ebody) => {
                 self.insert_above(v);
+                // self.state = State::Alias;
+                self.state = State::Dependence;
                 self.analyze_expr(ebound)?;
                 self.analyze_expr(ebody)?;
                 Ok(())
             }
             EIte(_ty, cond, t, f) => {
+                self.state = State::Alias;
                 self.analyze_anf(cond)?;
+                self.state = State::Dependence;
                 self.analyze_expr(t)?;
                 self.analyze_expr(f)?;
                 Ok(())
@@ -224,7 +263,10 @@ impl AnalysisEnv {
                 self.insert_above(v);
                 Ok(())
             }
-            EObserve(_, a) => self.analyze_anf(a),
+            EObserve(_, a) => {
+                self.state = State::Dependence;
+                self.analyze_anf(a)
+            }
             ESample(_, e) => self.analyze_expr(e),
         }
     }
@@ -301,19 +343,30 @@ impl AnalysisEnv {
         &mut self,
         p: &ProgramAnn,
         analyze: bool,
-    ) -> Result<ProgramAnlys, CompileError> {
+    ) -> Result<(ProgramAnlys, Analysis), CompileError> {
         match p {
             Program::Body(e) => {
                 if analyze {
                     self.analyze_expr(e)?;
                     self.compile_decorations();
+                    debug!("final values");
+                    for (k, (a, b)) in self.above_below.iter() {
+                        let above: HashSet<String> =
+                            a.iter().cloned().map(|v| v.debug_id()).collect();
+
+                        let below: HashSet<String> =
+                            b.iter().cloned().map(|v| v.debug_id()).collect();
+
+                        debug!("[{:?}]\t{:?}\t[{:?}]", above, &k.debug_id(), below);
+                    }
                 }
                 let fin = self.decorate_expr(e)?;
-                Ok(Program::Body(fin))
+                Ok((Program::Body(fin), self.above_below.clone()))
             }
         }
     }
 }
+pub type Analysis = HashMap<Var, (HashSet<Var>, HashSet<Var>)>;
 
 #[cfg(test)]
 mod tests {

@@ -120,6 +120,7 @@ pub struct Env<'a> {
     pub sampling_context: SamplingContext,
     pub sample_pruning: bool,
     pub inv: HashMap<NamedVar, HashSet<BddVar>>,
+    pub above_below: HashMap<Var, (HashSet<Var>, HashSet<Var>)>,
 
     // static
     pub varmap: Option<HashMap<UniqueId, Var>>,
@@ -133,6 +134,7 @@ impl<'a> Env<'a> {
         rng: Option<&'a mut StdRng>,
         sample_pruning: bool,
         inv: HashMap<NamedVar, HashSet<BddVar>>,
+        above_below: HashMap<Var, (HashSet<Var>, HashSet<Var>)>,
     ) -> Env<'a> {
         Env {
             order: mgr.get_order().clone(),
@@ -143,6 +145,7 @@ impl<'a> Env<'a> {
             mgr,
             rng,
             sampling_context: SamplingContext::Unset,
+            above_below,
             sample_pruning,
         }
     }
@@ -407,6 +410,7 @@ impl<'a> Env<'a> {
                                 ctx.accept,
                                 &ctx.samples_opt,
                                 &self.inv,
+                                &self.above_below,
                             )
                             .0,
                         )
@@ -581,6 +585,7 @@ impl<'a> Env<'a> {
                         ctx.accept,
                         &ctx.samples_opt,
                         &self.inv,
+                        &self.above_below,
                     );
                 } else {
                     (wmc, _) = crate::inference::calculate_wmc_prob(
@@ -676,6 +681,7 @@ impl<'a> Env<'a> {
                                         accept,
                                         &samples_opt,
                                         &self.inv,
+                                        &self.above_below,
                                     );
                                 } else {
                                     (theta_q, _) = crate::inference::calculate_wmc_prob(
@@ -710,42 +716,14 @@ impl<'a> Env<'a> {
                                 samples = self.mgr.and(samples, dist_holds);
 
                                 let dv = sampling_context.as_option();
+                                // TODO technically we have static knowledge of whether or
+                                // not we need to include a sample.
                                 samples_opt.insert(*dist, (dv, sample));
                             }
                             debug!("final dists:   {}", renderbdds(&dists));
                             debug!("final samples: {}", samples.print_bdd());
                             // println!("sample_pruning: {}", self.sample_pruning);
                             debug!("using optimizations: {}", self.sample_pruning);
-                            if self.sample_pruning {
-                                let removable = sampling_context
-                                    .as_option()
-                                    .map(|dv| {
-                                        let x =
-                                            dv.above().difference(&dv.below()).cloned().collect();
-                                        debug!(
-                                            "\nabove: {:?}\nbelow: {:?}\nresult: {:?}",
-                                            dv.above(),
-                                            dv.below(),
-                                            x
-                                        );
-                                        x
-                                    })
-                                    .unwrap_or(std::collections::HashSet::new());
-                                // println!("before: {:?}", samples_opt);
-                                debug!("removable: {:?}", removable);
-
-                                samples_opt = samples_opt
-                                    .into_iter()
-                                    .filter(|(k, (ovar, bool))| {
-                                        ovar.as_ref()
-                                            .map(|var| !removable.contains(&var.var()))
-                                            .unwrap_or(false)
-                                    })
-                                    .collect();
-                                debug!("samples_opt: {:?}", samples_opt);
-                                // println!("after: {:?}", samples_opt);
-                            }
-
                             let c = Output {
                                 dists,
                                 accept,
