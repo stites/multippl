@@ -3,12 +3,15 @@ use crate::compile::CompileError;
 use crate::grammar::*;
 use crate::uniquify::grammar::UniqueId;
 use crate::CompileError::Generic;
+use core::fmt::{Debug, Formatter, Result};
+use itertools::*;
 // use grammar::*;
 use rsdd::builder::bdd_plan::*;
 use rsdd::repr::var_label::*;
 use rsdd::repr::var_order::VarOrder;
 use rsdd::repr::wmc::WmcParams;
-use rsdd::util::hypergraph::*;
+// use rsdd::util::hypergraph::*;
+use core::hash::Hash;
 use std::collections::{HashMap, HashSet};
 use tracing::*;
 
@@ -26,11 +29,9 @@ pub enum PlanNode {
     ConstFalse,
     Literal(VarLabel, bool),
 }
-
 struct PlanManager {
     gensym: usize,
     store: HashMap<PlanPtr, PlanNode>,
-    graph: Hypergraph<PlanPtr>,
 }
 impl PlanManager {
     fn fresh(&mut self) -> PlanPtr {
@@ -38,7 +39,7 @@ impl PlanManager {
         self.gensym += 1;
         p
     }
-    fn flatten(&self, ptr: PlanPtr) -> HashSet<PlanPtr> {
+    pub fn flatten(&self, ptr: PlanPtr) -> HashSet<PlanPtr> {
         use PlanNode::*;
         match self.store.get(&ptr).unwrap() {
             ConstTrue | ConstFalse => HashSet::new(),
@@ -50,7 +51,7 @@ impl PlanManager {
             Ite(p, l, r) => self.flatten_all(&[*p, *l, *r]),
         }
     }
-    fn flatten_all(&self, ps: &[PlanPtr]) -> HashSet<PlanPtr> {
+    pub fn flatten_all(&self, ps: &[PlanPtr]) -> HashSet<PlanPtr> {
         ps.into_iter().fold(HashSet::new(), |mut fin, p| {
             fin.extend(&self.flatten(*p));
             fin
@@ -60,8 +61,6 @@ impl PlanManager {
         let lit = PlanNode::Literal(v, polarity);
         let ptr = self.fresh();
         self.store.insert(ptr, lit);
-
-        self.graph.insert_vertex(ptr);
         ptr
     }
     fn binop_h(
@@ -70,10 +69,8 @@ impl PlanManager {
         r: PlanPtr,
         op: &dyn Fn(PlanPtr, PlanPtr) -> PlanNode,
     ) -> PlanPtr {
-        self.graph.insert_edge(&self.flatten_all(&[l, r]));
         let ptr = self.fresh();
         let bdd = op(l, r);
-        self.store.insert(ptr, bdd);
         ptr
     }
     pub fn and(&mut self, l: PlanPtr, r: PlanPtr) -> PlanPtr {
@@ -86,7 +83,6 @@ impl PlanManager {
         self.binop_h(l, r, &|l, r| PlanNode::Iff(l, r))
     }
     pub fn ite(&mut self, p: PlanPtr, l: PlanPtr, r: PlanPtr) -> PlanPtr {
-        self.graph.insert_edge(&self.flatten_all(&[p, l, r]));
         let ptr = self.fresh();
         let bdd = PlanNode::Ite(p, l, r);
         self.store.insert(ptr, bdd);
@@ -97,6 +93,104 @@ impl PlanManager {
         let bdd = PlanNode::Not(p);
         self.store.insert(ptr, bdd);
         ptr
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Hypergraph<V, VL, EL>
+where
+    V: Clone + Debug + PartialEq + Eq + Hash,
+    VL: Clone + Debug + PartialEq + Eq + Hash,
+    EL: Clone + Debug + PartialEq + Eq + Hash,
+{
+    vertices: HashSet<(V, VL)>,
+    hyperedges: Vec<(HashSet<V>, EL)>,
+}
+impl<V, VL, EL> Hypergraph<V, VL, EL>
+where
+    V: Clone + Debug + PartialEq + Eq + Hash,
+    VL: Clone + Debug + PartialEq + Eq + Hash,
+    EL: Clone + Debug + PartialEq + Eq + Hash,
+{
+    /// add an edge to the hypergraph. Returns false if the edge is already in the hypergraph
+    pub fn insert_edge(&mut self, edge: &HashSet<V>, l: EL) -> bool {
+        let verts: HashSet<&V> = self.vertices.iter().map(|x| &x.0).collect();
+        let edgerefs: HashSet<&V> = edge.iter().collect();
+        let new_verts: HashSet<&V> = edgerefs.difference(&verts).cloned().map(|x| x).collect();
+        if !new_verts.is_empty() {
+            panic!("not all vertices in graph: {:?}", new_verts);
+        }
+
+        let _next_ix = self.hyperedges.len();
+        match self.hyperedges.iter().find(|e| e.0 == *edge && e.1 == l) {
+            Some(_) => return false,
+            None => self.hyperedges.push((edge.clone(), l)),
+        }
+        true
+    }
+    /// add a vertex to the hypergraph. Returns false if the vertex is already in the hypergraph
+    pub fn insert_vertex(&mut self, v: V, l: VL) -> bool {
+        self.vertices.insert((v, l))
+    }
+}
+#[derive(Clone, Hash, Debug, Eq, PartialEq)]
+pub enum CutSite {
+    LetIn(NamedVar),
+    // IteTrue(NamedVar),
+    // IteFalse(NamedVar),
+}
+
+struct HypStore<'a> {
+    graph: Hypergraph<PlanPtr, (), Option<CutSite>>,
+    label_info: HashMap<VarLabel, (PlanPtr, NamedVar)>,
+    mgr: &'a mut PlanManager,
+}
+impl<'a> HypStore<'a> {
+    // variables, created at flip, must be instatiated at a let-binding
+    pub fn new_var(&mut self, v: VarLabel, l: NamedVar) -> PlanPtr {
+        let ptr = self.mgr.var(v, true);
+        self.graph.insert_vertex(ptr, ());
+        self.label_info.insert(v, (ptr, l.clone()));
+        self.graph
+            .insert_edge(&HashSet::from([ptr]), Some(CutSite::LetIn(l)));
+        ptr
+    }
+    // variables, created at flip, must be instatiated at a let-binding
+    pub fn get_var(&mut self, v: VarLabel) -> PlanPtr {
+        self.label_info.get(&v).unwrap().0
+    }
+    // and-expressions may happen at any cutsite
+    pub fn and(&mut self, l: PlanPtr, r: PlanPtr) -> PlanPtr {
+        let ptr = self.mgr.and(l, r);
+        self.graph.insert_edge(&self.mgr.flatten_all(&[l, r]), None);
+        ptr
+    }
+    // or-expressions may happen at any cutsite
+    pub fn or(&mut self, l: PlanPtr, r: PlanPtr) -> PlanPtr {
+        let ptr = self.mgr.or(l, r);
+        self.graph.insert_edge(&self.mgr.flatten_all(&[l, r]), None);
+        ptr
+    }
+    // ite either happens at a top-level let-binding or not.
+    // TODO: we could add cutsites to each branch as well
+    pub fn ite(&mut self, p: PlanPtr, t: PlanPtr, f: PlanPtr, lbl: Option<NamedVar>) -> PlanPtr {
+        let ptr = self.mgr.ite(p, t, f);
+        // self.graph.insert_edge(
+        //     &self.mgr.flatten(t),
+        //     lbl.as_ref().map(|x| CutSite::IteTrue(x.clone())),
+        // );
+        // self.graph.insert_edge(
+        //     &self.mgr.flatten(f),
+        //     lbl.as_ref().map(|x| CutSite::IteFalse(x.clone())),
+        // );
+        self.graph.insert_edge(
+            &self.mgr.flatten_all(&[p, t, f]),
+            lbl.as_ref().map(|x| CutSite::LetIn(x.clone())),
+        );
+        ptr
+    }
+    pub fn not(&mut self, p: PlanPtr) -> PlanPtr {
+        self.mgr.not(p)
     }
 }
 
