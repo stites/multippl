@@ -25,6 +25,13 @@ pub mod grammar {
         pub fn id(&self) -> UniqueId {
             self.id
         }
+        pub fn new(id: UniqueId, label: VarLabel, provenance: Option<NamedVar>) -> Self {
+            BddVar {
+                id,
+                label,
+                provenance,
+            }
+        }
     }
 
     #[derive(Clone, Hash, Eq, PartialEq, Debug)]
@@ -35,6 +42,9 @@ pub mod grammar {
     impl NamedVar {
         pub fn id(&self) -> UniqueId {
             self.id
+        }
+        pub fn new(id: UniqueId, name: String) -> Self {
+            NamedVar { id, name }
         }
     }
 
@@ -81,7 +91,7 @@ pub mod grammar {
     impl ξ<Annotated> for AVarExt {
         // vars up/down
         // Vars are "sample-able"
-        type Ext = Var;
+        type Ext = NamedVar;
     }
     impl ξ<Annotated> for AValExt {
         type Ext = ();
@@ -107,7 +117,7 @@ pub mod grammar {
     impl ξ<Annotated> for ELetInExt {
         // vars up/down
         // binders are "sample-able"
-        type Ext = Var;
+        type Ext = NamedVar;
     }
     impl ξ<Annotated> for EIteExt {
         type Ext = ();
@@ -115,7 +125,7 @@ pub mod grammar {
     impl ξ<Annotated> for EFlipExt {
         // vars up/down
         // flip is sample-able
-        type Ext = Var;
+        type Ext = BddVar;
     }
     impl ξ<Annotated> for EObserveExt {
         type Ext = ();
@@ -186,7 +196,13 @@ impl LabelEnv {
     pub fn annotate_anf(&mut self, a: &AnfUnq) -> Result<AnfAnn, CompileError> {
         use crate::grammar::Anf::*;
         match a {
-            AVar(uid, s) => Ok(AVar(self.get_var(uid)?, s.to_string())),
+            AVar(uid, s) => {
+                let var = self.get_var(uid)?;
+                match var {
+                    Var::Named(nvar) => Ok(AVar(nvar, s.to_string())),
+                    Var::Bdd(_) => panic!("bdd vars are never referenced by source code!"),
+                }
+            }
             AVal(_, b) => Ok(AVal((), b.clone())),
             And(bl, br) => Ok(And(
                 Box::new(self.annotate_anf(bl)?),
@@ -216,11 +232,11 @@ impl LabelEnv {
                     name: s.to_string(),
                 };
                 let var = Var::Named(nvar.clone());
-                self.letpos = Some(nvar);
+                self.letpos = Some(nvar.clone());
                 // self.weights.insert(var.clone(), Weight::constant());
                 self.subst_var.insert(*id, var.clone());
                 Ok(ELetIn(
-                    var,
+                    nvar,
                     s.clone(),
                     Box::new(self.annotate_expr(ebound)?),
                     Box::new(self.annotate_expr(ebody)?),
@@ -234,8 +250,8 @@ impl LabelEnv {
             )),
             EFlip(id, param) => {
                 let lbl = self.fresh();
-                let var = Var::new_bdd(*id, lbl, self.letpos.clone());
-                self.subst_var.insert(*id, var.clone());
+                let var = BddVar::new(*id, lbl, self.letpos.clone());
+                self.subst_var.insert(*id, Var::Bdd(var.clone()));
                 Ok(EFlip(var, *param))
             }
             EObserve(_, a) => {

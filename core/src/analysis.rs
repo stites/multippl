@@ -25,6 +25,16 @@ pub mod grammar {
     }
     pub type DecoratedNamedVar = Decorated<NamedVar>;
     pub type DecoratedBddVar = Decorated<BddVar>;
+    impl DecoratedNamedVar {
+        pub fn id(&self) -> UniqueId {
+            self.var.id()
+        }
+    }
+    impl DecoratedBddVar {
+        pub fn id(&self) -> UniqueId {
+            self.var.id()
+        }
+    }
 
     #[derive(Clone, Eq, PartialEq, Debug)]
     pub enum DecoratedVar {
@@ -79,7 +89,7 @@ pub mod grammar {
     pub struct Analysis;
 
     impl ξ<Analysis> for AVarExt {
-        type Ext = DecoratedVar;
+        type Ext = DecoratedNamedVar;
     }
     impl ξ<Analysis> for AValExt {
         type Ext = ();
@@ -102,13 +112,13 @@ pub mod grammar {
         type Ext = ();
     }
     impl ξ<Analysis> for ELetInExt {
-        type Ext = DecoratedVar;
+        type Ext = DecoratedNamedVar;
     }
     impl ξ<Analysis> for EIteExt {
         type Ext = ();
     }
     impl ξ<Analysis> for EFlipExt {
-        type Ext = DecoratedVar;
+        type Ext = DecoratedBddVar;
     }
     impl ξ<Analysis> for EObserveExt {
         type Ext = ();
@@ -181,7 +191,7 @@ impl AnalysisEnv {
     pub fn analyze_anf(&mut self, a: &AnfAnn) -> Result<(), CompileError> {
         use crate::grammar::Anf::*;
         match a {
-            AVar(v, s) => match self.above_below.get(v) {
+            AVar(v, s) => match self.above_below.get(&Var::Named(v.clone())) {
                 None => Err(Generic(
                     "impossible: variables should already be established".to_string(),
                 )),
@@ -189,8 +199,8 @@ impl AnalysisEnv {
                     match self.state {
                         State::Declaration => panic!("impossible"),
                         State::Dependence => {
-                            self.insert_below(v);
-                            self.insert_above(v);
+                            self.insert_below(&Var::Named(v.clone()));
+                            self.insert_above(&Var::Named(v.clone()));
                         }
                         State::Alias => {}
                     }
@@ -244,7 +254,7 @@ impl AnalysisEnv {
                 self.analyze_anfs(anfs)
             }
             ELetIn(v, s, ebound, ebody) => {
-                self.insert_above(v);
+                self.insert_above(&Var::Named(v.clone()));
                 // self.state = State::Alias;
                 self.state = State::Dependence;
                 self.analyze_expr(ebound)?;
@@ -260,7 +270,7 @@ impl AnalysisEnv {
                 Ok(())
             }
             EFlip(v, param) => {
-                self.insert_above(v);
+                self.insert_above(&Var::Bdd(v.clone()));
                 Ok(())
             }
             EObserve(_, a) => {
@@ -273,9 +283,9 @@ impl AnalysisEnv {
     pub fn decorate_anf(&mut self, a: &AnfAnn) -> Result<AnfAnlys, CompileError> {
         use crate::grammar::Anf::*;
         match a {
-            AVar(v, s) => match self.decor.get(v) {
-                None => panic!("impossible"),
-                Some(dv) => Ok(AVar(dv.clone(), s.to_string())),
+            AVar(v, s) => match self.decor.get(&Var::Named(v.clone())) {
+                Some(DecoratedVar::Named(dv)) => Ok(AVar(dv.clone(), s.to_string())),
+                _ => panic!("impossible"),
             },
             AVal(_, b) => Ok(AVal((), b.clone())),
             And(bl, br) => Ok(And(
@@ -300,14 +310,14 @@ impl AnalysisEnv {
             EFst(_, a) => Ok(EFst((), Box::new(self.decorate_anf(a)?))),
             ESnd(_, a) => Ok(ESnd((), Box::new(self.decorate_anf(a)?))),
             EProd(_, anfs) => Ok(EProd((), self.decorate_anfs(anfs)?)),
-            ELetIn(v, s, ebound, ebody) => match self.decor.get(v) {
-                None => panic!("impossible"),
-                Some(dv) => Ok(ELetIn(
+            ELetIn(v, s, ebound, ebody) => match self.decor.get(&Var::Named(v.clone())) {
+                Some(DecoratedVar::Named(dv)) => Ok(ELetIn(
                     dv.clone(),
                     s.clone(),
                     Box::new(self.decorate_expr(ebound)?),
                     Box::new(self.decorate_expr(ebody)?),
                 )),
+                _ => panic!("impossible"),
             },
             EIte(_ty, cond, t, f) => Ok(EIte(
                 (),
@@ -316,9 +326,9 @@ impl AnalysisEnv {
                 Box::new(self.decorate_expr(f)?),
             )),
 
-            EFlip(v, param) => match self.decor.get(v) {
-                None => panic!("impossible"),
-                Some(dv) => Ok(EFlip(dv.clone(), *param)),
+            EFlip(v, param) => match self.decor.get(&Var::Bdd(v.clone())) {
+                Some(DecoratedVar::Bdd(dv)) => Ok(EFlip(dv.clone(), *param)),
+                _ => panic!("impossible"),
             },
             EObserve(_, a) => {
                 let anf = self.decorate_anf(a)?;

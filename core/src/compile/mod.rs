@@ -290,13 +290,15 @@ impl<'a> Env<'a> {
                 let _enter = let_in_span.enter();
                 match &self.sampling_context {
                     Unset | Set(_) => {
-                        self.sampling_context = Set(d.clone());
+                        self.sampling_context = Set(DecoratedVar::Named(d.clone()));
                     }
                     Sampling(v) => {
-                        self.sampling_context = SamplingWithLet(v.clone(), d.clone());
+                        self.sampling_context =
+                            SamplingWithLet(v.clone(), DecoratedVar::Named(d.clone()));
                     }
                     SamplingWithLet(v, _) => {
-                        self.sampling_context = SamplingWithLet(v.clone(), d.clone());
+                        self.sampling_context =
+                            SamplingWithLet(v.clone(), DecoratedVar::Named(d.clone()));
                     }
                 }
 
@@ -319,7 +321,7 @@ impl<'a> Env<'a> {
                         let mut newctx = Context::from_compiled(&bound);
                         newctx
                             .substitutions
-                            .insert(d.id(), (bound.dists.clone(), d.var().clone()));
+                            .insert(d.id(), (bound.dists.clone(), Var::Named(d.var.clone())));
 
                         let (bodies, bodiestr) = self.eval_expr(&newctx, ebody)?;
                         let cbodies = bodies
@@ -550,9 +552,9 @@ impl<'a> Env<'a> {
                 let _enter = span.enter();
 
                 let mut weightmap = ctx.weightmap.clone();
-                weightmap.insert(d.var().unsafe_label(), *param);
+                weightmap.insert(d.var.label, *param);
                 let o = Output {
-                    dists: vec![self.mgr.var(d.var().unsafe_label(), true)],
+                    dists: vec![self.mgr.var(d.var.label, true)],
                     accept: ctx.accept,
                     samples: ctx.samples,
                     samples_opt: ctx.samples_opt.clone(),

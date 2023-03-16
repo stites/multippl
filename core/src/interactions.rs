@@ -3,7 +3,7 @@ use crate::compile::CompileError;
 use crate::grammar::*;
 use crate::uniquify::grammar::UniqueId;
 use crate::CompileError::Generic;
-use core::fmt::{Debug, Formatter, Result};
+use core::fmt::{Debug, Formatter};
 use itertools::*;
 // use grammar::*;
 use rsdd::builder::bdd_plan::*;
