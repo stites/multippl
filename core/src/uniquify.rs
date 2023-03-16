@@ -206,6 +206,12 @@ impl SymEnv {
     }
 }
 
+pub fn pipeline(p: &crate::ProgramTyped) -> Result<ProgramUnq, CompileError> {
+    let p = crate::typecheck::pipeline(p)?;
+    let mut senv = SymEnv::default();
+    senv.uniquify(&p)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

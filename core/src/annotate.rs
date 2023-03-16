@@ -288,6 +288,23 @@ impl LabelEnv {
     }
 }
 
+pub fn pipeline(
+    p: &crate::ProgramTyped,
+) -> Result<
+    (
+        ProgramAnn,
+        VarOrder,
+        HashMap<UniqueId, Var>,
+        HashMap<NamedVar, HashSet<BddVar>>,
+        u64,
+    ),
+    CompileError,
+> {
+    let p = crate::uniquify::pipeline(p)?;
+    let mut lenv = LabelEnv::new();
+    lenv.annotate(&p)
+}
+
 #[cfg(test)]
 mod tests {
     use crate::compile::*;

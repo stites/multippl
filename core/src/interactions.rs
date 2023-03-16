@@ -11,14 +11,6 @@ use rsdd::repr::var_label::*;
 use rsdd::repr::var_order::VarOrder;
 use rsdd::repr::wmc::WmcParams;
 // use rsdd::util::hypergraph::*;
-use crate::annotate::{InvMap, LabelEnv};
-use crate::compile::{compile, Mgr};
-use crate::typecheck::{
-    grammar::{ExprTyped, ProgramTyped},
-    typecheck,
-};
-use crate::uniquify::SymEnv;
-use crate::Options;
 use core::hash::Hash;
 use std::collections::{HashMap, HashSet};
 use tracing::*;
@@ -355,20 +347,12 @@ impl InteractionEnv {
     }
 }
 
-pub fn compile_h(
-    p: &ProgramTyped,
-    mgr: &mut Mgr,
-    opt: &Options,
-) -> Result<IteractionGraph, CompileError> {
-    let p = typecheck(p)?;
-    let mut senv = SymEnv::default();
-    let p = senv.uniquify(&p)?;
-    let mut lenv = LabelEnv::new();
-    let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
-
+pub fn pipeline(p: &crate::ProgramTyped) -> Result<IteractionGraph, CompileError> {
+    let (p, vo, varmap, inv, mxlbl) = crate::annotate::pipeline(p)?;
     let mut env = InteractionEnv::default();
     env.plan(&p)
 }
+
 #[cfg(test)]
 mod tests {
     use crate::compile::*;

@@ -151,3 +151,7 @@ pub fn typecheck(p: &grammar::ProgramTyped) -> Result<ProgramUD, CompileError> {
         Program::Body(e) => Ok(Program::Body(typecheck_expr(e)?)),
     }
 }
+
+pub fn pipeline(p: &grammar::ProgramTyped) -> Result<ProgramUD, CompileError> {
+    typecheck(p)
+}
