@@ -11,10 +11,19 @@ use rsdd::repr::var_label::*;
 use rsdd::repr::var_order::VarOrder;
 use rsdd::repr::wmc::WmcParams;
 // use rsdd::util::hypergraph::*;
+use crate::annotate::{InvMap, LabelEnv};
+use crate::compile::{compile, Mgr};
+use crate::typecheck::{
+    grammar::{ExprTyped, ProgramTyped},
+    typecheck,
+};
+use crate::uniquify::SymEnv;
+use crate::Options;
 use core::hash::Hash;
 use std::collections::{HashMap, HashSet};
 use tracing::*;
 
+pub type IteractionGraph = Hypergraph<PlanPtr, (), Option<CutSite>>;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct PlanPtr(usize);
 
@@ -29,9 +38,17 @@ pub enum PlanNode {
     ConstFalse,
     Literal(VarLabel, bool),
 }
-struct PlanManager {
+pub struct PlanManager {
     gensym: usize,
     store: HashMap<PlanPtr, PlanNode>,
+}
+impl Default for PlanManager {
+    fn default() -> Self {
+        PlanManager {
+            gensym: 0,
+            store: Default::default(),
+        }
+    }
 }
 impl PlanManager {
     fn fresh(&mut self) -> PlanPtr {
@@ -116,6 +133,20 @@ where
     vertices: HashSet<(V, VL)>,
     hyperedges: Vec<(HashSet<V>, EL)>,
 }
+impl<V, VL, EL> Default for Hypergraph<V, VL, EL>
+where
+    V: Clone + Debug + PartialEq + Eq + Hash,
+    VL: Clone + Debug + PartialEq + Eq + Hash,
+    EL: Clone + Debug + PartialEq + Eq + Hash,
+{
+    fn default() -> Self {
+        Hypergraph {
+            vertices: Default::default(),
+            hyperedges: Default::default(),
+        }
+    }
+}
+
 impl<V, VL, EL> Hypergraph<V, VL, EL>
 where
     V: Clone + Debug + PartialEq + Eq + Hash,
@@ -152,19 +183,28 @@ pub enum CutSite {
     // IteFalse(NamedVar),
 }
 
-struct HypStore<'a> {
+pub struct HypStore {
     graph: Hypergraph<PlanPtr, (), Option<CutSite>>,
-    label_info: HashMap<VarLabel, (PlanPtr, NamedVar)>,
-    mgr: &'a mut PlanManager,
+    label_info: HashMap<VarLabel, (PlanPtr, Option<NamedVar>)>,
+    mgr: PlanManager,
 }
-impl<'a> HypStore<'a> {
+impl Default for HypStore {
+    fn default() -> Self {
+        HypStore {
+            mgr: Default::default(),
+            graph: Default::default(),
+            label_info: Default::default(),
+        }
+    }
+}
+impl HypStore {
     // variables, created at flip, must be instatiated at a let-binding
-    pub fn new_var(&mut self, v: VarLabel, l: NamedVar) -> PlanPtr {
+    pub fn new_var(&mut self, v: VarLabel, l: Option<NamedVar>) -> PlanPtr {
         let ptr = self.mgr.var(v, true);
         self.graph.insert_vertex(ptr, ());
         self.label_info.insert(v, (ptr, l.clone()));
         self.graph
-            .insert_edge(&HashSet::from([ptr]), Some(CutSite::LetIn(l)));
+            .insert_edge(&HashSet::from([ptr]), l.map(|x| CutSite::LetIn(x.clone())));
         ptr
     }
     // variables, created at flip, must be instatiated at a let-binding
@@ -209,36 +249,35 @@ impl<'a> HypStore<'a> {
     }
 }
 
-pub struct InteractionEnv<'a> {
-    gensym: usize,
-    mgr: HypStore<'a>,
+pub struct InteractionEnv {
+    mgr: HypStore,
 }
 
 struct Ctx {
     substitutions: HashMap<NamedVar, Vec<PlanPtr>>,
-    substitutions_id: HashMap<UniqueId, Vec<PlanPtr>>,
 }
-
-struct Output {
-    substitutions: HashMap<NamedVar, Vec<PlanPtr>>,
-    substitutions_id: HashMap<UniqueId, Vec<PlanPtr>>,
-}
-impl Output {
-    fn from_ctx(ctx: &Ctx) -> Self {
+impl Default for Ctx {
+    fn default() -> Self {
         Self {
-            substitutions: ctx.substitutions.clone(),
-            substitutions_id: ctx.substitutions_id.clone(),
+            substitutions: Default::default(),
         }
     }
 }
 
-impl<'a> InteractionEnv<'a> {
-    fn new(hypstore: HypStore<'a>) -> InteractionEnv<'a> {
+impl Ctx {
+    fn insert_sub(&mut self, v: NamedVar, d: Vec<PlanPtr>) {
+        self.substitutions.insert(v, d);
+    }
+}
+
+impl Default for InteractionEnv {
+    fn default() -> InteractionEnv {
         Self {
-            gensym: 0,
-            mgr: hypstore,
+            mgr: Default::default(),
         }
     }
+}
+impl InteractionEnv {
     fn plan_anf(&mut self, ctx: &Ctx, a: &AnfAnn) -> Result<Vec<PlanPtr>, CompileError> {
         use crate::grammar::Anf::*;
         match a {
@@ -279,190 +318,181 @@ impl<'a> InteractionEnv<'a> {
             })
             .collect()
     }
-    // fn plan_expr(&mut self, ctx: &Ctx, e: &ExprAnn) -> Result<Vec<PlanPtr>, CompileError> {
-    //     use crate::grammar::Expr::*;
-    //     match e {
-    //         EAnf(_, a) => self.plan_anf(ctx, a),
-    //         EPrj(_, i, a) => { Ok(vec![self.plan_anf(ctx, a)?[*i]]) },
-    //         EFst(_, a) => { Ok(vec![self.plan_anf(ctx, a)?[0]]) },
-    //         ESnd(_, a) => { Ok(vec![self.plan_anf(ctx, a)?[1]]) },
-    //         EProd(_, az) => self.plan_anfs(ctx, az),
-    //         ELetIn(v, s, ebound, ebody) => {
-    //             use SamplingContext::*;
-    //             self.state = Dependence;
-    //             match &self.sampling_context {
-    //                 Unset | Set(_) => {
-    //                     self.sampling_context = Set(v.clone());
-    //                 }
-    //                 Sampling(prv) => {
-    //                     self.sampling_context = SamplingWithLet(prv.clone(), v.clone());
-    //                 }
-    //                 SamplingWithLet(prv, _) => {
-    //                     self.sampling_context = SamplingWithLet(prv.clone(), v.clone());
-    //                 }
-    //             }
-    //             self.plan_expr(ebound)?;
-    //             self.plan_expr(ebody)?;
-    //             Ok(())
-    //         }
-    //         EIte(_ty, cond, t, f) => {
-    //             self.state = Dependence;
-    //             self.plan_anf(cond)?;
-    //             self.plan_expr(t)?;
-    //             self.plan_expr(f)?;
-    //             Ok(())
-    //         }
-    //         EFlip(v, param) => Ok(()),
-    //         EObserve(_, a) => {
-    //             self.state = Dependence;
-    //             self.plan_anf(a)
-    //         }
-    //         ESample(_, e) => {
-    //             use SamplingContext::*;
-
-    //             match &self.sampling_context {
-    //                 Sampling(_) | Unset => {}
-    //                 Set(v) => {
-    //                     self.sampling_context = Sampling(v.clone());
-    //                 }
-    //                 SamplingWithLet(_, v) => {
-    //                     self.sampling_context = Sampling(v.clone());
-    //                 }
-    //             }
-
-    //             self.plan_expr(e)
-    //         }
-    //     }
-    // }
-    //     // // pub fn decorate_anf(&mut self, a: &AnfAnn) -> Result<AnfAnlys, CompileError> {
-    //     // //     use crate::grammar::Anf::*;
-    //     // //     match a {
-    //     // //         AVar(v, s) => match self.decor.get(v) {
-    //     // //             None => panic!("impossible"),
-    //     // //             Some(dv) => Ok(AVar(dv.clone(), s.to_string())),
-    //     // //         },
-    //     // //         AVal(_, b) => Ok(AVal((), b.clone())),
-    //     // //         And(bl, br) => Ok(And(
-    //     // //             Box::new(self.decorate_anf(bl)?),
-    //     // //             Box::new(self.decorate_anf(br)?),
-    //     // //         )),
-    //     // //         Or(bl, br) => Ok(Or(
-    //     // //             Box::new(self.decorate_anf(bl)?),
-    //     // //             Box::new(self.decorate_anf(br)?),
-    //     // //         )),
-    //     // //         Neg(bl) => Ok(Neg(Box::new(self.decorate_anf(bl)?))),
-    //     // //     }
-    //     // // }
-    //     // // pub fn decorate_anfs(&mut self, anfs: &[AnfAnn]) -> Result<Vec<AnfAnlys>, CompileError> {
-    //     // //     anfs.iter().map(|a| self.decorate_anf(a)).collect()
-    //     // // }
-    //     // // pub fn decorate_expr(&mut self, e: &ExprAnn) -> Result<ExprAnlys, CompileError> {
-    //     // //     use crate::grammar::Expr::*;
-    //     // //     match e {
-    //     // //         EAnf(_, a) => Ok(EAnf((), Box::new(self.decorate_anf(a)?))),
-    //     // //         EPrj(_, i, a) => Ok(EPrj((), *i, Box::new(self.decorate_anf(a)?))),
-    //     // //         EFst(_, a) => Ok(EFst((), Box::new(self.decorate_anf(a)?))),
-    //     // //         ESnd(_, a) => Ok(ESnd((), Box::new(self.decorate_anf(a)?))),
-    //     // //         EProd(_, anfs) => Ok(EProd((), self.decorate_anfs(anfs)?)),
-    //     // //         ELetIn(v, s, ebound, ebody) => match self.decor.get(v) {
-    //     // //             None => panic!("impossible"),
-    //     // //             Some(dv) => Ok(ELetIn(
-    //     // //                 dv.clone(),
-    //     // //                 s.clone(),
-    //     // //                 Box::new(self.decorate_expr(ebound)?),
-    //     // //                 Box::new(self.decorate_expr(ebody)?),
-    //     // //             )),
-    //     // //         },
-    //     // //         EIte(_ty, cond, t, f) => Ok(EIte(
-    //     // //             (),
-    //     // //             Box::new(self.decorate_anf(cond)?),
-    //     // //             Box::new(self.decorate_expr(t)?),
-    //     // //             Box::new(self.decorate_expr(f)?),
-    //     // //         )),
-
-    //     // //         EFlip(v, param) => match self.decor.get(v) {
-    //     // //             None => panic!("impossible"),
-    //     // //             Some(dv) => Ok(EFlip(dv.clone(), *param)),
-    //     // //         },
-    //     // //         EObserve(_, a) => {
-    //     // //             let anf = self.decorate_anf(a)?;
-    //     // //             Ok(EObserve((), Box::new(anf)))
-    //     // //         }
-    //     // //         ESample(_, e) => Ok(ESample((), Box::new(self.decorate_expr(e)?))),
-    //     // //     }
-    //     // // }
-
-    //     // // pub fn compile_decorations(&mut self) {
-    //     // //     for (var, (above, below)) in self.above_below.clone() {
-    //     // //         let dv = DecoratedVar::new(&var, above, below);
-    //     // //         self.decor.insert(var, dv);
-    //     // //     }
-    //     // // }
-
-    //     // // pub fn interaction_graph(&mut self) -> Result<(), CompileError> {
-    //     // //     Ok(())
-    //     // // }
-
-    //     // // pub fn decorate(
-    //     // //     &mut self,
-    //     // //     p: &ProgramAnn,
-    //     // //     analyze: bool,
-    //     // // ) -> Result<(ProgramAnlys, Interaction), CompileError> {
-    //     // //     match p {
-    //     // //         Program::Body(e) => {
-    //     // //             if analyze {
-    //     // //                 self.plan_expr(e)?;
-    //     // //                 self.compile_decorations();
-    //     // //                 debug!("final values");
-    //     // //                 for (k, (a, b)) in self.above_below.iter() {
-    //     // //                     let above: HashSet<String> =
-    //     // //                         a.iter().cloned().map(|v| v.debug_id()).collect();
-
-    //     // //                     let below: HashSet<String> =
-    //     // //                         b.iter().cloned().map(|v| v.debug_id()).collect();
-
-    //     // //                     debug!("[{:?}]\t{:?}\t[{:?}]", above, &k.debug_id(), below);
-    //     // //                 }
-    //     // //             }
-    //     // //             let fin = self.decorate_expr(e)?;
-    //     // //             Ok((Program::Body(fin), self.above_below.clone()))
-    //     // //         }
-    //     // //     }
-    //     // // }
-    // }
-
-    // // use crate::annotate::{InvMap, LabelEnv};
-    // // use crate::compile::{compile, Mgr};
-    // // use crate::typecheck::{
-    // //     grammar::{ExprTyped, ProgramTyped},
-    // //     typecheck,
-    // // };
-    // // use crate::uniquify::SymEnv;
-    // // use crate::Options;
-    // // pub fn compile_h(
-    // //     p: &ProgramTyped,
-    // //     mgr: &mut Mgr,
-    // //     opt: &Options,
-    // // ) -> Result<(ProgramAnn, Interaction), CompileError> {
-    // //     let p = typecheck(p)?;
-    // //     let mut senv = SymEnv::default();
-    // //     let p = senv.uniquify(&p)?;
-    // //     let mut lenv = LabelEnv::new();
-    // //     let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
-
-    // //     // let mut aenv = InteractionEnv::new(&varmap);
-    // //     //aenv.decorate(&p, opt.opt)
-    // //     todo!()
+    fn plan_expr(&mut self, ctx: &mut Ctx, e: &ExprAnn) -> Result<Vec<PlanPtr>, CompileError> {
+        use crate::grammar::Expr::*;
+        match e {
+            EAnf(_, a) => self.plan_anf(ctx, a),
+            EPrj(_, i, a) => Ok(vec![self.plan_anf(ctx, a)?[*i]]),
+            EFst(_, a) => Ok(vec![self.plan_anf(ctx, a)?[0]]),
+            ESnd(_, a) => Ok(vec![self.plan_anf(ctx, a)?[1]]),
+            EProd(_, az) => self.plan_anfs(ctx, az),
+            ELetIn(v, s, ebound, ebody) => {
+                let ptrs = self.plan_expr(ctx, ebound)?;
+                ctx.insert_sub(v.clone(), ptrs);
+                self.plan_expr(ctx, ebody)
+            }
+            EIte(_, cond, t, f) => {
+                let ps = self.plan_anf(ctx, cond)?;
+                let ts = self.plan_expr(ctx, t)?;
+                let fs = self.plan_expr(ctx, f)?;
+                Ok(izip!(ps, ts, fs)
+                    .map(|(p, t, f)| self.mgr.ite(p, t, f, None))
+                    .collect_vec())
+            }
+            EFlip(v, param) => Ok(vec![self.mgr.new_var(v.label, None)]),
+            EObserve(_, a) => self.plan_anf(ctx, a),
+            ESample(_, e) => self.plan_expr(ctx, e),
+        }
+    }
+    pub fn plan(&mut self, p: &ProgramAnn) -> Result<IteractionGraph, CompileError> {
+        match p {
+            Program::Body(b) => {
+                let mut ctx = Default::default();
+                let _ = self.plan_expr(&mut ctx, b)?;
+                Ok(self.mgr.graph.clone())
+            }
+        }
+    }
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use crate::compile::*;
-//     use crate::grammar::*;
-//     use crate::grammar_macros::*;
-//     use crate::typecheck::grammar::{ExprTyped, ProgramTyped};
-//     use crate::typecheck::typecheck;
-//     use crate::*;
-//     use tracing::*;
-//     use tracing_test::traced_test;
-// }
+pub fn compile_h(
+    p: &ProgramTyped,
+    mgr: &mut Mgr,
+    opt: &Options,
+) -> Result<IteractionGraph, CompileError> {
+    let p = typecheck(p)?;
+    let mut senv = SymEnv::default();
+    let p = senv.uniquify(&p)?;
+    let mut lenv = LabelEnv::new();
+    let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
+
+    let mut env = InteractionEnv::default();
+    env.plan(&p)
+}
+#[cfg(test)]
+mod tests {
+    use crate::compile::*;
+    use crate::grammar::*;
+    use crate::grammar_macros::*;
+    use crate::typecheck::grammar::{ExprTyped, ProgramTyped};
+    use crate::typecheck::typecheck;
+    use crate::*;
+    use tracing::*;
+    use tracing_test::traced_test;
+    #[test]
+    pub fn test_interaction_graph_for_simple_programs() {
+        let p = program!(lets![
+            "x" ; b!() ;= flip!(1/3);
+           ...? b!("x") ; b!()
+        ]);
+        let p = program!(lets![
+            "x" ; b!() ;= flip!(1/3);
+            "y" ; b!() ;= flip!(1/3);
+            "z" ; b!() ;= b!("x" && "y");
+           ...? b!("z") ; b!()
+        ]);
+        // same as above!
+        let p = program!(lets![
+            "x" ; b!() ;= flip!(1/3);
+            "y" ; b!() ;= flip!(1/3);
+           ...? b!("x" && "y") ; b!()
+        ]);
+        let p = program!(lets![
+            "x" ; b!() ;= flip!(1/3);
+            "y" ; b!() ;= flip!(1/3);
+            "z" ; b!() ;= flip!(1/3);
+            "a" ; b!() ;= b!("x" && "y" && "z");
+           ...? b!("a") ; b!()
+        ]);
+        let shared_var = |ret: ExprTyped| {
+            Program::Body(lets![
+               "x" ; b!() ;= flip!(1/3);
+               "l" ; b!() ;= sample!(var!("x"));
+               "r" ; b!() ;= sample!(var!("x"));
+               ...? ret ; b!()
+            ])
+        };
+
+        let shared_tuple = Program::Body(lets![
+           "x" ; b!()     ;= flip!(1/3);
+           "z" ; b!(B, B) ;= sample!(b!("x", "x"));
+           ...? b!("z" ; b!(B, B)); b!(B, B)
+        ]);
+        let ite = |ret: ExprTyped| {
+            program!(lets![
+                "x" ; b!() ;= flip!(1/5);
+                "y" ; b!() ;= ite!(
+                    if ( var!("x") )
+                    then { sample!(flip!(1/3)) }
+                    else { flip!(1/4) });
+                ...? ret ; b!()
+            ])
+        };
+        let ite_with_nested_lets = program!(lets![
+            "x" ; b!() ;= flip!(2/3);
+            "y" ; b!() ;= ite!(
+                if ( var!("x") )
+                    then { lets![
+                             "q" ; b!() ;= flip!(1/4);
+                             "_" ; b!() ;= observe!(b!("q" || "w"));
+                             ...? b!("q") ; b!()
+                    ] }
+                else { flip!(1/5) });
+            "_" ; b!() ;= observe!(b!("x" || "y"));
+            ...? b!("x") ; b!()
+        ]);
+        let grid2x2_triu = |ret: ExprTyped| {
+            Program::Body(lets![
+                "00" ; B!() ;= flip!(1/2);
+                "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+                "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+                ...? ret ; B!()
+            ])
+        };
+        let grid2x2_tril = |ret: ExprTyped| {
+            Program::Body(lets![
+                "01" ; B!() ;= flip!(1/3) ;
+                "10" ; B!() ;= flip!(1/4) ;
+                "11" ; B!() ;=
+                    ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(3/7) ) : (
+                    ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(3/8) ) : (
+                    ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(3/9) ) : (
+                                                              flip!(3/11) ))))));
+                ...? ret ; B!()
+            ])
+        };
+        let grid2x2 = |ret: ExprTyped| {
+            Program::Body(lets![
+                "00" ; B!() ;= flip!(1/2);
+                "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+                "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+                "11" ; B!() ;=
+                    ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+                    ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+                    ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+                                                              flip!(1/11) ))))));
+                ...? ret ; B!()
+            ])
+        };
+
+        let grid2x2_sampled = |ret: ExprTyped| {
+            Program::Body(lets![
+                "00" ; B!() ;= flip!(1/2);
+                "01_10" ; b!(B, B) ;= sample!(
+                    lets![
+                        "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+                        "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+                        ...? b!("01", "10") ; b!(B, B)
+                    ]);
+                "01" ; B!() ;= fst!("01_10");
+                "10" ; B!() ;= snd!("01_10");
+                "11" ; B!() ;=
+                    ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+                    ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+                    ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+                                                              flip!(1/11) ))))));
+                ...? ret ; B!()
+            ])
+        };
+    }
+}
