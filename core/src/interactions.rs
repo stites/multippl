@@ -94,6 +94,16 @@ impl PlanManager {
         self.store.insert(ptr, bdd);
         ptr
     }
+    pub fn bool(&mut self, p: bool) -> PlanPtr {
+        let ptr = self.fresh();
+        let bdd = if p {
+            PlanNode::ConstTrue
+        } else {
+            PlanNode::ConstFalse
+        };
+        self.store.insert(ptr, bdd);
+        ptr
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -136,6 +146,8 @@ where
 #[derive(Clone, Hash, Debug, Eq, PartialEq)]
 pub enum CutSite {
     LetIn(NamedVar),
+    // TODO do I need a "sampled" statement which cannot be cut?
+    // SampledLetIn(NamedVar), // cannot be cut
     // IteTrue(NamedVar),
     // IteFalse(NamedVar),
 }
@@ -192,403 +204,256 @@ impl<'a> HypStore<'a> {
     pub fn not(&mut self, p: PlanPtr) -> PlanPtr {
         self.mgr.not(p)
     }
+    pub fn bool(&mut self, p: bool) -> PlanPtr {
+        self.mgr.bool(p)
+    }
 }
 
-// pub mod grammar {
-//     use super::*;
-//     pub use crate::annotate::grammar::{BddVar, NamedVar, Var};
-//     pub use crate::uniquify::grammar::UniqueId;
-//     use std::fmt;
-//     use std::fmt::*;
+pub struct InteractionEnv<'a> {
+    gensym: usize,
+    mgr: HypStore<'a>,
+}
 
-//     #[derive(Clone, Eq, PartialEq, Debug)]
-//     pub struct Decorated<X> {
-//         pub var: X,
-//         pub above: HashSet<Var>,
-//         pub below: HashSet<Var>,
-//     }
-//     pub type DecoratedNamedVar = Decorated<NamedVar>;
-//     pub type DecoratedBddVar = Decorated<BddVar>;
+struct Ctx {
+    substitutions: HashMap<NamedVar, Vec<PlanPtr>>,
+    substitutions_id: HashMap<UniqueId, Vec<PlanPtr>>,
+}
 
-//     #[derive(Clone, Eq, PartialEq, Debug)]
-//     pub enum DecoratedVar {
-//         Bdd(DecoratedBddVar),
-//         Named(DecoratedNamedVar),
-//     }
-//     impl DecoratedVar {
-//         pub fn new(v: &Var, above: HashSet<Var>, below: HashSet<Var>) -> Self {
-//             match v {
-//                 Var::Named(var) => DecoratedVar::Named(Decorated {
-//                     above,
-//                     below,
-//                     var: var.clone(),
-//                 }),
-//                 Var::Bdd(var) => DecoratedVar::Bdd(Decorated {
-//                     above,
-//                     below,
-//                     var: var.clone(),
-//                 }),
-//             }
-//         }
-//         pub fn id(&self) -> UniqueId {
-//             self.var().id()
-//         }
-//         pub fn below(&self) -> &HashSet<Var> {
-//             match self {
-//                 DecoratedVar::Named(d) => &d.below,
-//                 DecoratedVar::Bdd(d) => &d.below,
-//             }
-//         }
-//         pub fn above(&self) -> &HashSet<Var> {
-//             match self {
-//                 DecoratedVar::Named(d) => &d.above,
-//                 DecoratedVar::Bdd(d) => &d.above,
-//             }
-//         }
-//         pub fn var(&self) -> Var {
-//             match self {
-//                 DecoratedVar::Named(d) => Var::Named(d.var.clone()),
-//                 DecoratedVar::Bdd(d) => Var::Bdd(d.var.clone()),
-//             }
-//         }
-//         pub fn debug_id(&self) -> String {
-//             self.var().debug_id()
-//         }
-//         pub fn from_var(var: &Var) -> DecoratedVar {
-//             DecoratedVar::new(var, HashSet::new(), HashSet::new())
-//         }
-//     }
+struct Output {
+    substitutions: HashMap<NamedVar, Vec<PlanPtr>>,
+    substitutions_id: HashMap<UniqueId, Vec<PlanPtr>>,
+}
+impl Output {
+    fn from_ctx(ctx: &Ctx) -> Self {
+        Self {
+            substitutions: ctx.substitutions.clone(),
+            substitutions_id: ctx.substitutions_id.clone(),
+        }
+    }
+}
 
-//     #[derive(Debug, PartialEq, Clone)]
-//     pub struct Interaction;
+impl<'a> InteractionEnv<'a> {
+    fn new(hypstore: HypStore<'a>) -> InteractionEnv<'a> {
+        Self {
+            gensym: 0,
+            mgr: hypstore,
+        }
+    }
+    fn plan_anf(&mut self, ctx: &Ctx, a: &AnfAnn) -> Result<Vec<PlanPtr>, CompileError> {
+        use crate::grammar::Anf::*;
+        match a {
+            AVar(v, s) => match ctx.substitutions.get(&v) {
+                None => panic!("must already be included"),
+                Some(ptrs) => Ok(ptrs.clone()),
+            },
+            AVal(_, Val::Bool(b)) => Ok(vec![self.mgr.bool(*b)]),
+            AVal(_, Val::Prod(_)) => todo!(),
+            And(bl, br) => {
+                let pls = self.plan_anf(ctx, bl)?;
+                let prs = self.plan_anf(ctx, bl)?;
+                let ret = izip!(pls, prs)
+                    .map(|(l, r)| self.mgr.and(l, r))
+                    .collect_vec();
+                Ok(ret)
+            }
+            Or(bl, br) => {
+                let pls = self.plan_anf(ctx, bl)?;
+                let prs = self.plan_anf(ctx, bl)?;
+                let ret = izip!(pls, prs)
+                    .map(|(l, r)| self.mgr.or(l, r))
+                    .collect_vec();
+                Ok(ret)
+            }
+            Neg(bl) => {
+                let prs = self.plan_anf(ctx, bl)?;
+                Ok(prs.iter().map(|p| self.mgr.not(*p)).collect_vec())
+            }
+        }
+    }
+    fn plan_anfs(&mut self, ctx: &Ctx, anfs: &[AnfAnn]) -> Result<Vec<PlanPtr>, CompileError> {
+        anfs.iter()
+            .map(|a| {
+                let res = self.plan_anf(ctx, a)?;
+                assert_eq!(res.len(), 1);
+                Ok(res[0])
+            })
+            .collect()
+    }
+    // fn plan_expr(&mut self, ctx: &Ctx, e: &ExprAnn) -> Result<Vec<PlanPtr>, CompileError> {
+    //     use crate::grammar::Expr::*;
+    //     match e {
+    //         EAnf(_, a) => self.plan_anf(ctx, a),
+    //         EPrj(_, i, a) => { Ok(vec![self.plan_anf(ctx, a)?[*i]]) },
+    //         EFst(_, a) => { Ok(vec![self.plan_anf(ctx, a)?[0]]) },
+    //         ESnd(_, a) => { Ok(vec![self.plan_anf(ctx, a)?[1]]) },
+    //         EProd(_, az) => self.plan_anfs(ctx, az),
+    //         ELetIn(v, s, ebound, ebody) => {
+    //             use SamplingContext::*;
+    //             self.state = Dependence;
+    //             match &self.sampling_context {
+    //                 Unset | Set(_) => {
+    //                     self.sampling_context = Set(v.clone());
+    //                 }
+    //                 Sampling(prv) => {
+    //                     self.sampling_context = SamplingWithLet(prv.clone(), v.clone());
+    //                 }
+    //                 SamplingWithLet(prv, _) => {
+    //                     self.sampling_context = SamplingWithLet(prv.clone(), v.clone());
+    //                 }
+    //             }
+    //             self.plan_expr(ebound)?;
+    //             self.plan_expr(ebody)?;
+    //             Ok(())
+    //         }
+    //         EIte(_ty, cond, t, f) => {
+    //             self.state = Dependence;
+    //             self.plan_anf(cond)?;
+    //             self.plan_expr(t)?;
+    //             self.plan_expr(f)?;
+    //             Ok(())
+    //         }
+    //         EFlip(v, param) => Ok(()),
+    //         EObserve(_, a) => {
+    //             self.state = Dependence;
+    //             self.plan_anf(a)
+    //         }
+    //         ESample(_, e) => {
+    //             use SamplingContext::*;
 
-//     impl ξ<Interaction> for AVarExt {
-//         type Ext = DecoratedVar;
-//     }
-//     impl ξ<Interaction> for AValExt {
-//         type Ext = ();
-//     }
-//     pub type AnfAnlys = Anf<Interaction>;
+    //             match &self.sampling_context {
+    //                 Sampling(_) | Unset => {}
+    //                 Set(v) => {
+    //                     self.sampling_context = Sampling(v.clone());
+    //                 }
+    //                 SamplingWithLet(_, v) => {
+    //                     self.sampling_context = Sampling(v.clone());
+    //                 }
+    //             }
 
-//     impl ξ<Interaction> for EAnfExt {
-//         type Ext = ();
-//     }
-//     impl ξ<Interaction> for EFstExt {
-//         type Ext = ();
-//     }
-//     impl ξ<Interaction> for ESndExt {
-//         type Ext = ();
-//     }
-//     impl ξ<Interaction> for EPrjExt {
-//         type Ext = ();
-//     }
-//     impl ξ<Interaction> for EProdExt {
-//         type Ext = ();
-//     }
-//     impl ξ<Interaction> for ELetInExt {
-//         type Ext = ();
-//     }
-//     impl ξ<Interaction> for EIteExt {
-//         type Ext = ();
-//     }
-//     impl ξ<Interaction> for EFlipExt {
-//         type Ext = DecoratedBddVar;
-//     }
-//     impl ξ<Interaction> for EObserveExt {
-//         type Ext = ();
-//     }
+    //             self.plan_expr(e)
+    //         }
+    //     }
+    // }
+    //     // // pub fn decorate_anf(&mut self, a: &AnfAnn) -> Result<AnfAnlys, CompileError> {
+    //     // //     use crate::grammar::Anf::*;
+    //     // //     match a {
+    //     // //         AVar(v, s) => match self.decor.get(v) {
+    //     // //             None => panic!("impossible"),
+    //     // //             Some(dv) => Ok(AVar(dv.clone(), s.to_string())),
+    //     // //         },
+    //     // //         AVal(_, b) => Ok(AVal((), b.clone())),
+    //     // //         And(bl, br) => Ok(And(
+    //     // //             Box::new(self.decorate_anf(bl)?),
+    //     // //             Box::new(self.decorate_anf(br)?),
+    //     // //         )),
+    //     // //         Or(bl, br) => Ok(Or(
+    //     // //             Box::new(self.decorate_anf(bl)?),
+    //     // //             Box::new(self.decorate_anf(br)?),
+    //     // //         )),
+    //     // //         Neg(bl) => Ok(Neg(Box::new(self.decorate_anf(bl)?))),
+    //     // //     }
+    //     // // }
+    //     // // pub fn decorate_anfs(&mut self, anfs: &[AnfAnn]) -> Result<Vec<AnfAnlys>, CompileError> {
+    //     // //     anfs.iter().map(|a| self.decorate_anf(a)).collect()
+    //     // // }
+    //     // // pub fn decorate_expr(&mut self, e: &ExprAnn) -> Result<ExprAnlys, CompileError> {
+    //     // //     use crate::grammar::Expr::*;
+    //     // //     match e {
+    //     // //         EAnf(_, a) => Ok(EAnf((), Box::new(self.decorate_anf(a)?))),
+    //     // //         EPrj(_, i, a) => Ok(EPrj((), *i, Box::new(self.decorate_anf(a)?))),
+    //     // //         EFst(_, a) => Ok(EFst((), Box::new(self.decorate_anf(a)?))),
+    //     // //         ESnd(_, a) => Ok(ESnd((), Box::new(self.decorate_anf(a)?))),
+    //     // //         EProd(_, anfs) => Ok(EProd((), self.decorate_anfs(anfs)?)),
+    //     // //         ELetIn(v, s, ebound, ebody) => match self.decor.get(v) {
+    //     // //             None => panic!("impossible"),
+    //     // //             Some(dv) => Ok(ELetIn(
+    //     // //                 dv.clone(),
+    //     // //                 s.clone(),
+    //     // //                 Box::new(self.decorate_expr(ebound)?),
+    //     // //                 Box::new(self.decorate_expr(ebody)?),
+    //     // //             )),
+    //     // //         },
+    //     // //         EIte(_ty, cond, t, f) => Ok(EIte(
+    //     // //             (),
+    //     // //             Box::new(self.decorate_anf(cond)?),
+    //     // //             Box::new(self.decorate_expr(t)?),
+    //     // //             Box::new(self.decorate_expr(f)?),
+    //     // //         )),
 
-//     #[derive(PartialEq, Copy, Clone, Debug, Hash, Eq)]
-//     pub enum SamplingPosition {
-//         Pos(UniqueId, usize),
-//     }
+    //     // //         EFlip(v, param) => match self.decor.get(v) {
+    //     // //             None => panic!("impossible"),
+    //     // //             Some(dv) => Ok(EFlip(dv.clone(), *param)),
+    //     // //         },
+    //     // //         EObserve(_, a) => {
+    //     // //             let anf = self.decorate_anf(a)?;
+    //     // //             Ok(EObserve((), Box::new(anf)))
+    //     // //         }
+    //     // //         ESample(_, e) => Ok(ESample((), Box::new(self.decorate_expr(e)?))),
+    //     // //     }
+    //     // // }
 
-//     impl ξ<Interaction> for ESampleExt {
-//         type Ext = Vec<Decorated<SamplingPosition>>;
-//     }
+    //     // // pub fn compile_decorations(&mut self) {
+    //     // //     for (var, (above, below)) in self.above_below.clone() {
+    //     // //         let dv = DecoratedVar::new(&var, above, below);
+    //     // //         self.decor.insert(var, dv);
+    //     // //     }
+    //     // // }
 
-//     pub type ExprAnlys = Expr<Interaction>;
-//     pub type ProgramAnlys = Program<Interaction>;
-// }
-// #[derive(PartialEq, Copy, Clone, Debug, Hash, Eq)]
-// enum State {
-//     Declaration,
-//     Dependence,
-//     Projection,
-// }
-// #[derive(Clone, Debug)]
-// pub enum SamplingContext {
-//     Unset,
-//     Set(Var),
-//     Sampling(Var),
-//     SamplingWithLet(Var, Var),
-// }
-// impl SamplingContext {
-//     pub fn as_option(&self) -> Option<Var> {
-//         use SamplingContext::*;
-//         match self {
-//             Unset => None,
-//             Set(v) | Sampling(v) => Some(v.clone()),
-//             SamplingWithLet(v, _) => Some(v.clone()),
-//         }
-//     }
-// }
-// pub struct InteractionEnv {
-//     gensym : usize,
-// }
+    //     // // pub fn interaction_graph(&mut self) -> Result<(), CompileError> {
+    //     // //     Ok(())
+    //     // // }
 
-// pub struct AbstractBddPtr(usize);
+    //     // // pub fn decorate(
+    //     // //     &mut self,
+    //     // //     p: &ProgramAnn,
+    //     // //     analyze: bool,
+    //     // // ) -> Result<(ProgramAnlys, Interaction), CompileError> {
+    //     // //     match p {
+    //     // //         Program::Body(e) => {
+    //     // //             if analyze {
+    //     // //                 self.plan_expr(e)?;
+    //     // //                 self.compile_decorations();
+    //     // //                 debug!("final values");
+    //     // //                 for (k, (a, b)) in self.above_below.iter() {
+    //     // //                     let above: HashSet<String> =
+    //     // //                         a.iter().cloned().map(|v| v.debug_id()).collect();
 
-// pub struct Ctx {
-//     substitutions: HashMap<Var, Vec<BddPlan>>,
-//     dependencies: HashMap<BddPlan, HashSet<Var>>,
-// }
+    //     // //                     let below: HashSet<String> =
+    //     // //                         b.iter().cloned().map(|v| v.debug_id()).collect();
 
-// type Deps = HashMap<AbstractBddPtr, HashSet<Var>>;
+    //     // //                     debug!("[{:?}]\t{:?}\t[{:?}]", above, &k.debug_id(), below);
+    //     // //                 }
+    //     // //             }
+    //     // //             let fin = self.decorate_expr(e)?;
+    //     // //             Ok((Program::Body(fin), self.above_below.clone()))
+    //     // //         }
+    //     // //     }
+    //     // // }
+    // }
 
-// impl InteractionEnv {
-//     pub fn new() -> InteractionEnv {
-//         Self {
-//             gensym : 0,
-//         }
-//     }
-//     pub fn fresh_ptr(&mut self) -> AbstractBddPtr {
-//         let p = AbstractBddPtr(self.gensym);
-//         self.gensym += 1;
-//         p
-//     }
+    // // use crate::annotate::{InvMap, LabelEnv};
+    // // use crate::compile::{compile, Mgr};
+    // // use crate::typecheck::{
+    // //     grammar::{ExprTyped, ProgramTyped},
+    // //     typecheck,
+    // // };
+    // // use crate::uniquify::SymEnv;
+    // // use crate::Options;
+    // // pub fn compile_h(
+    // //     p: &ProgramTyped,
+    // //     mgr: &mut Mgr,
+    // //     opt: &Options,
+    // // ) -> Result<(ProgramAnn, Interaction), CompileError> {
+    // //     let p = typecheck(p)?;
+    // //     let mut senv = SymEnv::default();
+    // //     let p = senv.uniquify(&p)?;
+    // //     let mut lenv = LabelEnv::new();
+    // //     let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
 
-//     pub fn analyze_anf(&mut self, ctx:&mut Ctx, a: &AnfAnn) -> Result<(), CompileError> {
-//         use crate::grammar::Anf::*;
-//         match a {
-//             AVar(v, s) => match ctx.substitutions.get(&v) {
-//                 None => panic!("must already be included"),
-//                 Some(ptrs) => {
-//                     // for p in ptrs {
-//                     //     ctx.dependencies.get(p);
-//                     // }
-//                     todo!("what does this mean?")
-//                 }
-//             }
-//             AVal(_, b) => Ok(()),
-//             _ => todo!(),
-//             // And(bl, br) => {
-//             //     let al = self.analyze_anf(ctx, bl);
-//             //     let ar = self.analyze_anf(ctx, br);
-//             //     let p = self.fresh_ptr();
-
-//             //     self.state = State::Dependence;
-//             //     self.analyze_anf(bl)?;
-//             //     self.analyze_anf(br)?;
-//             //     Ok(())
-//             // }
-//             // Or(bl, br) => {
-//             //     self.state = State::Dependence;
-//             //     self.analyze_anf(bl)?;
-//             //     self.analyze_anf(br)?;
-//             //     Ok(())
-//             // }
-//             // Neg(bl) => {
-//             //     self.state = State::Dependence;
-//             //     self.analyze_anf(bl)
-//             // }
-//         }
-//     }
-//     // pub fn analyze_anfs(&mut self, anfs: &[AnfAnn]) -> Result<(), CompileError> {
-//     //     for (i, a) in anfs.iter().enumerate() {
-//     //         self.tuple_ix = i;
-//     //         self.analyze_anf(a)?;
-//     //     }
-//     //     self.tuple_ix = 0;
-//     //     Ok(())
-//     // }
-//     // fn state_bracket(
-//     //     &mut self,
-//     //     s: State,
-//     //     f: &mut dyn FnMut(&mut Self) -> Result<(), CompileError>,
-//     // ) -> Result<(), CompileError> {
-//     //     let prv = self.state;
-//     //     self.state = s;
-//     //     let r = f(self);
-//     //     self.state = prv;
-//     //     r
-//     // }
-//     // pub fn analyze_expr(&mut self, e: &ExprAnn) -> Result<(), CompileError> {
-//     //     use crate::grammar::Expr::*;
-//     //     use State::*;
-//     //     match e {
-//     //         EAnf(_, a) => self.analyze_anf(a),
-//     //         EPrj(_, i, a) => self.state_bracket(Projection, &mut |s| s.analyze_anf(a)),
-//     //         EFst(_, a) => self.state_bracket(Projection, &mut |s| s.analyze_anf(a)),
-//     //         ESnd(_, a) => self.state_bracket(Projection, &mut |s| s.analyze_anf(a)),
-//     //         EProd(_, az) => self.state_bracket(Projection, &mut |s| s.analyze_anfs(az)),
-//     //         ELetIn(v, s, ebound, ebody) => {
-//     //             use SamplingContext::*;
-//     //             self.state = Dependence;
-//     //             match &self.sampling_context {
-//     //                 Unset | Set(_) => {
-//     //                     self.sampling_context = Set(v.clone());
-//     //                 }
-//     //                 Sampling(prv) => {
-//     //                     self.sampling_context = SamplingWithLet(prv.clone(), v.clone());
-//     //                 }
-//     //                 SamplingWithLet(prv, _) => {
-//     //                     self.sampling_context = SamplingWithLet(prv.clone(), v.clone());
-//     //                 }
-//     //             }
-//     //             self.analyze_expr(ebound)?;
-//     //             self.analyze_expr(ebody)?;
-//     //             Ok(())
-//     //         }
-//     //         EIte(_ty, cond, t, f) => {
-//     //             self.state = Dependence;
-//     //             self.analyze_anf(cond)?;
-//     //             self.analyze_expr(t)?;
-//     //             self.analyze_expr(f)?;
-//     //             Ok(())
-//     //         }
-//     //         EFlip(v, param) => Ok(()),
-//     //         EObserve(_, a) => {
-//     //             self.state = Dependence;
-//     //             self.analyze_anf(a)
-//     //         }
-//     //         ESample(_, e) => {
-//     //             use SamplingContext::*;
-
-//     //             match &self.sampling_context {
-//     //                 Sampling(_) | Unset => {}
-//     //                 Set(v) => {
-//     //                     self.sampling_context = Sampling(v.clone());
-//     //                 }
-//     //                 SamplingWithLet(_, v) => {
-//     //                     self.sampling_context = Sampling(v.clone());
-//     //                 }
-//     //             }
-
-//     //             self.analyze_expr(e)
-//     //         }
-//     //     }
-//     // }
-//     // // pub fn decorate_anf(&mut self, a: &AnfAnn) -> Result<AnfAnlys, CompileError> {
-//     // //     use crate::grammar::Anf::*;
-//     // //     match a {
-//     // //         AVar(v, s) => match self.decor.get(v) {
-//     // //             None => panic!("impossible"),
-//     // //             Some(dv) => Ok(AVar(dv.clone(), s.to_string())),
-//     // //         },
-//     // //         AVal(_, b) => Ok(AVal((), b.clone())),
-//     // //         And(bl, br) => Ok(And(
-//     // //             Box::new(self.decorate_anf(bl)?),
-//     // //             Box::new(self.decorate_anf(br)?),
-//     // //         )),
-//     // //         Or(bl, br) => Ok(Or(
-//     // //             Box::new(self.decorate_anf(bl)?),
-//     // //             Box::new(self.decorate_anf(br)?),
-//     // //         )),
-//     // //         Neg(bl) => Ok(Neg(Box::new(self.decorate_anf(bl)?))),
-//     // //     }
-//     // // }
-//     // // pub fn decorate_anfs(&mut self, anfs: &[AnfAnn]) -> Result<Vec<AnfAnlys>, CompileError> {
-//     // //     anfs.iter().map(|a| self.decorate_anf(a)).collect()
-//     // // }
-//     // // pub fn decorate_expr(&mut self, e: &ExprAnn) -> Result<ExprAnlys, CompileError> {
-//     // //     use crate::grammar::Expr::*;
-//     // //     match e {
-//     // //         EAnf(_, a) => Ok(EAnf((), Box::new(self.decorate_anf(a)?))),
-//     // //         EPrj(_, i, a) => Ok(EPrj((), *i, Box::new(self.decorate_anf(a)?))),
-//     // //         EFst(_, a) => Ok(EFst((), Box::new(self.decorate_anf(a)?))),
-//     // //         ESnd(_, a) => Ok(ESnd((), Box::new(self.decorate_anf(a)?))),
-//     // //         EProd(_, anfs) => Ok(EProd((), self.decorate_anfs(anfs)?)),
-//     // //         ELetIn(v, s, ebound, ebody) => match self.decor.get(v) {
-//     // //             None => panic!("impossible"),
-//     // //             Some(dv) => Ok(ELetIn(
-//     // //                 dv.clone(),
-//     // //                 s.clone(),
-//     // //                 Box::new(self.decorate_expr(ebound)?),
-//     // //                 Box::new(self.decorate_expr(ebody)?),
-//     // //             )),
-//     // //         },
-//     // //         EIte(_ty, cond, t, f) => Ok(EIte(
-//     // //             (),
-//     // //             Box::new(self.decorate_anf(cond)?),
-//     // //             Box::new(self.decorate_expr(t)?),
-//     // //             Box::new(self.decorate_expr(f)?),
-//     // //         )),
-
-//     // //         EFlip(v, param) => match self.decor.get(v) {
-//     // //             None => panic!("impossible"),
-//     // //             Some(dv) => Ok(EFlip(dv.clone(), *param)),
-//     // //         },
-//     // //         EObserve(_, a) => {
-//     // //             let anf = self.decorate_anf(a)?;
-//     // //             Ok(EObserve((), Box::new(anf)))
-//     // //         }
-//     // //         ESample(_, e) => Ok(ESample((), Box::new(self.decorate_expr(e)?))),
-//     // //     }
-//     // // }
-
-//     // // pub fn compile_decorations(&mut self) {
-//     // //     for (var, (above, below)) in self.above_below.clone() {
-//     // //         let dv = DecoratedVar::new(&var, above, below);
-//     // //         self.decor.insert(var, dv);
-//     // //     }
-//     // // }
-
-//     // // pub fn interaction_graph(&mut self) -> Result<(), CompileError> {
-//     // //     Ok(())
-//     // // }
-
-//     // // pub fn decorate(
-//     // //     &mut self,
-//     // //     p: &ProgramAnn,
-//     // //     analyze: bool,
-//     // // ) -> Result<(ProgramAnlys, Interaction), CompileError> {
-//     // //     match p {
-//     // //         Program::Body(e) => {
-//     // //             if analyze {
-//     // //                 self.analyze_expr(e)?;
-//     // //                 self.compile_decorations();
-//     // //                 debug!("final values");
-//     // //                 for (k, (a, b)) in self.above_below.iter() {
-//     // //                     let above: HashSet<String> =
-//     // //                         a.iter().cloned().map(|v| v.debug_id()).collect();
-
-//     // //                     let below: HashSet<String> =
-//     // //                         b.iter().cloned().map(|v| v.debug_id()).collect();
-
-//     // //                     debug!("[{:?}]\t{:?}\t[{:?}]", above, &k.debug_id(), below);
-//     // //                 }
-//     // //             }
-//     // //             let fin = self.decorate_expr(e)?;
-//     // //             Ok((Program::Body(fin), self.above_below.clone()))
-//     // //         }
-//     // //     }
-//     // // }
-// }
-
-// // use crate::annotate::{InvMap, LabelEnv};
-// // use crate::compile::{compile, Mgr};
-// // use crate::typecheck::{
-// //     grammar::{ExprTyped, ProgramTyped},
-// //     typecheck,
-// // };
-// // use crate::uniquify::SymEnv;
-// // use crate::Options;
-// // pub fn compile_h(
-// //     p: &ProgramTyped,
-// //     mgr: &mut Mgr,
-// //     opt: &Options,
-// // ) -> Result<(ProgramAnn, Interaction), CompileError> {
-// //     let p = typecheck(p)?;
-// //     let mut senv = SymEnv::default();
-// //     let p = senv.uniquify(&p)?;
-// //     let mut lenv = LabelEnv::new();
-// //     let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
-
-// //     // let mut aenv = InteractionEnv::new(&varmap);
-// //     //aenv.decorate(&p, opt.opt)
-// //     todo!()
-// // }
+    // //     // let mut aenv = InteractionEnv::new(&varmap);
+    // //     //aenv.decorate(&p, opt.opt)
+    // //     todo!()
+}
 
 // #[cfg(test)]
 // mod tests {
