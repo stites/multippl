@@ -39,6 +39,9 @@ pub mod grammar {
         pub id: UniqueId,
         pub name: String,
     }
+    pub fn named(id: u64, name: &str) -> NamedVar {
+        NamedVar::new(UniqueId(id), name.to_string())
+    }
     impl NamedVar {
         pub fn id(&self) -> UniqueId {
             self.id
