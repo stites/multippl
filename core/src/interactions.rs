@@ -397,8 +397,9 @@ mod tests {
     use crate::*;
     use tracing::*;
     use tracing_test::traced_test;
+
     #[test]
-    pub fn test_interaction_graph_for_simple_programs() {
+    pub fn test_interaction_graph_for_simple_program() {
         let p = program!(lets![
             "x" ; b!() ;= flip!(1/3);
            ...? b!("x") ; b!()
@@ -410,6 +411,9 @@ mod tests {
         assert_eq!(nvar, Binding::Let(named(0, "x")), "flip edge first");
         let (_, nvar) = g.hyperedges[1].clone();
         assert_eq!(nvar, Binding::Unbound, "expected query edge last");
+    }
+    #[test]
+    pub fn test_interaction_graph_with_boolean_operator() {
         let p = program!(lets![
             "x" ; b!() ;= flip!(1/3);
             "y" ; b!() ;= flip!(1/3);
@@ -425,6 +429,9 @@ mod tests {
         }
         let (_, nvar) = g.hyperedges.last().clone().unwrap();
         assert_eq!(*nvar, Binding::Unbound);
+    }
+    #[test]
+    pub fn test_interaction_graph_works_with_conjoined_query() {
         let p = program!(lets![
             "x" ; b!() ;= flip!(1/3);
             "y" ; b!() ;= flip!(1/3);
@@ -433,7 +440,9 @@ mod tests {
         let g = pipeline(&p).unwrap();
         assert_eq!(g.vertices.len(), 2);
         assert_eq!(g.hyperedges.len(), 3, "edge for each line");
-        let g = pipeline(&p).unwrap();
+    }
+    #[test]
+    pub fn test_interaction_graph_captures_correct_edge_with_aliases() {
         let p = program!(lets![
             "x" ; b!() ;= flip!(1/3);
             "y" ; b!() ;= flip!(1/3);
@@ -450,8 +459,11 @@ mod tests {
         // }
         let query = &g.hyperedges.last().unwrap().0;
         assert_eq!(query.len(), 3, "query depends on every variable above");
-        // <<< <<< <<< <<< <<< <<< <<< <<< <<< <<< progress
+    }
 
+    #[test]
+    pub fn test_interaction_todos() {
+        // <<< <<< <<< <<< <<< <<< <<< <<< <<< <<< progress
         let shared_var = program!(lets![
            "x" ; b!() ;= flip!(1/3);
            "l" ; b!() ;= sample!(var!("x"));
