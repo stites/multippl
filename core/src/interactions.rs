@@ -149,6 +149,8 @@ where
 {
     /// add an edge to the hypergraph. Returns false if the edge is already in the hypergraph
     pub fn insert_edge(&mut self, edge: &HashSet<V>, l: EL) -> bool {
+        debug!("insert edge: {:?} @ {:?}", edge, l);
+
         let verts: HashSet<&V> = self.vertices.iter().map(|x| &x.0).collect();
         let edgerefs: HashSet<&V> = edge.iter().collect();
         let new_verts: HashSet<&V> = edgerefs.difference(&verts).cloned().map(|x| x).collect();
@@ -308,7 +310,8 @@ impl InteractionEnv {
                 let res = self.plan_anf(ctx, a)?;
                 assert_eq!(res.len(), 1);
                 let deps = self.mgr.mgr.flatten(res[0]);
-                self.mgr.graph.insert_edge(&deps, self.binding.clone());
+                debug!("print: {:?}", a);
+                // self.mgr.graph.insert_edge(&deps, self.binding.clone());
                 Ok(res[0])
             })
             .collect()
@@ -328,8 +331,16 @@ impl InteractionEnv {
             EPrj(_, i, a) => Ok(vec![self.plan_anf(ctx, a)?[*i]]),
             EFst(_, a) => Ok(vec![self.plan_anf(ctx, a)?[0]]),
             ESnd(_, a) => Ok(vec![self.plan_anf(ctx, a)?[1]]),
-            EProd(_, az) => self.plan_anfs(ctx, az),
+            EProd(_, az) => {
+                let span = tracing::span!(tracing::Level::DEBUG, "prod");
+                let _enter = span.enter();
+                self.plan_anfs(ctx, az)
+            }
             ELetIn(v, s, ebound, ebody) => {
+                let span = tracing::span!(tracing::Level::DEBUG, "let");
+                let _enter = span.enter();
+                debug!("{:?}", v);
+
                 let binding = match &self.binding {
                     Unbound | Let(_) => Let(v.clone()),
                     NamedSample(prv) | NamedSampleLet(prv, _) => {
@@ -359,6 +370,9 @@ impl InteractionEnv {
             EFlip(v, param) => Ok(vec![self.mgr.new_var(v.label, &self.binding)]),
             EObserve(_, a) => self.plan_anf(ctx, a),
             ESample(_, e) => {
+                let span = tracing::span!(tracing::Level::DEBUG, "sample");
+                let _enter = span.enter();
+
                 let initial_binding = self.binding.clone();
                 let binding = match &self.binding {
                     Let(prv) => NamedSample(prv.clone()),
@@ -386,6 +400,27 @@ pub fn pipeline(p: &crate::ProgramTyped) -> Result<IteractionGraph, CompileError
     let (p, vo, varmap, inv, mxlbl) = crate::annotate::pipeline(p)?;
     let mut env = InteractionEnv::default();
     env.plan(&p)
+}
+
+pub struct Rank(pub usize);
+pub fn order_cuts(g: &IteractionGraph) -> Vec<(Binding, Rank)> {
+    todo!()
+}
+pub fn apply_cuts(g: &IteractionGraph, cuts: &Vec<Binding>, p: &ProgramAnn) -> ProgramAnn {
+    todo!()
+}
+pub fn apply_cut(g: &IteractionGraph, cuts: &Binding, p: &ProgramAnn) -> ProgramAnn {
+    todo!()
+}
+pub fn bottom_up_traversal(p: &ProgramAnn) {
+    todo!()
+}
+
+pub fn rebind_expressions(g: &IteractionGraph) -> Vec<(Binding, Rank)> {
+    todo!("probably just skip sampling unbounded expressions for now")
+}
+pub fn tuple_samples(g: &IteractionGraph) -> Vec<(Binding, Rank)> {
+    todo!("important when we get multi-rooted WMC")
 }
 
 #[cfg(test)]
@@ -485,22 +520,25 @@ mod tests {
         assert_eq!(query, &HashSet::from([PlanPtr(0)]));
     }
 
-    pub fn test_interaction_todos() {
-        // <<< <<< <<< <<< <<< <<< <<< <<< <<< <<< progress
+    #[test]
+    pub fn test_interaction_shared_tuples_get_separated() {
         let shared_tuple = program!(lets![
            "x" ; b!()     ;= flip!(1/3);
-           "z" ; b!(B, B) ;= sample!(b!("x", "x"));
+           "y" ; b!()     ;= flip!(1/3);
+           "z" ; b!(B, B) ;= sample!(b!("x", "y"));
            ...? b!("z" ; b!(B, B)); b!(B, B)
         ]);
         let g = pipeline(&shared_tuple).unwrap();
-        assert_eq!(g.vertices.len(), 3);
-        assert_eq!(g.hyperedges.len(), 5, "edge for each line");
+        assert_eq!(g.vertices.len(), 2);
         for (edge, nvar) in &g.hyperedges {
             println!("nvar: {:?}", nvar);
             println!("edge: {:?}", edge);
         }
-        let query = &g.hyperedges.last().unwrap().0;
-        assert_eq!(query.len(), 3, "query depends on every variable above");
+        assert_eq!(g.hyperedges.len(), 4, "needs a tuple for each position");
+    }
+
+    #[test]
+    pub fn test_interaction_ite_sample() {
         let ite = program!(lets![
             "x" ; b!() ;= flip!(1/5);
             "y" ; b!() ;= ite!(
@@ -511,13 +549,19 @@ mod tests {
         ]);
         let g = pipeline(&ite).unwrap();
         assert_eq!(g.vertices.len(), 3);
-        assert_eq!(g.hyperedges.len(), 5, "edge for each line");
+        assert_eq!(g.hyperedges.len(), 4, "edge for each line");
         for (edge, nvar) in &g.hyperedges {
             println!("nvar: {:?}", nvar);
             println!("edge: {:?}", edge);
         }
         let query = &g.hyperedges.last().unwrap().0;
         assert_eq!(query.len(), 3, "query depends on every variable above");
+    }
+
+    #[test]
+    #[ignore]
+    // #[traced_test]
+    pub fn test_interaction_ite_nested_let_todos() {
         let ite_with_nested_lets = program!(lets![
             "x" ; b!() ;= flip!(2/3);
             "y" ; b!() ;= ite!(
@@ -540,6 +584,10 @@ mod tests {
         }
         let query = &g.hyperedges.last().unwrap().0;
         assert_eq!(query.len(), 3, "query depends on every variable above");
+    }
+
+    #[test]
+    pub fn test_interaction_2x2_triu() {
         let grid2x2_triu = program!(lets![
             "00" ; B!() ;= flip!(1/2);
             "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -547,14 +595,12 @@ mod tests {
             ...? b!("01", "10") ; B!()
         ]);
         let g = pipeline(&grid2x2_triu).unwrap();
-        assert_eq!(g.vertices.len(), 3);
+        assert_eq!(g.vertices.len(), 5);
         assert_eq!(g.hyperedges.len(), 5, "edge for each line");
-        for (edge, nvar) in &g.hyperedges {
-            println!("nvar: {:?}", nvar);
-            println!("edge: {:?}", edge);
-        }
-        let query = &g.hyperedges.last().unwrap().0;
-        assert_eq!(query.len(), 3, "query depends on every variable above");
+    }
+
+    #[test]
+    pub fn test_interaction_2x2_tril() {
         let grid2x2_tril = program!(lets![
             "01" ; B!() ;= flip!(1/3) ;
             "10" ; B!() ;= flip!(1/4) ;
@@ -566,14 +612,14 @@ mod tests {
             ...? b!("11") ; B!()
         ]);
         let g = pipeline(&grid2x2_tril).unwrap();
-        assert_eq!(g.vertices.len(), 3);
-        assert_eq!(g.hyperedges.len(), 5, "edge for each line");
-        for (edge, nvar) in &g.hyperedges {
-            println!("nvar: {:?}", nvar);
-            println!("edge: {:?}", edge);
-        }
+        assert_eq!(g.vertices.len(), 6);
+        assert_eq!(g.hyperedges.len(), 7, "edge for each var and full ITE");
         let query = &g.hyperedges.last().unwrap().0;
-        assert_eq!(query.len(), 3, "query depends on every variable above");
+        assert_eq!(query.len(), 6, "query depends on every variable above");
+    }
+
+    #[test]
+    pub fn test_interaction_2x2_full() {
         let grid2x2 = program!(lets![
             "00" ; B!() ;= flip!(1/2);
             "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -586,14 +632,14 @@ mod tests {
             ...? b!("11") ; B!()
         ]);
         let g = pipeline(&grid2x2).unwrap();
-        assert_eq!(g.vertices.len(), 3);
-        assert_eq!(g.hyperedges.len(), 5, "edge for each line");
-        for (edge, nvar) in &g.hyperedges {
-            println!("nvar: {:?}", nvar);
-            println!("edge: {:?}", edge);
-        }
+        assert_eq!(g.vertices.len(), 9);
+        assert_eq!(g.hyperedges.len(), 10, "vertex + ITE");
         let query = &g.hyperedges.last().unwrap().0;
-        assert_eq!(query.len(), 3, "query depends on every variable above");
+        assert_eq!(query.len(), 9, "query depends on every variable above");
+    }
+
+    #[test]
+    pub fn test_interaction_grid2x2_sampled() {
         let grid2x2_sampled = program!(lets![
             "00" ; B!() ;= flip!(1/2);
             "01_10" ; b!(B, B) ;= sample!(
@@ -612,13 +658,9 @@ mod tests {
             ...? b!("11") ; B!()
         ]);
         let g = pipeline(&grid2x2_sampled).unwrap();
-        assert_eq!(g.vertices.len(), 3);
-        assert_eq!(g.hyperedges.len(), 5, "edge for each line");
-        for (edge, nvar) in &g.hyperedges {
-            println!("nvar: {:?}", nvar);
-            println!("edge: {:?}", edge);
-        }
+        assert_eq!(g.vertices.len(), 9);
+        assert_eq!(g.hyperedges.len(), 10, "vertex + ITE");
         let query = &g.hyperedges.last().unwrap().0;
-        assert_eq!(query.len(), 3, "query depends on every variable above");
+        assert_eq!(query.len(), 9, "query depends on every variable above");
     }
 }
