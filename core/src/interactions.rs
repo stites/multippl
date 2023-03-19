@@ -140,6 +140,33 @@ where
         }
     }
 }
+fn dedupe_labeled_hashset_refs<'a, T: Hash + Eq, L: Hash + Eq + Clone>(
+    hss: Vec<(&'a HashSet<T>, &'a L)>,
+) -> Vec<(&'a HashSet<T>, &'a L)> {
+    let mut cache: HashMap<(L, usize), Vec<(&HashSet<T>, &L)>> = HashMap::new();
+    for (cur, lbl) in hss {
+        let len = cur.len(); // an incredibly stupid hashset for the time being
+        match cache.get_mut(&(lbl.clone(), len)) {
+            None => {
+                cache.insert((lbl.clone(), len), vec![(cur, lbl)]);
+            }
+            Some(cached_hss) => {
+                let mut add = true;
+                for (cached_hs, cached_label) in cached_hss.iter() {
+                    if cached_label == &lbl || cached_hs.symmetric_difference(cur).next().is_none()
+                    {
+                        add = false;
+                        break;
+                    }
+                }
+                if add {
+                    cached_hss.push((cur, lbl));
+                }
+            }
+        }
+    }
+    cache.into_values().flatten().collect()
+}
 
 impl<V, VL, EL> Hypergraph<V, VL, EL>
 where
@@ -168,6 +195,48 @@ where
     /// add a vertex to the hypergraph. Returns false if the vertex is already in the hypergraph
     pub fn insert_vertex(&mut self, v: V, l: VL) -> bool {
         self.vertices.insert((v, l))
+    }
+
+    pub fn edges_to_covers(
+        hyperedges: &Vec<(HashSet<V>, EL)>,
+    ) -> Vec<(HashSet<V>, Vec<(&HashSet<V>, &EL)>)> {
+        let mut overlaps: Vec<(HashSet<V>, Vec<(&HashSet<V>, &EL)>)> = vec![];
+        for (edge, label) in hyperedges.iter() {
+            let overlaps_for_edge: Vec<(usize, HashSet<V>, Vec<(&HashSet<V>, &EL)>)> = overlaps
+                .iter()
+                .enumerate()
+                .filter(|(_, (oedge, _))| !oedge.is_disjoint(edge))
+                .map(|(a, (b, c))| (a, b.clone(), c.clone()))
+                .collect_vec();
+
+            if overlaps_for_edge.is_empty() {
+                overlaps.push((edge.clone(), vec![(edge, label)]))
+            } else {
+                // update a cover
+                let mut new_cover = edge.clone();
+                let mut new_cover_edges = vec![(edge, label)];
+                let mut diff = 0;
+                for (cover_ix, cover, edges) in overlaps_for_edge {
+                    new_cover.extend(cover.clone());
+                    new_cover_edges.extend(edges);
+                    overlaps.remove(cover_ix - diff);
+                    diff += 1;
+                }
+                let nonempty_new_cover_edges = new_cover_edges
+                    .into_iter()
+                    .filter(|s| !s.0.is_empty())
+                    .collect();
+                overlaps.push((
+                    new_cover,
+                    dedupe_labeled_hashset_refs(nonempty_new_cover_edges),
+                ));
+            }
+        }
+        overlaps
+    }
+
+    pub fn covers(&self) -> Vec<(HashSet<V>, Vec<(&HashSet<V>, &EL)>)> {
+        Self::edges_to_covers(&self.hyperedges)
     }
 }
 
