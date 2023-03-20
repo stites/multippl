@@ -13,7 +13,6 @@ pub mod grids;
 pub mod inference;
 pub mod typecheck;
 
-mod analysis;
 mod interactions;
 // mod analysis2;
 mod annotate;
@@ -63,7 +62,7 @@ impl Options {
     }
 }
 
-use crate::analysis::{Analysis, AnalysisEnv};
+// use crate::analysis::{Analysis, AnalysisEnv};
 use crate::annotate::{InvMap, LabelEnv};
 use crate::compile::{compile, CompileError, Compiled, Env, Mgr, Output, Result};
 use crate::typecheck::{
@@ -84,7 +83,7 @@ pub fn run_h(p: &ProgramTyped, mgr: &mut Mgr) -> Result<Output> {
 
 pub fn runner(p: &ProgramTyped, opt: &Options) -> Result<(Mgr, Compiled)> {
     let mut mgr = make_mgr(p);
-    let (c, _, _) = runner_h(p, &mut mgr, opt)?;
+    let (c, _) = runner_h(p, &mut mgr, opt)?;
     Ok((mgr, c))
 }
 
@@ -104,30 +103,27 @@ pub fn make_mgr(p: &ProgramTyped) -> Mgr {
     }
 }
 
-pub fn runner_h(
-    p: &ProgramTyped,
-    mgr: &mut Mgr,
-    opt: &Options,
-) -> Result<(Compiled, InvMap, Analysis)> {
+pub fn runner_h(p: &ProgramTyped, mgr: &mut Mgr, opt: &Options) -> Result<(Compiled, InvMap)> {
+    // , Analysis)> {
     let p = typecheck(p)?;
     let mut senv = SymEnv::default();
     let p = senv.uniquify(&p)?;
     let mut lenv = LabelEnv::new();
     let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
 
-    let mut aenv = AnalysisEnv::new(&varmap);
-    let (p, ab) = aenv.decorate(&p, opt.opt)?;
-    let ig = aenv.interaction_graph()?;
+    // let mut aenv = AnalysisEnv::new(&varmap);
+    // let (p, ab) = aenv.decorate(&p, opt.opt)?;
+    // let ig = aenv.interaction_graph()?;
 
     let mut rng = opt.rng();
     let orng = if opt.debug { None } else { Some(&mut rng) };
-    let mut env = Env::new(mgr, orng, opt.opt, inv.clone(), ab.clone()); // technically don't need this if I use the decorated vars in a clever way
+    let mut env = Env::new(mgr, orng, opt.opt, inv.clone()); // , ab.clone()); // technically don't need this if I use the decorated vars in a clever way
 
     env.varmap = Some(varmap);
 
     let c = compile(&mut env, &p)?;
     tracing::debug!("hurray!");
-    Ok((c, inv, ab))
+    Ok((c, inv)) // , ab))
 }
 
 #[cfg(test)]

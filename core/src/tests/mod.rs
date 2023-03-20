@@ -52,105 +52,105 @@ pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &Pr
         });
 }
 
-#[test]
-#[ignore]
-#[traced_test]
-fn optimization_eliminates_variables() {
-    let opt = Options {
-        opt: true,
-        debug: false,
-        seed: Some(3),
-    };
-    let mk = |ret: ExprTyped| {
-        Program::Body(lets![
-            "x" ; b!() ;= flip!(1/3);
-            "y" ; b!() ;= sample!(
-                lets![
-                    "x0" ; b!() ;= flip!(1/5);
-                    ...? b!("x0" || "x") ; b!()
-                ]);
-           "_" ; b!() ;= observe!(b!("x" || "y")); // is this a problem?
-           ...? ret ; b!()
+// #[test]
+// #[ignore]
+// #[traced_test]
+// fn optimization_eliminates_variables() {
+//     let opt = Options {
+//         opt: true,
+//         debug: false,
+//         seed: Some(3),
+//     };
+//     let mk = |ret: ExprTyped| {
+//         Program::Body(lets![
+//             "x" ; b!() ;= flip!(1/3);
+//             "y" ; b!() ;= sample!(
+//                 lets![
+//                     "x0" ; b!() ;= flip!(1/5);
+//                     ...? b!("x0" || "x") ; b!()
+//                 ]);
+//            "_" ; b!() ;= observe!(b!("x" || "y")); // is this a problem?
+//            ...? ret ; b!()
 
-        ])
-    };
-    // (|p| check_invariant("free2/x*y ", None, None, &p))(mk(q!("x" x "y")));
-    // (|p| debug_approx("free2/x*y", vec![0.714285714], &p, 5))(mk(b!("x")));
-    let px = mk(var!("x"));
-    let py = mk(var!("y"));
+//         ])
+//     };
+//     // (|p| check_invariant("free2/x*y ", None, None, &p))(mk(q!("x" x "y")));
+//     // (|p| debug_approx("free2/x*y", vec![0.714285714], &p, 5))(mk(b!("x")));
+//     let px = mk(var!("x"));
+//     let py = mk(var!("y"));
 
-    let mut mgr = crate::make_mgr(&py);
+//     let mut mgr = crate::make_mgr(&py);
 
-    // let (approx, _) = importance_weighting_h(
-    //     1,
-    //     &py,
-    //     &opt,
-    // );
-    let (cs, inv, sis) = crate::runner_h(&px, &mut mgr, &opt).unwrap();
-    cs.into_iter().for_each(|c| {
-        assert_eq!(c.samples_opt.len(), 1);
-        let (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
-        debug!("{:?}", ps);
-        debug!("{:#?}", stats);
-    });
-    let mk = Program::Body(lets![
-        "x" ; b!() ;= flip!(1/3);
-        "y" ; b!() ;= sample!(flip!(1/5));
-       ...? var!("y") ; b!()
+//     // let (approx, _) = importance_weighting_h(
+//     //     1,
+//     //     &py,
+//     //     &opt,
+//     // );
+//     let (cs, inv, sis) = crate::runner_h(&px, &mut mgr, &opt).unwrap();
+//     cs.into_iter().for_each(|c| {
+//         assert_eq!(c.samples_opt.len(), 1);
+//         let (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
+//         debug!("{:?}", ps);
+//         debug!("{:#?}", stats);
+//     });
+//     let mk = Program::Body(lets![
+//         "x" ; b!() ;= flip!(1/3);
+//         "y" ; b!() ;= sample!(flip!(1/5));
+//        ...? var!("y") ; b!()
 
-    ]);
-    let mut mgr = crate::make_mgr(&mk);
-    let (cs, inv, sis) = crate::runner_h(&mk, &mut mgr, &opt).unwrap();
-    cs.into_iter().for_each(|c| {
-        assert_eq!(c.samples_opt.len(), 1);
-        let (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
-        debug!("{:?}", ps);
-        debug!("{:#?}", stats);
-    });
+//     ]);
+//     let mut mgr = crate::make_mgr(&mk);
+//     let (cs, inv, sis) = crate::runner_h(&mk, &mut mgr, &opt).unwrap();
+//     cs.into_iter().for_each(|c| {
+//         assert_eq!(c.samples_opt.len(), 1);
+//         let (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
+//         debug!("{:?}", ps);
+//         debug!("{:#?}", stats);
+//     });
 
-    // =======================  above is correct ================== //
-    let mk = Program::Body(lets![
-        "x" ; b!() ;= flip!(1/3);
-        "tpl" ; b!() ;= sample!(
-                lets![
-                    "t0" ; b!() ;= flip!(1/2);
-                    "t1" ; b!() ;= flip!(1/2);
-                    ...? b!("t0", "t1") ; b!()
-                ]);
-        "fin" ; b!() ;= fst!("tpl");
-       ...? var!("fin") ; b!()
+//     // =======================  above is correct ================== //
+//     let mk = Program::Body(lets![
+//         "x" ; b!() ;= flip!(1/3);
+//         "tpl" ; b!() ;= sample!(
+//                 lets![
+//                     "t0" ; b!() ;= flip!(1/2);
+//                     "t1" ; b!() ;= flip!(1/2);
+//                     ...? b!("t0", "t1") ; b!()
+//                 ]);
+//         "fin" ; b!() ;= fst!("tpl");
+//        ...? var!("fin") ; b!()
 
-    ]);
-    let mut mgr = crate::make_mgr(&mk);
-    let (cs, inv, sis) = crate::runner_h(&mk, &mut mgr, &opt).unwrap();
-    cs.into_iter().for_each(|c| {
-        assert_eq!(c.samples_opt.len(), 2);
-        let (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
-        debug!("{:?}", ps);
-        debug!("{:#?}", stats);
-    });
-    // ===================  below is incorrect ================== //
-    use crate::grids::*;
-    let mk_probability = |_ix, _p| Probability::new(0.5);
-    let schema = GridSchema::new_from_fn(
-        2,
-        true,
-        None,
-        None,
-        Default::default(),
-        None,
-        &mk_probability,
-    );
-    let grid = make::grid(schema);
-    let mut mgr = crate::make_mgr(&grid);
-    let (cs, inv, sis) = crate::runner_h(&grid, &mut mgr, &opt).unwrap();
-    cs.into_iter().for_each(|c| {
-        let (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
-        debug!("{:?}", ps);
-        debug!("{:#?}", stats);
-        todo!();
-    });
-}
+//     ]);
+//     let mut mgr = crate::make_mgr(&mk);
+//     let (cs, inv) = crate::runner_h(&mk, &mut mgr, &opt).unwrap();
+//     cs.into_iter().for_each(|c| {
+//         assert_eq!(c.samples_opt.len(), 2);
+//         let (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
+//         debug!("{:?}", ps);
+//         debug!("{:#?}", stats);
+//     });
+//     // ===================  below is incorrect ================== //
+//     use crate::grids::*;
+//     let mk_probability = |_ix, _p| Probability::new(0.5);
+//     let schema = GridSchema::new_from_fn(
+//         2,
+//         true,
+//         None,
+//         None,
+//         Default::default(),
+//         None,
+//         &mk_probability,
+//     );
+//     let grid = make::grid(schema);
+//     let mut mgr = crate::make_mgr(&grid);
+//     let (cs, inv, sis) = crate::runner_h(&grid, &mut mgr, &opt).unwrap();
+//     cs.into_iter().for_each(|c| {
+//         let (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
+//         debug!("{:?}", ps);
+//         debug!("{:#?}", stats);
+//         todo!();
+//     });
+// }
 
 #[test]
 // #[traced_test]

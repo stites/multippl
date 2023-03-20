@@ -4,7 +4,7 @@ pub mod errors;
 pub mod importance;
 pub mod weighting;
 
-use crate::analysis::grammar::*;
+// use crate::analysis::grammar::*;
 use crate::annotate::grammar::*;
 use crate::grammar::*;
 use crate::render::*;
@@ -91,23 +91,6 @@ pub mod grammar {
 }
 use grammar::*;
 
-#[derive(Clone, Debug)]
-pub enum SamplingContext {
-    Unset,
-    Set(DecoratedVar),
-    Sampling(DecoratedVar),
-    SamplingWithLet(DecoratedVar, DecoratedVar),
-}
-impl SamplingContext {
-    pub fn as_option(&self) -> Option<DecoratedVar> {
-        use SamplingContext::*;
-        match self {
-            Unset => None,
-            Set(v) | Sampling(v) => Some(v.clone()),
-            SamplingWithLet(v, _) => Some(v.clone()),
-        }
-    }
-}
 pub struct Env<'a> {
     pub mgr: &'a mut BddManager<AllTable<BddPtr>>,
     pub rng: Option<&'a mut StdRng>, // None implies "debug mode"
@@ -117,10 +100,8 @@ pub struct Env<'a> {
     pub max_label: u64,
 
     // in progress
-    pub sampling_context: SamplingContext,
     pub sample_pruning: bool,
     pub inv: HashMap<NamedVar, HashSet<BddVar>>,
-    pub above_below: HashMap<Var, (HashSet<Var>, HashSet<Var>)>,
 
     // static
     pub varmap: Option<HashMap<UniqueId, Var>>,
@@ -134,7 +115,6 @@ impl<'a> Env<'a> {
         rng: Option<&'a mut StdRng>,
         sample_pruning: bool,
         inv: HashMap<NamedVar, HashSet<BddVar>>,
-        above_below: HashMap<Var, (HashSet<Var>, HashSet<Var>)>,
     ) -> Env<'a> {
         Env {
             order: mgr.get_order().clone(),
@@ -144,8 +124,6 @@ impl<'a> Env<'a> {
             inv,
             mgr,
             rng,
-            sampling_context: SamplingContext::Unset,
-            above_below,
             sample_pruning,
         }
     }
@@ -153,8 +131,8 @@ impl<'a> Env<'a> {
     pub fn eval_anf_binop(
         &mut self,
         ctx: &Context,
-        bl: &AnfAnlys,
-        br: &AnfAnlys,
+        bl: &AnfAnn,
+        br: &AnfAnn,
         op: &dyn Fn(&mut Mgr, BddPtr, BddPtr) -> BddPtr,
     ) -> Result<(AnfTr, AnfTr, Output)> {
         let (l, ltr) = self.eval_anf(ctx, bl)?;
@@ -176,7 +154,7 @@ impl<'a> Env<'a> {
         }
     }
 
-    pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnlys) -> Result<(Output, AnfTr)> {
+    pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnn) -> Result<(Output, AnfTr)> {
         use Anf::*;
         match a {
             AVar(d, s) => match ctx.substitutions.get(&d.id()) {
@@ -216,7 +194,7 @@ impl<'a> Env<'a> {
             None => Compiled::Output(c),
         })
     }
-    pub fn eval_expr(&mut self, ctx: &Context, e: &ExprAnlys) -> Result<(Compiled, ExprTr)> {
+    pub fn eval_expr(&mut self, ctx: &Context, e: &ExprAnn) -> Result<(Compiled, ExprTr)> {
         use Expr::*;
         match e {
             EAnf(_, a) => {
@@ -273,7 +251,6 @@ impl<'a> Env<'a> {
                     dists,
                     accept: ctx.accept,
                     samples: ctx.samples,
-                    samples_opt: ctx.samples_opt.clone(),
                     weightmap: ctx.weightmap.clone(),
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0); flen],
@@ -285,22 +262,8 @@ impl<'a> Env<'a> {
                 Ok((c.clone(), EProd(Box::new(c), atrs)))
             }
             ELetIn(d, s, ebound, ebody) => {
-                use SamplingContext::*;
                 let let_in_span = tracing::span!(Level::DEBUG, "let", var = s);
                 let _enter = let_in_span.enter();
-                match &self.sampling_context {
-                    Unset | Set(_) => {
-                        self.sampling_context = Set(DecoratedVar::Named(d.clone()));
-                    }
-                    Sampling(v) => {
-                        self.sampling_context =
-                            SamplingWithLet(v.clone(), DecoratedVar::Named(d.clone()));
-                    }
-                    SamplingWithLet(v, _) => {
-                        self.sampling_context =
-                            SamplingWithLet(v.clone(), DecoratedVar::Named(d.clone()));
-                    }
-                }
 
                 // let lbl = d.var.label;
                 // if we produce multiple worlds, we must account for them all
@@ -321,7 +284,7 @@ impl<'a> Env<'a> {
                         let mut newctx = Context::from_compiled(&bound);
                         newctx
                             .substitutions
-                            .insert(d.id(), (bound.dists.clone(), Var::Named(d.var.clone())));
+                            .insert(d.id(), (bound.dists.clone(), Var::Named(d.clone())));
 
                         let (bodies, bodiestr) = self.eval_expr(&newctx, ebody)?;
                         let cbodies = bodies
@@ -337,15 +300,11 @@ impl<'a> Env<'a> {
 
                                 let accept = self.mgr.and(body.accept, ctx.accept);
                                 let samples;
-                                let samples_opt;
 
                                 if self.sample_pruning {
                                     samples = ctx.samples;
-                                    samples_opt = body.samples_opt;
                                 } else {
                                     samples = self.mgr.and(body.samples, ctx.samples);
-                                    // TODO see if I need to include both body and ctx samples.
-                                    samples_opt = body.samples_opt.clone();
                                 }
                                 let probabilities =
                                     izip!(bound.probabilities.clone(), body.probabilities)
@@ -358,7 +317,6 @@ impl<'a> Env<'a> {
                                     dists: body.dists,
                                     accept,
                                     samples,
-                                    samples_opt,
                                     substitutions: body.substitutions.clone(),
                                     weightmap: body.weightmap,
                                     probabilities,
@@ -411,15 +369,13 @@ impl<'a> Env<'a> {
                 if self.sample_pruning {
                     let mut wmc_opt_h = |pred_dist| {
                         Probability::new(
-                            crate::inference::calculate_wmc_prob_opt(
+                            crate::inference::calculate_wmc_prob(
                                 self.mgr,
                                 &wmc_params,
                                 &var_order,
                                 pred_dist,
                                 ctx.accept,
-                                &ctx.samples_opt,
-                                &self.inv,
-                                &self.above_below,
+                                BddPtr::PtrTrue, // TODO &samples
                             )
                             .0,
                         )
@@ -481,15 +437,11 @@ impl<'a> Env<'a> {
                                   })
                                   .collect_vec();
 
-                            let samples; let samples_opt;
+                            let samples;
                             if self.sample_pruning {
                                 samples = truthy.samples;
-                                samples_opt = falsey.samples_opt;
                             } else {
                                 samples = self.mgr.and(truthy.samples, falsey.samples);
-                                let mut samples_opt_m = truthy.samples_opt.clone();
-                                samples_opt_m.extend(falsey.samples_opt.clone());
-                                samples_opt = samples_opt_m;
                             }
 
                             let accept_l = self.mgr.and(pred_dist, truthy.accept);
@@ -519,7 +471,6 @@ impl<'a> Env<'a> {
                                   dists,
                                   accept,
                                   samples,
-                                  samples_opt,
                                   weightmap,
                                   substitutions,
                                   probabilities,
@@ -552,12 +503,11 @@ impl<'a> Env<'a> {
                 let _enter = span.enter();
 
                 let mut weightmap = ctx.weightmap.clone();
-                weightmap.insert(d.var.label, *param);
+                weightmap.insert(d.label, *param);
                 let o = Output {
-                    dists: vec![self.mgr.var(d.var.label, true)],
+                    dists: vec![self.mgr.var(d.label, true)],
                     accept: ctx.accept,
                     samples: ctx.samples,
-                    samples_opt: ctx.samples_opt.clone(),
                     weightmap,
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0)],
@@ -619,7 +569,6 @@ impl<'a> Env<'a> {
                     dists: vec![BddPtr::PtrTrue],
                     accept: dist,
                     samples: ctx.samples,
-                    samples_opt: ctx.samples_opt.clone(),
                     weightmap: ctx.weightmap.clone(),
                     substitutions: ctx.substitutions.clone(),
                     probabilities: vec![Probability::new(1.0)],
@@ -630,19 +579,8 @@ impl<'a> Env<'a> {
                 Ok((c.clone(), EObserve(Box::new(c), Box::new(atr))))
             }
             ESample(_, e) => {
-                use SamplingContext::*;
                 let span = tracing::span!(tracing::Level::DEBUG, "sample");
                 let _enter = span.enter();
-
-                match &self.sampling_context {
-                    Sampling(_) | Unset => {}
-                    Set(v) => {
-                        self.sampling_context = Sampling(v.clone());
-                    }
-                    SamplingWithLet(ctx, lastlet) => {
-                        self.sampling_context = Sampling(lastlet.clone());
-                    }
-                }
 
                 let (comp, etr) = self.eval_expr(ctx, e)?;
                 let c: Compiled = comp
@@ -677,9 +615,7 @@ impl<'a> Env<'a> {
                                 tracing::span!(tracing::Level::DEBUG, "", s)
                             };
                             let _enter = span.enter();
-                            let sampling_context = self.sampling_context.clone();
                             let mut samples = comp.samples;
-                            let mut samples_opt = comp.samples_opt.clone();
                             let (mut qs, mut dists) = (vec![], vec![]);
                             for dist in comp.dists.iter() {
                                 let theta_q;
@@ -727,11 +663,6 @@ impl<'a> Env<'a> {
                                     // with rsdd's fold
                                     let dist_holds = self.mgr.iff(*dist, sampled_value);
                                     samples = self.mgr.and(samples, dist_holds);
-
-                                    let dv = sampling_context.as_option();
-                                    // TODO technically we have static knowledge of whether or
-                                    // not we need to include a sample.
-                                    samples_opt.insert(*dist, (dv, sample));
                                 }
                             }
                             debug!("final dists:   {}", renderbdds(&dists));
@@ -742,7 +673,6 @@ impl<'a> Env<'a> {
                                 dists,
                                 accept,
                                 samples,
-                                samples_opt: samples_opt.clone(),
                                 weightmap: comp.weightmap.clone(),
                                 // any dangling references will be treated as
                                 // constant and, thus, ignored -- information
@@ -770,7 +700,7 @@ impl<'a> Env<'a> {
         }
     }
 }
-pub fn debug(env: &mut Env, p: &ProgramAnlys) -> Result<(Compiled, ExprTr)> {
+pub fn debug(env: &mut Env, p: &ProgramAnn) -> Result<(Compiled, ExprTr)> {
     match p {
         Program::Body(e) => {
             debug!("========================================================");
@@ -779,6 +709,6 @@ pub fn debug(env: &mut Env, p: &ProgramAnlys) -> Result<(Compiled, ExprTr)> {
     }
 }
 
-pub fn compile(env: &mut Env, p: &ProgramAnlys) -> Result<Compiled> {
+pub fn compile(env: &mut Env, p: &ProgramAnn) -> Result<Compiled> {
     Ok(debug(env, p)?.0)
 }
