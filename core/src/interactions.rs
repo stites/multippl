@@ -545,19 +545,15 @@ pub fn order_cuts(g: &IteractionGraph) -> Vec<(Binding, Rank)> {
     }
     ranking
 }
-pub fn apply_cuts(cuts: &Vec<(Binding, Rank)>, n: usize, p: &ProgramAnn) -> ProgramAnn {
-    let mut prg = p.clone();
-    for (b, _) in &cuts[0..n] {
-        prg = apply_cut(b, &prg);
-    }
-    prg
-}
-pub fn apply_cut(cuts: &Binding, p: &ProgramAnn) -> ProgramAnn {
-    todo!()
-}
-
-pub fn bottom_up_traversal(p: &ProgramAnn) {
-    todo!()
+pub fn top_k_cuts(cuts: &Vec<(Binding, Rank)>, n: usize) -> Vec<Binding> {
+    assert!(
+        n - 1 < cuts.len(),
+        "requested {} cuts, but only {} possible cut{} found",
+        n,
+        cuts.len(),
+        String::from(if cuts.len() == 1 { "" } else { "s" })
+    );
+    cuts.iter().map(|(b, r)| b.clone()).take(n).collect()
 }
 fn bottom_up_anf_h(a: &AnfAnn) -> Option<()> {
     use crate::grammar::Anf::*;
