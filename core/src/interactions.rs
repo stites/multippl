@@ -224,8 +224,16 @@ where
             .map(|(edge, l)| (edge, l, self.edge_cut_rank(edge, l)))
             .collect()
     }
+
     pub fn edge_cut_rank(&self, edge: &HashSet<V>, label: &EL) -> Rank {
-        Rank(0)
+        let nextedges = self
+            .hyperedges
+            .iter()
+            .filter(|(e, l)| l != label && e != edge)
+            .cloned()
+            .collect_vec();
+        let newcovers = Self::edges_to_covers(&nextedges);
+        Rank(newcovers.len())
     }
 
     pub fn edges_to_covers(
