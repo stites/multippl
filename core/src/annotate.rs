@@ -292,7 +292,7 @@ impl LabelEnv {
 }
 
 pub fn pipeline(
-    p: &crate::ProgramTyped,
+    p: &crate::ProgramInferable,
 ) -> Result<
     (
         ProgramAnn,

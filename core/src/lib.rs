@@ -14,6 +14,7 @@ pub mod inference;
 pub mod typecheck;
 
 mod interactions;
+mod typeinf;
 // mod analysis2;
 mod annotate;
 mod parser;
@@ -69,26 +70,29 @@ use crate::typecheck::{
     grammar::{ExprTyped, ProgramTyped},
     typecheck,
 };
+use crate::typeinf::grammar::ProgramInferable;
+use crate::typeinf::typeinference;
 use crate::uniquify::SymEnv;
 use rand::rngs::StdRng;
 
-pub fn run(p: &ProgramTyped) -> Result<(Mgr, Output)> {
+pub fn run(p: &ProgramInferable) -> Result<(Mgr, Output)> {
     let (m, c) = runner(p, &Default::default())?;
     Ok((m, c.as_output().unwrap()))
 }
-pub fn run_h(p: &ProgramTyped, mgr: &mut Mgr) -> Result<Output> {
+pub fn run_h(p: &ProgramInferable, mgr: &mut Mgr) -> Result<Output> {
     let c = runner_h(p, mgr, &Default::default())?;
     Ok(c.0.as_output().unwrap())
 }
 
-pub fn runner(p: &ProgramTyped, opt: &Options) -> Result<(Mgr, Compiled)> {
+pub fn runner(p: &ProgramInferable, opt: &Options) -> Result<(Mgr, Compiled)> {
     let mut mgr = make_mgr(p);
     let (c, _) = runner_h(p, &mut mgr, opt)?;
     Ok((mgr, c))
 }
 
-pub fn make_mgr_h(p: &ProgramTyped) -> Result<Mgr> {
-    let p = typecheck(p)?;
+pub fn make_mgr_h(p: &ProgramInferable) -> Result<Mgr> {
+    let p = typeinference(p)?;
+    let p = typecheck(&p)?;
     let mut senv = SymEnv::default();
     let p = senv.uniquify(&p)?;
     let mut lenv = LabelEnv::new();
@@ -96,16 +100,17 @@ pub fn make_mgr_h(p: &ProgramTyped) -> Result<Mgr> {
 
     Ok(Mgr::new_default_order(mxlbl as usize))
 }
-pub fn make_mgr(p: &ProgramTyped) -> Mgr {
+pub fn make_mgr(p: &ProgramInferable) -> Mgr {
     match make_mgr_h(p) {
         Ok(m) => m,
         Err(e) => panic!("{}", e),
     }
 }
 
-pub fn runner_h(p: &ProgramTyped, mgr: &mut Mgr, opt: &Options) -> Result<(Compiled, InvMap)> {
+pub fn runner_h(p: &ProgramInferable, mgr: &mut Mgr, opt: &Options) -> Result<(Compiled, InvMap)> {
     // , Analysis)> {
-    let p = typecheck(p)?;
+    let p = typeinference(p)?;
+    let p = typecheck(&p)?;
     let mut senv = SymEnv::default();
     let p = senv.uniquify(&p)?;
     let mut lenv = LabelEnv::new();

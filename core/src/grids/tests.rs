@@ -62,7 +62,7 @@ macro_rules! pmap {
         probmap
     }};
 }
-pub fn full_2x2_query() -> ExprTyped {
+pub fn full_2x2_query() -> ExprInferable {
     b!("00", "01", "10", "11")
 }
 
@@ -146,12 +146,12 @@ fn test_make_2x2_tril() {
         make::choose_with_two_parents(&mut schema, ix(1, 1), (ix(0, 1), ix(1, 0)), query.clone());
     assert_eq!(prg, flip11);
     let expected = lets![
-        "11" ; B!() ;=
+        "11"  ;=
             ite!(( b!((  b!(@anf "01")) && (  b!(@anf "10"))) ) ? ( flip!(1/7) ) : (
             ite!(( b!((  b!(@anf "01")) && (not!("10"))) ) ? ( flip!(1/9) ) : (
             ite!(( b!((  not!("01")) && (  b!(@anf "10"))) ) ? ( flip!(1/8) ) : (
                                                       flip!(1/11) ))))));
-       ...? query.clone() ; B!()
+       ...? query.clone()
     ];
     assert_eq!(prg, expected);
 }
@@ -183,9 +183,9 @@ fn test_make_2x2_diag() {
         vec![ix(0, 1), ix(1, 0)],
     );
     let expected = lets![
-        "10" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
-        "01" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-       ...? query.clone() ; B!()
+        "10"  ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
+        "01"  ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+       ...? query.clone()
     ];
     assert_eq!(prg, expected);
 
@@ -202,14 +202,14 @@ fn test_make_2x2_diag() {
     assert_eq!(seen, HashSet::from([ix(0, 1), ix(1, 0), ix(1, 1)]));
     assert_eq!(next_triu, HashSet::from([ix(0, 0)]));
     let expected = lets![
-        "diag" ; B!() ;= sample!(lets![
-            "10" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
-            "01" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-            ...? b!("01", "10") ; B!()
+        "diag"  ;= sample!(lets![
+            "10"  ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
+            "01"  ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+            ...? b!("01", "10")
             ]);
-       "01" ; B!() ;= EPrj(b!(), 0, Box::new(b!(@anf "diag")));
-       "10" ; B!() ;= EPrj(b!(), 1, Box::new(b!(@anf "diag")));
-       ...? query.clone() ; B!()
+       "01"  ;= EPrj(None, 0, Box::new(b!(@anf "diag")));
+       "10"  ;= EPrj(None, 1, Box::new(b!(@anf "diag")));
+       ...? query.clone()
     ];
     assert_eq!(prg, expected);
 }
@@ -224,15 +224,15 @@ fn test_grid_2x2_compiles() {
     let grid = make::grid(schema);
 
     let expected = program!(lets![
-        "00" ; B!() ;= flip!(1/2);
-        "10" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
-        "01" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-        "11" ; B!() ;=
+        "00"  ;= flip!(1/2);
+        "10"  ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
+        "01"  ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+        "11"  ;=
             ite!(( b!((  b!(@anf "01")) && (  b!(@anf "10"))) ) ? ( flip!(1/7) ) : (
             ite!(( b!((  b!(@anf "01")) && (not!("10"))) ) ? ( flip!(1/9) ) : (
             ite!(( b!((  not!("01")) && (  b!(@anf "10"))) ) ? ( flip!(1/8) ) : (
                                                                  flip!(1/11) ))))));
-        ...? query.clone() ; B!()
+        ...? query.clone()
     ]);
 
     println!("{:?}", grid);
@@ -250,37 +250,37 @@ fn test_grid_2x2_compiles() {
     let grid = make::grid(schema);
 
     let expected = program!(lets![
-        "00" ; B!() ;= flip!(1/2);
-        "diag" ; B!() ;= sample!(lets![
-            "10" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
-            "01" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-            ...? b!("01", "10") ; B!()
+        "00"  ;= flip!(1/2);
+        "diag"  ;= sample!(lets![
+            "10"  ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
+            "01"  ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+            ...? b!("01", "10")
         ]);
-        "01" ; B!() ;= EPrj(b!(), 0, Box::new(b!(@anf "diag")));
-        "10" ; B!() ;= EPrj(b!(), 1, Box::new(b!(@anf "diag")));
-        "11" ; B!() ;=
+        "01"  ;= EPrj(None, 0, Box::new(b!(@anf "diag")));
+        "10"  ;= EPrj(None, 1, Box::new(b!(@anf "diag")));
+        "11"  ;=
             ite!(( b!((  b!(@anf "01")) && (  b!(@anf "10"))) ) ? ( flip!(1/7) ) : (
             ite!(( b!((  b!(@anf "01")) && (not!("10"))) ) ? ( flip!(1/9) ) : (
             ite!(( b!((  not!("01")) && (  b!(@anf "10"))) ) ? ( flip!(1/8) ) : (
                                                       flip!(1/11) ))))));
-        ...? query.clone() ; B!()
+        ...? query.clone()
     ]);
     assert_eq!(grid, expected);
 }
 
 #[test]
 fn test_grid2x2_inference() {
-    let mk = |ret: ExprTyped| {
+    let mk = |ret: ExprInferable| {
         Program::Body(lets![
-            "00" ; B!() ;= flip!(1/2);
-            "01" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-            "10" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
-            "11" ; B!() ;=
+            "00"  ;= flip!(1/2);
+            "01"  ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+            "10"  ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
+            "11"  ;=
             ite!(( b!((  b!(@anf "01")) && (  b!(@anf "10"))) ) ? ( flip!(1/7) ) : (
             ite!(( b!((  b!(@anf "01")) && (not!("10"))) ) ? ( flip!(1/9) ) : (
             ite!(( b!((  not!("01")) && (  b!(@anf "10"))) ) ? ( flip!(1/8) ) : (
                                                       flip!(1/11) ))))));
-            ...? ret ; B!()
+            ...? ret
         ])
     };
     crate::tests::check_exact1("grid2x2/3/00", 1.0 / 2.0, &mk(b!("00")));
@@ -360,7 +360,7 @@ pub fn make_3x3_pmap() -> HashMap<(Ix, Parents<bool>), Probability> {
         9 / 11 @ pkey!((2 1 false, 1 2 false) => 2 2)
     ]
 }
-pub fn full_3x3_query() -> ExprTyped {
+pub fn full_3x3_query() -> ExprInferable {
     b!("00", "01", "10", "02", "20", "11", "12", "21", "22")
 }
 
@@ -434,24 +434,24 @@ fn test_make_3x3_tril() {
     assert_eq!(seen, HashSet::from([ix(2, 2), ix(2, 1), ix(1, 2)]));
     assert_eq!(next_diag, HashSet::from([ix(0, 2), ix(1, 1), ix(2, 0)]));
     let expected = lets![
-            "21" ; B!() ;=
+            "21"  ;=
                 ite!(( b!((  b!(@anf "11")) && (  b!(@anf "20"))) ) ? ( flip!(2/7) ) : (
                 ite!(( b!((  b!(@anf "11")) && (not!("20"))) ) ? ( flip!(2/9) ) : (
                 ite!(( b!((  not!("11")) && (  b!(@anf "20"))) ) ? ( flip!(2/8) ) : (
                                                           flip!(2/11) ))))));
 
-            "12" ; B!() ;=
+            "12"  ;=
                 ite!(( b!((  b!(@anf "02")) && (  b!(@anf "11"))) ) ? ( flip!(6/7) ) : (
                 ite!(( b!((  b!(@anf "02")) && (not!("11"))) ) ? ( flip!(6/9) ) : (
                 ite!(( b!((  not!("02")) && (  b!(@anf "11"))) ) ? ( flip!(6/8) ) : (
                                                           flip!(6/11) ))))));
 
-            "22" ; B!() ;=
+            "22"  ;=
                 ite!(( b!((  b!(@anf "12")) && (  b!(@anf "21"))) ) ? ( flip!(3/7) ) : (
                 ite!(( b!((  b!(@anf "12")) && (not!("21"))) ) ? ( flip!(8/9) ) : (
                 ite!(( b!((  not!("12")) && (  b!(@anf "21"))) ) ? ( flip!(3/8) ) : (
                                                           flip!(9/11) ))))));
-            ...? query.clone() ; B!()
+            ...? query.clone()
     ];
     assert_eq!(prg, expected);
 }
@@ -480,16 +480,16 @@ fn test_make_3x3_diag() {
     );
     assert_eq!(next_triu, HashSet::from([ix(0, 1), ix(1, 0)]));
     let expected = lets![
-        "20" ; B!() ;= ite!( ( b!(@anf "10") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
+        "20"  ;= ite!( ( b!(@anf "10") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
 
-        "11" ; B!() ;=
+        "11"  ;=
             ite!(( b!((  b!(@anf "01")) && (  b!(@anf "10"))) ) ? ( flip!(1/7) ) : (
             ite!(( b!((  b!(@anf "01")) && (not!("10"))) ) ? ( flip!(1/9) ) : (
             ite!(( b!((  not!("01")) && (  b!(@anf "10"))) ) ? ( flip!(1/8) ) : (
                                                       flip!(1/11) ))))));
 
-        "02" ; B!() ;= ite!( ( b!(@anf "01") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-       ...? query.clone() ; B!()
+        "02"  ;= ite!( ( b!(@anf "01") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+       ...? query.clone()
     ];
     assert_eq!(prg, expected);
 }
@@ -504,37 +504,37 @@ fn test_grid_3x3_compiles() {
     let grid = make::grid(schema);
 
     let expected = program!(lets![
-        "00" ; B!() ;= flip!(1/2);
-        "10" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
-        "01" ; B!() ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-        "20" ; B!() ;= ite!( ( b!(@anf "10") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
+        "00"  ;= flip!(1/2);
+        "10"  ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
+        "01"  ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+        "20"  ;= ite!( ( b!(@anf "10") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
 
-        "11" ; B!() ;=
+        "11"  ;=
             ite!(( b!((  b!(@anf "01")) && (  b!(@anf "10"))) ) ? ( flip!(1/7) ) : (
             ite!(( b!((  b!(@anf "01")) && (not!("10"))) ) ? ( flip!(1/9) ) : (
             ite!(( b!((  not!("01")) && (  b!(@anf "10"))) ) ? ( flip!(1/8) ) : (
                                                       flip!(1/11) ))))));
 
-        "02" ; B!() ;= ite!( ( b!(@anf "01") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+        "02"  ;= ite!( ( b!(@anf "01") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
 
-        "21" ; B!() ;=
+        "21"  ;=
             ite!(( b!((  b!(@anf "11")) && (  b!(@anf "20"))) ) ? ( flip!(2/7) ) : (
             ite!(( b!((  b!(@anf "11")) && (not!("20"))) ) ? ( flip!(2/9) ) : (
             ite!(( b!((  not!("11")) && (  b!(@anf "20"))) ) ? ( flip!(2/8) ) : (
                                                       flip!(2/11) ))))));
 
-        "12" ; B!() ;=
+        "12"  ;=
             ite!(( b!((  b!(@anf "02")) && (  b!(@anf "11"))) ) ? ( flip!(6/7) ) : (
             ite!(( b!((  b!(@anf "02")) && (not!("11"))) ) ? ( flip!(6/9) ) : (
             ite!(( b!((  not!("02")) && (  b!(@anf "11"))) ) ? ( flip!(6/8) ) : (
                                                       flip!(6/11) ))))));
 
-        "22" ; B!() ;=
+        "22"  ;=
             ite!(( b!((  b!(@anf "12")) && (  b!(@anf "21"))) ) ? ( flip!(3/7) ) : (
             ite!(( b!((  b!(@anf "12")) && (not!("21"))) ) ? ( flip!(8/9) ) : (
             ite!(( b!((  not!("12")) && (  b!(@anf "21"))) ) ? ( flip!(3/8) ) : (
                                                       flip!(9/11) ))))));
-        ...? query.clone() ; B!()
+        ...? query.clone()
     ]);
 
     assert_eq!(grid, expected);
@@ -549,38 +549,38 @@ fn test_grid_3x3_compiles() {
 #[test]
 // #[traced_test]
 fn test_grid3x3_inference() {
-    let mk = |ret: ExprTyped| {
+    let mk = |ret: ExprInferable| {
         Program::Body(lets![
-            "00" ; B!() ;= flip!(1/2);
-            "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-            "02" ; B!() ;= ite!( ( b!(@anf "01")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-            "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-            "20" ; B!() ;= ite!( ( not!("10") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+            "00"  ;= flip!(1/2);
+            "01"  ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+            "02"  ;= ite!( ( b!(@anf "01")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+            "10"  ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+            "20"  ;= ite!( ( not!("10") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
 
-            "11" ; B!() ;=
+            "11"  ;=
                 ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
                 ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
                 ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
                                                           flip!(1/11) ))))));
 
-            "21" ; B!() ;=
+            "21"  ;=
                 ite!(( b!((  b!(@anf "20")) && (  b!(@anf "11"))) ) ? ( flip!(2/7) ) : (
                 ite!(( b!((  b!(@anf "20")) && (not!("11"))) ) ? ( flip!(2/8) ) : (
                 ite!(( b!((  not!("20")) && (  b!(@anf "11"))) ) ? ( flip!(2/9) ) : (
                                                           flip!(2/11) ))))));
 
-            "12" ; B!() ;=
+            "12"  ;=
                 ite!(( b!((  b!(@anf "11")) && (  b!(@anf "02"))) ) ? ( flip!(6/7) ) : (
                 ite!(( b!((  b!(@anf "11")) && (not!("02"))) ) ? ( flip!(6/8) ) : (
                 ite!(( b!((  not!("11")) && (  b!(@anf "02"))) ) ? ( flip!(6/9) ) : (
                                                           flip!(6/11) ))))));
 
-            "22" ; B!() ;=
+            "22"  ;=
                 ite!(( b!((  b!(@anf "21")) && (  b!(@anf "12"))) ) ? ( flip!(3/7) ) : (
                 ite!(( b!((  b!(@anf "21")) && (not!("12"))) ) ? ( flip!(3/8) ) : (
                 ite!(( b!((  not!("21")) && (  b!(@anf "12"))) ) ? ( flip!(8/9) ) : (
                                                           flip!(9/11) ))))));
-            ...? ret ; B!()
+            ...? ret
         ])
     };
     let query = b!("00", "01", "10", "02", "20", "11", "12", "21", "22");
@@ -630,45 +630,45 @@ fn test_grid3x3_inference() {
 #[test]
 // #[traced_test]
 fn test_grid3x3_sampled_inference() {
-    let mk = |ret: ExprTyped| {
+    let mk = |ret: ExprInferable| {
         Program::Body(lets![
-            "00" ; B!() ;= flip!(1/2);
-            "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-            "10" ; B!() ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+            "00"  ;= flip!(1/2);
+            "01"  ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+            "10"  ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
 
-            "20_11_02" ; b!(B, B) ;= sample!(
+            "20_11_02" ;= sample!(
                 lets![
-                  "20" ; B!() ;= ite!( ( not!("10") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-                  "11" ; B!() ;=
+                  "20"  ;= ite!( ( not!("10") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+                  "11"  ;=
                       ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
                       ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
                       ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
                                                                 flip!(1/11) ))))));
-                  "02" ; B!() ;= ite!( ( b!(@anf "01")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-                          ...? b!("20", "11", "02") ; b!(B, B, B)
+                  "02"  ;= ite!( ( b!(@anf "01")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+                          ...? b!("20", "11", "02")
                 ]);
-            "20" ; B!() ;= fst!("20_11_02");
-            "11" ; B!() ;= snd!("20_11_02");
-            "02" ; B!() ;= thd!("20_11_02");
+            "20"  ;= fst!("20_11_02");
+            "11"  ;= snd!("20_11_02");
+            "02"  ;= thd!("20_11_02");
 
-            "21" ; B!() ;=
+            "21"  ;=
                 ite!(( b!((  b!(@anf "20")) && (  b!(@anf "11"))) ) ? ( flip!(2/7) ) : (
                 ite!(( b!((  b!(@anf "20")) && (not!("11"))) ) ? ( flip!(2/8) ) : (
                 ite!(( b!((  not!("20")) && (  b!(@anf "11"))) ) ? ( flip!(2/9) ) : (
                                                           flip!(2/11) ))))));
 
-            "12" ; B!() ;=
+            "12"  ;=
                 ite!(( b!((  b!(@anf "11")) && (  b!(@anf "02"))) ) ? ( flip!(6/7) ) : (
                 ite!(( b!((  b!(@anf "11")) && (not!("02"))) ) ? ( flip!(6/8) ) : (
                 ite!(( b!((  not!("11")) && (  b!(@anf "02"))) ) ? ( flip!(6/9) ) : (
                                                           flip!(6/11) ))))));
 
-            "22" ; B!() ;=
+            "22"  ;=
                 ite!(( b!((  b!(@anf "21")) && (  b!(@anf "12"))) ) ? ( flip!(3/7) ) : (
                 ite!(( b!((  b!(@anf "21")) && (not!("12"))) ) ? ( flip!(3/8) ) : (
                 ite!(( b!((  not!("21")) && (  b!(@anf "12"))) ) ? ( flip!(8/9) ) : (
                                                           flip!(9/11) ))))));
-            ...? ret ; B!()
+            ...? ret
         ])
     };
     let query = b!("00", "01", "10", "02", "20", "11", "12", "21", "22");

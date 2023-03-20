@@ -414,7 +414,7 @@ pub fn get_vec<T: Copy>(v: Vec<T>, i: usize) -> Option<T> {
 pub fn get_or_else<T: Copy>(v: Vec<T>, i: usize, d: T) -> T {
     get_vec(v, i).unwrap_or(d)
 }
-pub fn exact_with(p: &ProgramTyped) -> (Vec<f64>, WmcStats) {
+pub fn exact_with(p: &ProgramInferable) -> (Vec<f64>, WmcStats) {
     match crate::run(p) {
         Ok((mut mgr, c)) => wmc_prob(&mut mgr, &c),
         Err(e) => panic!(
@@ -424,7 +424,7 @@ pub fn exact_with(p: &ProgramTyped) -> (Vec<f64>, WmcStats) {
     }
 }
 
-pub fn exact(p: &ProgramTyped) -> Vec<f64> {
+pub fn exact(p: &ProgramInferable) -> Vec<f64> {
     exact_with(p).0
 }
 
@@ -473,7 +473,7 @@ fn debug_importance_weighting(
         debug!("");
     });
 }
-pub fn importance_weighting(steps: usize, p: &ProgramTyped) -> Vec<f64> {
+pub fn importance_weighting(steps: usize, p: &ProgramInferable) -> Vec<f64> {
     importance_weighting_h(
         steps,
         p,
@@ -487,7 +487,7 @@ pub fn importance_weighting(steps: usize, p: &ProgramTyped) -> Vec<f64> {
 #[allow(unused_mut)]
 pub fn importance_weighting_h(
     steps: usize,
-    p: &ProgramTyped,
+    p: &ProgramInferable,
     opt: &crate::Options,
 ) -> (Vec<f64>, WmcStats) {
     let mut e = Expectations::empty();

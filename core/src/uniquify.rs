@@ -206,7 +206,7 @@ impl SymEnv {
     }
 }
 
-pub fn pipeline(p: &crate::ProgramTyped) -> Result<ProgramUnq, CompileError> {
+pub fn pipeline(p: &crate::ProgramInferable) -> Result<ProgramUnq, CompileError> {
     let p = crate::typecheck::pipeline(p)?;
     let mut senv = SymEnv::default();
     senv.uniquify(&p)
@@ -218,17 +218,17 @@ mod tests {
     use crate::compile::*;
     use crate::grammar::*;
     use crate::grammar_macros::*;
-    use crate::typecheck::grammar::{ExprTyped, ProgramTyped};
-    use crate::typecheck::typecheck;
+    use crate::typecheck::pipeline;
+    use crate::typeinf::grammar::{ExprInferable, ProgramInferable};
     use crate::*;
     use tracing::*;
     use tracing_test::traced_test;
 
     #[test]
     fn invalid_observe() {
-        let res = SymEnv::default().uniquify(&typecheck(&program!(observe!(b!("x")))).unwrap());
+        let res = SymEnv::default().uniquify(&pipeline(&program!(observe!(b!("x")))).unwrap());
         assert!(res.is_err());
-        let mk = |ret: ExprTyped| {
+        let mk = |ret: ExprInferable| {
             Program::Body(lets![
                 "x" ; b!() ;= flip!(1/3);
                 "y" ; b!() ;= sample!(
@@ -241,10 +241,10 @@ mod tests {
                ...? ret ; b!()
             ])
         };
-        let res = SymEnv::default().uniquify(&typecheck(&mk(b!("l"))).unwrap());
+        let res = SymEnv::default().uniquify(&pipeline(&mk(b!("l"))).unwrap());
         assert!(res.is_err());
         let mut senv = SymEnv::default();
-        let res = senv.uniquify(&typecheck(&mk(b!("x"))).unwrap());
+        let res = senv.uniquify(&pipeline(&mk(b!("x"))).unwrap());
         assert!(res.is_ok());
         assert!(senv.gensym == 6);
     }

@@ -152,6 +152,6 @@ pub fn typecheck(p: &grammar::ProgramTyped) -> Result<ProgramUD, CompileError> {
     }
 }
 
-pub fn pipeline(p: &grammar::ProgramTyped) -> Result<ProgramUD, CompileError> {
-    typecheck(p)
+pub fn pipeline(p: &crate::typeinf::grammar::ProgramInferable) -> Result<ProgramUD, CompileError> {
+    typecheck(&crate::typeinf::pipeline(p)?)
 }
