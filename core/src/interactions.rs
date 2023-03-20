@@ -217,6 +217,17 @@ where
         s
     }
 
+    /// cut a vertex out of the hypergraph
+    pub fn rank_edge_cuts(&self) -> Vec<(&HashSet<V>, &EL, Rank)> {
+        self.hyperedges
+            .iter()
+            .map(|(edge, l)| (edge, l, self.edge_cut_rank(edge, l)))
+            .collect()
+    }
+    pub fn edge_cut_rank(&self, edge: &HashSet<V>, label: &EL) -> Rank {
+        Rank(0)
+    }
+
     pub fn edges_to_covers(
         hyperedges: &Vec<(HashSet<V>, EL)>,
     ) -> Vec<(HashSet<V>, Vec<(&HashSet<V>, &EL)>)> {
@@ -533,15 +544,14 @@ pub fn pipeline(p: &crate::ProgramInferable) -> Result<IteractionGraph, CompileE
     env.plan(&p)
 }
 
+#[derive(Clone, Copy, Hash, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Rank(pub usize);
 pub fn order_cuts(g: &IteractionGraph) -> Vec<(Binding, Rank)> {
     let mut ranking = vec![];
-    let mut sorted_covers = g.covers();
-    sorted_covers.sort_by(|(a, _), (b, _)| b.len().cmp(&a.len()));
-    for (cover, edges) in sorted_covers {
-        for (_, label) in edges {
-            ranking.push((label.clone(), Rank(cover.len())));
-        }
+    let mut sorted_edges = g.rank_edge_cuts();
+    sorted_edges.sort_by(|(_, _, a), (_, _, b)| b.cmp(&a));
+    for (edges, label, rank) in sorted_edges {
+        ranking.push((label.clone(), rank));
     }
     ranking
 }
@@ -578,26 +588,32 @@ fn sample_expr(cut: &Binding, e: &ExprAnn) -> ExprAnn {
         // }
         ELetIn(v, s, ebound, ebody) => match cut.cut_id().map(|i| v.id() == i) {
             Some(true) => {
-                let smpl = ESample((), ebound.clone());
-                ELetIn(v.clone(), s.to_string(), Box::new(smpl), ebody.clone())
+                println!("{:?} ?= {:?} == {}", cut, v, true);
+                let smpl = ESample((), Box::new(sample_expr(cut, ebound)));
+                ELetIn(
+                    v.clone(),
+                    s.to_string(),
+                    Box::new(smpl),
+                    Box::new(sample_expr(cut, ebody)),
+                )
             }
-            _ => e.clone(),
+            _ => {
+                println!("{:?} ?= {:?} == {}", cut, v, false);
+                ELetIn(
+                    v.clone(),
+                    s.to_string(),
+                    Box::new(sample_expr(cut, ebound)),
+                    Box::new(sample_expr(cut, ebody)),
+                )
+            }
         },
+        EIte(v, cond, t, f) => {
+            let ts = sample_expr(cut, t);
+            let fs = sample_expr(cut, f);
+            EIte(v.clone(), cond.clone(), Box::new(ts), Box::new(fs))
+        }
+        ESample((), e) => ESample((), Box::new(sample_expr(cut, e))),
         _ => e.clone(),
-        // EIte(_, cond, t, f) => {
-        //     let ps = sample_anf(cond)?;
-        //     let ts = sample_expr(t)?;
-        //     let fs = sample_expr(f)?;
-        //     None
-        // }
-        // EFlip(v, param) => None,
-        // EObserve(_, a) => sample_anf(a),
-        // ESample(_, e) => {
-        //     let span = tracing::span!(tracing::Level::DEBUG, "sample");
-        //     let _enter = span.enter();
-        //     sample_expr(e)
-        // }
-        // _ => todo!(""),
     }
 }
 pub fn sample_program(cut: &Binding, p: &ProgramAnn) -> ProgramAnn {
@@ -669,7 +685,7 @@ mod tests {
         assert_eq!(cuts.len(), 3);
         let pann = crate::annotate::pipeline(&p).unwrap().0;
         let cs = top_k_cuts(&cuts, 1);
-        println!("{:?}", cs);
+        println!("{:#?}", cuts);
         let p1 = apply_cuts(cs, &pann);
         let p1_expected = program!(lets![
             "x" ;= flip!(1/3);
