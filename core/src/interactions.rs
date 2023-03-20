@@ -197,6 +197,26 @@ where
         self.vertices.insert((v, l))
     }
 
+    pub fn print(&self) -> String {
+        let vtxs = self
+            .vertices
+            .iter()
+            .map(|x| format!("{:?}", x.0))
+            .join(", ");
+        let edges = self
+            .hyperedges
+            .iter()
+            .map(|x| format!("{:?}", x.0))
+            .join(",\n");
+        let mut s = String::from("");
+        s.push_str(&format!("vertices: {{ {} }}\n", vtxs));
+        s.push_str("edges:\n");
+        for (edge, name) in &self.hyperedges {
+            s.push_str(&format!("  | {:?} -@-> {:?}\n", edge, name));
+        }
+        s
+    }
+
     pub fn edges_to_covers(
         hyperedges: &Vec<(HashSet<V>, EL)>,
     ) -> Vec<(HashSet<V>, Vec<(&HashSet<V>, &EL)>)> {
