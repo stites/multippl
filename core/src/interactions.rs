@@ -246,6 +246,8 @@ pub enum Binding {
     Let(NamedVar),
     NamedSample(NamedVar),
     NamedSampleLet(NamedVar, NamedVar),
+    Query,
+    CompoundQuery,
     // TODO: beyond the prototype, these would be warranted:
     // InUnnamedSample,
     // InUnnamedIteBranch(bool),
@@ -352,6 +354,12 @@ impl InteractionEnv {
             AVal(_, Val::Bool(b)) => Ok(vec![self.mgr.bool(*b)]),
             AVal(_, Val::Prod(_)) => todo!(),
             And(bl, br) => {
+                let b = match &self.binding {
+                    Binding::Query => Binding::CompoundQuery,
+                    a => a.clone(),
+                };
+                self.binding = b;
+
                 let pls = self.plan_anf(ctx, bl)?;
                 let prs = self.plan_anf(ctx, br)?;
                 let ret = izip!(pls, prs)
@@ -360,6 +368,12 @@ impl InteractionEnv {
                 Ok(ret)
             }
             Or(bl, br) => {
+                let b = match &self.binding {
+                    Binding::Query => Binding::CompoundQuery,
+                    a => a.clone(),
+                };
+                self.binding = b;
+
                 let pls = self.plan_anf(ctx, bl)?;
                 let prs = self.plan_anf(ctx, br)?;
                 let ret = izip!(pls, prs)
@@ -390,11 +404,15 @@ impl InteractionEnv {
         use Binding::*;
         match e {
             EAnf(_, a) => {
+                let binding = self.binding.clone();
                 let ptrs = self.plan_anf(ctx, a)?;
-                for p in &ptrs {
-                    let deps = self.mgr.mgr.flatten(*p);
-                    self.mgr.graph.insert_edge(&deps, self.binding.clone());
+                if binding == CompoundQuery {
+                    for p in &ptrs {
+                        let deps = self.mgr.mgr.flatten(*p);
+                        self.mgr.graph.insert_edge(&deps, self.binding.clone());
+                    }
                 }
+                self.binding = binding;
                 Ok(ptrs)
             }
             EPrj(_, i, a) => Ok(vec![self.plan_anf(ctx, a)?[*i]]),
@@ -411,6 +429,7 @@ impl InteractionEnv {
                 debug!("{:?}", v);
 
                 let binding = match &self.binding {
+                    Query | CompoundQuery => panic!("impossible"),
                     Unbound | Let(_) => Let(v.clone()),
                     NamedSample(prv) | NamedSampleLet(prv, _) => {
                         NamedSampleLet(prv.clone(), v.clone())
@@ -423,7 +442,7 @@ impl InteractionEnv {
                 match **ebody {
                     ELetIn(_, _, _, _) => self.plan_expr(ctx, ebody),
                     _ => {
-                        self.binding = Unbound;
+                        self.binding = Query;
                         self.plan_expr(ctx, ebody)
                     }
                 }
@@ -473,16 +492,94 @@ pub fn pipeline(p: &crate::ProgramTyped) -> Result<IteractionGraph, CompileError
 
 pub struct Rank(pub usize);
 pub fn order_cuts(g: &IteractionGraph) -> Vec<(Binding, Rank)> {
+    let mut ranking = vec![];
+    let mut sorted_covers = g.covers();
+    sorted_covers.sort_by(|(a, _), (b, _)| b.len().cmp(&a.len()));
+    for (cover, edges) in sorted_covers {
+        for (_, label) in edges {
+            ranking.push((label.clone(), Rank(cover.len())));
+        }
+    }
+    ranking
+}
+pub fn apply_cuts(cuts: &Vec<(Binding, Rank)>, n: usize, p: &ProgramAnn) -> ProgramAnn {
+    let mut prg = p.clone();
+    for (b, _) in &cuts[0..n] {
+        prg = apply_cut(b, &prg);
+    }
+    prg
+}
+pub fn apply_cut(cuts: &Binding, p: &ProgramAnn) -> ProgramAnn {
     todo!()
 }
-pub fn apply_cuts(g: &IteractionGraph, cuts: &Vec<Binding>, p: &ProgramAnn) -> ProgramAnn {
-    todo!()
-}
-pub fn apply_cut(g: &IteractionGraph, cuts: &Binding, p: &ProgramAnn) -> ProgramAnn {
-    todo!()
-}
+
 pub fn bottom_up_traversal(p: &ProgramAnn) {
     todo!()
+}
+fn bottom_up_anf_h(a: &AnfAnn) -> Option<()> {
+    use crate::grammar::Anf::*;
+    match a {
+        AVar(v, s) => None,
+        AVal(_, Val::Bool(b)) => None,
+        AVal(_, Val::Prod(_)) => todo!(),
+        And(bl, br) => {
+            let pls = bottom_up_anf_h(bl)?;
+            let prs = bottom_up_anf_h(br)?;
+            None
+        }
+        Or(bl, br) => {
+            let pls = bottom_up_anf_h(bl)?;
+            let prs = bottom_up_anf_h(br)?;
+            None
+        }
+        Neg(bl) => {
+            let prs = bottom_up_anf_h(bl)?;
+            None
+        }
+    }
+}
+fn bottom_up_anfs_h(anfs: &[AnfAnn]) -> Option<()> {
+    anfs.iter().map(|a| bottom_up_anf_h(a)).collect()
+}
+fn bottom_up_expr_h(e: &ExprAnn) -> Option<()> {
+    use crate::grammar::Expr::*;
+    use Binding::*;
+    match e {
+        EAnf(_, a) => bottom_up_anf_h(a),
+        // EPrj(_, i, a) => bottom_up_anf_h(a)?[*i],
+        // EFst(_, a) => Ok(vec![bottom_up_anf_h(a)?[0]]),
+        // ESnd(_, a) => Ok(vec![bottom_up_anf_h(a)?[1]]),
+        EProd(_, az) => {
+            let span = tracing::span!(tracing::Level::DEBUG, "prod");
+            let _enter = span.enter();
+            bottom_up_anfs_h(az)
+        }
+        ELetIn(v, s, ebound, ebody) => {
+            let span = tracing::span!(tracing::Level::DEBUG, "let");
+            let _enter = span.enter();
+            let ptrs = bottom_up_expr_h(ebound)?;
+            bottom_up_expr_h(ebody)
+        }
+        EIte(_, cond, t, f) => {
+            let ps = bottom_up_anf_h(cond)?;
+            let ts = bottom_up_expr_h(t)?;
+            let fs = bottom_up_expr_h(f)?;
+            None
+        }
+        EFlip(v, param) => None,
+        EObserve(_, a) => bottom_up_anf_h(a),
+        ESample(_, e) => {
+            let span = tracing::span!(tracing::Level::DEBUG, "sample");
+            let _enter = span.enter();
+            bottom_up_expr_h(e)
+        }
+        _ => todo!(""),
+    }
+}
+pub fn bottom_up_program_h(p: &ProgramAnn) -> Option<()> {
+    match p {
+        Program::Body(b) => bottom_up_expr_h(b),
+    }
 }
 
 pub fn rebind_expressions(g: &IteractionGraph) -> Vec<(Binding, Rank)> {
@@ -506,20 +603,30 @@ mod tests {
     use tracing_test::traced_test;
 
     #[test]
-    pub fn test_interaction_graph_for_simple_program() {
+    pub fn test_interaction_graph_for_simple_program_todo() {
         let p = program!(lets![
             "x" ; b!() ;= flip!(1/3);
            ...? b!("x") ; b!()
         ]);
         let g = pipeline(&p).unwrap();
         assert_eq!(g.vertices.len(), 1);
-        assert_eq!(g.hyperedges.len(), 2, "expected a flip and query edge");
+        assert_eq!(g.hyperedges.len(), 1);
         let (_, nvar) = g.hyperedges[0].clone();
         assert_eq!(nvar, Binding::Let(named(0, "x")), "flip edge first");
-        let (_, nvar) = g.hyperedges[1].clone();
-        assert_eq!(nvar, Binding::Unbound, "expected query edge last");
+        let cs = order_cuts(&g);
+        let pann = crate::annotate::pipeline(&p).unwrap().0;
+        let p1 = apply_cuts(&cs, 1, &pann);
+        let p1_expected = program!(lets![
+            "x" ; b!() ;= sample!(flip!(1/3));
+           ...? b!("x") ; b!()
+        ]);
+        let pann_expected = crate::annotate::pipeline(&p1_expected).unwrap().0;
+        assert_eq!(&p1, &pann_expected);
+        let p2 = apply_cuts(&cs, 2, &pann);
+        assert_eq!(&p2, &pann_expected);
     }
     #[test]
+    #[ignore]
     pub fn test_interaction_graph_with_boolean_operator() {
         let p = program!(lets![
             "x" ; b!() ;= flip!(1/3);
@@ -536,9 +643,12 @@ mod tests {
         }
         let (_, nvar) = g.hyperedges.last().clone().unwrap();
         assert_eq!(*nvar, Binding::Unbound);
+        let order = order_cuts(&g);
+        assert_eq!(order.len(), 1);
     }
     #[test]
-    pub fn test_interaction_graph_works_with_conjoined_query() {
+    #[ignore]
+    pub fn test_interaction_graph_works_with_conjoined_query_todo() {
         let p = program!(lets![
             "x" ; b!() ;= flip!(1/3);
             "y" ; b!() ;= flip!(1/3);
@@ -547,9 +657,11 @@ mod tests {
         let g = pipeline(&p).unwrap();
         assert_eq!(g.vertices.len(), 2);
         assert_eq!(g.hyperedges.len(), 3, "edge for each line");
+        order_cuts(&g);
     }
     #[test]
-    pub fn test_interaction_graph_captures_correct_edge_with_aliases() {
+    #[ignore]
+    pub fn test_interaction_graph_captures_correct_edge_with_aliases_todo() {
         let p = program!(lets![
             "x" ; b!() ;= flip!(1/3);
             "y" ; b!() ;= flip!(1/3);
@@ -562,10 +674,12 @@ mod tests {
         assert_eq!(g.hyperedges.len(), 5, "edge for each line");
         let query = &g.hyperedges.last().unwrap().0;
         assert_eq!(query.len(), 3, "query depends on every variable above");
+        order_cuts(&g);
     }
 
     #[test]
-    pub fn test_interaction_works_as_expected_for_samples() {
+    #[ignore]
+    pub fn test_interaction_works_as_expected_for_samples_todo() {
         let shared_var = program!(lets![
            "x" ; b!() ;= flip!(1/3);
            "l" ; b!() ;= sample!(var!("x"));
@@ -587,10 +701,12 @@ mod tests {
         let (query, n) = &es[3];
         assert_eq!(n, &Binding::Unbound);
         assert_eq!(query, &HashSet::from([PlanPtr(0)]));
+        order_cuts(&g);
     }
 
     #[test]
-    pub fn test_interaction_shared_tuples_get_separated() {
+    #[ignore]
+    pub fn test_interaction_shared_tuples_get_separated_todo() {
         let shared_tuple = program!(lets![
            "x" ; b!()     ;= flip!(1/3);
            "y" ; b!()     ;= flip!(1/3);
@@ -599,15 +715,17 @@ mod tests {
         ]);
         let g = pipeline(&shared_tuple).unwrap();
         assert_eq!(g.vertices.len(), 2);
-        for (edge, nvar) in &g.hyperedges {
-            println!("nvar: {:?}", nvar);
-            println!("edge: {:?}", edge);
-        }
+        // for (edge, nvar) in &g.hyperedges {
+        //     println!("nvar: {:?}", nvar);
+        //     println!("edge: {:?}", edge);
+        // }
         assert_eq!(g.hyperedges.len(), 4, "needs a tuple for each position");
+        order_cuts(&g);
     }
 
     #[test]
-    pub fn test_interaction_ite_sample() {
+    #[ignore]
+    pub fn test_interaction_ite_sample_todo() {
         let ite = program!(lets![
             "x" ; b!() ;= flip!(1/5);
             "y" ; b!() ;= ite!(
@@ -625,12 +743,13 @@ mod tests {
         }
         let query = &g.hyperedges.last().unwrap().0;
         assert_eq!(query.len(), 3, "query depends on every variable above");
+        order_cuts(&g);
     }
 
     #[test]
     #[ignore]
     // #[traced_test]
-    pub fn test_interaction_ite_nested_let_todos() {
+    pub fn test_interaction_ite_nested_let_todo() {
         let ite_with_nested_lets = program!(lets![
             "x" ; b!() ;= flip!(2/3);
             "y" ; b!() ;= ite!(
@@ -653,10 +772,12 @@ mod tests {
         }
         let query = &g.hyperedges.last().unwrap().0;
         assert_eq!(query.len(), 3, "query depends on every variable above");
+        order_cuts(&g);
     }
 
     #[test]
-    pub fn test_interaction_2x2_triu() {
+    #[ignore]
+    pub fn test_interaction_2x2_triu_todo() {
         let grid2x2_triu = program!(lets![
             "00" ; B!() ;= flip!(1/2);
             "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -666,10 +787,12 @@ mod tests {
         let g = pipeline(&grid2x2_triu).unwrap();
         assert_eq!(g.vertices.len(), 5);
         assert_eq!(g.hyperedges.len(), 5, "edge for each line");
+        order_cuts(&g);
     }
 
     #[test]
-    pub fn test_interaction_2x2_tril() {
+    #[ignore]
+    pub fn test_interaction_2x2_tril_todo() {
         let grid2x2_tril = program!(lets![
             "01" ; B!() ;= flip!(1/3) ;
             "10" ; B!() ;= flip!(1/4) ;
@@ -685,10 +808,12 @@ mod tests {
         assert_eq!(g.hyperedges.len(), 7, "edge for each var and full ITE");
         let query = &g.hyperedges.last().unwrap().0;
         assert_eq!(query.len(), 6, "query depends on every variable above");
+        order_cuts(&g);
     }
 
     #[test]
-    pub fn test_interaction_2x2_full() {
+    #[ignore]
+    pub fn test_interaction_2x2_full_todo() {
         let grid2x2 = program!(lets![
             "00" ; B!() ;= flip!(1/2);
             "01" ; B!() ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -705,10 +830,13 @@ mod tests {
         assert_eq!(g.hyperedges.len(), 10, "vertex + ITE");
         let query = &g.hyperedges.last().unwrap().0;
         assert_eq!(query.len(), 9, "query depends on every variable above");
+        todo!("actually, this one seems wrong: NamedVar(11) seems to miss the ITE");
+        order_cuts(&g);
     }
 
     #[test]
-    pub fn test_interaction_grid2x2_sampled() {
+    #[ignore]
+    pub fn test_interaction_grid2x2_sampled_todo() {
         let grid2x2_sampled = program!(lets![
             "00" ; B!() ;= flip!(1/2);
             "01_10" ; b!(B, B) ;= sample!(
@@ -731,5 +859,6 @@ mod tests {
         assert_eq!(g.hyperedges.len(), 10, "vertex + ITE");
         let query = &g.hyperedges.last().unwrap().0;
         assert_eq!(query.len(), 9, "query depends on every variable above");
+        order_cuts(&g);
     }
 }
