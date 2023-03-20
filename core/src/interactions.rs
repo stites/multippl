@@ -273,6 +273,29 @@ pub enum Binding {
     // InUnnamedIteBranch(bool),
     // NamedIteBranch(bool, NamedVar),
 }
+impl Binding {
+    pub fn id(&self) -> Option<UniqueId> {
+        use Binding::*;
+        match self {
+            Unbound | Query | CompoundQuery => None,
+            Let(v) | NamedSample(v) | NamedSampleLet(_, v) => Some(v.id()),
+        }
+    }
+    pub fn sample_id(&self) -> Option<UniqueId> {
+        use Binding::*;
+        match self {
+            Unbound | Query | CompoundQuery | Let(_) => None,
+            NamedSample(v) | NamedSampleLet(v, _) => Some(v.id()),
+        }
+    }
+    pub fn cut_id(&self) -> Option<UniqueId> {
+        use Binding::*;
+        match self {
+            Unbound | Query | CompoundQuery | NamedSample(_) | NamedSampleLet(_, _) => None,
+            Let(v) => Some(v.id()),
+        }
+    }
+}
 
 pub struct HypStore {
     graph: Hypergraph<PlanPtr, (), Binding>,
