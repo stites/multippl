@@ -555,69 +555,54 @@ pub fn top_k_cuts(cuts: &Vec<(Binding, Rank)>, n: usize) -> Vec<Binding> {
     );
     cuts.iter().map(|(b, r)| b.clone()).take(n).collect()
 }
-fn bottom_up_anf_h(a: &AnfAnn) -> Option<()> {
-    use crate::grammar::Anf::*;
-    match a {
-        AVar(v, s) => None,
-        AVal(_, Val::Bool(b)) => None,
-        AVal(_, Val::Prod(_)) => todo!(),
-        And(bl, br) => {
-            let pls = bottom_up_anf_h(bl)?;
-            let prs = bottom_up_anf_h(br)?;
-            None
-        }
-        Or(bl, br) => {
-            let pls = bottom_up_anf_h(bl)?;
-            let prs = bottom_up_anf_h(br)?;
-            None
-        }
-        Neg(bl) => {
-            let prs = bottom_up_anf_h(bl)?;
-            None
-        }
-    }
+pub fn apply_cuts(cuts: Vec<Binding>, p: &ProgramAnn) -> ProgramAnn {
+    cuts.iter().fold(p.clone(), |fin, cut| apply_cut(cut, &fin))
 }
-fn bottom_up_anfs_h(anfs: &[AnfAnn]) -> Option<()> {
-    anfs.iter().map(|a| bottom_up_anf_h(a)).collect()
+pub fn apply_cut(cut: &Binding, p: &ProgramAnn) -> ProgramAnn {
+    sample_program(cut, p)
 }
-fn bottom_up_expr_h(e: &ExprAnn) -> Option<()> {
+
+fn sample_expr(cut: &Binding, e: &ExprAnn) -> ExprAnn {
     use crate::grammar::Expr::*;
     use Binding::*;
     match e {
-        EAnf(_, a) => bottom_up_anf_h(a),
-        // EPrj(_, i, a) => bottom_up_anf_h(a)?[*i],
-        // EFst(_, a) => Ok(vec![bottom_up_anf_h(a)?[0]]),
-        // ESnd(_, a) => Ok(vec![bottom_up_anf_h(a)?[1]]),
-        EProd(_, az) => {
-            let span = tracing::span!(tracing::Level::DEBUG, "prod");
-            let _enter = span.enter();
-            bottom_up_anfs_h(az)
-        }
-        ELetIn(v, s, ebound, ebody) => {
-            let span = tracing::span!(tracing::Level::DEBUG, "let");
-            let _enter = span.enter();
-            let ptrs = bottom_up_expr_h(ebound)?;
-            bottom_up_expr_h(ebody)
-        }
-        EIte(_, cond, t, f) => {
-            let ps = bottom_up_anf_h(cond)?;
-            let ts = bottom_up_expr_h(t)?;
-            let fs = bottom_up_expr_h(f)?;
-            None
-        }
-        EFlip(v, param) => None,
-        EObserve(_, a) => bottom_up_anf_h(a),
-        ESample(_, e) => {
-            let span = tracing::span!(tracing::Level::DEBUG, "sample");
-            let _enter = span.enter();
-            bottom_up_expr_h(e)
-        }
-        _ => todo!(""),
+        // EAnf(_, a) => e.clone(),
+        // EPrj(_, i, a) => e.clone(),
+        // EFst(_, a) => e.clone(),
+        // ESnd(_, a) => e.clone(),
+        // EProd(_, az) => {
+        //     // let span = tracing::span!(tracing::Level::DEBUG, "prod");
+        //     // let _enter = span.enter();
+        //     // sample_anfs(az)
+        //     e.clone()
+        // }
+        ELetIn(v, s, ebound, ebody) => match cut.cut_id().map(|i| v.id() == i) {
+            Some(true) => {
+                let smpl = ESample((), ebound.clone());
+                ELetIn(v.clone(), s.to_string(), Box::new(smpl), ebody.clone())
+            }
+            _ => e.clone(),
+        },
+        _ => e.clone(),
+        // EIte(_, cond, t, f) => {
+        //     let ps = sample_anf(cond)?;
+        //     let ts = sample_expr(t)?;
+        //     let fs = sample_expr(f)?;
+        //     None
+        // }
+        // EFlip(v, param) => None,
+        // EObserve(_, a) => sample_anf(a),
+        // ESample(_, e) => {
+        //     let span = tracing::span!(tracing::Level::DEBUG, "sample");
+        //     let _enter = span.enter();
+        //     sample_expr(e)
+        // }
+        // _ => todo!(""),
     }
 }
-pub fn bottom_up_program_h(p: &ProgramAnn) -> Option<()> {
+pub fn sample_program(cut: &Binding, p: &ProgramAnn) -> ProgramAnn {
     match p {
-        Program::Body(b) => bottom_up_expr_h(b),
+        Program::Body(b) => Program::Body(sample_expr(cut, b)),
     }
 }
 
