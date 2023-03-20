@@ -449,7 +449,7 @@ impl InteractionEnv {
             EAnf(_, a) => {
                 let binding = self.binding.clone();
                 let ptrs = self.plan_anf(ctx, a)?;
-                if binding == CompoundQuery {
+                if binding != Query {
                     for p in &ptrs {
                         let deps = self.mgr.mgr.flatten(*p);
                         self.mgr.graph.insert_edge(&deps, self.binding.clone());
