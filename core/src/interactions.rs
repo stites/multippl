@@ -573,60 +573,77 @@ pub fn top_k_cuts(cuts: &Vec<(Binding, Rank)>, n: usize) -> Vec<Binding> {
     );
     cuts.iter().map(|(b, r)| b.clone()).take(n).collect()
 }
-pub fn apply_cuts(cuts: Vec<Binding>, p: &ProgramAnn) -> ProgramAnn {
-    cuts.iter().fold(p.clone(), |fin, cut| apply_cut(cut, &fin))
-}
-pub fn apply_cut(cut: &Binding, p: &ProgramAnn) -> ProgramAnn {
-    sample_program(cut, p)
-}
 
-fn sample_expr(cut: &Binding, e: &ExprAnn) -> ExprAnn {
-    use crate::grammar::Expr::*;
-    use Binding::*;
-    match e {
-        // EAnf(_, a) => e.clone(),
-        // EPrj(_, i, a) => e.clone(),
-        // EFst(_, a) => e.clone(),
-        // ESnd(_, a) => e.clone(),
-        // EProd(_, az) => {
-        //     // let span = tracing::span!(tracing::Level::DEBUG, "prod");
-        //     // let _enter = span.enter();
-        //     // sample_anfs(az)
-        //     e.clone()
-        // }
-        ELetIn(v, s, ebound, ebody) => match cut.cut_id().map(|i| v.id() == i) {
-            Some(true) => {
-                println!("{:?} ?= {:?} == {}", cut, v, true);
-                let smpl = ESample((), Box::new(sample_expr(cut, ebound)));
-                ELetIn(
-                    v.clone(),
-                    s.to_string(),
-                    Box::new(smpl),
-                    Box::new(sample_expr(cut, ebody)),
-                )
-            }
-            _ => {
-                println!("{:?} ?= {:?} == {}", cut, v, false);
-                ELetIn(
-                    v.clone(),
-                    s.to_string(),
-                    Box::new(sample_expr(cut, ebound)),
-                    Box::new(sample_expr(cut, ebody)),
-                )
-            }
-        },
-        EIte(v, cond, t, f) => {
-            let ts = sample_expr(cut, t);
-            let fs = sample_expr(cut, f);
-            EIte(v.clone(), cond.clone(), Box::new(ts), Box::new(fs))
-        }
-        ESample((), e) => ESample((), Box::new(sample_expr(cut, e))),
-        _ => e.clone(),
-    }
+pub struct InsertionEnv {
+    cuts: Vec<Binding>,
+    cut: Binding,
+    gensym: usize,
 }
-pub fn sample_program(cut: &Binding, p: &ProgramAnn) -> ProgramAnn {
-    match p {
-        Program::Body(b) => Program::Body(sample_expr(cut, b)),
+impl InsertionEnv {
+    pub fn new(cuts: Vec<Binding>) -> Self {
+        let cut = cuts.first().as_ref().unwrap().clone().to_owned();
+        Self {
+            cuts,
+            cut,
+            gensym: 0,
+        }
+    }
+    pub fn sample_expr(&mut self, e: &ExprAnn) -> ExprAnn {
+        use crate::grammar::Expr::*;
+        use Binding::*;
+        match e {
+            // EAnf(_, a) => e.clone(),
+            // EPrj(_, i, a) => e.clone(),
+            // EFst(_, a) => e.clone(),
+            // ESnd(_, a) => e.clone(),
+            // EProd(_, az) => {
+            //     // let span = tracing::span!(tracing::Level::DEBUG, "prod");
+            //     // let _enter = span.enter();
+            //     // sample_anfs(az)
+            //     e.clone()
+            // }
+            ELetIn(v, s, ebound, ebody) => match self.cut.cut_id().map(|i| v.id() == i) {
+                Some(true) => {
+                    println!("{:?} ?= {:?} == {}", self.cut, v, true);
+                    let smpl = ESample((), Box::new(self.sample_expr(ebound)));
+                    ELetIn(
+                        v.clone(),
+                        s.to_string(),
+                        Box::new(smpl),
+                        Box::new(self.sample_expr(ebody)),
+                    )
+                }
+                _ => {
+                    println!("{:?} ?= {:?} == {}", self.cut, v, false);
+                    ELetIn(
+                        v.clone(),
+                        s.to_string(),
+                        Box::new(self.sample_expr(ebound)),
+                        Box::new(self.sample_expr(ebody)),
+                    )
+                }
+            },
+            EIte(v, cond, t, f) => {
+                let ts = self.sample_expr(t);
+                let fs = self.sample_expr(f);
+                EIte(v.clone(), cond.clone(), Box::new(ts), Box::new(fs))
+            }
+            ESample((), e) => ESample((), Box::new(self.sample_expr(e))),
+            _ => e.clone(),
+        }
+    }
+
+    pub fn apply_cut(&mut self, p: &ProgramAnn) -> ProgramAnn {
+        match p {
+            Program::Body(b) => Program::Body(self.sample_expr(b)),
+        }
+    }
+    pub fn apply_cuts(&mut self, p: &ProgramAnn) -> ProgramAnn {
+        let cuts = self.cuts.clone();
+        cuts.iter().fold(p.clone(), |fin, cut| {
+            self.cut = cut.clone();
+            self.apply_cut(&fin)
+        })
     }
 }
 
@@ -664,7 +681,8 @@ mod tests {
         let cuts = order_cuts(&g);
         let pann = crate::annotate::pipeline(&p).unwrap().0;
         let cs = top_k_cuts(&cuts, 1);
-        let p1 = apply_cuts(cs, &pann);
+        let mut env = InsertionEnv::new(cs);
+        let p1 = env.apply_cuts(&pann);
         let p1_expected = program!(lets![
             "x" ;= sample!(flip!(1/3));
            ...? b!("x")
@@ -674,7 +692,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_interaction_graph_with_boolean_operator_todo() {
+    pub fn test_interaction_graph_with_boolean_operator() {
         let p = program!(lets![
             "x" ;= flip!(1/3);
             "y" ;= flip!(1/3);
@@ -694,7 +712,8 @@ mod tests {
         let pann = crate::annotate::pipeline(&p).unwrap().0;
         let cs = top_k_cuts(&cuts, 1);
         println!("{:#?}", cuts);
-        let p1 = apply_cuts(cs, &pann);
+        let mut env = InsertionEnv::new(cs);
+        let p1 = env.apply_cuts(&pann);
         let p1_expected = program!(lets![
             "x" ;= flip!(1/3);
             "y" ;= flip!(1/3);
@@ -706,7 +725,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     pub fn test_interaction_graph_works_with_conjoined_query_todo() {
         let p = program!(lets![
             "x" ;= flip!(1/3);
@@ -716,7 +734,21 @@ mod tests {
         let g = pipeline(&p).unwrap();
         assert_eq!(g.vertices.len(), 2);
         assert_eq!(g.hyperedges.len(), 3, "edge for each line");
-        order_cuts(&g);
+        let cuts = order_cuts(&g);
+        assert_eq!(cuts.len(), 3);
+        let pann = crate::annotate::pipeline(&p).unwrap().0;
+        let cs = top_k_cuts(&cuts, 1);
+        println!("{:#?}", cuts);
+        let mut env = InsertionEnv::new(cs);
+        let p1 = env.apply_cuts(&pann);
+        let p1_expected = program!(lets![
+            "x" ;= flip!(1/3);
+            "y" ;= flip!(1/3);
+            "__s#0" ;= sample!(b!("x" && "y"));
+           ...? b!("__s#0")
+        ]);
+        let pann_expected = crate::annotate::pipeline(&p1_expected).unwrap().0;
+        assert_eq!(&p1, &pann_expected);
     }
     #[test]
     #[ignore]
