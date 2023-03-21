@@ -484,6 +484,7 @@ pub fn importance_weighting(steps: usize, p: &ProgramInferable) -> Vec<f64> {
     )
     .0
 }
+
 #[allow(unused_mut)]
 pub fn importance_weighting_h(
     steps: usize,
