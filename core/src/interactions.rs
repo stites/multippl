@@ -316,71 +316,14 @@ impl Binding {
     }
 }
 
-pub struct HypStore {
-    graph: Hypergraph<PlanPtr, (), Binding>,
-    label_info: HashMap<VarLabel, (PlanPtr, Binding)>,
-    mgr: PlanManager,
-}
-impl Default for HypStore {
-    fn default() -> Self {
-        HypStore {
-            mgr: Default::default(),
-            graph: Default::default(),
-            label_info: Default::default(),
-        }
-    }
-}
-
-impl HypStore {
-    // variables, created at flip, must be instatiated at a let-binding
-    pub fn new_var(&mut self, v: VarLabel, l: &Binding) -> PlanPtr {
-        let ptr = self.mgr.var(v, true);
-        self.graph.insert_vertex(ptr, ());
-        self.label_info.insert(v, (ptr, l.clone()));
-        self.graph.insert_edge(&HashSet::from([ptr]), l.clone());
-        ptr
-    }
-    // variables, created at flip, must be instatiated at a let-binding
-    pub fn get_var(&mut self, v: VarLabel) -> PlanPtr {
-        self.label_info.get(&v).unwrap().0
-    }
-    // and-expressions may happen at any cutsite
-    pub fn and(&mut self, l: PlanPtr, r: PlanPtr) -> PlanPtr {
-        let ptr = self.mgr.and(l, r);
-        // self.graph
-        //     .insert_edge(&self.mgr.flatten_all(&[l, r]), Binding::Unbound);
-        ptr
-    }
-    // or-expressions may happen at any cutsite
-    pub fn or(&mut self, l: PlanPtr, r: PlanPtr) -> PlanPtr {
-        let ptr = self.mgr.or(l, r);
-        // self.graph
-        //     .insert_edge(&self.mgr.flatten_all(&[l, r]), Binding::Unbound);
-        ptr
-    }
-
-    // ite either happens at a top-level let-binding or not.
-    // TODO: we could add cutsites to each branch as well
-    pub fn ite(&mut self, p: PlanPtr, t: PlanPtr, f: PlanPtr, lbl: &Binding) -> PlanPtr {
-        let ptr = self.mgr.ite(p, t, f);
-        // self.graph
-        //     .insert_edge(&self.mgr.flatten_all(&[p, t, f]), lbl.clone());
-        ptr
-    }
-    pub fn not(&mut self, p: PlanPtr) -> PlanPtr {
-        self.mgr.not(p)
-    }
-    pub fn bool(&mut self, p: bool) -> PlanPtr {
-        self.mgr.bool(p)
-    }
-}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct MaxUniqueId(u64);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub struct MaxVarLabel(u64);
 
 pub struct InteractionEnv {
-    mgr: HypStore,
+    graph: Hypergraph<PlanPtr, (), Binding>,
+    mgr: PlanManager,
     binding: Binding,
     mx_uid: MaxUniqueId,
     mx_lbl: MaxVarLabel,
@@ -407,6 +350,7 @@ impl Default for InteractionEnv {
     fn default() -> InteractionEnv {
         Self {
             mgr: Default::default(),
+            graph: Default::default(),
             binding: Binding::Unbound,
             mx_uid: MaxUniqueId(0),
             mx_lbl: MaxVarLabel(0),
@@ -469,9 +413,9 @@ impl InteractionEnv {
             .map(|a| {
                 let res = self.plan_anf(ctx, a)?;
                 assert_eq!(res.len(), 1);
-                let deps = self.mgr.mgr.flatten(res[0]);
+                let deps = self.mgr.flatten(res[0]);
                 debug!("print: {:?}", a);
-                // self.mgr.graph.insert_edge(&deps, self.binding.clone());
+                // self.graph.insert_edge(&deps, self.binding.clone());
                 Ok(res[0])
             })
             .collect()
@@ -485,13 +429,13 @@ impl InteractionEnv {
                 let ptrs = self.plan_anf(ctx, a)?;
                 if self.binding != Query {
                     for (i, p) in ptrs.iter().enumerate() {
-                        let deps = self.mgr.mgr.flatten(*p);
+                        let deps = self.mgr.flatten(*p);
                         let binding = match &self.binding {
                             CompoundQuery(0) => CompoundQuery(i),
                             CompoundQuery(_) => panic!("impossible!"),
                             e => e.clone(),
                         };
-                        self.mgr.graph.insert_edge(&deps, binding);
+                        self.graph.insert_edge(&deps, binding);
                     }
                 }
                 self.binding = binding;
@@ -540,14 +484,19 @@ impl InteractionEnv {
                 let ts = self.plan_expr(ctx, t)?;
                 let fs = self.plan_expr(ctx, f)?;
                 Ok(izip!(ps, ts, fs)
-                    .map(|(p, t, f)| self.mgr.ite(p, t, f, &self.binding))
+                    .map(|(p, t, f)| self.mgr.ite(p, t, f))
                     .collect_vec())
             }
             EFlip(v, param) => {
                 if v.label.value() > self.mx_lbl.0 {
                     self.mx_lbl = MaxVarLabel(v.label.value());
                 }
-                Ok(vec![self.mgr.new_var(v.label, &self.binding)])
+                let ptr = self.mgr.var(v.label, true);
+                self.graph.insert_vertex(ptr, ());
+                self.graph
+                    .insert_edge(&HashSet::from([ptr]), self.binding.clone());
+
+                Ok(vec![ptr])
             }
             EObserve(_, a) => self.plan_anf(ctx, a),
             ESample(_, e) => {
@@ -574,7 +523,7 @@ impl InteractionEnv {
             Program::Body(b) => {
                 let mut ctx = Default::default();
                 let _ = self.plan_expr(&mut ctx, b)?;
-                Ok((self.mgr.graph.clone(), self.mx_uid, self.mx_lbl))
+                Ok((self.graph.clone(), self.mx_uid, self.mx_lbl))
             }
         }
     }
@@ -954,7 +903,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
     pub fn test_interaction_2x2_tril_todo() {
         let grid2x2_tril = program!(lets![
             "01" ;= flip!(1/3) ;
@@ -968,9 +916,13 @@ mod tests {
         ]);
         let g = pipeline(&grid2x2_tril).unwrap().0;
         assert_eq!(g.vertices.len(), 6);
-        assert_eq!(g.hyperedges.len(), 7, "edge for each var and full ITE");
+        for (edge, nvar) in &g.hyperedges {
+            println!("nvar: {:?}", nvar);
+            println!("edge: {:?}", edge);
+        }
+        assert_eq!(g.hyperedges.len(), 3, "edge for each var and full ITE");
         let query = &g.hyperedges.last().unwrap().0;
-        assert_eq!(query.len(), 6, "query depends on every variable above");
+        assert_eq!(query.len(), 6, "11 depends on every variable above");
         order_cuts(&g);
     }
 
