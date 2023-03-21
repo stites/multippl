@@ -1,6 +1,7 @@
 #![allow(unused_imports)]
+#![allow(dead_code)]
 
-use csv::{Reader, Writer};
+use csv::{Reader, WriterBuilder};
 use itertools::*;
 // use plotters::coord::types::*;
 // use plotters::coord::*;
@@ -101,7 +102,7 @@ zoom_and_enhance! {
         gridsize: usize,
         comptype: CompileType,
         determinism: f64,
-        seed: u64,
+        seed: Option<u64>,
         ix: u64,
         acceptsize: usize,
         distsize: usize,
@@ -113,16 +114,16 @@ zoom_and_enhance! {
 
 impl Row {
     fn csv_array(&self) -> [String; 10] {
-        let c1 = format!("{}\t", self.gridsize);
-        let c2 = format!("{:?}\t", self.comptype);
-        let c3 = format!("{:.2}\t", self.determinism);
-        let c4 = format!("{}\t", self.seed);
-        let c5 = format!("{}\t", self.ix);
-        let c6 = format!("{}\t", self.acceptsize);
-        let c7 = format!("{}\t", self.distsize);
-        let c8 = format!("{}\t", self.numsize);
-        let c9 = format!("{}\t", self.calls);
-        let c10 = format!("{}\t", self.duration.as_millis());
+        let c1 = format!("{}", self.gridsize);
+        let c2 = format!("{:?}", self.comptype);
+        let c3 = format!("{:.2}", self.determinism);
+        let c4 = format!("{}", self.seed.map(|x| x as i64).unwrap_or_else(|| -1));
+        let c5 = format!("{}", self.ix);
+        let c6 = format!("{}", self.acceptsize);
+        let c7 = format!("{}", self.distsize);
+        let c8 = format!("{}", self.numsize);
+        let c9 = format!("{}", self.calls);
+        let c10 = format!("{}", self.duration.as_micros());
         [c1, c2, c3, c4, c5, c6, c7, c8, c9, c10]
     }
 }
@@ -148,7 +149,7 @@ fn write_csv_header(path: &str) -> MyResult<()> {
         .create_new(!std::path::Path::new(&path).exists())
         .open(path)
         .unwrap();
-    let mut wtr = Writer::from_writer(file);
+    let mut wtr = WriterBuilder::new().delimiter(b'\t').from_writer(file);
     wtr.write_record(Row::header())?;
     wtr.flush()?;
     Ok(())
@@ -159,19 +160,30 @@ fn write_csv_row(path: &str, row: &Row) -> MyResult<()> {
         .append(true)
         .open(path)
         .unwrap();
-    let mut wtr = Writer::from_writer(file);
+    let mut wtr = WriterBuilder::new().delimiter(b'\t').from_writer(file);
     wtr.write_record(&row.csv_array())?;
     wtr.flush()?;
     Ok(())
 }
-fn runner(gridsize: usize, comptype: CompileType, ix: u64, determinism: f64) -> Row {
+fn runner(
+    gridsize: usize,
+    comptype: CompileType,
+    ix: u64,
+    determinism: f64,
+    seed: Option<u64>,
+) -> Row {
     debug!("begin running");
     use CompileType::*;
-    let seed = 5;
-    let prg = define_program(gridsize, comptype.use_sampled(), seed, determinism);
+    let synthesize_seed = 5;
+    let prg = define_program(
+        gridsize,
+        comptype.use_sampled(),
+        synthesize_seed,
+        determinism,
+    );
     let start = Instant::now();
     let opts = yodel::Options {
-        seed: Some(<usize as TryInto<u64>>::try_into(gridsize).unwrap() + ix),
+        seed,
         ..Default::default()
     };
     let stats = match comptype {
@@ -182,12 +194,12 @@ fn runner(gridsize: usize, comptype: CompileType, ix: u64, determinism: f64) -> 
     let stop = Instant::now();
     let duration = stop.duration_since(start);
     let row = Row {
-        gridsize: gridsize,
-        comptype: comptype,
+        gridsize,
+        comptype,
         duration,
-        determinism: determinism,
-        ix: ix,
-        seed: seed,
+        determinism,
+        ix,
+        seed,
         acceptsize: stats.accept,
         distsize: stats.dist,
         numsize: stats.dist_accept,
@@ -205,9 +217,15 @@ fn run_all_grids(path: &str) -> Vec<Row> {
     let mut all_answers = vec![];
     for determinism in [0.75, 0.25, 0.5, 0.0_f64] {
         for comptype in [Approx, Exact] {
-            for gridsize in [3, 6, 9, 12, 15_usize] {
+            for gridsize in [3, 6, 9, 12, 15_u64] {
                 for ix in 1..=10_u64 {
-                    let row = runner(gridsize, comptype, ix, determinism);
+                    let row = runner(
+                        gridsize as usize,
+                        comptype,
+                        ix,
+                        determinism,
+                        Some(gridsize * 100 + ix),
+                    );
                     let _ = write_csv_row(path, &row);
                     all_answers.push(row);
                 }
@@ -298,6 +316,8 @@ struct PlotGridsArgs {
     comptype: CompileType,
     #[arg(long, short)]
     determinism: f64,
+    #[arg(long, short, default_value = None)]
+    seed: Option<u64>,
     #[arg(long, short, default_value_t = 10)]
     runs: u64,
     #[arg(short, default_value_t = 0)]
@@ -326,10 +346,12 @@ fn main() -> MyResult<()> {
     };
     let csv = args.csv.unwrap_or_else(|| String::from("grids.csv"));
     let path = args.path.unwrap_or_else(|| String::from("out/plots/"));
+    let seed: u64 = args.seed.unwrap_or_else(|| (args.gridsize as u64) * 100);
     info!("gridsize   : {:?}x{:?}", args.gridsize, args.gridsize);
     info!("comptype   : {:?}", args.comptype);
     info!("determinism: {:?}", args.determinism);
     info!("runs       : {:?}", args.runs);
+    info!("start seed : {:?}", seed);
     info!("path       : {:?}", path);
     info!("csv        : {:?}", csv);
     info!("verbosity  : {:?}", verbosity);
@@ -338,7 +360,13 @@ fn main() -> MyResult<()> {
     let csvpath = &(path + &csv);
     let _ = write_csv_header(csvpath);
     for ix in 0..args.runs {
-        let row = runner(args.gridsize, args.comptype, ix, args.determinism);
+        let row = runner(
+            args.gridsize,
+            args.comptype,
+            ix,
+            args.determinism,
+            Some(seed + ix),
+        );
         let _ = write_csv_row(csvpath, &row);
     }
 
