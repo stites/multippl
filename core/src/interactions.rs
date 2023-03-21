@@ -286,7 +286,7 @@ pub enum Binding {
     NamedSample(NamedVar),
     NamedSampleLet(NamedVar, NamedVar),
     Query,
-    CompoundQuery,
+    CompoundQuery(usize),
     // TODO: beyond the prototype, these would be warranted:
     // InUnnamedSample,
     // InUnnamedIteBranch(bool),
@@ -296,21 +296,21 @@ impl Binding {
     pub fn id(&self) -> Option<UniqueId> {
         use Binding::*;
         match self {
-            Unbound | Query | CompoundQuery => None,
+            Unbound | Query | CompoundQuery(_) => None,
             Let(v) | NamedSample(v) | NamedSampleLet(_, v) => Some(v.id()),
         }
     }
     pub fn sample_id(&self) -> Option<UniqueId> {
         use Binding::*;
         match self {
-            Unbound | Query | CompoundQuery | Let(_) => None,
+            Unbound | Query | CompoundQuery(_) | Let(_) => None,
             NamedSample(v) | NamedSampleLet(v, _) => Some(v.id()),
         }
     }
     pub fn cut_id(&self) -> Option<UniqueId> {
         use Binding::*;
         match self {
-            Unbound | Query | CompoundQuery | NamedSample(_) | NamedSampleLet(_, _) => None,
+            Unbound | Query | CompoundQuery(_) | NamedSample(_) | NamedSampleLet(_, _) => None,
             Let(v) => Some(v.id()),
         }
     }
@@ -374,10 +374,16 @@ impl HypStore {
         self.mgr.bool(p)
     }
 }
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct MaxUniqueId(u64);
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct MaxVarLabel(u64);
 
 pub struct InteractionEnv {
     mgr: HypStore,
     binding: Binding,
+    mx_uid: MaxUniqueId,
+    mx_lbl: MaxVarLabel,
 }
 
 struct Ctx {
@@ -402,6 +408,8 @@ impl Default for InteractionEnv {
         Self {
             mgr: Default::default(),
             binding: Binding::Unbound,
+            mx_uid: MaxUniqueId(0),
+            mx_lbl: MaxVarLabel(0),
         }
     }
 }
@@ -409,17 +417,24 @@ impl InteractionEnv {
     fn plan_anf(&mut self, ctx: &Ctx, a: &AnfAnn) -> Result<Vec<PlanPtr>, CompileError> {
         use crate::grammar::Anf::*;
         match a {
-            AVar(v, s) => match ctx.substitutions.get(&v) {
-                None => panic!("must already be included"),
-                Some(ptrs) => Ok(ptrs.clone()),
-            },
+            AVar(v, s) => {
+                if v.id().0 > self.mx_uid.0 {
+                    self.mx_uid = MaxUniqueId(v.id().0);
+                }
+                match ctx.substitutions.get(&v) {
+                    None => panic!("must already be included"),
+                    Some(ptrs) => Ok(ptrs.clone()),
+                }
+            }
             AVal(_, Val::Bool(b)) => Ok(vec![self.mgr.bool(*b)]),
             AVal(_, Val::Prod(_)) => todo!(),
             And(bl, br) => {
                 let b = match &self.binding {
-                    Binding::Query => Binding::CompoundQuery,
+                    Binding::Query => Binding::CompoundQuery(0),
                     a => a.clone(),
                 };
+                println!("{:?} -> {:?}", self.binding, b);
+
                 self.binding = b;
 
                 let pls = self.plan_anf(ctx, bl)?;
@@ -431,7 +446,7 @@ impl InteractionEnv {
             }
             Or(bl, br) => {
                 let b = match &self.binding {
-                    Binding::Query => Binding::CompoundQuery,
+                    Binding::Query => Binding::CompoundQuery(0), // 0 is just a placeholder for now
                     a => a.clone(),
                 };
                 self.binding = b;
@@ -468,10 +483,15 @@ impl InteractionEnv {
             EAnf(_, a) => {
                 let binding = self.binding.clone();
                 let ptrs = self.plan_anf(ctx, a)?;
-                if binding != Query {
-                    for p in &ptrs {
+                if self.binding != Query {
+                    for (i, p) in ptrs.iter().enumerate() {
                         let deps = self.mgr.mgr.flatten(*p);
-                        self.mgr.graph.insert_edge(&deps, self.binding.clone());
+                        let binding = match &self.binding {
+                            CompoundQuery(0) => CompoundQuery(i),
+                            CompoundQuery(_) => panic!("impossible!"),
+                            e => e.clone(),
+                        };
+                        self.mgr.graph.insert_edge(&deps, binding);
                     }
                 }
                 self.binding = binding;
@@ -486,12 +506,15 @@ impl InteractionEnv {
                 self.plan_anfs(ctx, az)
             }
             ELetIn(v, s, ebound, ebody) => {
+                if v.id().0 > self.mx_uid.0 {
+                    self.mx_uid = MaxUniqueId(v.id().0);
+                }
                 let span = tracing::span!(tracing::Level::DEBUG, "let");
                 let _enter = span.enter();
                 debug!("{:?}", v);
 
                 let binding = match &self.binding {
-                    Query | CompoundQuery => panic!("impossible"),
+                    Query | CompoundQuery(_) => panic!("impossible"),
                     Unbound | Let(_) => Let(v.clone()),
                     NamedSample(prv) | NamedSampleLet(prv, _) => {
                         NamedSampleLet(prv.clone(), v.clone())
@@ -517,7 +540,12 @@ impl InteractionEnv {
                     .map(|(p, t, f)| self.mgr.ite(p, t, f, &self.binding))
                     .collect_vec())
             }
-            EFlip(v, param) => Ok(vec![self.mgr.new_var(v.label, &self.binding)]),
+            EFlip(v, param) => {
+                if v.label.value() > self.mx_lbl.0 {
+                    self.mx_lbl = MaxVarLabel(v.label.value());
+                }
+                Ok(vec![self.mgr.new_var(v.label, &self.binding)])
+            }
             EObserve(_, a) => self.plan_anf(ctx, a),
             ESample(_, e) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "sample");
@@ -535,18 +563,23 @@ impl InteractionEnv {
             }
         }
     }
-    pub fn plan(&mut self, p: &ProgramAnn) -> Result<IteractionGraph, CompileError> {
+    pub fn plan(
+        &mut self,
+        p: &ProgramAnn,
+    ) -> Result<(IteractionGraph, MaxUniqueId, MaxVarLabel), CompileError> {
         match p {
             Program::Body(b) => {
                 let mut ctx = Default::default();
                 let _ = self.plan_expr(&mut ctx, b)?;
-                Ok(self.mgr.graph.clone())
+                Ok((self.mgr.graph.clone(), self.mx_uid, self.mx_lbl))
             }
         }
     }
 }
 
-pub fn pipeline(p: &crate::ProgramInferable) -> Result<IteractionGraph, CompileError> {
+pub fn pipeline(
+    p: &crate::ProgramInferable,
+) -> Result<(IteractionGraph, MaxUniqueId, MaxVarLabel), CompileError> {
     let (p, vo, varmap, inv, mxlbl) = crate::annotate::pipeline(p)?;
     let mut env = InteractionEnv::default();
     env.plan(&p)
@@ -577,16 +610,33 @@ pub fn top_k_cuts(cuts: &Vec<(Binding, Rank)>, n: usize) -> Vec<Binding> {
 pub struct InsertionEnv {
     cuts: Vec<Binding>,
     cut: Binding,
-    gensym: usize,
+    gen_unq: u64,
+    gen_lbl: u64,
+    binding: Binding, // only used for complex query at the moment
 }
 impl InsertionEnv {
-    pub fn new(cuts: Vec<Binding>) -> Self {
+    pub fn new(cuts: Vec<Binding>, mx_uid: MaxUniqueId, mx_lbl: MaxVarLabel) -> Self {
         let cut = cuts.first().as_ref().unwrap().clone().to_owned();
         Self {
             cuts,
             cut,
-            gensym: 0,
+            gen_unq: mx_uid.0,
+            gen_lbl: mx_lbl.0,
+            binding: Binding::Unbound,
         }
+    }
+    pub fn fresh_uniq(&mut self) -> UniqueId {
+        let sym = self.gen_unq;
+        self.gen_unq += 1;
+        UniqueId(sym)
+    }
+    pub fn fresh_name(&mut self) -> (UniqueId, String) {
+        let sym = self.fresh_uniq();
+        (sym, format!("__s#{}", sym.0))
+    }
+    pub fn fresh_anf(&mut self) -> Var {
+        let (uid, s) = self.fresh_name();
+        Var::Named(NamedVar { id: uid, name: s })
     }
     pub fn sample_expr(&mut self, e: &ExprAnn) -> ExprAnn {
         use crate::grammar::Expr::*;
@@ -596,22 +646,45 @@ impl InsertionEnv {
             // EPrj(_, i, a) => e.clone(),
             // EFst(_, a) => e.clone(),
             // ESnd(_, a) => e.clone(),
-            // EProd(_, az) => {
-            //     // let span = tracing::span!(tracing::Level::DEBUG, "prod");
-            //     // let _enter = span.enter();
-            //     // sample_anfs(az)
-            //     e.clone()
-            // }
+            EProd(v, az) => {
+                match self.binding {
+                    CompoundQuery(bindix) => {
+                        let mut newazs = vec![];
+                        let (uid, s) = self.fresh_name();
+                        // let nvar = NamedVar{ id: uid, name: s };
+                        // let var = Var::Named(nvar.clone());
+
+                        for (i, a) in az.iter().enumerate() {
+                            if i == bindix {
+                                let nvar = NamedVar {
+                                    id: uid.clone(),
+                                    name: s.clone(),
+                                };
+                                newazs.push(Anf::AVar(nvar, s.clone()));
+                            } else {
+                                newazs.push(a.clone());
+                            }
+                        }
+                        EProd(v.clone(), newazs)
+                    }
+                    _ => e.clone(),
+                }
+            }
             ELetIn(v, s, ebound, ebody) => match self.cut.cut_id().map(|i| v.id() == i) {
                 Some(true) => {
                     println!("{:?} ?= {:?} == {}", self.cut, v, true);
                     let smpl = ESample((), Box::new(self.sample_expr(ebound)));
-                    ELetIn(
-                        v.clone(),
-                        s.to_string(),
-                        Box::new(smpl),
-                        Box::new(self.sample_expr(ebody)),
-                    )
+                    let body = match **ebody {
+                        EProd(_, _) => {
+                            let binding = self.binding.clone();
+                            self.binding = CompoundQuery(0);
+                            let ret = self.sample_expr(ebody);
+                            self.binding = binding;
+                            ret
+                        }
+                        _ => self.sample_expr(ebody),
+                    };
+                    ELetIn(v.clone(), s.to_string(), Box::new(smpl), Box::new(body))
                 }
                 _ => {
                     println!("{:?} ?= {:?} == {}", self.cut, v, false);
@@ -673,7 +746,7 @@ mod tests {
             "x" ;= flip!(1/3);
            ...? b!("x")
         ]);
-        let g = pipeline(&p).unwrap();
+        let (g, uid, lbl) = pipeline(&p).unwrap();
         assert_eq!(g.vertices.len(), 1);
         assert_eq!(g.hyperedges.len(), 1);
         let (_, nvar) = g.hyperedges[0].clone();
@@ -681,7 +754,7 @@ mod tests {
         let cuts = order_cuts(&g);
         let pann = crate::annotate::pipeline(&p).unwrap().0;
         let cs = top_k_cuts(&cuts, 1);
-        let mut env = InsertionEnv::new(cs);
+        let mut env = InsertionEnv::new(cs, uid, lbl);
         let p1 = env.apply_cuts(&pann);
         let p1_expected = program!(lets![
             "x" ;= sample!(flip!(1/3));
@@ -699,7 +772,7 @@ mod tests {
             "z" ;= b!("x" && "y");
            ...? b!("z")
         ]);
-        let g = pipeline(&p).unwrap();
+        let (g, uid, lbl) = pipeline(&p).unwrap();
         assert_eq!(g.vertices.len(), 2);
         println!("{}", g.print());
         assert_eq!(g.hyperedges.len(), 3, "edge for each line");
@@ -712,7 +785,7 @@ mod tests {
         let pann = crate::annotate::pipeline(&p).unwrap().0;
         let cs = top_k_cuts(&cuts, 1);
         println!("{:#?}", cuts);
-        let mut env = InsertionEnv::new(cs);
+        let mut env = InsertionEnv::new(cs, uid, lbl);
         let p1 = env.apply_cuts(&pann);
         let p1_expected = program!(lets![
             "x" ;= flip!(1/3);
@@ -731,15 +804,16 @@ mod tests {
             "y" ;= flip!(1/3);
            ...? b!("x" && "y")
         ]);
-        let g = pipeline(&p).unwrap();
+        let (g, uid, lbl) = pipeline(&p).unwrap();
         assert_eq!(g.vertices.len(), 2);
+        println!("{}", g.print());
         assert_eq!(g.hyperedges.len(), 3, "edge for each line");
         let cuts = order_cuts(&g);
         assert_eq!(cuts.len(), 3);
         let pann = crate::annotate::pipeline(&p).unwrap().0;
         let cs = top_k_cuts(&cuts, 1);
         println!("{:#?}", cuts);
-        let mut env = InsertionEnv::new(cs);
+        let mut env = InsertionEnv::new(cs, uid, lbl);
         let p1 = env.apply_cuts(&pann);
         let p1_expected = program!(lets![
             "x" ;= flip!(1/3);
@@ -760,7 +834,7 @@ mod tests {
             "a" ;= b!("x" && "y" && "z");
            ...? b!("a")
         ]);
-        let g = pipeline(&p).unwrap();
+        let g = pipeline(&p).unwrap().0;
         assert_eq!(g.vertices.len(), 3);
         assert_eq!(g.hyperedges.len(), 5, "edge for each line");
         let query = &g.hyperedges.last().unwrap().0;
@@ -777,7 +851,7 @@ mod tests {
            "r" ;= sample!(var!("x"));
            ...? b!("r")
         ]);
-        let g = pipeline(&shared_var).unwrap();
+        let g = pipeline(&shared_var).unwrap().0;
         assert_eq!(g.vertices.len(), 1);
         let es = g.hyperedges.clone();
         assert_eq!(g.hyperedges.len(), 4, "edge for each line");
@@ -804,7 +878,7 @@ mod tests {
            "z" ;= sample!(b!("x", "y"));
            ...? b!("z")
         ]);
-        let g = pipeline(&shared_tuple).unwrap();
+        let g = pipeline(&shared_tuple).unwrap().0;
         assert_eq!(g.vertices.len(), 2);
         // for (edge, nvar) in &g.hyperedges {
         //     println!("nvar: {:?}", nvar);
@@ -825,7 +899,7 @@ mod tests {
                 else { flip!(1/4) });
             ...? b!("y")
         ]);
-        let g = pipeline(&ite).unwrap();
+        let g = pipeline(&ite).unwrap().0;
         assert_eq!(g.vertices.len(), 3);
         assert_eq!(g.hyperedges.len(), 4, "edge for each line");
         for (edge, nvar) in &g.hyperedges {
@@ -854,7 +928,7 @@ mod tests {
             "_" ;= observe!(b!("x" || "y"));
             ...? b!("x")
         ]);
-        let g = pipeline(&ite_with_nested_lets).unwrap();
+        let g = pipeline(&ite_with_nested_lets).unwrap().0;
         assert_eq!(g.vertices.len(), 3);
         assert_eq!(g.hyperedges.len(), 5, "edge for each line");
         for (edge, nvar) in &g.hyperedges {
@@ -875,7 +949,7 @@ mod tests {
             "10" ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
             ...? b!("01", "10")
         ]);
-        let g = pipeline(&grid2x2_triu).unwrap();
+        let g = pipeline(&grid2x2_triu).unwrap().0;
         assert_eq!(g.vertices.len(), 5);
         assert_eq!(g.hyperedges.len(), 5, "edge for each line");
         order_cuts(&g);
@@ -894,7 +968,7 @@ mod tests {
                                                           flip!(3/11) ))))));
             ...? b!("11")
         ]);
-        let g = pipeline(&grid2x2_tril).unwrap();
+        let g = pipeline(&grid2x2_tril).unwrap().0;
         assert_eq!(g.vertices.len(), 6);
         assert_eq!(g.hyperedges.len(), 7, "edge for each var and full ITE");
         let query = &g.hyperedges.last().unwrap().0;
@@ -916,7 +990,7 @@ mod tests {
                                                           flip!(1/11) ))))));
             ...? b!("11")
         ]);
-        let g = pipeline(&grid2x2).unwrap();
+        let g = pipeline(&grid2x2).unwrap().0;
         assert_eq!(g.vertices.len(), 9);
         assert_eq!(g.hyperedges.len(), 10, "vertex + ITE");
         let query = &g.hyperedges.last().unwrap().0;
@@ -945,7 +1019,7 @@ mod tests {
                                                           flip!(1/11) ))))));
             ...? b!("11")
         ]);
-        let g = pipeline(&grid2x2_sampled).unwrap();
+        let g = pipeline(&grid2x2_sampled).unwrap().0;
         assert_eq!(g.vertices.len(), 9);
         assert_eq!(g.hyperedges.len(), 10, "vertex + ITE");
         let query = &g.hyperedges.last().unwrap().0;
