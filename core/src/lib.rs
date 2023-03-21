@@ -11,10 +11,10 @@ pub mod grammar;
 pub mod grammar_macros;
 pub mod grids;
 pub mod inference;
-pub mod typecheck;
+pub mod typeinf;
 
 mod interactions;
-mod typeinf;
+mod typecheck;
 // mod analysis2;
 mod annotate;
 mod parser;

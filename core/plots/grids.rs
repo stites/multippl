@@ -19,7 +19,7 @@ use tracing_subscriber::FmtSubscriber;
 use yodel::compile::grammar::*;
 use yodel::grids::*;
 use yodel::inference::*;
-use yodel::typecheck::grammar::*;
+use yodel::typeinf::grammar::*;
 
 type MyResult<X> = Result<X, Box<dyn Error>>;
 
@@ -127,7 +127,7 @@ impl Row {
     }
 }
 
-fn define_program(size: usize, sampled: bool, prg_seed: u64, determinism: f64) -> ProgramTyped {
+fn define_program(size: usize, sampled: bool, prg_seed: u64, determinism: f64) -> ProgramInferable {
     let mk_probability = |_ix, _p| Probability::new(0.5);
     let schema = GridSchema::new_from_fn(
         size,
@@ -164,7 +164,7 @@ fn write_csv_row(path: &str, row: &Row) -> MyResult<()> {
     wtr.flush()?;
     Ok(())
 }
-fn runner(gridsize: usize, comptype: CompileType, ix: u64, determinism: f64) -> (Row, WmcStats) {
+fn runner(gridsize: usize, comptype: CompileType, ix: u64, determinism: f64) -> Row {
     debug!("begin running");
     use CompileType::*;
     let seed = 5;
@@ -193,35 +193,26 @@ fn runner(gridsize: usize, comptype: CompileType, ix: u64, determinism: f64) -> 
         numsize: stats.dist_accept,
         calls: stats.mgr_recursive_calls,
     };
-    info!("computed: {:?} {:?}", row, stats);
-    (row, stats)
+    info!("computed: {:?}", row);
+    row
 }
-fn run_all_grids(path: &str) -> Vec<(Row, WmcStats)> {
-    debug!("begin running");
+
+fn run_all_grids(path: &str) -> Vec<Row> {
+    debug!("begin running grid");
     use CompileType::*;
     let _ = write_csv_header(path);
 
-    let specs: Vec<_> = iproduct!(
-        [2, 3, 4, 5, 7_usize, 9, 12, 15, 20, 25_usize],
-        // [9_usize],
-        [Approx, OptApx], // Exact,],
-        (1..=1_u64)
-    )
-    .collect_vec();
-
     let mut all_answers = vec![];
-    for determinism in [0.5, 0.25, 0.0_f64] {
-        // for determinism in [0.0_f64] {
-        let some_answers: Vec<_> = specs
-            .clone()
-            .into_iter()
-            .map(|(gridsize, comptype, ix)| {
-                let (row, stats) = runner(gridsize, comptype, ix, determinism);
-                let _ = write_csv_row(path, &row);
-                (row, stats)
-            })
-            .collect();
-        all_answers.extend(some_answers);
+    for determinism in [0.75, 0.25, 0.5, 0.0_f64] {
+        for comptype in [Approx, Exact] {
+            for gridsize in [3, 6, 9, 12, 15_usize] {
+                for ix in 1..=10_u64 {
+                    let row = runner(gridsize, comptype, ix, determinism);
+                    let _ = write_csv_row(path, &row);
+                    all_answers.push(row);
+                }
+            }
+        }
     }
     all_answers
 }
@@ -298,28 +289,29 @@ fn run_all_grids(path: &str) -> Vec<(Row, WmcStats)> {
 //     Ok(())
 // }
 
-// #[derive(Parser)]
-// #[command(author, version, about, long_about = None)]
-// struct PlotGridsArgs {
-//     #[arg(long)]
-//     gridsize: usize,
-//     #[arg(long)]
-//     comptype: CompileType,
-//     #[arg(long, short)]
-//     determinism: f64,
-//     #[arg(short, default_value_t = 0)]
-//     verbosity: usize,
-//     #[arg(short, default_value = None)]
-//     csv: Option<String>,
-//     #[arg(short, default_value = None)]
-//     path: Option<String>,
-// }
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+struct PlotGridsArgs {
+    #[arg(long, short)]
+    gridsize: usize,
+    #[arg(long, short)]
+    comptype: CompileType,
+    #[arg(long, short)]
+    determinism: f64,
+    #[arg(long, short, default_value_t = 10)]
+    runs: u64,
+    #[arg(short, default_value_t = 0)]
+    verbosity: usize,
+    #[arg(long, default_value = None)]
+    csv: Option<String>,
+    #[arg(long, default_value = None)]
+    path: Option<String>,
+}
 
 fn main() -> MyResult<()> {
-    // let args = PlotGridsArgs::parse();
+    let args = PlotGridsArgs::parse();
 
-    // let verbosity = match args.verbosity {
-    let verbosity = match 0 {
+    let verbosity = match args.verbosity {
         0 => None,
         1 => Some(tracing::Level::INFO),
         2 => Some(tracing::Level::DEBUG),
@@ -332,19 +324,24 @@ fn main() -> MyResult<()> {
             .with_target(false)
             .init(),
     };
-    let csv = String::from("grids.csv");
-    let path = String::from("out/plots/");
-    // let csv = args.csv.unwrap_or_else(|| String::from("grids.csv"));
-    // let path = args.path.unwrap_or_else(|| String::from("out/plots/"));
-    // info!("gridsize   : {:?}x{:?}", args.gridsize, args.gridsize);
-    // info!("comptype   : {:?}", args.comptype);
-    // info!("determinism: {:?}", args.determinism);
+    let csv = args.csv.unwrap_or_else(|| String::from("grids.csv"));
+    let path = args.path.unwrap_or_else(|| String::from("out/plots/"));
+    info!("gridsize   : {:?}x{:?}", args.gridsize, args.gridsize);
+    info!("comptype   : {:?}", args.comptype);
+    info!("determinism: {:?}", args.determinism);
+    info!("runs       : {:?}", args.runs);
     info!("path       : {:?}", path);
     info!("csv        : {:?}", csv);
     info!("verbosity  : {:?}", verbosity);
 
     fs::create_dir_all(path.clone())?;
-    let _rows = run_all_grids(&(path + &csv));
+    let csvpath = &(path + &csv);
+    let _ = write_csv_header(csvpath);
+    for ix in 0..args.runs {
+        let row = runner(args.gridsize, args.comptype, ix, args.determinism);
+        let _ = write_csv_row(csvpath, &row);
+    }
+
     // build_chart(rows);
     Ok(())
 }
