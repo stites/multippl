@@ -13,7 +13,7 @@ use tracing::*;
 use tracing_test::*;
 
 mod arbitrary;
-const USE_OPT: bool = true;
+const USE_OPT: bool = false;
 const USE_DEBUG: bool = false;
 
 pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &ProgramInferable) {
@@ -554,8 +554,8 @@ fn free_variables_1() {
            ...? var!("l")
         ])
     };
-    // check_approx1("free/!!", 1.0, &problem, 1000);
-    check_approx1("free/!!", 1.0, &problem, 2);
+    check_approx1("free/!!", 1.0, &problem, 1000);
+    // check_approx1("free/!!", 1.0, &problem, 2);
 }
 
 macro_rules! free_variable_2_tests {
