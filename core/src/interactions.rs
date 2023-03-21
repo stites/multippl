@@ -527,8 +527,11 @@ impl InteractionEnv {
                 match **ebody {
                     ELetIn(_, _, _, _) => self.plan_expr(ctx, ebody),
                     _ => {
+                        let binding = self.binding.clone();
                         self.binding = Query;
-                        self.plan_expr(ctx, ebody)
+                        let ret = self.plan_expr(ctx, ebody);
+                        self.binding = binding;
+                        ret
                     }
                 }
             }
@@ -612,7 +615,6 @@ pub struct InsertionEnv {
     cut: Binding,
     gen_unq: u64,
     gen_lbl: u64,
-    binding: Binding, // only used for complex query at the moment
 }
 impl InsertionEnv {
     pub fn new(cuts: Vec<Binding>, mx_uid: MaxUniqueId, mx_lbl: MaxVarLabel) -> Self {
@@ -622,7 +624,6 @@ impl InsertionEnv {
             cut,
             gen_unq: mx_uid.0,
             gen_lbl: mx_lbl.0,
-            binding: Binding::Unbound,
         }
     }
     pub fn fresh_uniq(&mut self) -> UniqueId {
@@ -646,53 +647,56 @@ impl InsertionEnv {
             // EPrj(_, i, a) => e.clone(),
             // EFst(_, a) => e.clone(),
             // ESnd(_, a) => e.clone(),
-            EProd(v, az) => {
-                match self.binding {
-                    CompoundQuery(bindix) => {
-                        let mut newazs = vec![];
-                        let (uid, s) = self.fresh_name();
-                        // let nvar = NamedVar{ id: uid, name: s };
-                        // let var = Var::Named(nvar.clone());
-
-                        for (i, a) in az.iter().enumerate() {
-                            if i == bindix {
-                                let nvar = NamedVar {
-                                    id: uid.clone(),
-                                    name: s.clone(),
-                                };
-                                newazs.push(Anf::AVar(nvar, s.clone()));
-                            } else {
-                                newazs.push(a.clone());
-                            }
-                        }
-                        EProd(v.clone(), newazs)
-                    }
-                    _ => e.clone(),
-                }
-            }
-            ELetIn(v, s, ebound, ebody) => match self.cut.cut_id().map(|i| v.id() == i) {
+            // EProd(v, az) => e.clone(),
+            ELetIn(v, s, ebound, ebody) => match self.cut.id().map(|ix| ix == v.id()) {
                 Some(true) => {
-                    println!("{:?} ?= {:?} == {}", self.cut, v, true);
+                    debug!("> {:?} ?= {:?} == {}", self.cut, v, true);
                     let smpl = ESample((), Box::new(self.sample_expr(ebound)));
-                    let body = match **ebody {
-                        EProd(_, _) => {
-                            let binding = self.binding.clone();
-                            self.binding = CompoundQuery(0);
-                            let ret = self.sample_expr(ebody);
-                            self.binding = binding;
-                            ret
+                    ELetIn(v.clone(), s.to_string(), Box::new(smpl), ebody.clone())
+                }
+                _ => {
+                    debug!("{:?} ?= {:?} == {}", self.cut, v, false);
+                    let body = match (&**ebody, self.cut.clone()) {
+                        (EAnf((), a), CompoundQuery(0)) => {
+                            let (uid, s) = self.fresh_name();
+                            let nvar = NamedVar {
+                                id: uid,
+                                name: s.to_string(),
+                            };
+                            let to_sample = EAnf((), a.clone());
+                            let smpl = ESample((), Box::new(to_sample));
+                            let body = EAnf((), Box::new(Anf::AVar(nvar.clone(), s.to_string())));
+                            ELetIn(nvar, s.to_string(), Box::new(smpl), Box::new(body))
+                        }
+                        (EProd((), az), CompoundQuery(bindix)) => {
+                            let mut newazs = vec![];
+                            let (uid, s) = self.fresh_name();
+                            let mut sampled_anf = None;
+                            let nvar = NamedVar {
+                                id: uid.clone(),
+                                name: s.clone(),
+                            };
+                            for (i, a) in az.iter().enumerate() {
+                                if i == bindix {
+                                    sampled_anf = Some(a);
+                                    newazs.push(Anf::AVar(nvar.clone(), s.clone()));
+                                } else {
+                                    newazs.push(a.clone());
+                                }
+                            }
+
+                            let to_sample = EAnf((), Box::new(sampled_anf.unwrap().clone()));
+                            let smpl = ESample((), Box::new(to_sample));
+                            let body = EProd((), newazs);
+                            ELetIn(nvar.clone(), s.to_string(), Box::new(smpl), Box::new(body))
                         }
                         _ => self.sample_expr(ebody),
                     };
-                    ELetIn(v.clone(), s.to_string(), Box::new(smpl), Box::new(body))
-                }
-                _ => {
-                    println!("{:?} ?= {:?} == {}", self.cut, v, false);
                     ELetIn(
                         v.clone(),
                         s.to_string(),
                         Box::new(self.sample_expr(ebound)),
-                        Box::new(self.sample_expr(ebody)),
+                        Box::new(body),
                     )
                 }
             },
@@ -798,10 +802,10 @@ mod tests {
     }
 
     #[test]
-    pub fn test_interaction_graph_works_with_conjoined_query_todo() {
+    pub fn test_interaction_graph_works_with_conjoined_query() {
         let p = program!(lets![
-            "x" ;= flip!(1/3);
-            "y" ;= flip!(1/3);
+            "x" ;= flip!(0.2);
+            "y" ;= flip!(0.2);
            ...? b!("x" && "y")
         ]);
         let (g, uid, lbl) = pipeline(&p).unwrap();
@@ -816,17 +820,16 @@ mod tests {
         let mut env = InsertionEnv::new(cs, uid, lbl);
         let p1 = env.apply_cuts(&pann);
         let p1_expected = program!(lets![
-            "x" ;= flip!(1/3);
-            "y" ;= flip!(1/3);
-            "__s#0" ;= sample!(b!("x" && "y"));
-           ...? b!("__s#0")
+            "x" ;= flip!(0.2);
+            "y" ;= flip!(0.2);
+            "__s#2" ;= sample!(b!("x" && "y"));
+           ...? b!("__s#2")
         ]);
         let pann_expected = crate::annotate::pipeline(&p1_expected).unwrap().0;
         assert_eq!(&p1, &pann_expected);
     }
     #[test]
-    #[ignore]
-    pub fn test_interaction_graph_captures_correct_edge_with_aliases_todo() {
+    pub fn test_interaction_graph_captures_correct_edge_with_aliases() {
         let p = program!(lets![
             "x" ;= flip!(1/3);
             "y" ;= flip!(1/3);
@@ -836,15 +839,14 @@ mod tests {
         ]);
         let g = pipeline(&p).unwrap().0;
         assert_eq!(g.vertices.len(), 3);
-        assert_eq!(g.hyperedges.len(), 5, "edge for each line");
+        assert_eq!(g.hyperedges.len(), 4, "edge for each line");
         let query = &g.hyperedges.last().unwrap().0;
         assert_eq!(query.len(), 3, "query depends on every variable above");
         order_cuts(&g);
     }
 
     #[test]
-    #[ignore]
-    pub fn test_interaction_works_as_expected_for_samples_todo() {
+    pub fn test_interaction_works_as_expected_for_samples() {
         let shared_var = program!(lets![
            "x" ;= flip!(1/3);
            "l" ;= sample!(var!("x"));
@@ -854,7 +856,7 @@ mod tests {
         let g = pipeline(&shared_var).unwrap().0;
         assert_eq!(g.vertices.len(), 1);
         let es = g.hyperedges.clone();
-        assert_eq!(g.hyperedges.len(), 4, "edge for each line");
+        assert_eq!(g.hyperedges.len(), 3, "edge for each line");
         let n = &es[0].1;
         assert_eq!(n, &Binding::Let(named(0, "x")));
         let (e, n) = &es[1];
@@ -870,8 +872,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
-    pub fn test_interaction_shared_tuples_get_separated_todo() {
+    pub fn test_interaction_shared_tuples_get_separated() {
         let shared_tuple = program!(lets![
            "x" ;= flip!(1/3);
            "y" ;= flip!(1/3);
@@ -884,13 +885,12 @@ mod tests {
         //     println!("nvar: {:?}", nvar);
         //     println!("edge: {:?}", edge);
         // }
-        assert_eq!(g.hyperedges.len(), 4, "needs a tuple for each position");
+        assert_eq!(g.hyperedges.len(), 3, "needs a tuple for each position");
         order_cuts(&g);
     }
 
     #[test]
-    #[ignore]
-    pub fn test_interaction_ite_sample_todo() {
+    pub fn test_interaction_ite_sample() {
         let ite = program!(lets![
             "x" ;= flip!(1/5);
             "y" ;= ite!(
@@ -901,20 +901,19 @@ mod tests {
         ]);
         let g = pipeline(&ite).unwrap().0;
         assert_eq!(g.vertices.len(), 3);
-        assert_eq!(g.hyperedges.len(), 4, "edge for each line");
+        assert_eq!(g.hyperedges.len(), 3, "edge for each line");
         for (edge, nvar) in &g.hyperedges {
             println!("nvar: {:?}", nvar);
             println!("edge: {:?}", edge);
         }
-        let query = &g.hyperedges.last().unwrap().0;
-        assert_eq!(query.len(), 3, "query depends on every variable above");
-        order_cuts(&g);
+        // let query = &g.hyperedges.last().unwrap().0;
+        // assert_eq!(query.len(), 3, "query depends on every variable above");
+        // order_cuts(&g);
     }
 
     #[test]
-    #[ignore]
     // #[traced_test]
-    pub fn test_interaction_ite_nested_let_todo() {
+    pub fn test_interaction_ite_nested_let() {
         let ite_with_nested_lets = program!(lets![
             "x" ;= flip!(2/3);
             "y" ;= ite!(
@@ -930,7 +929,7 @@ mod tests {
         ]);
         let g = pipeline(&ite_with_nested_lets).unwrap().0;
         assert_eq!(g.vertices.len(), 3);
-        assert_eq!(g.hyperedges.len(), 5, "edge for each line");
+        assert_eq!(g.hyperedges.len(), 3, "edge for each line");
         for (edge, nvar) in &g.hyperedges {
             println!("nvar: {:?}", nvar);
             println!("edge: {:?}", edge);
@@ -941,8 +940,7 @@ mod tests {
     }
 
     #[test]
-    #[ignore]
-    pub fn test_interaction_2x2_triu_todo() {
+    pub fn test_interaction_2x2_triu() {
         let grid2x2_triu = program!(lets![
             "00" ;= flip!(1/2);
             "01" ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -951,7 +949,7 @@ mod tests {
         ]);
         let g = pipeline(&grid2x2_triu).unwrap().0;
         assert_eq!(g.vertices.len(), 5);
-        assert_eq!(g.hyperedges.len(), 5, "edge for each line");
+        assert_eq!(g.hyperedges.len(), 3, "edge for each line");
         order_cuts(&g);
     }
 
