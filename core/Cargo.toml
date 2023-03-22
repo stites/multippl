@@ -10,7 +10,7 @@ required-features = ["criterion"]
 
 [[bin]]
 name = "plot-grids"
-path = "plots/grids.rs"
+path = "plots/grids/mod.rs"
 required-features = ["plots"]
 
 [dependencies]
