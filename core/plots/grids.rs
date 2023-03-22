@@ -19,11 +19,16 @@ use std::time::{Duration, Instant};
 use tracing::*;
 use tracing_subscriber::FmtSubscriber;
 use yodel::compile::grammar::*;
+use yodel::compile::Importance;
 use yodel::grids::*;
 use yodel::inference::*;
 use yodel::typeinf::grammar::*;
 
 type MyResult<X> = Result<X, Box<dyn Error>>;
+
+fn duration_to_usize(d: &Duration) -> usize {
+    d.as_micros().try_into().unwrap()
+}
 
 macro_rules! zoom_and_enhance {
     (struct $name:ident { $($fname:ident : $ftype:ty,)* }) => {
@@ -221,52 +226,58 @@ fn duration_runner(
     info!("computed: {:?}", row);
     row
 }
-// fn variance_runner(
-//     gridsize: usize,
-//     comptype: CompileType,
-//     ix: u64,
-//     determinism: f64,
-//     seed: Option<u64>,
-// ) -> Row {
-//     todo!()
-//     // debug!("begin running");
-//     // use CompileType::*;
-//     // if comptype == Exact {
-//     //     panic!("exact compile type not supported for 'duration' task")
-//     // }
-//     // let synthesize_seed = 5;
-//     // let prg = define_program(
-//     //     gridsize,
-//     //     comptype.use_sampled(),
-//     //     synthesize_seed,
-//     //     determinism,
-//     // );
-//     // let opts = yodel::Options {
-//     //     seed,
-//     //     ..Default::default()
-//     // };
-//     // let stats = match comptype {
-//     //     Exact => exact_with(&prg).1,
-//     //     Approx => importance_weighting_h(1, &prg, &opts).1,
-//     //     OptApx => importance_weighting_h(1, &prg, &yodel::Options { opt: true, ..opts }).1,
-//     // };
-//     // let stop = Instant::now();
-//     // let duration = stop.duration_since(start);
-//     // let row = Row {
-//     //     gridsize,
-//     //     comptype,
-//     //     duration,
-//     //     determinism,
-//     //     ix,
-//     //     seed,
-//     //     acceptsize: stats.accept,
-//     //     distsize: stats.dist,
-//     //     numsize: stats.dist_accept,
-//     //     calls: stats.mgr_recursive_calls,
-//     // };
-//     // info!("computed: {:?}", row);
-//     // row
-// }
+pub struct QueryRet(Vec<f64>);
+fn variance_runner(
+    gridsize: usize,
+    comptype: CompileType,
+    determinism: Det,
+    runs: usize,
+    seed: Option<u64>,
+) -> (
+    SummaryKey,
+    SummaryData,
+    Expectations,
+    Vec<Importance>,
+    Vec<QueryRet>,
+) {
+    debug!("begin running");
+    use CompileType::*;
+    let synthesize_seed = 5;
+    let prg = define_program(
+        gridsize,
+        comptype.use_sampled(),
+        synthesize_seed,
+        determinism.to_f64(),
+    );
+    let opts = yodel::Options {
+        seed,
+        ..Default::default()
+    };
+    let start = Instant::now();
+    let (qs, stats) = match comptype {
+        Exact => panic!("exact compile type not supported for 'variance' task"),
+        Approx => importance_weighting_h(runs, &prg, &opts),
+        OptApx => importance_weighting_h(runs, &prg, &yodel::Options { opt: true, ..opts }),
+    };
+    let stop = Instant::now();
+    let duration = stop.duration_since(start);
+    let key = SummaryKey {
+        comptype,
+        gridsize,
+        determinism,
+    };
+
+    let data = SummaryData {
+        duration: duration_to_usize(&duration),
+        acceptsize: stats.accept,
+        distsize: stats.dist,
+        numsize: stats.dist_accept,
+        calls: stats.mgr_recursive_calls,
+        nsamples: runs,
+    };
+    info!("{:?} {:?}", key, data);
+    (key, data, todo!(), todo!(), todo!())
+}
 
 fn run_all_grids(path: &str) -> Vec<Row> {
     debug!("begin running grid");
@@ -372,7 +383,7 @@ struct RunArgs {
     #[arg(long, short)]
     comptype: CompileType,
     #[arg(long, short)]
-    determinism: f64,
+    determinism: Det,
     #[arg(long, short, default_value = None)]
     seed: Option<u64>,
     #[arg(long, short, default_value_t = 10)]
@@ -392,6 +403,33 @@ enum Det {
     TwentyFivePer,
     FiftyPer,
     SeventyFivePer,
+}
+impl FromStr for Det {
+    type Err = String;
+    fn from_str(s: &str) -> Result<Self, <Self as FromStr>::Err> {
+        use Det::*;
+        let prefixes = ["0.", ".", ""];
+        let options_for = |num: usize| {
+            prefixes
+                .iter()
+                .map(|pre| pre.to_string() + &(num).to_string())
+                .collect::<HashSet<String>>()
+        };
+        if options_for(75).contains(s) {
+            Ok(Det::SeventyFivePer)
+        } else if options_for(0).contains(s) {
+            Ok(Det::Zero)
+        } else if options_for(5).contains(s) {
+            Ok(Det::FiftyPer)
+        } else if options_for(25).contains(s) {
+            Ok(Det::TwentyFivePer)
+        } else {
+            Err(format!(
+                "{} is not a valid string. Choose one of \"0.25\" \"0.5\" \"0.75\"",
+                s
+            ))
+        }
+    }
 }
 impl Det {
     fn from_f64(f: f64) -> Det {
@@ -450,6 +488,7 @@ impl SummaryKey {
         }
     }
 }
+
 #[derive(Clone, Copy, Hash, Eq, PartialEq, Debug)]
 struct SummaryData {
     duration: usize,
@@ -553,7 +592,7 @@ fn main() -> MyResult<()> {
                     args.gridsize,
                     args.comptype,
                     ix,
-                    args.determinism,
+                    args.determinism.to_f64(),
                     Some(seed + ix),
                 );
                 let _ = write_csv_row(csvpath, &row);
@@ -570,7 +609,19 @@ fn main() -> MyResult<()> {
             info!("path       : {:?}", path);
             info!("csv        : {:?}", csv);
             info!("verbosity  : {:?}", verbosity);
-            todo!()
+            fs::create_dir_all(path.clone())?;
+            let csvpath = &(path + &csv);
+            let _ = write_csv_header(csvpath);
+            let (key, data, expectations, ws, result) = variance_runner(
+                args.gridsize,
+                args.comptype,
+                args.determinism,
+                args.runs.try_into().unwrap(),
+                Some(seed),
+            );
+            for (w, r) in izip!(ws, result) {
+                // let _ = write_csv_row(csvpath, &r);
+            }
         }
         DurationStats => {
             let paths = fs::read_dir(path).unwrap();
