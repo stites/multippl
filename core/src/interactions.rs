@@ -292,6 +292,7 @@ where
 #[derive(Clone, Hash, Debug, Eq, PartialEq)]
 pub enum Binding {
     Unbound,
+    Alias,
     Let(NamedVar),
     NamedSample(NamedVar),
     NamedSampleLet(NamedVar, NamedVar),
@@ -306,21 +307,23 @@ impl Binding {
     pub fn id(&self) -> Option<UniqueId> {
         use Binding::*;
         match self {
-            Unbound | Query | CompoundQuery(_) => None,
+            Alias | Unbound | Query | CompoundQuery(_) => None,
             Let(v) | NamedSample(v) | NamedSampleLet(_, v) => Some(v.id()),
         }
     }
     pub fn sample_id(&self) -> Option<UniqueId> {
         use Binding::*;
         match self {
-            Unbound | Query | CompoundQuery(_) | Let(_) => None,
+            Alias | Unbound | Query | CompoundQuery(_) | Let(_) => None,
             NamedSample(v) | NamedSampleLet(v, _) => Some(v.id()),
         }
     }
     pub fn cut_id(&self) -> Option<UniqueId> {
         use Binding::*;
         match self {
-            Unbound | Query | CompoundQuery(_) | NamedSample(_) | NamedSampleLet(_, _) => None,
+            Alias | Unbound | Query | CompoundQuery(_) | NamedSample(_) | NamedSampleLet(_, _) => {
+                None
+            }
             Let(v) => Some(v.id()),
         }
     }
@@ -387,7 +390,6 @@ impl InteractionEnv {
                     Binding::Query => Binding::CompoundQuery(0),
                     a => a.clone(),
                 };
-                println!("{:?} -> {:?}", self.binding, b);
 
                 self.binding = b;
 
@@ -435,9 +437,18 @@ impl InteractionEnv {
         use Binding::*;
         match e {
             EAnf(_, a) => self.plan_anf(ctx, a),
-            EPrj(_, i, a) => Ok(vec![self.plan_anf(ctx, a)?[*i]]),
-            EFst(_, a) => Ok(vec![self.plan_anf(ctx, a)?[0]]),
-            ESnd(_, a) => Ok(vec![self.plan_anf(ctx, a)?[1]]),
+            EPrj(_, i, a) => {
+                self.binding = Alias;
+                Ok(vec![self.plan_anf(ctx, a)?[*i]])
+            }
+            EFst(_, a) => {
+                self.binding = Alias;
+                Ok(vec![self.plan_anf(ctx, a)?[0]])
+            }
+            ESnd(_, a) => {
+                self.binding = Alias;
+                Ok(vec![self.plan_anf(ctx, a)?[1]])
+            }
             EProd(_, az) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "prod");
                 let _enter = span.enter();
@@ -453,29 +464,36 @@ impl InteractionEnv {
 
                 let binding = match &self.binding {
                     Query | CompoundQuery(_) => panic!("impossible"),
-                    Unbound | Let(_) => Let(v.clone()),
+                    Alias | Unbound | Let(_) => Let(v.clone()),
                     NamedSample(prv) | NamedSampleLet(prv, _) => {
                         NamedSampleLet(prv.clone(), v.clone())
                     }
                 };
-                self.binding = binding;
+                self.binding = binding.clone();
                 let ptrs = self.plan_expr(ctx, ebound)?;
                 ctx.insert_sub(v.clone(), ptrs.clone());
-                for ptr in &ptrs {
-                    let deps = self.mgr.flatten(*ptr);
-                    self.graph.insert_edge(&deps, self.binding.clone());
+
+                if ![Alias, Query].contains(&self.binding) {
+                    for ptr in &ptrs {
+                        let deps = self.mgr.flatten(*ptr);
+                        self.graph.insert_edge(&deps, self.binding.clone());
+                    }
                 }
+                self.binding = binding;
 
                 // perform look ahead for the query
                 match **ebody {
-                    ELetIn(_, _, _, _) => self.plan_expr(ctx, ebody),
+                    ELetIn(_, _, _, _) => {
+                        let x = self.plan_expr(ctx, ebody)?;
+                        Ok(x)
+                    }
                     _ => {
                         let binding = self.binding.clone();
                         self.binding = Query;
-                        let ret = self.plan_expr(ctx, ebody);
+                        let ret = self.plan_expr(ctx, ebody)?;
                         match &self.binding {
                             CompoundQuery(0) => {
-                                for (i, p) in ptrs.iter().enumerate() {
+                                for (i, p) in ret.iter().enumerate() {
                                     let deps = self.mgr.flatten(*p);
                                     self.graph.insert_edge(&deps, CompoundQuery(i));
                                 }
@@ -483,7 +501,7 @@ impl InteractionEnv {
                             CompoundQuery(_) => panic!("impossible!"),
                             _ => {}
                         }
-                        ret
+                        Ok(ret)
                     }
                 }
             }
@@ -502,10 +520,13 @@ impl InteractionEnv {
                 if v.label.value() > self.mx_lbl.0 {
                     self.mx_lbl = MaxVarLabel(v.label.value());
                 }
+                if v.id().0 > self.mx_uid.0 {
+                    self.mx_uid = MaxUniqueId(v.id().0);
+                }
                 let ptr = self.mgr.var(v.label, true);
                 self.graph.insert_vertex(ptr, ());
-                self.graph
-                    .insert_edge(&HashSet::from([ptr]), self.binding.clone());
+                // self.graph
+                //     .insert_edge(&HashSet::from([ptr]), self.binding.clone());
 
                 Ok(vec![ptr])
             }
@@ -514,14 +535,14 @@ impl InteractionEnv {
                 let span = tracing::span!(tracing::Level::DEBUG, "sample");
                 let _enter = span.enter();
 
-                let initial_binding = self.binding.clone();
+                // let initial_binding = self.binding.clone();
                 let binding = match &self.binding {
                     Let(prv) => NamedSample(prv.clone()),
                     x => x.clone(),
                 };
                 self.binding = binding;
                 let ret = self.plan_expr(ctx, e);
-                self.binding = initial_binding;
+                // self.binding = initial_binding;
                 ret
             }
         }
@@ -587,9 +608,9 @@ impl InsertionEnv {
         }
     }
     pub fn fresh_uniq(&mut self) -> UniqueId {
-        let sym = self.gen_unq;
+        // we start with a known symbol, so we increment before returning the symbol
         self.gen_unq += 1;
-        UniqueId(sym)
+        UniqueId(self.gen_unq)
     }
     pub fn fresh_name(&mut self) -> (UniqueId, String) {
         let sym = self.fresh_uniq();
@@ -762,11 +783,10 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "punt for now"]
     pub fn test_interaction_graph_works_with_conjoined_query() {
         let p = program!(lets![
-            "x" ;= flip!(0.2);
-            "y" ;= flip!(0.2);
+            "x" ;= flip!(0.0);
+            "y" ;= flip!(0.0);
            ...? b!("x" && "y")
         ]);
         let (g, uid, lbl) = pipeline(&p).unwrap();
@@ -777,18 +797,21 @@ mod tests {
         assert_eq!(cuts.len(), 3);
         let pann = crate::annotate::pipeline(&p).unwrap().0;
         let cs = top_k_cuts(&cuts, 1);
-        println!("{:#?}", cuts);
+        for c in &cuts {
+            println!("{:?}", c);
+        }
         let mut env = InsertionEnv::new(cs, uid, lbl);
         let p1 = env.apply_cuts(&pann);
         let p1_expected = program!(lets![
-            "x" ;= flip!(0.2);
-            "y" ;= flip!(0.2);
-            "__s#2" ;= sample!(b!("x" && "y"));
-           ...? b!("__s#2")
+            "x" ;= flip!(0.0);
+            "y" ;= flip!(0.0);
+            "__s#4" ;= sample!(b!("x" && "y"));
+           ...? b!("__s#4")
         ]);
         let pann_expected = crate::annotate::pipeline(&p1_expected).unwrap().0;
         assert_eq!(&p1, &pann_expected);
     }
+
     #[test]
     pub fn test_interaction_graph_captures_correct_edge_with_aliases() {
         let p = program!(lets![
@@ -807,7 +830,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore = "expectations need to be revisited"]
     pub fn test_interaction_works_as_expected_for_samples() {
         let shared_var = program!(lets![
            "x" ;= flip!(1/3);
@@ -827,14 +849,9 @@ mod tests {
         let (e, n) = &es[2];
         assert_eq!(n, &Binding::NamedSample(named(3, "r")));
         assert_eq!(e, &HashSet::from([PlanPtr(0)]));
-        let (query, n) = &es[3];
-        assert_eq!(n, &Binding::Unbound);
-        assert_eq!(query, &HashSet::from([PlanPtr(0)]));
-        order_cuts(&g);
     }
 
     #[test]
-    #[ignore = "expectations need to be revisited"]
     pub fn test_interaction_shared_tuples_get_separated() {
         let shared_tuple = program!(lets![
            "x" ;= flip!(1/3);
@@ -844,16 +861,15 @@ mod tests {
         ]);
         let g = pipeline(&shared_tuple).unwrap().0;
         assert_eq!(g.vertices.len(), 2);
-        // for (edge, nvar) in &g.hyperedges {
-        //     println!("nvar: {:?}", nvar);
-        //     println!("edge: {:?}", edge);
-        // }
-        assert_eq!(g.hyperedges.len(), 3, "needs a tuple for each position");
+        for (edge, nvar) in &g.hyperedges {
+            println!("nvar: {:?}", nvar);
+            println!("edge: {:?}", edge);
+        }
+        assert_eq!(g.hyperedges.len(), 4, "needs a tuple for each position");
         order_cuts(&g);
     }
 
     #[test]
-    #[ignore = "expectations need to be revisited"]
     pub fn test_interaction_ite_sample() {
         let ite = program!(lets![
             "x" ;= flip!(1/5);
@@ -865,11 +881,11 @@ mod tests {
         ]);
         let g = pipeline(&ite).unwrap().0;
         assert_eq!(g.vertices.len(), 3);
-        assert_eq!(g.hyperedges.len(), 3, "edge for each line");
         for (edge, nvar) in &g.hyperedges {
             println!("nvar: {:?}", nvar);
             println!("edge: {:?}", edge);
         }
+        assert_eq!(g.hyperedges.len(), 2, "edge for each line");
         // let query = &g.hyperedges.last().unwrap().0;
         // assert_eq!(query.len(), 3, "query depends on every variable above");
         // order_cuts(&g);
@@ -877,7 +893,7 @@ mod tests {
 
     #[test]
     // #[traced_test]
-    #[ignore = "expectations need to be revisited"]
+    // #[ignore = "expectations need to be revisited"]
     pub fn test_interaction_ite_nested_let() {
         let ite_with_nested_lets = program!(lets![
             "x" ;= flip!(2/3);
@@ -894,7 +910,7 @@ mod tests {
         ]);
         let g = pipeline(&ite_with_nested_lets).unwrap().0;
         assert_eq!(g.vertices.len(), 3);
-        assert_eq!(g.hyperedges.len(), 3, "edge for each line");
+        assert_eq!(g.hyperedges.len(), 5, "edge for each line");
         for (edge, nvar) in &g.hyperedges {
             println!("nvar: {:?}", nvar);
             println!("edge: {:?}", edge);
@@ -914,7 +930,7 @@ mod tests {
         ]);
         let g = pipeline(&grid2x2_triu).unwrap().0;
         assert_eq!(g.vertices.len(), 5);
-        assert_eq!(g.hyperedges.len(), 7, "each var + ite");
+        assert_eq!(g.hyperedges.len(), 3, "each var + ite");
         order_cuts(&g);
     }
 
@@ -936,7 +952,7 @@ mod tests {
             println!("edge: {:?}", edge);
         }
         assert_eq!(g.vertices.len(), 6, "one per flip");
-        assert_eq!(g.hyperedges.len(), 7, "one per flip + ite");
+        assert_eq!(g.hyperedges.len(), 3, "one per flip + ite");
         let query = &g.hyperedges.last().unwrap().0;
         assert_eq!(query.len(), 6, "var 11 depends on every variable above");
         order_cuts(&g);
@@ -957,15 +973,14 @@ mod tests {
         ]);
         let g = pipeline(&grid2x2).unwrap().0;
         assert_eq!(g.vertices.len(), 9);
-        assert_eq!(g.hyperedges.len(), 12, "vertex + 3xITE");
+        assert_eq!(g.hyperedges.len(), 4, "vertex + 3xITE");
         let query = &g.hyperedges.last().unwrap().0;
         assert_eq!(query.len(), 9, "query depends on every variable above");
         order_cuts(&g);
     }
 
     #[test]
-    #[ignore = "expectations need to be revisited"]
-    pub fn test_interaction_grid2x2_sampled_todo() {
+    pub fn test_interaction_2x2_sampled() {
         let grid2x2_sampled = program!(lets![
             "00" ;= flip!(1/2);
             "01_10" ;= sample!(
@@ -986,12 +1001,15 @@ mod tests {
         let g = pipeline(&grid2x2_sampled).unwrap().0;
         assert_eq!(g.vertices.len(), 9);
         for (edge, nvar) in &g.hyperedges {
-            println!("nvar: {:?}", nvar);
-            println!("edge: {:?}", edge);
+            println!("{:?} >>> {:?}", nvar, edge);
         }
-        assert_eq!(g.hyperedges.len(), 15, "vertex + 5*ITE + sample");
+        assert_eq!(g.hyperedges.len(), 4, "every named ITE + 00");
         let query = &g.hyperedges.last().unwrap().0;
-        assert_eq!(query.len(), 9, "query depends on every variable above");
+        assert_eq!(
+            query.len(),
+            9,
+            "11 (last one) depends on every variable above"
+        );
         order_cuts(&g);
     }
 }
