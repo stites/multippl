@@ -34,8 +34,10 @@ fn runner(
     let start = Instant::now();
     let (qs, stats) = match comptype {
         Exact => panic!("exact compile type not supported for 'variance' task"),
-        Approx => importance_weighting_h(runs, &prg, &opts),
-        OptApx => importance_weighting_h(runs, &prg, &yodel::Options { opt: true, ..opts }),
+        Approx => importance_weighting_h_h(runs, &prg, &opts),
+        OptApx => {
+            panic!("optimized approximation is on hold until it actually does useful optimizations")
+        }
     };
     let stop = Instant::now();
     let duration = stop.duration_since(start);
@@ -59,48 +61,7 @@ fn runner(
 
 pub fn stats(path: String) {
     let paths = fs::read_dir(path).unwrap();
-    let mut data = vec![];
-    for path in paths {
-        let p = path.unwrap();
-        if p.metadata().unwrap().is_file() {
-            let cpth = p.path().canonicalize().unwrap();
-            let pth = cpth.as_path();
-            let ostr = pth.to_str();
-            let pstr = ostr.unwrap();
-            println!("Processing... {}", pstr);
-            let rows = read_csv(pstr).unwrap();
-            data.extend(rows.clone());
-        }
-    }
-    let mut summary = HashMap::new();
-    for d in data {
-        let k = SummaryKey::from_data(&d);
-        let v = SummaryData::from_data(&d);
-        match summary.get(&k) {
-            None => summary.insert(k, v),
-            Some(v0) => summary.insert(k, v0.plus(&v)),
-        };
-    }
-    let summary: HashMap<SummaryKey, SummaryData> =
-        summary.into_iter().map(|(k, v)| (k, v.avg())).collect();
-
-    println!("{}\t{}", SummaryKey::to_header(), SummaryData::to_header(),);
-    for g in [3, 6, 9, 12, 15] {
-        for det in [0.75, 0.5, 0.25, 0.0_f64] {
-            let d = Det::from_f64(det);
-            for ctype in [CompileType::Exact, CompileType::Approx] {
-                let key = SummaryKey::new(ctype, g, d);
-                match summary.get(&key) {
-                    None => println!(
-                        "{}\t----------------------------------------------------------------------------------------------",
-                        key.to_string()
-                    ),
-                    Some(v) => println!("{}\t{}", key.to_string(), v.to_string(),),
-                }
-            }
-            println!("");
-        }
-    }
+    todo!()
 }
 
 #[derive(Parser, Debug, Clone)]
@@ -119,6 +80,8 @@ pub struct RunArgs {
     pub runs: usize,
     #[arg(long, short, default_value_t = 100)]
     pub runchecks: usize,
+    #[arg(long, short, default_value_t = false)]
+    pub debug: bool,
 }
 
 pub fn main(path: String, args: RunArgs) {
@@ -127,14 +90,26 @@ pub fn main(path: String, args: RunArgs) {
         .clone()
         .unwrap_or_else(|| String::from("grids.csv"));
     let seed: u64 = args.seed.unwrap_or_else(|| (args.gridsize as u64) * 100);
+
+    let runs;
+    let runchecks;
+    if args.debug {
+        info!(",<><><><><><><><><>.");
+        info!("| debug    : true  |");
+        info!("`<><><><><><><><><>'");
+        runs = 4;
+        runchecks = 2;
+    } else {
+        runs = args.runs;
+        runchecks = args.runchecks;
+    }
     info!("gridsize   : {:?}x{:?}", args.gridsize, args.gridsize);
     info!("comptype   : {:?}", args.comptype);
     info!("determinism: {:?}", args.determinism);
-    info!("runs       : {:?}", args.runs);
-    info!("run checks : {:?}", args.runchecks);
+    info!("runs       : {:?}", runs);
+    info!("run checks : {:?}", runchecks);
     info!("start seed : {:?}", seed);
-    info!("path       : {:?}", path);
-    info!("csv        : {:?}", csv);
+    info!("csv        : {}", csv);
     let _ = fs::create_dir_all(path.clone());
     let csvpath = &(path + &csv);
     let _ = write_csv_header(csvpath);
