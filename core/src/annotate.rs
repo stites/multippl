@@ -15,12 +15,26 @@ pub mod grammar {
     use std::fmt;
     use std::fmt::*;
 
-    #[derive(Clone, Hash, Eq, PartialEq, Debug)]
+    #[derive(Clone, Hash, Eq, PartialEq)]
     pub struct BddVar {
         pub id: UniqueId,
         pub label: VarLabel,
         pub provenance: Option<NamedVar>,
     }
+    impl Debug for BddVar {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match &self.provenance {
+                None => f.write_str(&format!("BddVar(#{}, L{})", self.id.0, self.label.value())),
+                Some(n) => f.write_str(&format!(
+                    "BddVar(#{}, L{}, from:{})",
+                    self.id.0,
+                    self.label.value(),
+                    n.name
+                )),
+            }
+        }
+    }
+
     impl BddVar {
         pub fn id(&self) -> UniqueId {
             self.id
@@ -34,10 +48,15 @@ pub mod grammar {
         }
     }
 
-    #[derive(Clone, Hash, Eq, PartialEq, Debug)]
+    #[derive(Clone, Hash, Eq, PartialEq)]
     pub struct NamedVar {
         pub id: UniqueId,
         pub name: String,
+    }
+    impl Debug for NamedVar {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            f.write_str(&format!("NamedVar(#{}, {})", self.id.0, self.name))
+        }
     }
     pub fn named(id: u64, name: &str) -> NamedVar {
         NamedVar::new(UniqueId(id), name.to_string())

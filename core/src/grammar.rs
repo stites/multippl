@@ -100,11 +100,10 @@ where
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Anf::*;
         match self {
-            AVar(ext, s) => f.write_fmt(format_args!("Var {}", s)),
-            AVal(ext, v) => f.write_fmt(format_args!("Val {:?}", v)),
+            AVar(ext, s) => f.write_fmt(format_args!("Var({:?}) {}", ext, s)),
+            AVal(ext, v) => f.write_fmt(format_args!("Val({:?}) {:?}", ext, v)),
             And(l, r) => f.write_fmt(format_args!("And({:?} && {:?})", l, r)),
             Or(l, r) => f.write_fmt(format_args!("Or({:?} || {:?})", l, r)),
-
             Neg(n) => f.write_fmt(format_args!("!({:?})", n)),
         }
     }
@@ -213,53 +212,28 @@ where
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Expr::*;
         match self {
-            EAnf(ext, a) => f.write_fmt(format_args!("Anf({:?})", a)),
-            EFst(ext, a) => f
-                .debug_tuple("Fst")
-                // .field("ext", &ext)
-                .field(a)
-                .finish(),
-            ESnd(ext, a) => f
-                .debug_tuple("Snd")
-                // .field("ext", &ext)
-                .field(a)
-                .finish(),
-            EPrj(ext, i, a) => f
-                .debug_tuple("Prj")
-                // .field("ext", &ext)
-                .field(i)
-                .field(a)
-                .finish(),
-            EProd(ext, anfs) => f
-                .debug_tuple("Prod")
-                // .field("ext", &ext)
-                .field(anfs)
-                .finish(),
+            EAnf(ext, a) => f.write_fmt(format_args!("Anf({:?},{:?})", ext, a)),
+            EFst(ext, a) => f.debug_tuple("Fst").field(&ext).field(a).finish(),
+            ESnd(ext, a) => f.debug_tuple("Snd").field(&ext).field(a).finish(),
+            EPrj(ext, i, a) => f.debug_tuple("Prj").field(&ext).field(i).field(a).finish(),
+            EProd(ext, anfs) => f.debug_tuple("Prod").field(&ext).field(anfs).finish(),
             ELetIn(ext, s, bindee, body) => f
                 .debug_struct("LetIn")
-                // .field("ext", &ext)
+                .field("ext", &ext)
                 .field("var", s)
                 .field("bindee", bindee)
                 .field("body", body)
                 .finish(),
             EIte(ext, p, tru, fls) => f
                 .debug_struct("Ite")
-                // .field("ext", &ext)
+                .field("ext", &ext)
                 .field("predicate", p)
                 .field("truthy", tru)
                 .field("falsey", fls)
                 .finish(),
-            EFlip(ext, p) => f.write_fmt(format_args!("Flip {:?}", p)),
-            EObserve(ext, a) => f
-                .debug_tuple("Observe")
-                // .field("ext", &ext)
-                .field(a)
-                .finish(),
-            ESample(ext, e) => f
-                .debug_tuple("Sample")
-                // .field("ext", &ext)
-                .field(e)
-                .finish(),
+            EFlip(ext, p) => f.write_fmt(format_args!("Flip({:?}, {:?})", ext, p)),
+            EObserve(ext, a) => f.debug_tuple("Observe").field(&ext).field(a).finish(),
+            ESample(ext, e) => f.debug_tuple("Sample").field(&ext).field(e).finish(),
         }
     }
 }
