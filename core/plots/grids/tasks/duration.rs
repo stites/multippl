@@ -1,3 +1,4 @@
+use crate::csv::*;
 use crate::*;
 use std::time::Instant;
 use yodel::inference::*;
@@ -82,7 +83,7 @@ pub fn stats(path: String) {
             let ostr = pth.to_str();
             let pstr = ostr.unwrap();
             println!("Processing... {}", pstr);
-            let rows = read_csv(pstr).unwrap();
+            let rows = crate::csv::read_csv(pstr).unwrap();
             data.extend(rows.clone());
         }
     }
@@ -115,6 +116,22 @@ pub fn stats(path: String) {
             println!("");
         }
     }
+}
+
+#[derive(Parser, Debug, Clone)]
+pub struct RunArgs {
+    #[arg(long, short)]
+    pub gridsize: usize,
+    #[arg(long, default_value = None)]
+    pub csv: Option<String>,
+    #[arg(long, short)]
+    pub comptype: CompileType,
+    #[arg(long, short)]
+    pub determinism: Det,
+    #[arg(long, short, default_value = None)]
+    pub seed: Option<u64>,
+    #[arg(long, short, default_value_t = 10)]
+    pub runs: u64,
 }
 
 pub fn main(path: String, args: RunArgs) {

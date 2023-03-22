@@ -2,13 +2,22 @@ use crate::*;
 use std::time::Instant;
 use yodel::inference::*;
 
+pub struct QueryRet(Vec<f64>);
+
 fn runner(
     gridsize: usize,
     comptype: CompileType,
-    ix: u64,
-    determinism: f64,
+    determinism: Det,
+    runs: usize,
+    runchecks: usize,
     seed: Option<u64>,
-) -> Row {
+) -> (
+    SummaryKey,
+    SummaryData,
+    Expectations,
+    Vec<Importance>,
+    Vec<QueryRet>,
+) {
     debug!("begin running");
     use CompileType::*;
     let synthesize_seed = 5;
@@ -16,61 +25,38 @@ fn runner(
         gridsize,
         comptype.use_sampled(),
         synthesize_seed,
-        determinism,
+        determinism.to_f64(),
     );
-    let start = Instant::now();
     let opts = yodel::Options {
         seed,
         ..Default::default()
     };
-    let stats = match comptype {
-        Exact => exact_with(&prg).1,
-        Approx => importance_weighting_h(1, &prg, &opts).1,
-        OptApx => importance_weighting_h(1, &prg, &yodel::Options { opt: true, ..opts }).1,
+    let start = Instant::now();
+    let (qs, stats) = match comptype {
+        Exact => panic!("exact compile type not supported for 'variance' task"),
+        Approx => importance_weighting_h(runs, &prg, &opts),
+        OptApx => importance_weighting_h(runs, &prg, &yodel::Options { opt: true, ..opts }),
     };
     let stop = Instant::now();
     let duration = stop.duration_since(start);
-    let row = Row {
-        gridsize,
+    let key = SummaryKey {
         comptype,
-        duration,
+        gridsize,
         determinism,
-        ix,
-        seed,
+    };
+
+    let data = SummaryData {
+        duration: duration_to_usize(&duration),
         acceptsize: stats.accept,
         distsize: stats.dist,
         numsize: stats.dist_accept,
         calls: stats.mgr_recursive_calls,
+        nsamples: runs,
     };
-    info!("computed: {:?}", row);
-    row
+    info!("{:?} {:?}", key, data);
+    (key, data, todo!(), todo!(), todo!())
 }
 
-pub fn run_all_grids(path: &str) -> Vec<Row> {
-    debug!("begin running grid");
-    use CompileType::*;
-    let _ = write_csv_header(path);
-
-    let mut all_answers = vec![];
-    for determinism in [0.75, 0.25, 0.5, 0.0_f64] {
-        for comptype in [Approx, Exact] {
-            for gridsize in [3, 6, 9, 12, 15_u64] {
-                for ix in 1..=10_u64 {
-                    let row = runner(
-                        gridsize as usize,
-                        comptype,
-                        ix,
-                        determinism,
-                        Some(gridsize * 100 + ix),
-                    );
-                    let _ = write_csv_row(path, &row);
-                    all_answers.push(row);
-                }
-            }
-        }
-    }
-    all_answers
-}
 pub fn stats(path: String) {
     let paths = fs::read_dir(path).unwrap();
     let mut data = vec![];
@@ -117,6 +103,24 @@ pub fn stats(path: String) {
     }
 }
 
+#[derive(Parser, Debug, Clone)]
+pub struct RunArgs {
+    #[arg(long, short)]
+    pub gridsize: usize,
+    #[arg(long, default_value = None)]
+    pub csv: Option<String>,
+    #[arg(long, short)]
+    pub comptype: CompileType,
+    #[arg(long, short)]
+    pub determinism: Det,
+    #[arg(long, short, default_value = None)]
+    pub seed: Option<u64>,
+    #[arg(long, short, default_value_t = 10000)]
+    pub runs: usize,
+    #[arg(long, short, default_value_t = 100)]
+    pub runchecks: usize,
+}
+
 pub fn main(path: String, args: RunArgs) {
     let csv = args
         .csv
@@ -127,17 +131,19 @@ pub fn main(path: String, args: RunArgs) {
     info!("comptype   : {:?}", args.comptype);
     info!("determinism: {:?}", args.determinism);
     info!("runs       : {:?}", args.runs);
+    info!("run checks : {:?}", args.runchecks);
     info!("start seed : {:?}", seed);
     info!("path       : {:?}", path);
     info!("csv        : {:?}", csv);
     let _ = fs::create_dir_all(path.clone());
     let csvpath = &(path + &csv);
     let _ = write_csv_header(csvpath);
-    let (key, data, expectations, ws, result) = variance_runner(
+    let (key, data, expectations, ws, result) = runner(
         args.gridsize,
         args.comptype,
         args.determinism,
-        args.runs.try_into().unwrap(),
+        args.runs,
+        args.runchecks,
         Some(seed),
     );
     for (w, r) in izip!(ws, result) {

@@ -1,5 +1,5 @@
 use crate::Row;
-use csv::WriterBuilder;
+use csv::{ReaderBuilder, WriterBuilder};
 use std::error::Error;
 use std::fs;
 use std::time::Duration;
@@ -32,4 +32,20 @@ pub fn write_csv_row(path: &str, row: &Row) -> MyResult<()> {
     wtr.write_record(&row.csv_array())?;
     wtr.flush()?;
     Ok(())
+}
+
+pub fn read_csv(path: &str) -> MyResult<Vec<crate::DumbRow>> {
+    let file = fs::OpenOptions::new().read(true).open(path).unwrap();
+    let mut rdr = ReaderBuilder::new()
+        .delimiter(b'\t')
+        .has_headers(true)
+        .from_reader(file);
+    let mut rows = vec![];
+    for result in rdr.deserialize() {
+        // The iterator yields MyResult<StringRecord, Error>, so we check the
+        // error here.
+        let record: crate::DumbRow = result?;
+        rows.push(record);
+    }
+    Ok(rows)
 }

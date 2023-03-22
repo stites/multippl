@@ -1,7 +1,6 @@
 #![allow(unused_imports)]
 #![allow(dead_code)]
 
-use csv::{ReaderBuilder, WriterBuilder};
 use itertools::*;
 // use plotters::coord::types::*;
 // use plotters::coord::*;
@@ -34,74 +33,6 @@ use crate::tasks::*;
 
 type MyResult<X> = Result<X, Box<dyn Error>>;
 
-pub struct QueryRet(Vec<f64>);
-fn variance_runner(
-    gridsize: usize,
-    comptype: CompileType,
-    determinism: Det,
-    runs: usize,
-    seed: Option<u64>,
-) -> (
-    SummaryKey,
-    SummaryData,
-    Expectations,
-    Vec<Importance>,
-    Vec<QueryRet>,
-) {
-    debug!("begin running");
-    use CompileType::*;
-    let synthesize_seed = 5;
-    let prg = generate::program(
-        gridsize,
-        comptype.use_sampled(),
-        synthesize_seed,
-        determinism.to_f64(),
-    );
-    let opts = yodel::Options {
-        seed,
-        ..Default::default()
-    };
-    let start = Instant::now();
-    let (qs, stats) = match comptype {
-        Exact => panic!("exact compile type not supported for 'variance' task"),
-        Approx => importance_weighting_h(runs, &prg, &opts),
-        OptApx => importance_weighting_h(runs, &prg, &yodel::Options { opt: true, ..opts }),
-    };
-    let stop = Instant::now();
-    let duration = stop.duration_since(start);
-    let key = SummaryKey {
-        comptype,
-        gridsize,
-        determinism,
-    };
-
-    let data = SummaryData {
-        duration: duration_to_usize(&duration),
-        acceptsize: stats.accept,
-        distsize: stats.dist,
-        numsize: stats.dist_accept,
-        calls: stats.mgr_recursive_calls,
-        nsamples: runs,
-    };
-    info!("{:?} {:?}", key, data);
-    (key, data, todo!(), todo!(), todo!())
-}
-
-fn read_csv(path: &str) -> MyResult<Vec<DumbRow>> {
-    let file = fs::OpenOptions::new().read(true).open(path).unwrap();
-    let mut rdr = ReaderBuilder::new()
-        .delimiter(b'\t')
-        .has_headers(true)
-        .from_reader(file);
-    let mut rows = vec![];
-    for result in rdr.deserialize() {
-        // The iterator yields MyResult<StringRecord, Error>, so we check the
-        // error here.
-        let record: DumbRow = result?;
-        rows.push(record);
-    }
-    Ok(rows)
-}
 // fn build_chart(rows: Vec<SummaryRow>) -> MyResult<()> {
 //     let root = BitMapBackend::new("out/plots/grid.png", (640, 480)).into_drawing_area();
 //     root.fill(&WHITE)?;
@@ -156,26 +87,10 @@ struct PlotGridsArgs {
     command: CommandType,
 }
 
-#[derive(Parser, Debug, Clone)]
-pub struct RunArgs {
-    #[arg(long, short)]
-    pub gridsize: usize,
-    #[arg(long, default_value = None)]
-    pub csv: Option<String>,
-    #[arg(long, short)]
-    pub comptype: CompileType,
-    #[arg(long, short)]
-    pub determinism: Det,
-    #[arg(long, short, default_value = None)]
-    pub seed: Option<u64>,
-    #[arg(long, short, default_value_t = 10)]
-    pub runs: u64,
-}
-
 #[derive(clap::Subcommand, Debug, Clone)]
 enum CommandType {
-    Duration(RunArgs),
-    Variance(RunArgs),
+    Duration(duration::RunArgs),
+    Variance(variance::RunArgs),
     DurationStats,
 }
 
