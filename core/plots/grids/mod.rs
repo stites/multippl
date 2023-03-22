@@ -108,6 +108,7 @@ fn main() -> MyResult<()> {
         Some(level) => tracing_subscriber::fmt()
             .with_max_level(level)
             .with_target(false)
+            .without_time()
             .init(),
     };
     let path = cliargs
