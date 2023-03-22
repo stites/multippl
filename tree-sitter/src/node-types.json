@@ -22,6 +22,10 @@
         {
           "type": "bool_unop",
           "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
         }
       ]
     }
@@ -458,10 +462,6 @@
     "named": false
   },
   {
-    "type": ";",
-    "named": false
-  },
-  {
     "type": "=",
     "named": false
   },
@@ -502,11 +502,19 @@
     "named": false
   },
   {
+    "type": "index",
+    "named": true
+  },
+  {
     "type": "let",
     "named": false
   },
   {
     "type": "observe",
+    "named": false
+  },
+  {
+    "type": "prj",
     "named": false
   },
   {

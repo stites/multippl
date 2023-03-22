@@ -6,7 +6,6 @@ module.exports = grammar({
     // source_file: $ => seq(repeat($._function), $._expr)
     source_file: $ => $._expr,
 
-    // _type:  $ => choice('Bool', seq('(', $._type, ',', $._type, ')')),
     _expr: $ => choice(
       $.let_binding,
       $.ite_binding,
@@ -23,16 +22,28 @@ module.exports = grammar({
     ),
     ty: $ => choice($.tBool, $.tProd),
     tBool: $ => 'Bool',
-    tProd: $ => seq('(', $.ty, ',', $.ty, ')'),
+
+    tProd: $ => choice(
+      seq('(', $.ty, ',', $.ty, ')'),
+      seq('(', $.ty, ',', repeat(seq($.ty, ',')), $.ty, ')'),
+    ),
 
     fst: $ => seq('fst', $.anf),
     snd: $ => seq('snd', $.anf),
-    prod: $ => seq('(', $.anf, ',', $.anf, ')'),
+    prj: $ => seq('prj', $.index, $.anf),
+    index: $ => /\d+/,
+
+    prod: $ => choice(
+      seq('(', $.anf, ',', $.anf, ')'),
+      seq('(', $.anf, ',', repeat(seq($.anf, ',')), $.anf, ')'),
+    ),
+
 
     let_binding: $ => choice(
-      prec.left(1, seq('let', $.identifier, ':', $.ty, '=', $._expr, 'in', $._expr)),
-      prec.left(1, seq('let', $.identifier, ':', $.ty, '=', $._expr,       $._expr)),
-      prec.left(1, seq('let', $.identifier, ':', $.ty, '=', $._expr,  ';', $._expr)),
+      seq('let', $.identifier, '=', $._expr, 'in', $._expr),
+      seq('let', $.identifier, ':', $.ty, '=', $._expr, 'in', $._expr),
+      // seq('let', $.identifier, ':', $.ty, '=', $._expr,  ';', $._expr), // TODO
+      // prec.left(10, seq('let', $.identifier, ':', $.ty, '=', $._expr, $._expr)), // TODO
     ),
     ite_binding: $ =>
       prec.left(2, seq('if', $.anf, 'then', $._expr, 'else', $._expr)),
@@ -56,13 +67,18 @@ module.exports = grammar({
     float: $ => /\d+(?:\.\d*|)/, // 0.3  0.3. 3 0.
     float_op: $ => choice('*', '/', '+', '-'),
 
-    _value: $ => choice($.bool), // , seq('(', $._value, ',', $._value, ')')),
+    _value: $ => choice(
+      $.bool,
+      prec(10, seq('(', $._value, ',', $._value, ')')),
+      prec(10, seq('(', $._value, ',', repeat(seq($._value, ',')), $._value, ')')),
+    ),
 
     ann: $ => prec.right(5, seq($._expr, ':', $.ty)),
     anf: $ => choice(
+      $.identifier,
       $._value,
-      prec.left(1, seq($.anf, $.bool_biop, $.anf)),
-      prec.left(2, seq($.bool_unop, $.anf)),
+      prec.left(3, seq($.anf, $.bool_biop, $.anf)),
+      prec.left(5, seq($.bool_unop, $.anf)),
     ),
 
     identifier: $ => /[a-zA-Z_][_a-zA-Z0-9]*/,
