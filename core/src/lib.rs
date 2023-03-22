@@ -30,6 +30,7 @@ pub struct Options {
     pub seed: Option<u64>,
     pub debug: bool, // overrides seed
     pub opt: bool,   // use optimizations
+    pub stats_window: u64,
 }
 impl Options {
     pub fn rng(&self) -> StdRng {
@@ -56,10 +57,16 @@ impl Options {
     }
     pub fn new(
         seed: Option<u64>,
-        debug: bool, // overrides seed
-        opt: bool,   // use optimizations
+        debug: bool,       // overrides seed
+        opt: bool,         // use optimizations
+        stats_window: u64, // use optimizations
     ) -> Self {
-        Self { seed, debug, opt }
+        Self {
+            seed,
+            debug,
+            opt,
+            stats_window,
+        }
     }
 }
 
