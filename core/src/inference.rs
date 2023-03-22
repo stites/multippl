@@ -523,13 +523,18 @@ pub fn importance_weighting_h(
                     let stats;
                     (ps, stats) = wmc_prob(&mut mgr, &c);
 
-                    let w = c.importance.weight();
+                    let w = c.importance;
                     debug!("{}", c.accept.print_bdd());
                     debug!("{}", renderbdds(&c.dists));
-                    debug!("{}, {}, {}", w, renderfloats(&ps, false), prs.len());
-                    let exp_cur = Expectations::new(w, ps.clone());
+                    debug!(
+                        "{}, {}, {}",
+                        w.weight(),
+                        renderfloats(&ps, false),
+                        prs.len()
+                    );
+                    let exp_cur = Expectations::new(w.clone(), ps.clone());
                     e = Expectations::add(e.clone(), exp_cur);
-                    ws.push(w);
+                    ws.push(w.weight());
                     // qss.push(_qs);
                     prs.push(ps);
                     // sss.push(env.samples.clone());
@@ -612,6 +617,53 @@ pub fn importance_weighting_h(
     }
 }
 
+#[allow(unused_mut)]
+pub fn importance_weighting_h_h(
+    steps: usize,
+    p: &ProgramInferable,
+    opt: &crate::Options,
+) -> (Vec<f64>, WmcStats) {
+    let mut expectations = Expectations::empty();
+    let mut weights: Vec<Importance> = vec![];
+    let mut queries: Vec<Vec<f64>> = vec![];
+    let mut mgr = crate::make_mgr(p);
+    let mut stats_max = None;
+
+    debug!("running with options: {:#?}", opt);
+    // let mut debug_inv = None;
+
+    for _step in 1..=steps {
+        match crate::runner_h(p, &mut mgr, opt) {
+            Ok((cs, inv)) => {
+                cs.into_iter().for_each(|c| {
+                    let (query_result, stats) = wmc_prob(&mut mgr, &c);
+
+                    expectations.mut_add(&Expectations::new(
+                        c.importance.clone(),
+                        query_result.clone(),
+                    ));
+                    weights.push(c.importance.clone());
+                    queries.push(query_result);
+                    stats_max = stats_max
+                        .as_ref()
+                        .map(|prv: &WmcStats| prv.largest_of(&stats))
+                        .or_else(|| Some(stats));
+                });
+            }
+            Err(e) => panic!("{:?}", e),
+        }
+    }
+
+    debug!("{}", expectations.to_str());
+    debug!(
+        "ws = {}",
+        weights.iter().map(Importance::weight).sum::<f64>()
+    );
+    // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
+    let x = expectations.compute_query();
+    (x, stats_max.expect("at least one sample"))
+}
+
 // fn conc_prelude(env: &mut Env, p: &ProgramTyped) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
 //     match run(env, p) {
 //         Ok(c) => {
@@ -659,36 +711,68 @@ pub fn importance_weighting_h(
 pub struct Expectations {
     pub exp: Vec<f64>,
     pub expw: Vec<f64>,
-    // pub expw2: Vec<f64>,
+    pub expw2: Vec<f64>,
+    pub cached_query: Option<Vec<f64>>,
 }
 impl Expectations {
     pub fn empty() -> Self {
         Self {
             exp: vec![],
             expw: vec![],
+            expw2: vec![],
+            cached_query: None,
         }
     }
-    pub fn new(w: f64, prs: Vec<f64>) -> Self {
-        let (exp, expw) = prs
-            .into_iter()
-            .map(|pr| {
-                let exp = w * pr;
-                let expw = w;
-                let expw2 = w * w;
-                (exp, expw) // , expw2)
-            })
-            .unzip();
-        Self { exp, expw }
+    pub fn new(weight: Importance, prs: Vec<f64>) -> Self {
+        let (exp, expw, expw2) = prs.into_iter().fold(
+            (vec![], vec![], vec![]),
+            |(mut exp, mut expw, mut expw2), pr| {
+                let w = weight.weight();
+                exp.push(w * pr);
+                expw.push(w);
+                expw2.push(w * w);
+                (exp, expw, expw2)
+            },
+        );
+        Self {
+            exp,
+            expw,
+            expw2,
+            cached_query: None,
+        }
     }
     pub fn add(l: Self, o: Self) -> Self {
         if l.exp.is_empty() {
             o
         } else {
-            Self {
-                exp: izip!(l.exp, o.exp).map(|(l, r)| l + r).collect_vec(),
-                expw: izip!(l.expw, o.expw).map(|(l, r)| l + r).collect_vec(),
-            }
+            let mut x = l.clone();
+            x.mut_add(&o);
+            x
         }
+    }
+
+    pub fn mut_add(&mut self, o: &Self) {
+        self.exp = izip!(&self.exp, &o.exp).map(|(l, r)| l + r).collect_vec();
+        self.expw = izip!(&self.expw, &o.expw).map(|(l, r)| l + r).collect_vec();
+        self.cached_query = None;
+    }
+
+    pub fn to_str(&self) -> String {
+        let mut s = String::new();
+        s.push_str(&String::from("exp : "));
+        s.push_str(&renderfloats(&self.exp, false));
+        s.push('\n');
+        s.push_str(&String::from("expw: "));
+        s.push_str(&renderfloats(&self.expw, false));
+        s.push('\n');
+        s
+    }
+    pub fn compute_query(&mut self) -> Vec<f64> {
+        let qs = izip!(&self.exp, &self.expw)
+            .map(|(exp, expw)| if exp == &0.0 { 0.0 } else { exp / expw })
+            .collect_vec();
+        self.cached_query = Some(qs.clone());
+        qs
     }
 }
 // pub trait Sum<A = Self> {
@@ -770,66 +854,4 @@ impl Sum for Expectations {
 //     let exp = fin.exp;
 //     let expw = fin.expw;
 //     izip!(exp, expw)
-//         .map(|(exp, expw)| (exp / expw) as f64)
-//         .collect_vec()
-// }
-
-// pub fn importance_weighting_seeded(
-//     seeds: Vec<u64>,
-//     steps: usize,
-//     p: &ProgramTyped,
-// ) -> Vec<f64> {
-//     let (mut exp, mut expw, mut expw2) = (vec![], vec![], vec![]);
-//     let mut ws: Vec<f64> = vec![];
-//     let mut qss: Vec<Vec<f64>> = vec![];
-//     let mut pss: Vec<Vec<f64>> = vec![];
-//     let mut sss: Vec<HashMap<UniqueId, Vec<bool>>> = vec![];
-//     let num_seeds = seeds.len();
-
-//     for step in 1..=steps {
-//         let seed = seeds[step % num_seeds];
-//         let mut envargs = EnvArgs::default_args(Some(seed));
-
-//         let mut env = Env::from_args(&mut envargs);
-//         match run(&mut env, p) {
-//             Ok(c) => {
-//                 let azs = wmc_prob(&mut env, &c);
-//                 let prs = azs
-//                     .into_iter()
-//                     .map(|(a, z)| {
-//                         debug!(a = a, z = z);
-//                         (a / z) as f64
-//                     })
-//                     .collect_vec();
-//                 let _qs = c
-//                     .probabilities
-//                     .iter()
-//                     .map(Probability::as_f64)
-//                     .collect_vec();
-//                 let w = c.importance.weight();
-
-//                 if exp.len() == 0 {
-//                     exp = vec![0.0; prs.len()];
-//                     expw = vec![0.0; prs.len()];
-//                     expw2 = vec![0.0; prs.len()];
-//                 }
-//                 izip!(prs.clone(), _qs.clone())
-//                     .enumerate()
-//                     .for_each(|(i, (pr, _q))| {
-//                         exp[i] = exp[i] + w * pr;
-//                         expw[i] = expw[i] + w;
-//                         expw2[i] = expw2[i] + (w * w);
-//                     });
-//                 ws.push(w);
-//                 qss.push(_qs);
-//                 pss.push(prs);
-//                 sss.push(env.samples.clone());
-//             }
-//             Err(e) => panic!("{:?}", e),
-//         }
-//     }
-//     debug_importance_weighting(true, steps, &ws, &qss, &pss, &sss, &exp, &expw);
-//     izip!(exp, expw)
-//         .map(|(exp, expw)| (exp / expw) as f64)
-//         .collect_vec()
-// }
+//         .map(|(exp, expw)
