@@ -4,8 +4,25 @@ use crate::grammar::*;
 use std::collections::{HashMap, HashSet};
 use tracing::*;
 
+#[derive(Default, Clone)]
+struct Dependencies(pub HashMap<NamedVar, HashSet<NamedVar>>);
+impl Dependencies {
+    pub fn insert(&mut self, var: NamedVar, deps: HashSet<NamedVar>) {
+        self.0.insert(var, deps);
+    }
+    pub fn get(&self, var: &NamedVar) -> Option<&HashSet<NamedVar>> {
+        self.0.get(var)
+    }
+    pub fn unsafe_get(&self, var: &NamedVar) -> &HashSet<NamedVar> {
+        self.get(var)
+            .unwrap_or_else(|| panic!("{:?} not found in {:?}", var, self.0.keys()))
+    }
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+}
 pub struct DependencyEnv {
-    dependencies: HashMap<NamedVar, HashSet<NamedVar>>,
+    dependencies: Dependencies,
 }
 impl DependencyEnv {
     pub fn new() -> Self {
@@ -63,7 +80,7 @@ impl DependencyEnv {
         }
     }
 
-    fn scan(&mut self, p: &ProgramAnn) -> HashMap<NamedVar, HashSet<NamedVar>> {
+    fn scan(&mut self, p: &ProgramAnn) -> Dependencies {
         match p {
             Program::Body(b) => {
                 self.scan_expr(b);
@@ -88,18 +105,18 @@ mod tests {
 
     macro_rules! assert_root {
         ($deps:ident : $xvar:expr $(, $var:expr)*) => {{
-            let ds = $deps.get(& $xvar.clone()).unwrap_or_else(|| panic!("{:?} not found in {:?}", $xvar, $deps.keys()));
+            let ds = $deps.unsafe_get(&$xvar);
             assert_eq!(ds, &HashSet::new(), "{:?} deps should be empty", $xvar);
 
             $(
-            let ds = $deps.get(& $var.clone()).unwrap_or_else(|| panic!("{:?} not found in {:?}", $xvar, $deps.keys()));
+            let ds = $deps.unsafe_get(&$var);
             assert_eq!(ds, &HashSet::new(), "{:?} deps should be empty", $var);
             )*
         }}
     }
     macro_rules! assert_family {
         ($deps:ident : $xvar:expr => $f0:expr $(, $var:expr)*) => {{
-            let ds = $deps.get(& $xvar.clone()).unwrap_or_else(|| panic!("{:?} not found in {:?}", $xvar, $deps.keys()));
+            let ds = $deps.unsafe_get(&$xvar);
             let mut fam = HashSet::new();
             fam.insert($f0.clone());
             $(
@@ -196,7 +213,7 @@ mod tests {
         let deps = DependencyEnv::new().scan(&p);
         let xvar = named(0, "x");
         let yvar = named(2, "y");
-        let zvar = named(4, "y");
+        let zvar = named(4, "z");
         assert_root!(deps: xvar, yvar);
         assert_family!(deps: zvar => xvar, yvar);
         assert_eq!(deps.len(), 3);
