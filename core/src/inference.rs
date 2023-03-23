@@ -792,6 +792,7 @@ pub struct Expectations {
     pub expw: Vec<f64>,
     pub expw2: Vec<f64>,
     pub cached_query: Option<Vec<f64>>,
+    pub cached_variance: Option<Vec<f64>>,
 }
 impl Expectations {
     pub fn empty() -> Self {
@@ -800,6 +801,7 @@ impl Expectations {
             expw: vec![],
             expw2: vec![],
             cached_query: None,
+            cached_variance: None,
         }
     }
     pub fn new(weight: Importance, prs: Vec<f64>) -> Self {
@@ -818,6 +820,7 @@ impl Expectations {
             expw,
             expw2,
             cached_query: None,
+            cached_variance: None,
         }
     }
     pub fn add(l: Self, o: Self) -> Self {
@@ -832,10 +835,12 @@ impl Expectations {
             self.expw = o.expw.clone();
             self.expw2 = o.expw2.clone();
             self.cached_query = o.cached_query.clone();
+            self.cached_variance = o.cached_variance.clone();
         } else {
             self.exp = izip!(&self.exp, &o.exp).map(|(l, r)| l + r).collect_vec();
             self.expw = izip!(&self.expw, &o.expw).map(|(l, r)| l + r).collect_vec();
             self.cached_query = None;
+            self.cached_variance = None;
         }
     }
 
@@ -857,6 +862,16 @@ impl Expectations {
     pub fn compute_query(&mut self) -> Vec<f64> {
         let qs = self.query();
         self.cached_query = Some(qs.clone());
+        qs
+    }
+    pub fn var(&self) -> Vec<f64> {
+        izip!(&self.expw2, &self.expw)
+            .map(|(exp, expw)| if exp == &0.0 { 0.0 } else { exp / expw })
+            .collect_vec()
+    }
+    pub fn compute_var(&mut self) -> Vec<f64> {
+        let qs = self.var();
+        self.cached_variance = Some(qs.clone());
         qs
     }
 }

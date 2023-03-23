@@ -53,14 +53,15 @@ fn runner(
         OptApx => panic!("optimized approx on hold"),
         Approx => {
             for res in SamplingIter::new(runs, &prg, &opts) {
-                if res.step > runs - 10 {
+                if (res.step > runs - 10) || (res.step < 10) {
                     println!("{}: {:?}", res.step, res.stats);
                     let query = res.expectations.query();
                     println!("{}: {:?} {:?}", res.step, res.weight, res.duration);
                     match &expected {
                         None => println!("{}: {:?}", res.step, query),
                         Some(q) => {
-                            println!("{}: {:?} @ {}", res.step, query, l1_distance(&q, &query))
+                            println!("{}: {:?} @ {}", res.step, query, l1_distance(&q, &query));
+                            println!("{}: {:?} ", res.step, res.expectations.var());
                         }
                     }
                 }
