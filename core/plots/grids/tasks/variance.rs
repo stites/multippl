@@ -10,6 +10,9 @@ pub struct VarianceDataPoint {
     expectations: Expectations,
     duration: Duration,
 }
+fn l1_distance(x0: &[f64], x1: &[f64]) -> f64 {
+    izip!(x0, x1).fold(0.0, |dist, (l, r)| dist + (l - r).abs())
+}
 fn runner(
     gridsize: usize,
     comptype: CompileType,
@@ -17,6 +20,7 @@ fn runner(
     runs: usize,
     runchecks: usize,
     seed: Option<u64>,
+    l1: bool,
 ) -> (
     SummaryKey,
     SummaryData,
@@ -43,17 +47,23 @@ fn runner(
         determinism,
     };
     info!("{:?}", key);
+    let expected = if l1 { Some(exact(&prg)) } else { None };
     match comptype {
         Exact => panic!("exact compile type not supported for 'variance' task"),
         OptApx => panic!("optimized approx on hold"),
         Approx => {
             for res in SamplingIter::new(runs, &prg, &opts) {
-                println!("{}", res.step);
-                println!("{:?}", res.stats);
-                let query = res.expectations.query();
-                println!("{:?}", query);
-                println!("{:?}", res.duration);
-                println!("{:?}", res.weight);
+                if res.step > runs - 10 {
+                    println!("{}: {:?}", res.step, res.stats);
+                    let query = res.expectations.query();
+                    println!("{}: {:?} {:?}", res.step, res.weight, res.duration);
+                    match &expected {
+                        None => println!("{}: {:?}", res.step, query),
+                        Some(q) => {
+                            println!("{}: {:?} @ {}", res.step, query, l1_distance(&q, &query))
+                        }
+                    }
+                }
             }
         }
     }
@@ -100,8 +110,8 @@ pub fn main(path: String, args: RunArgs) {
         info!(",<><><><><><><><><>.");
         info!("| debug    : true  |");
         info!("`<><><><><><><><><>'");
-        runs = 4;
-        runchecks = 2;
+        runs = 1000;
+        runchecks = 4;
     } else {
         runs = args.runs;
         runchecks = args.runchecks;
@@ -126,7 +136,8 @@ pub fn main(path: String, args: RunArgs) {
         args.determinism,
         runs,
         runchecks,
-        Some(seed),
+        None,
+        true,
     );
     for (w, r) in izip!(ws, result) {
         // let _ = write_csv_row(csvpath, &r);

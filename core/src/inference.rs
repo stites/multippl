@@ -425,7 +425,8 @@ pub fn get_or_else<T: Copy>(v: Vec<T>, i: usize, d: T) -> T {
     get_vec(v, i).unwrap_or(d)
 }
 pub fn exact_with(p: &ProgramInferable) -> (Vec<f64>, WmcStats) {
-    match crate::run(p) {
+    let p = p.strip_samples();
+    match crate::run(&p) {
         Ok((mut mgr, c)) => wmc_prob(&mut mgr, &c),
         Err(e) => panic!(
             "\nCompiler Error!!!\n==============\n{}\n==============\n",
@@ -629,6 +630,7 @@ pub fn importance_weighting_h(
 
 pub struct SamplingIter {
     pub current_step: usize,
+    pub current_exp: Expectations,
     pub max_steps: usize,
     pub opt: crate::Options, // can only be 1
     pub start: Instant,
@@ -641,6 +643,7 @@ impl SamplingIter {
         let mgr = crate::make_mgr(p);
         Self {
             current_step: 0,
+            current_exp: Expectations::empty(),
             max_steps: steps,
             opt: opt.clone(),
             start: Instant::now(),
@@ -674,12 +677,13 @@ impl Iterator for SamplingIter {
                 let (query_result, stats) = wmc_prob(&mut self.manager, &c);
                 self.max_stats = self.max_stats.largest_of(&stats);
                 let expectations = Expectations::new(c.importance.clone(), query_result.clone());
+                self.current_exp.mut_add(&expectations);
                 let stop = Instant::now();
                 let duration = stop.duration_since(self.start);
                 Some(SamplingResult {
                     step,
                     stats: self.max_stats.clone(),
-                    expectations,
+                    expectations: self.current_exp.clone(),
                     duration,
                     weight: c.importance,
                 })
@@ -817,19 +821,22 @@ impl Expectations {
         }
     }
     pub fn add(l: Self, o: Self) -> Self {
-        if l.exp.is_empty() {
-            o
-        } else {
-            let mut x = l.clone();
-            x.mut_add(&o);
-            x
-        }
+        let mut x = l.clone();
+        x.mut_add(&o);
+        x
     }
 
     pub fn mut_add(&mut self, o: &Self) {
-        self.exp = izip!(&self.exp, &o.exp).map(|(l, r)| l + r).collect_vec();
-        self.expw = izip!(&self.expw, &o.expw).map(|(l, r)| l + r).collect_vec();
-        self.cached_query = None;
+        if self.exp.is_empty() {
+            self.exp = o.exp.clone();
+            self.expw = o.expw.clone();
+            self.expw2 = o.expw2.clone();
+            self.cached_query = o.cached_query.clone();
+        } else {
+            self.exp = izip!(&self.exp, &o.exp).map(|(l, r)| l + r).collect_vec();
+            self.expw = izip!(&self.expw, &o.expw).map(|(l, r)| l + r).collect_vec();
+            self.cached_query = None;
+        }
     }
 
     pub fn to_str(&self) -> String {
