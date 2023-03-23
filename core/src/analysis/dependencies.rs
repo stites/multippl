@@ -86,139 +86,103 @@ mod tests {
     use tracing::*;
     use tracing_test::traced_test;
 
+    macro_rules! assert_root {
+        ($deps:ident : $xvar:expr $(, $var:expr)*) => {{
+            let ds = $deps.get(& $xvar.clone()).unwrap_or_else(|| panic!("{:?} not found in {:?}", $xvar, $deps.keys()));
+            assert_eq!(ds, &HashSet::new(), "{:?} deps should be empty", $xvar);
+
+            $(
+            let ds = $deps.get(& $var.clone()).unwrap_or_else(|| panic!("{:?} not found in {:?}", $xvar, $deps.keys()));
+            assert_eq!(ds, &HashSet::new(), "{:?} deps should be empty", $var);
+            )*
+        }}
+    }
+    macro_rules! assert_family {
+        ($deps:ident : $xvar:expr => $f0:expr $(, $var:expr)*) => {{
+            let ds = $deps.get(& $xvar.clone()).unwrap_or_else(|| panic!("{:?} not found in {:?}", $xvar, $deps.keys()));
+            let mut fam = HashSet::new();
+            fam.insert($f0.clone());
+            $(
+            fam.insert($var.clone());
+            )*
+            assert_eq!(ds, &fam, "var {:?}: expected {:?}, found: {:?}", $xvar, ds, fam);
+        }}
+    }
+
     #[test]
     pub fn test_dependencies_for_simple_program() {
         let p = program!(lets![
             "x" ;= flip!(1/3);
            ...? b!("x")
         ]);
-
         let p = annotate::pipeline(&p).unwrap().0;
         let deps = DependencyEnv::new().scan(&p);
+        assert_root!(deps: named(0, "x"));
         assert_eq!(deps.len(), 1);
-        let xdeps = deps.get(&named(0, "x")).unwrap();
-        assert_eq!(xdeps, &HashSet::new());
-        // assert_eq!(g.vertices.len(), 1);
-        // assert_eq!(g.hyperedges.len(), 1);
-        // let (_, nvar) = g.hyperedges[0].clone();
-        // assert_eq!(nvar, Binding::Let(named(0, "x")), "flip edge first");
-        // let cuts = order_cuts(&g);
-        // let pann = crate::annotate::pipeline(&p).unwrap().0;
-        // let cs = top_k_cuts(&cuts, 1);
-        // let mut env = InsertionEnv::new(cs, uid, lbl);
-        // let p1 = env.apply_cuts(&pann);
-        // let p1_expected = program!(lets![
-        //     "x" ;= sample!(flip!(1/3));
-        //    ...? b!("x")
-        // ]);
-        // let pann_expected = crate::annotate::pipeline(&p1_expected).unwrap().0;
-        // assert_eq!(&p1, &pann_expected);
+    }
+
+    #[test]
+    pub fn test_dependencies_with_boolean_operator() {
+        let p = program!(lets![
+            "x" ;= flip!(1/3);
+            "y" ;= flip!(1/3);
+            "z" ;= b!("x" && "y");
+            "q" ;= flip!(1/3);
+            "w" ;= b!("q" && "z");
+           ...? b!("z")
+        ]);
+        let p = annotate::pipeline(&p).unwrap().0;
+        let deps = DependencyEnv::new().scan(&p);
+        let xvar = named(0, "x");
+        let yvar = named(2, "y");
+        let zvar = named(4, "z");
+        let qvar = named(5, "q");
+        let wvar = named(7, "w");
+        assert_root!(deps: xvar, yvar, qvar);
+        assert_family!(deps: zvar => xvar, yvar);
+        assert_family!(deps: wvar => qvar, zvar);
+        assert_eq!(deps.len(), 5);
+    }
+
+    #[test]
+    pub fn test_dependencies_captures_tuples() {
+        let p = program!(lets![
+            "x" ;= flip!(1/3);
+            "y" ;= flip!(1/3);
+            "t" ;= b!("x", "y");
+            "f" ;= fst!("t");
+           ...? b!("t")
+        ]);
+        let p = annotate::pipeline(&p).unwrap().0;
+        let deps = DependencyEnv::new().scan(&p);
+        let xvar = named(0, "x");
+        let yvar = named(2, "y");
+        let tvar = named(4, "t");
+        let fvar = named(5, "f");
+        assert_root!(deps: xvar, yvar);
+        assert_family!(deps: tvar => xvar, yvar);
+        assert_family!(deps: fvar => tvar);
+        assert_eq!(deps.len(), 4);
+    }
+
+    #[test]
+    pub fn test_interaction_works_as_expected_for_samples() {
+        let p = program!(lets![
+           "x" ;= flip!(1/3);
+           "s" ;= sample!(var!("x"));
+           ...? b!("s")
+        ]);
+        let p = annotate::pipeline(&p).unwrap().0;
+        let deps = DependencyEnv::new().scan(&p);
+        let xvar = named(0, "x");
+        let svar = named(2, "s");
+        assert_root!(deps: xvar, svar);
+        assert_eq!(deps.len(), 2);
     }
 
     // #[test]
-    // pub fn test_dependencies_graph_with_boolean_operator() {
-    //     let p = program!(lets![
-    //         "x" ;= flip!(1/3);
-    //         "y" ;= flip!(1/3);
-    //         "z" ;= b!("x" && "y");
-    //        ...? b!("z")
-    //     ]);
-    //     let (g, uid, lbl) = pipeline(&p).unwrap();
-    //     assert_eq!(g.vertices.len(), 2);
-    //     println!("{}", g.print());
-    //     assert_eq!(g.hyperedges.len(), 3, "edge for each line");
-    //     for (ix, (id, s)) in [(0, "x"), (2, "y"), (4, "z")].iter().enumerate() {
-    //         let (_, nvar) = g.hyperedges[ix].clone();
-    //         assert_eq!(nvar, Binding::Let(named(*id, s)));
-    //     }
-    //     let cuts = order_cuts(&g);
-    //     assert_eq!(cuts.len(), 3);
-    //     let pann = crate::annotate::pipeline(&p).unwrap().0;
-    //     let cs = top_k_cuts(&cuts, 1);
-    //     println!("{:#?}", cuts);
-    //     let mut env = InsertionEnv::new(cs, uid, lbl);
-    //     let p1 = env.apply_cuts(&pann);
-    //     let p1_expected = program!(lets![
-    //         "x" ;= flip!(1/3);
-    //         "y" ;= flip!(1/3);
-    //         "z" ;= sample!(b!("x" && "y"));
-    //        ...? b!("z")
-    //     ]);
-    //     let pann_expected = crate::annotate::pipeline(&p1_expected).unwrap().0;
-    //     assert_eq!(&p1, &pann_expected);
-    // }
-
-    // #[test]
-    // pub fn test_dependencies_graph_works_with_conjoined_query() {
-    //     let p = program!(lets![
-    //         "x" ;= flip!(0.0);
-    //         "y" ;= flip!(0.0);
-    //        ...? b!("x" && "y")
-    //     ]);
-    //     let (g, uid, lbl) = hypergraph::pipeline(&p).unwrap();
-    //     let cuts = order_cuts(&g);
-    //     assert_eq!(cuts.len(), 3);
-    //     let pann = crate::annotate::pipeline(&p).unwrap().0;
-    //     let cs = top_k_cuts(&cuts, 1);
-    //     for c in &cuts {
-    //         println!("{:?}", c);
-    //     }
-    //     let mut env = InsertionEnv::new(cs, uid, lbl);
-    //     let p1 = env.apply_cuts(&pann);
-    //     let p1_expected = program!(lets![
-    //         "x" ;= flip!(0.0);
-    //         "y" ;= flip!(0.0);
-    //         "__s#4" ;= sample!(b!("x" && "y"));
-    //        ...? b!("__s#4")
-    //     ]);
-    //     let pann_expected = crate::annotate::pipeline(&p1_expected).unwrap().0;
-    //     assert_eq!(&p1, &pann_expected);
-    // }
-
-    // #[test]
     // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_dependencies_graph_captures_correct_edge_with_aliases() {
-    //     let p = program!(lets![
-    //         "x" ;= flip!(1/3);
-    //         "y" ;= flip!(1/3);
-    //         "z" ;= flip!(1/3);
-    //         "a" ;= b!("x" && "y" && "z");
-    //        ...? b!("a")
-    //     ]);
-    //     let g = pipeline(&p).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 3);
-    //     assert_eq!(g.hyperedges.len(), 4, "edge for each line");
-    //     let query = &g.hyperedges.last().unwrap().0;
-    //     assert_eq!(query.len(), 3, "query depends on every variable above");
-    //     order_cuts(&g);
-    // }
-
-    // #[test]
-    // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_dependencies_works_as_expected_for_samples() {
-    //     let shared_var = program!(lets![
-    //        "x" ;= flip!(1/3);
-    //        "l" ;= sample!(var!("x"));
-    //        "r" ;= sample!(var!("x"));
-    //        ...? b!("r")
-    //     ]);
-    //     let g = pipeline(&shared_var).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 1);
-    //     let es = g.hyperedges.clone();
-    //     assert_eq!(g.hyperedges.len(), 3, "edge for each line");
-    //     let n = &es[0].1;
-    //     assert_eq!(n, &Binding::Let(named(0, "x")));
-    //     let (e, n) = &es[1];
-    //     assert_eq!(n, &Binding::NamedSample(named(2, "l")));
-    //     assert_eq!(e, &HashSet::from([PlanPtr(0)]));
-    //     let (e, n) = &es[2];
-    //     assert_eq!(n, &Binding::NamedSample(named(3, "r")));
-    //     assert_eq!(e, &HashSet::from([PlanPtr(0)]));
-    // }
-
-    // #[test]
-    // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_dependencies_shared_tuples_get_separated() {
+    // pub fn test_interaction_shared_tuples_get_separated() {
     //     let shared_tuple = program!(lets![
     //        "x" ;= flip!(1/3);
     //        "y" ;= flip!(1/3);
@@ -237,7 +201,7 @@ mod tests {
 
     // #[test]
     // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_dependencies_ite_sample() {
+    // pub fn test_interaction_ite_sample() {
     //     let ite = program!(lets![
     //         "x" ;= flip!(1/5);
     //         "y" ;= ite!(
@@ -260,7 +224,7 @@ mod tests {
 
     // #[test]
     // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_dependencies_ite_nested_let() {
+    // pub fn test_interaction_ite_nested_let() {
     //     let ite_with_nested_lets = program!(lets![
     //         "x" ;= flip!(2/3);
     //         "y" ;= ite!(
@@ -288,7 +252,7 @@ mod tests {
 
     // #[test]
     // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_dependencies_2x2_triu() {
+    // pub fn test_interaction_2x2_triu() {
     //     let grid2x2_triu = program!(lets![
     //         "00" ;= flip!(1/2);
     //         "01" ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -303,7 +267,7 @@ mod tests {
 
     // #[test]
     // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_dependencies_2x2_tril() {
+    // pub fn test_interaction_2x2_tril() {
     //     let grid2x2_tril = program!(lets![
     //         "01" ;= flip!(1/3);
     //         "10" ;= flip!(1/4);
@@ -328,7 +292,7 @@ mod tests {
 
     // #[test]
     // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_dependencies_2x2_full() {
+    // pub fn test_interaction_2x2_full() {
     //     let grid2x2 = program!(lets![
     //         "00" ;= flip!(1/2);
     //         "01" ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -350,7 +314,7 @@ mod tests {
 
     // #[test]
     // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_dependencies_2x2_sampled() {
+    // pub fn test_interaction_2x2_sampled() {
     //     let grid2x2_sampled = program!(lets![
     //         "00" ;= flip!(1/2);
     //         "01_10" ;= sample!(
