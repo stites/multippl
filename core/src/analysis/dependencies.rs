@@ -166,7 +166,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_interaction_works_as_expected_for_samples() {
+    pub fn test_dependencies_works_as_expected_for_samples() {
         let p = program!(lets![
            "x" ;= flip!(1/3);
            "s" ;= sample!(var!("x"));
@@ -176,174 +176,29 @@ mod tests {
         let deps = DependencyEnv::new().scan(&p);
         let xvar = named(0, "x");
         let svar = named(2, "s");
-        assert_root!(deps: xvar, svar);
+        assert_root!(deps: xvar);
+        assert_family!(deps: svar => xvar);
         assert_eq!(deps.len(), 2);
     }
 
-    // #[test]
-    // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_interaction_shared_tuples_get_separated() {
-    //     let shared_tuple = program!(lets![
-    //        "x" ;= flip!(1/3);
-    //        "y" ;= flip!(1/3);
-    //        "z" ;= sample!(b!("x", "y"));
-    //        ...? b!("z")
-    //     ]);
-    //     let g = pipeline(&shared_tuple).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 2);
-    //     for (edge, nvar) in &g.hyperedges {
-    //         println!("nvar: {:?}", nvar);
-    //         println!("edge: {:?}", edge);
-    //     }
-    //     assert_eq!(g.hyperedges.len(), 4, "needs a tuple for each position");
-    //     order_cuts(&g);
-    // }
-
-    // #[test]
-    // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_interaction_ite_sample() {
-    //     let ite = program!(lets![
-    //         "x" ;= flip!(1/5);
-    //         "y" ;= ite!(
-    //             if ( var!("x") )
-    //             then { sample!(flip!(1/3)) }
-    //             else { flip!(1/4) });
-    //         ...? b!("y")
-    //     ]);
-    //     let g = pipeline(&ite).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 3);
-    //     for (edge, nvar) in &g.hyperedges {
-    //         println!("nvar: {:?}", nvar);
-    //         println!("edge: {:?}", edge);
-    //     }
-    //     assert_eq!(g.hyperedges.len(), 2, "edge for each line");
-    //     // let query = &g.hyperedges.last().unwrap().0;
-    //     // assert_eq!(query.len(), 3, "query depends on every variable above");
-    //     // order_cuts(&g);
-    // }
-
-    // #[test]
-    // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_interaction_ite_nested_let() {
-    //     let ite_with_nested_lets = program!(lets![
-    //         "x" ;= flip!(2/3);
-    //         "y" ;= ite!(
-    //             if ( var!("x") )
-    //                 then { lets![
-    //                          "q" ;= flip!(1/4);
-    //                          "_" ;= observe!(b!("q" || "x"));
-    //                          ...? b!("q")
-    //                 ] }
-    //             else { flip!(1/5) });
-    //         "_" ;= observe!(b!("x" || "y"));
-    //         ...? b!("x")
-    //     ]);
-    //     let g = pipeline(&ite_with_nested_lets).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 3);
-    //     assert_eq!(g.hyperedges.len(), 5, "edge for each line");
-    //     for (edge, nvar) in &g.hyperedges {
-    //         println!("nvar: {:?}", nvar);
-    //         println!("edge: {:?}", edge);
-    //     }
-    //     let query = &g.hyperedges.last().unwrap().0;
-    //     assert_eq!(query.len(), 3, "query depends on every variable above");
-    //     order_cuts(&g);
-    // }
-
-    // #[test]
-    // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_interaction_2x2_triu() {
-    //     let grid2x2_triu = program!(lets![
-    //         "00" ;= flip!(1/2);
-    //         "01" ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-    //         "10" ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-    //         ...? b!("01", "10")
-    //     ]);
-    //     let g = pipeline(&grid2x2_triu).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 5);
-    //     assert_eq!(g.hyperedges.len(), 3, "each var + ite");
-    //     order_cuts(&g);
-    // }
-
-    // #[test]
-    // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_interaction_2x2_tril() {
-    //     let grid2x2_tril = program!(lets![
-    //         "01" ;= flip!(1/3);
-    //         "10" ;= flip!(1/4);
-    //         "11" ;=
-    //             ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(3/7) ) : (
-    //             ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(3/8) ) : (
-    //             ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(3/9) ) : (
-    //                                                       flip!(3/11) ))))));
-    //         ...? b!("11")
-    //     ]);
-    //     let g = pipeline(&grid2x2_tril).unwrap().0;
-    //     for (edge, nvar) in &g.hyperedges {
-    //         println!("nvar: {:?}", nvar);
-    //         println!("edge: {:?}", edge);
-    //     }
-    //     assert_eq!(g.vertices.len(), 6, "one per flip");
-    //     assert_eq!(g.hyperedges.len(), 3, "one per flip + ite");
-    //     let query = &g.hyperedges.last().unwrap().0;
-    //     assert_eq!(query.len(), 6, "var 11 depends on every variable above");
-    //     order_cuts(&g);
-    // }
-
-    // #[test]
-    // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_interaction_2x2_full() {
-    //     let grid2x2 = program!(lets![
-    //         "00" ;= flip!(1/2);
-    //         "01" ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-    //         "10" ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-    //         "11" ;=
-    //             ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
-    //             ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
-    //             ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
-    //                                                       flip!(1/11) ))))));
-    //         ...? b!("11")
-    //     ]);
-    //     let g = pipeline(&grid2x2).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 9);
-    //     assert_eq!(g.hyperedges.len(), 4, "vertex + 3xITE");
-    //     let query = &g.hyperedges.last().unwrap().0;
-    //     assert_eq!(query.len(), 9, "query depends on every variable above");
-    //     order_cuts(&g);
-    // }
-
-    // #[test]
-    // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_interaction_2x2_sampled() {
-    //     let grid2x2_sampled = program!(lets![
-    //         "00" ;= flip!(1/2);
-    //         "01_10" ;= sample!(
-    //             lets![
-    //                 "01" ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-    //                 "10" ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-    //                 ...? b!("01", "10")
-    //             ]);
-    //         "01" ;= fst!("01_10");
-    //         "10" ;= snd!("01_10");
-    //         "11" ;=
-    //             ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
-    //             ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
-    //             ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
-    //                                                       flip!(1/11) ))))));
-    //         ...? b!("11")
-    //     ]);
-    //     let g = pipeline(&grid2x2_sampled).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 9);
-    //     for (edge, nvar) in &g.hyperedges {
-    //         println!("{:?} >>> {:?}", nvar, edge);
-    //     }
-    //     assert_eq!(g.hyperedges.len(), 4, "every named ITE + 00");
-    //     let query = &g.hyperedges.last().unwrap().0;
-    //     assert_eq!(
-    //         query.len(),
-    //         9,
-    //         "11 (last one) depends on every variable above"
-    //     );
-    //     order_cuts(&g);
-    // }
+    #[test]
+    pub fn test_dependencies_ite_sample() {
+        let p = program!(lets![
+            "x" ;= flip!(1/5);
+            "y" ;= flip!(1/5);
+            "z" ;= ite!(
+                if ( var!("x") )
+                then { sample!(flip!(1/3)) }
+                else { var!("y") });
+            ...? b!("y")
+        ]);
+        let p = annotate::pipeline(&p).unwrap().0;
+        let deps = DependencyEnv::new().scan(&p);
+        let xvar = named(0, "x");
+        let yvar = named(2, "y");
+        let zvar = named(4, "y");
+        assert_root!(deps: xvar, yvar);
+        assert_family!(deps: zvar => xvar, yvar);
+        assert_eq!(deps.len(), 3);
+    }
 }
