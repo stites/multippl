@@ -13,7 +13,7 @@ pub mod grids;
 pub mod inference;
 pub mod typeinf;
 
-mod interactions;
+mod analysis;
 mod typecheck;
 // mod analysis2;
 mod annotate;

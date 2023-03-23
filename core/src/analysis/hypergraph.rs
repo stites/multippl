@@ -18,7 +18,7 @@ use tracing::*;
 
 pub type IteractionGraph = Hypergraph<PlanPtr, (), Binding>;
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct PlanPtr(usize);
+pub struct PlanPtr(pub usize);
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PlanNode {
@@ -124,8 +124,8 @@ where
     VL: Clone + Debug + PartialEq + Eq + Hash,
     EL: Clone + Debug + PartialEq + Eq + Hash,
 {
-    vertices: HashSet<(V, VL)>,
-    hyperedges: Vec<(HashSet<V>, EL)>,
+    pub vertices: HashSet<(V, VL)>,
+    pub hyperedges: Vec<(HashSet<V>, EL)>,
 }
 impl<V, VL, EL> Default for Hypergraph<V, VL, EL>
 where
@@ -330,9 +330,9 @@ impl Binding {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct MaxUniqueId(u64);
+pub struct MaxUniqueId(pub u64);
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
-pub struct MaxVarLabel(u64);
+pub struct MaxVarLabel(pub u64);
 
 pub struct InteractionEnv {
     graph: Hypergraph<PlanPtr, (), Binding>,
@@ -591,127 +591,6 @@ pub fn top_k_cuts(cuts: &Vec<(Binding, Rank)>, n: usize) -> Vec<Binding> {
     cuts.iter().map(|(b, r)| b.clone()).take(n).collect()
 }
 
-pub struct InsertionEnv {
-    cuts: Vec<Binding>,
-    cut: Binding,
-    gen_unq: u64,
-    gen_lbl: u64,
-}
-impl InsertionEnv {
-    pub fn new(cuts: Vec<Binding>, mx_uid: MaxUniqueId, mx_lbl: MaxVarLabel) -> Self {
-        let cut = cuts.first().as_ref().unwrap().clone().to_owned();
-        Self {
-            cuts,
-            cut,
-            gen_unq: mx_uid.0,
-            gen_lbl: mx_lbl.0,
-        }
-    }
-    pub fn fresh_uniq(&mut self) -> UniqueId {
-        // we start with a known symbol, so we increment before returning the symbol
-        self.gen_unq += 1;
-        UniqueId(self.gen_unq)
-    }
-    pub fn fresh_name(&mut self) -> (UniqueId, String) {
-        let sym = self.fresh_uniq();
-        (sym, format!("__s#{}", sym.0))
-    }
-    pub fn fresh_anf(&mut self) -> Var {
-        let (uid, s) = self.fresh_name();
-        Var::Named(NamedVar { id: uid, name: s })
-    }
-    pub fn sample_expr(&mut self, e: &ExprAnn) -> ExprAnn {
-        use crate::grammar::Expr::*;
-        use Binding::*;
-        match e {
-            // EAnf(_, a) => e.clone(),
-            // EPrj(_, i, a) => e.clone(),
-            // EFst(_, a) => e.clone(),
-            // ESnd(_, a) => e.clone(),
-            // EProd(v, az) => e.clone(),
-            ELetIn(v, s, ebound, ebody) => match self.cut.id().map(|ix| ix == v.id()) {
-                Some(true) => {
-                    debug!("> {:?} ?= {:?} == {}", self.cut, v, true);
-                    let smpl = ESample((), Box::new(self.sample_expr(ebound)));
-                    ELetIn(v.clone(), s.to_string(), Box::new(smpl), ebody.clone())
-                }
-                _ => {
-                    debug!("{:?} ?= {:?} == {}", self.cut, v, false);
-                    let body = match (&**ebody, self.cut.clone()) {
-                        (EAnf((), a), CompoundQuery(0)) => {
-                            let (uid, s) = self.fresh_name();
-                            let nvar = NamedVar {
-                                id: uid,
-                                name: s.to_string(),
-                            };
-                            let to_sample = EAnf((), a.clone());
-                            let smpl = ESample((), Box::new(to_sample));
-                            let body = EAnf((), Box::new(Anf::AVar(nvar.clone(), s.to_string())));
-                            ELetIn(nvar, s.to_string(), Box::new(smpl), Box::new(body))
-                        }
-                        (EProd((), az), CompoundQuery(bindix)) => {
-                            let mut newazs = vec![];
-                            let (uid, s) = self.fresh_name();
-                            let mut sampled_anf = None;
-                            let nvar = NamedVar {
-                                id: uid.clone(),
-                                name: s.clone(),
-                            };
-                            for (i, a) in az.iter().enumerate() {
-                                if i == bindix {
-                                    sampled_anf = Some(a);
-                                    newazs.push(Anf::AVar(nvar.clone(), s.clone()));
-                                } else {
-                                    newazs.push(a.clone());
-                                }
-                            }
-
-                            let to_sample = EAnf((), Box::new(sampled_anf.unwrap().clone()));
-                            let smpl = ESample((), Box::new(to_sample));
-                            let body = EProd((), newazs);
-                            ELetIn(nvar.clone(), s.to_string(), Box::new(smpl), Box::new(body))
-                        }
-                        _ => self.sample_expr(ebody),
-                    };
-                    ELetIn(
-                        v.clone(),
-                        s.to_string(),
-                        Box::new(self.sample_expr(ebound)),
-                        Box::new(body),
-                    )
-                }
-            },
-            EIte(v, cond, t, f) => {
-                let ts = self.sample_expr(t);
-                let fs = self.sample_expr(f);
-                EIte(v.clone(), cond.clone(), Box::new(ts), Box::new(fs))
-            }
-            ESample((), e) => ESample((), Box::new(self.sample_expr(e))),
-            _ => e.clone(),
-        }
-    }
-
-    pub fn apply_cut(&mut self, p: &ProgramAnn) -> ProgramAnn {
-        match p {
-            Program::Body(b) => Program::Body(self.sample_expr(b)),
-        }
-    }
-    pub fn apply_cuts(&mut self, p: &ProgramAnn) -> ProgramAnn {
-        let cuts = self.cuts.clone();
-        cuts.iter().fold(p.clone(), |fin, cut| {
-            self.cut = cut.clone();
-            self.apply_cut(&fin)
-        })
-    }
-}
-
-pub fn rebind_expressions(g: &IteractionGraph) -> Vec<(Binding, Rank)> {
-    todo!("probably just skip sampling unbounded expressions for now")
-}
-pub fn tuple_samples(g: &IteractionGraph) -> Vec<(Binding, Rank)> {
-    todo!("important when we get multi-rooted WMC")
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -739,14 +618,6 @@ mod tests {
         let cuts = order_cuts(&g);
         let pann = crate::annotate::pipeline(&p).unwrap().0;
         let cs = top_k_cuts(&cuts, 1);
-        let mut env = InsertionEnv::new(cs, uid, lbl);
-        let p1 = env.apply_cuts(&pann);
-        let p1_expected = program!(lets![
-            "x" ;= sample!(flip!(1/3));
-           ...? b!("x")
-        ]);
-        let pann_expected = crate::annotate::pipeline(&p1_expected).unwrap().0;
-        assert_eq!(&p1, &pann_expected);
     }
 
     #[test]
@@ -770,16 +641,6 @@ mod tests {
         let pann = crate::annotate::pipeline(&p).unwrap().0;
         let cs = top_k_cuts(&cuts, 1);
         println!("{:#?}", cuts);
-        let mut env = InsertionEnv::new(cs, uid, lbl);
-        let p1 = env.apply_cuts(&pann);
-        let p1_expected = program!(lets![
-            "x" ;= flip!(1/3);
-            "y" ;= flip!(1/3);
-            "z" ;= sample!(b!("x" && "y"));
-           ...? b!("z")
-        ]);
-        let pann_expected = crate::annotate::pipeline(&p1_expected).unwrap().0;
-        assert_eq!(&p1, &pann_expected);
     }
 
     #[test]
@@ -800,16 +661,6 @@ mod tests {
         for c in &cuts {
             println!("{:?}", c);
         }
-        let mut env = InsertionEnv::new(cs, uid, lbl);
-        let p1 = env.apply_cuts(&pann);
-        let p1_expected = program!(lets![
-            "x" ;= flip!(0.0);
-            "y" ;= flip!(0.0);
-            "__s#4" ;= sample!(b!("x" && "y"));
-           ...? b!("__s#4")
-        ]);
-        let pann_expected = crate::annotate::pipeline(&p1_expected).unwrap().0;
-        assert_eq!(&p1, &pann_expected);
     }
 
     #[test]
