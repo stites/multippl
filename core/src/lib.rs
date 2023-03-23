@@ -25,7 +25,7 @@ mod utils;
 #[cfg(test)]
 mod tests;
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 pub struct Options {
     pub seed: Option<u64>,
     pub debug: bool, // overrides seed

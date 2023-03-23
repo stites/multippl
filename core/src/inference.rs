@@ -16,6 +16,8 @@ use std::cmp;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::iter::Sum;
+use std::time::Duration;
+use std::time::Instant;
 use tracing::debug;
 
 #[derive(Debug, Clone, Copy)]
@@ -32,6 +34,14 @@ impl WmcStats {
             accept: cmp::max(self.accept, o.accept),
             dist_accept: cmp::max(self.dist_accept, o.dist_accept),
             mgr_recursive_calls: cmp::max(self.mgr_recursive_calls, o.mgr_recursive_calls),
+        }
+    }
+    fn empty() -> WmcStats {
+        WmcStats {
+            dist: 0,
+            accept: 0,
+            dist_accept: 0,
+            mgr_recursive_calls: 0,
         }
     }
 }
@@ -617,52 +627,117 @@ pub fn importance_weighting_h(
     }
 }
 
-#[allow(unused_mut)]
-pub fn importance_weighting_h_h(
-    steps: usize,
-    p: &ProgramInferable,
-    opt: &crate::Options,
-) -> (Vec<f64>, WmcStats) {
-    let mut expectations = Expectations::empty();
-    let mut weights: Vec<Importance> = vec![];
-    let mut queries: Vec<Vec<f64>> = vec![];
-    let mut mgr = crate::make_mgr(p);
-    let mut stats_max = None;
-
-    debug!("running with options: {:#?}", opt);
-    // let mut debug_inv = None;
-
-    for _step in 1..=steps {
-        match crate::runner_h(p, &mut mgr, opt) {
-            Ok((cs, inv)) => {
-                cs.into_iter().for_each(|c| {
-                    let (query_result, stats) = wmc_prob(&mut mgr, &c);
-
-                    expectations.mut_add(&Expectations::new(
-                        c.importance.clone(),
-                        query_result.clone(),
-                    ));
-                    weights.push(c.importance.clone());
-                    queries.push(query_result);
-                    stats_max = stats_max
-                        .as_ref()
-                        .map(|prv: &WmcStats| prv.largest_of(&stats))
-                        .or_else(|| Some(stats));
-                });
-            }
-            Err(e) => panic!("{:?}", e),
+pub struct SamplingIter {
+    pub current_step: usize,
+    pub max_steps: usize,
+    pub opt: crate::Options, // can only be 1
+    pub start: Instant,
+    pub program: ProgramInferable,
+    pub manager: Mgr,
+    pub max_stats: WmcStats,
+}
+impl SamplingIter {
+    pub fn new(steps: usize, p: &ProgramInferable, opt: &crate::Options) -> Self {
+        let mgr = crate::make_mgr(p);
+        Self {
+            current_step: 0,
+            max_steps: steps,
+            opt: opt.clone(),
+            start: Instant::now(),
+            program: p.clone(),
+            manager: mgr,
+            max_stats: WmcStats::empty(),
         }
     }
-
-    debug!("{}", expectations.to_str());
-    debug!(
-        "ws = {}",
-        weights.iter().map(Importance::weight).sum::<f64>()
-    );
-    // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
-    let x = expectations.compute_query();
-    (x, stats_max.expect("at least one sample"))
 }
+pub struct SamplingResult {
+    pub step: usize,
+    pub stats: WmcStats,
+    pub expectations: Expectations,
+    pub duration: Duration,
+    pub weight: Importance,
+}
+
+impl Iterator for SamplingIter {
+    type Item = SamplingResult;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current_step > self.max_steps {
+            return None;
+        }
+        match crate::runner_h(&self.program, &mut self.manager, &self.opt) {
+            Ok((cs, inv)) => {
+                let c = cs.as_output()?;
+                let step = self.current_step;
+
+                self.current_step += 1;
+                let (query_result, stats) = wmc_prob(&mut self.manager, &c);
+                self.max_stats = self.max_stats.largest_of(&stats);
+                let expectations = Expectations::new(c.importance.clone(), query_result.clone());
+                let stop = Instant::now();
+                let duration = stop.duration_since(self.start);
+                Some(SamplingResult {
+                    step,
+                    stats: self.max_stats.clone(),
+                    expectations,
+                    duration,
+                    weight: c.importance,
+                })
+            }
+            Err(e) => None,
+        }
+    }
+}
+
+// pub fn importance_weighting_h_h(
+//     steps: usize,
+//     checkpoints: usize,
+//     p: &ProgramInferable,
+//     opt: &crate::Options,
+// ) -> SamplingResult {
+//     let mut expectations = Expectations::empty();
+//     let mut weights: Vec<Importance> = vec![];
+//     let mut queries: Vec<Vec<f64>> = vec![];
+//     let mut mgr = crate::make_mgr(p);
+//     let mut stats_max = WmcStats::empty();
+//     let mut ckpts = vec![];
+
+//     debug!("running with options: {:#?}", opt);
+
+//     let start = Instant::now();
+//     for step in 1..=steps {
+//         match crate::runner_h(p, &mut mgr, opt) {
+//             Ok((cs, inv)) => {
+//                 cs.into_iter().for_each(|c| {
+//                     let (query_result, stats) = wmc_prob(&mut mgr, &c);
+
+//                     expectations.mut_add(&Expectations::new(
+//                         c.importance.clone(),
+//                         query_result.clone(),
+//                     ));
+//                     weights.push(c.importance.clone());
+//                     queries.push(query_result);
+//                     stats_max = stats_max.largest_of(&stats);
+//                     if step % checkpoints == 0 || step == steps {
+//                         let stop = Instant::now();
+//                         let duration = stop.duration_since(start);
+//                         ckpts.push((step, stats_max.clone(), expectations.clone(), duration));
+//                     }
+//                 });
+//             }
+//             Err(e) => panic!("{:?}", e),
+//         }
+//     }
+
+//     debug!("{}", expectations.to_str());
+//     debug!(
+//         "ws = {}",
+//         weights.iter().map(Importance::weight).sum::<f64>()
+//     );
+//     // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
+//     let x = expectations.compute_query();
+//     (ckpts, weights.clone())
+// }
 
 // fn conc_prelude(env: &mut Env, p: &ProgramTyped) -> (Vec<f64>, Vec<f64>, Vec<f64>) {
 //     match run(env, p) {
@@ -767,19 +842,17 @@ impl Expectations {
         s.push('\n');
         s
     }
-    pub fn compute_query(&mut self) -> Vec<f64> {
-        let qs = izip!(&self.exp, &self.expw)
+    pub fn query(&self) -> Vec<f64> {
+        izip!(&self.exp, &self.expw)
             .map(|(exp, expw)| if exp == &0.0 { 0.0 } else { exp / expw })
-            .collect_vec();
+            .collect_vec()
+    }
+    pub fn compute_query(&mut self) -> Vec<f64> {
+        let qs = self.query();
         self.cached_query = Some(qs.clone());
         qs
     }
 }
-// pub trait Sum<A = Self> {
-//     fn sum<I>(iter: I) -> Self
-//     where
-//         I: Iterator<Item = A>;
-// }
 
 impl Sum for Expectations {
     fn sum<I>(iter: I) -> Self

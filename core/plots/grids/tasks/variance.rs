@@ -4,6 +4,12 @@ use yodel::inference::*;
 
 pub struct QueryRet(Vec<f64>);
 
+pub struct VarianceDataPoint {
+    step: usize,
+    stats: WmcStats,
+    expectations: Expectations,
+    duration: Duration,
+}
 fn runner(
     gridsize: usize,
     comptype: CompileType,
@@ -31,32 +37,29 @@ fn runner(
         seed,
         ..Default::default()
     };
-    let start = Instant::now();
-    let (qs, stats) = match comptype {
-        Exact => panic!("exact compile type not supported for 'variance' task"),
-        Approx => importance_weighting_h_h(runs, &prg, &opts),
-        OptApx => {
-            panic!("optimized approximation is on hold until it actually does useful optimizations")
-        }
-    };
-    let stop = Instant::now();
-    let duration = stop.duration_since(start);
     let key = SummaryKey {
         comptype,
         gridsize,
         determinism,
     };
+    info!("{:?}", key);
+    match comptype {
+        Exact => panic!("exact compile type not supported for 'variance' task"),
+        OptApx => panic!("optimized approx on hold"),
+        Approx => {
+            for res in SamplingIter::new(runs, &prg, &opts) {
+                println!("{}", res.step);
+                println!("{:?}", res.stats);
+                let query = res.expectations.query();
+                println!("{:?}", query);
+                println!("{:?}", res.duration);
+                println!("{:?}", res.weight);
+            }
+        }
+    }
 
-    let data = SummaryData {
-        duration: duration_to_usize(&duration),
-        acceptsize: stats.accept,
-        distsize: stats.dist,
-        numsize: stats.dist_accept,
-        calls: stats.mgr_recursive_calls,
-        nsamples: runs,
-    };
-    info!("{:?} {:?}", key, data);
-    (key, data, todo!(), todo!(), todo!())
+    todo!()
+    // (key, todo!(), todo!(), todo!(), todo!())
 }
 
 pub fn stats(path: String) {
@@ -102,6 +105,9 @@ pub fn main(path: String, args: RunArgs) {
     } else {
         runs = args.runs;
         runchecks = args.runchecks;
+        assert!(runchecks < runs);
+        let ratio = (runs as f64 / runchecks as f64) as usize;
+        assert!(ratio < 4);
     }
     info!("gridsize   : {:?}x{:?}", args.gridsize, args.gridsize);
     info!("comptype   : {:?}", args.comptype);
@@ -113,12 +119,13 @@ pub fn main(path: String, args: RunArgs) {
     let _ = fs::create_dir_all(path.clone());
     let csvpath = &(path + &csv);
     let _ = write_csv_header(csvpath);
+
     let (key, data, expectations, ws, result) = runner(
         args.gridsize,
         args.comptype,
         args.determinism,
-        args.runs,
-        args.runchecks,
+        runs,
+        runchecks,
         Some(seed),
     );
     for (w, r) in izip!(ws, result) {
