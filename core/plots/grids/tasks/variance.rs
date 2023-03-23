@@ -13,6 +13,12 @@ pub struct VarianceDataPoint {
 fn l1_distance(x0: &[f64], x1: &[f64]) -> f64 {
     izip!(x0, x1).fold(0.0, |dist, (l, r)| dist + (l - r).abs())
 }
+fn ess(ws: &[Importance]) -> f64 {
+    let ss = ws.iter().map(Importance::weight).sum::<f64>();
+    println!("{}", ss);
+    // 1.0 / ws.iter().map(Importance::weight).sum::<f64>()
+    todo!()
+}
 fn runner(
     gridsize: usize,
     comptype: CompileType,
@@ -52,7 +58,10 @@ fn runner(
         Exact => panic!("exact compile type not supported for 'variance' task"),
         OptApx => panic!("optimized approx on hold"),
         Approx => {
+            let mut ws = vec![];
             for res in SamplingIter::new(runs, &prg, &opts) {
+                ws.push(res.weight.clone());
+
                 if (res.step > runs - 10) || (res.step < 10) {
                     println!("{}: {:?}", res.step, res.stats);
                     let query = res.expectations.query();
@@ -66,6 +75,9 @@ fn runner(
                     }
                 }
             }
+            println!("------------------------------");
+            println!("final ess: {:?}", ess(&ws));
+            println!("------------------------------");
         }
     }
 

@@ -665,7 +665,7 @@ impl Iterator for SamplingIter {
     type Item = SamplingResult;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.current_step > self.max_steps {
+        if self.current_step >= self.max_steps {
             return None;
         }
         match crate::runner_h(&self.program, &mut self.manager, &self.opt) {
@@ -860,9 +860,14 @@ impl Expectations {
             .collect_vec()
     }
     pub fn compute_query(&mut self) -> Vec<f64> {
-        let qs = self.query();
-        self.cached_query = Some(qs.clone());
-        qs
+        match &self.cached_query {
+            None => {
+                let qs = self.query();
+                self.cached_query = Some(qs.clone());
+                qs
+            }
+            Some(q) => q.clone(),
+        }
     }
     pub fn var(&self) -> Vec<f64> {
         izip!(&self.expw2, &self.expw)
@@ -870,9 +875,14 @@ impl Expectations {
             .collect_vec()
     }
     pub fn compute_var(&mut self) -> Vec<f64> {
-        let qs = self.var();
-        self.cached_variance = Some(qs.clone());
-        qs
+        match &self.cached_variance {
+            None => {
+                let qs = self.var();
+                self.cached_variance = Some(qs.clone());
+                qs
+            }
+            Some(q) => q.clone(),
+        }
     }
 }
 
