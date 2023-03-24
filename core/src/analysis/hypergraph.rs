@@ -20,7 +20,7 @@ use std::hash::{Hash, Hasher};
 use tracing::*;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct Edge<V>(HashSet<V>)
+pub struct Edge<V>(HashSet<V>)
 where
     V: Clone + Debug + PartialEq + Eq + Hash;
 impl<V> Hash for Edge<V>
@@ -197,6 +197,26 @@ pub fn common_variables(clusters: &HashSet<Cluster<NamedVar>>) -> HashSet<NamedV
     }
     common
 }
+impl HGraph<Cluster<NamedVar>> {
+    pub fn names_to_edges(&self) -> HashMap<NamedVar, HashSet<Edge<Cluster<NamedVar>>>> {
+        let mut ret: HashMap<NamedVar, HashSet<Edge<Cluster<NamedVar>>>> = HashMap::new();
+        for edge in self.hyperedges() {
+            for cluster in edge.iter() {
+                for name in cluster.0.iter() {
+                    match ret.get_mut(&name) {
+                        None => {
+                            ret.insert(name.clone(), HashSet::from([Edge(edge.clone())]));
+                        }
+                        Some(es) => {
+                            es.insert(Edge(edge.clone()));
+                        }
+                    }
+                }
+            }
+        }
+        ret
+    }
+}
 pub fn build_graph(deps: &Dependencies) -> HGraph<Cluster<NamedVar>> {
     let mut g = HGraph::default();
     let mut edges: HashMap<NamedVar, HashSet<Cluster<NamedVar>>> = HashMap::new();
@@ -278,263 +298,152 @@ mod tests {
     use tracing::*;
     use tracing_test::traced_test;
 
-    // #[test]
-    // pub fn test_interaction_graph_for_simple_program() {
-    //     let p = program!(lets![
-    //         "x" ;= flip!(1/3);
-    //        ...? b!("x")
-    //     ]);
-    //     let (g, uid, lbl) = pipeline(&p).unwrap();
-    //     assert_eq!(g.vertices.len(), 1);
-    //     assert_eq!(g.hyperedges.len(), 1);
-    //     let (_, nvar) = g.hyperedges[0].clone();
-    //     assert_eq!(nvar, Binding::Let(named(0, "x")), "flip edge first");
-    //     let cuts = order_cuts(&g);
-    //     let pann = crate::annotate::pipeline(&p).unwrap().0;
-    //     let cs = top_k_cuts(&cuts, 1);
-    // }
+    macro_rules! assert_clusters {
+        ($g:ident : $cvar:expr) => {{
+            let cs = $g.vertices();
+            assert!(cs.contains(&$cvar), "expected {:?} in hypergraph. found: {:?}", $cvar, cs);
+        }};
+        ($g:ident, : $xvar:expr $(, $var:expr)+) => {{
+            assert_clusters!($g : $xvar);
+            $(
+            assert_clusters!($g : $var);
+            )+
+        }};
+        ($g:ident, vars: $xvar:expr) => {{
+            assert_clusters!($g : Cluster(HashSet::from([$xvar])));
+        }};
+        ($g:ident, vars : $xvar:expr $(, $var:expr)+) => {{
+            assert_clusters!($g, vars : $xvar);
+            $(
+            assert_clusters!($g, vars : $var);
+            )+
+        }};
+    }
+    macro_rules! assert_edges {
+        (@ $n2e:ident { $var:expr => $dep0:expr $(, $deps:expr)* }) => {{
+            let found = $n2e.get(&$var).unwrap_or_else(|| {
+                panic!(
+                    "expected singleton cluster {:?} in graph. Found: {:?}",
+                    $var,
+                    $n2e.keys()
+                )
+            });
+            let e0 = Edge($dep0.iter().map(|x| Cluster(HashSet::from(x.clone()))).collect());
+            assert!(found.contains(&e0));
+        }};
+
+        ($g:ident { $var:expr => $dep0:expr $(, $deps:expr)* }) => {{
+            let n2e = $g.names_to_edges();
+            let count = 1;
+            assert_edges!(@ n2e { $var => $dep0 $(, $deps:expr)* });
+            assert_eq!($g.hyperedges().count(), count);
+        }};
+        // ($g:ident { $xvar:expr => $xdeps:expr $(, $var:expr => $deps:expr)* }) => {{
+            //     let n2e = $g.names_to_edges(); // -> HashMap<NamedVar, HashSet<Edge<Cluster<NamedVar>>>> {
+
+            //     let cs = $g.hyperedges();
+            //     let mut fam = HashSet::new();
+            //     fam.insert($f0.clone());
+            //     $(
+            //     fam.insert($var.clone());
+            //     )*
+            //     assert_eq!(ds, &fam, "var {:?}: expected {:?}, found: {:?}", $xvar, ds, fam);
+            // }}
+    }
+
+    #[test]
+    pub fn test_hypergraphs_for_simple_program() {
+        let p = program!(lets![
+            "x" ;= flip!(1/3);
+           ...? b!("x")
+        ]);
+        let g = pipeline(&p);
+
+        let xvar = named(0, "x");
+        assert_clusters!(g, vars: named(0, "x"));
+        assert_eq!(g.vertices().len(), 1);
+        println!("{}", g.print());
+
+        assert_edges!(g { xvar => [[xvar]] } );
+    }
 
     // #[test]
-    // pub fn test_interaction_graph_with_boolean_operator() {
+    // pub fn test_hypergraphs_with_boolean_operator() {
     //     let p = program!(lets![
     //         "x" ;= flip!(1/3);
     //         "y" ;= flip!(1/3);
     //         "z" ;= b!("x" && "y");
+    //         "q" ;= flip!(1/3);
+    //         "w" ;= b!("q" && "z");
     //        ...? b!("z")
     //     ]);
-    //     let (g, uid, lbl) = pipeline(&p).unwrap();
-    //     assert_eq!(g.vertices.len(), 2);
-    //     println!("{}", g.print());
-    //     assert_eq!(g.hyperedges.len(), 3, "edge for each line");
-    //     for (ix, (id, s)) in [(0, "x"), (2, "y"), (4, "z")].iter().enumerate() {
-    //         let (_, nvar) = g.hyperedges[ix].clone();
-    //         assert_eq!(nvar, Binding::Let(named(*id, s)));
-    //     }
-    //     let cuts = order_cuts(&g);
-    //     assert_eq!(cuts.len(), 3);
-    //     let pann = crate::annotate::pipeline(&p).unwrap().0;
-    //     let cs = top_k_cuts(&cuts, 1);
-    //     println!("{:#?}", cuts);
+    //     let g = pipeline(&p);
+    //     let xvar = named(0, "x");
+    //     let yvar = named(2, "y");
+    //     let zvar = named(4, "z");
+    //     let qvar = named(5, "q");
+    //     let wvar = named(7, "w");
+    //     // assert_root!(deps: xvar, yvar, qvar);
+    //     // assert_family!(deps: zvar => xvar, yvar);
+    //     // assert_family!(deps: wvar => qvar, zvar);
+    //     // assert_eq!(deps.len(), 5);
     // }
 
     // #[test]
-    // pub fn test_interaction_graph_works_with_conjoined_query() {
-    //     let p = program!(lets![
-    //         "x" ;= flip!(0.0);
-    //         "y" ;= flip!(0.0);
-    //        ...? b!("x" && "y")
-    //     ]);
-    //     let (g, uid, lbl) = pipeline(&p).unwrap();
-    //     assert_eq!(g.vertices.len(), 2);
-    //     println!("{}", g.print());
-    //     assert_eq!(g.hyperedges.len(), 3, "each line + complex query");
-    //     let cuts = order_cuts(&g);
-    //     assert_eq!(cuts.len(), 3);
-    //     let pann = crate::annotate::pipeline(&p).unwrap().0;
-    //     let cs = top_k_cuts(&cuts, 1);
-    //     for c in &cuts {
-    //         println!("{:?}", c);
-    //     }
-    // }
-
-    // #[test]
-    // pub fn test_interaction_graph_captures_correct_edge_with_aliases() {
+    // pub fn test_hypergraphs_captures_tuples() {
     //     let p = program!(lets![
     //         "x" ;= flip!(1/3);
     //         "y" ;= flip!(1/3);
-    //         "z" ;= flip!(1/3);
-    //         "a" ;= b!("x" && "y" && "z");
-    //        ...? b!("a")
+    //         "t" ;= b!("x", "y");
+    //         "f" ;= fst!("t");
+    //        ...? b!("t")
     //     ]);
-    //     let g = pipeline(&p).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 3);
-    //     assert_eq!(g.hyperedges.len(), 4, "edge for each line");
-    //     let query = &g.hyperedges.last().unwrap().0;
-    //     assert_eq!(query.len(), 3, "query depends on every variable above");
-    //     order_cuts(&g);
+    //     let p = annotate::pipeline(&p).unwrap().0;
+    //     let deps = DependencyEnv::new().scan(&p);
+    //     let xvar = named(0, "x");
+    //     let yvar = named(2, "y");
+    //     let tvar = named(4, "t");
+    //     let fvar = named(5, "f");
+    //     assert_root!(deps: xvar, yvar);
+    //     assert_family!(deps: tvar => xvar, yvar);
+    //     assert_family!(deps: fvar => tvar);
+    //     assert_eq!(deps.len(), 4);
     // }
 
     // #[test]
-    // pub fn test_interaction_works_as_expected_for_samples() {
-    //     let shared_var = program!(lets![
+    // pub fn test_hypergraphs_works_as_expected_for_samples() {
+    //     let p = program!(lets![
     //        "x" ;= flip!(1/3);
-    //        "l" ;= sample!(var!("x"));
-    //        "r" ;= sample!(var!("x"));
-    //        ...? b!("r")
+    //        "s" ;= sample!(var!("x"));
+    //        ...? b!("s")
     //     ]);
-    //     let g = pipeline(&shared_var).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 1);
-    //     let es = g.hyperedges.clone();
-    //     assert_eq!(g.hyperedges.len(), 3, "edge for each line");
-    //     let n = &es[0].1;
-    //     assert_eq!(n, &Binding::Let(named(0, "x")));
-    //     let (e, n) = &es[1];
-    //     assert_eq!(n, &Binding::NamedSample(named(2, "l")));
-    //     assert_eq!(e, &HashSet::from([PlanPtr(0)]));
-    //     let (e, n) = &es[2];
-    //     assert_eq!(n, &Binding::NamedSample(named(3, "r")));
-    //     assert_eq!(e, &HashSet::from([PlanPtr(0)]));
+    //     let p = annotate::pipeline(&p).unwrap().0;
+    //     let deps = DependencyEnv::new().scan(&p);
+    //     let xvar = named(0, "x");
+    //     let svar = named(2, "s");
+    //     assert_root!(deps: xvar);
+    //     assert_family!(deps: svar => xvar);
+    //     assert_eq!(deps.len(), 2);
     // }
 
     // #[test]
-    // pub fn test_interaction_shared_tuples_get_separated() {
-    //     let shared_tuple = program!(lets![
-    //        "x" ;= flip!(1/3);
-    //        "y" ;= flip!(1/3);
-    //        "z" ;= sample!(b!("x", "y"));
-    //        ...? b!("z")
-    //     ]);
-    //     let g = pipeline(&shared_tuple).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 2);
-    //     for (edge, nvar) in &g.hyperedges {
-    //         println!("nvar: {:?}", nvar);
-    //         println!("edge: {:?}", edge);
-    //     }
-    //     assert_eq!(g.hyperedges.len(), 4, "needs a tuple for each position");
-    //     order_cuts(&g);
-    // }
-
-    // #[test]
-    // pub fn test_interaction_ite_sample() {
-    //     let ite = program!(lets![
+    // pub fn test_hypergraphs_ite_sample() {
+    //     let p = program!(lets![
     //         "x" ;= flip!(1/5);
-    //         "y" ;= ite!(
+    //         "y" ;= flip!(1/5);
+    //         "z" ;= ite!(
     //             if ( var!("x") )
     //             then { sample!(flip!(1/3)) }
-    //             else { flip!(1/4) });
+    //             else { var!("y") });
     //         ...? b!("y")
     //     ]);
-    //     let g = pipeline(&ite).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 3);
-    //     for (edge, nvar) in &g.hyperedges {
-    //         println!("nvar: {:?}", nvar);
-    //         println!("edge: {:?}", edge);
-    //     }
-    //     assert_eq!(g.hyperedges.len(), 2, "edge for each line");
-    //     // let query = &g.hyperedges.last().unwrap().0;
-    //     // assert_eq!(query.len(), 3, "query depends on every variable above");
-    //     // order_cuts(&g);
-    // }
-
-    // #[test]
-    // // #[traced_test]
-    // // #[ignore = "expectations need to be revisited"]
-    // pub fn test_interaction_ite_nested_let() {
-    //     let ite_with_nested_lets = program!(lets![
-    //         "x" ;= flip!(2/3);
-    //         "y" ;= ite!(
-    //             if ( var!("x") )
-    //                 then { lets![
-    //                          "q" ;= flip!(1/4);
-    //                          "_" ;= observe!(b!("q" || "x"));
-    //                          ...? b!("q")
-    //                 ] }
-    //             else { flip!(1/5) });
-    //         "_" ;= observe!(b!("x" || "y"));
-    //         ...? b!("x")
-    //     ]);
-    //     let g = pipeline(&ite_with_nested_lets).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 3);
-    //     assert_eq!(g.hyperedges.len(), 5, "edge for each line");
-    //     for (edge, nvar) in &g.hyperedges {
-    //         println!("nvar: {:?}", nvar);
-    //         println!("edge: {:?}", edge);
-    //     }
-    //     let query = &g.hyperedges.last().unwrap().0;
-    //     assert_eq!(query.len(), 3, "query depends on every variable above");
-    //     order_cuts(&g);
-    // }
-
-    // #[test]
-    // pub fn test_interaction_2x2_triu() {
-    //     let grid2x2_triu = program!(lets![
-    //         "00" ;= flip!(1/2);
-    //         "01" ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-    //         "10" ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-    //         ...? b!("01", "10")
-    //     ]);
-    //     let g = pipeline(&grid2x2_triu).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 5);
-    //     assert_eq!(g.hyperedges.len(), 3, "each var + ite");
-    //     order_cuts(&g);
-    // }
-
-    // #[test]
-    // pub fn test_interaction_2x2_tril() {
-    //     let grid2x2_tril = program!(lets![
-    //         "01" ;= flip!(1/3);
-    //         "10" ;= flip!(1/4);
-    //         "11" ;=
-    //             ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(3/7) ) : (
-    //             ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(3/8) ) : (
-    //             ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(3/9) ) : (
-    //                                                       flip!(3/11) ))))));
-    //         ...? b!("11")
-    //     ]);
-    //     let g = pipeline(&grid2x2_tril).unwrap().0;
-    //     for (edge, nvar) in &g.hyperedges {
-    //         println!("nvar: {:?}", nvar);
-    //         println!("edge: {:?}", edge);
-    //     }
-    //     assert_eq!(g.vertices.len(), 6, "one per flip");
-    //     assert_eq!(g.hyperedges.len(), 3, "one per flip + ite");
-    //     let query = &g.hyperedges.last().unwrap().0;
-    //     assert_eq!(query.len(), 6, "var 11 depends on every variable above");
-    //     order_cuts(&g);
-    // }
-
-    // #[test]
-    // pub fn test_interaction_2x2_full() {
-    //     let grid2x2 = program!(lets![
-    //         "00" ;= flip!(1/2);
-    //         "01" ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-    //         "10" ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-    //         "11" ;=
-    //             ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
-    //             ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
-    //             ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
-    //                                                       flip!(1/11) ))))));
-    //         ...? b!("11")
-    //     ]);
-    //     let g = pipeline(&grid2x2).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 9);
-    //     assert_eq!(g.hyperedges.len(), 4, "vertex + 3xITE");
-    //     let query = &g.hyperedges.last().unwrap().0;
-    //     assert_eq!(query.len(), 9, "query depends on every variable above");
-    //     order_cuts(&g);
-    // }
-
-    // #[test]
-    // pub fn test_interaction_2x2_sampled() {
-    //     let grid2x2_sampled = program!(lets![
-    //         "00" ;= flip!(1/2);
-    //         "01_10" ;= sample!(
-    //             lets![
-    //                 "01" ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-    //                 "10" ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-    //                 ...? b!("01", "10")
-    //             ]);
-    //         "01" ;= fst!("01_10");
-    //         "10" ;= snd!("01_10");
-    //         "11" ;=
-    //             ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
-    //             ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
-    //             ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
-    //                                                       flip!(1/11) ))))));
-    //         ...? b!("11")
-    //     ]);
-    //     let g = pipeline(&grid2x2_sampled).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 9);
-    //     for (edge, nvar) in &g.hyperedges {
-    //         println!("{:?} >>> {:?}", nvar, edge);
-    //     }
-    //     assert_eq!(g.hyperedges.len(), 4, "every named ITE + 00");
-    //     let query = &g.hyperedges.last().unwrap().0;
-    //     assert_eq!(
-    //         query.len(),
-    //         9,
-    //         "11 (last one) depends on every variable above"
-    //     );
-    //     order_cuts(&g);
+    //     let p = annotate::pipeline(&p).unwrap().0;
+    //     let deps = DependencyEnv::new().scan(&p);
+    //     let xvar = named(0, "x");
+    //     let yvar = named(2, "y");
+    //     let zvar = named(4, "z");
+    //     assert_root!(deps: xvar, yvar);
+    //     assert_family!(deps: zvar => xvar, yvar);
+    //     assert_eq!(deps.len(), 3);
     // }
 }
