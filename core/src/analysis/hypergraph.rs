@@ -186,6 +186,17 @@ where
     //     Self::edges_to_covers(&self.hyperedges)
     // }
 }
+pub fn common_variables(clusters: &HashSet<Cluster<NamedVar>>) -> HashSet<NamedVar> {
+    let mut common = clusters
+        .iter()
+        .map(|x| x.0.clone())
+        .nth(0)
+        .expect("clusters should be non-empty");
+    for c in clusters.iter() {
+        common = common.intersection(&c.0).cloned().collect();
+    }
+    common
+}
 pub fn build_graph(deps: &Dependencies) -> HGraph<Cluster<NamedVar>> {
     let mut g = HGraph::default();
     let mut edges: HashMap<NamedVar, HashSet<Cluster<NamedVar>>> = HashMap::new();
