@@ -35,6 +35,7 @@ where
         self.0.iter().for_each(|v| v.hash(state));
     }
 }
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Cover<'a, V>
 where
@@ -44,49 +45,70 @@ where
     edges: HashSet<&'a Edge<V>>,
 }
 
+pub trait Hypergraph {
+    type Vertex;
+    type EdgeIter: Iterator<Item = HashSet<Self::Vertex>>;
+    fn vertices(&self) -> &HashSet<Self::Vertex>;
+    fn hyperedges(&self) -> Self::EdgeIter;
+    fn insert_edge(&mut self, edge: &HashSet<Self::Vertex>) -> bool;
+    fn insert_vertex(&mut self, v: Self::Vertex) -> bool;
+}
+
 #[derive(Clone, Debug)]
-pub struct Hypergraph<V>
+pub struct HGraph<V>
 where
     V: Clone + Debug + PartialEq + Eq + Hash,
 {
     vertices: HashSet<V>,
     hyperedges: HashSet<Edge<V>>,
 }
-impl<V> Default for Hypergraph<V>
+impl<V> Default for HGraph<V>
 where
     V: Clone + Debug + PartialEq + Eq + Hash,
 {
     fn default() -> Self {
-        Hypergraph {
+        HGraph {
             vertices: Default::default(),
             hyperedges: Default::default(),
         }
     }
 }
-impl<V> Hypergraph<V>
+impl<V> Hypergraph for HGraph<V>
 where
     V: Clone + Debug + PartialEq + Eq + Hash,
 {
-    pub fn vertices(&self) -> &HashSet<V> {
+    type Vertex = V;
+    type EdgeIter = std::vec::IntoIter<HashSet<Self::Vertex>>;
+
+    fn vertices(&self) -> &HashSet<V> {
         &self.vertices
     }
 
-    pub fn edges(&self) -> impl Iterator<Item = &HashSet<V>> {
-        self.hyperedges.iter().map(|x| &x.0)
+    fn hyperedges<'a>(&self) -> Self::EdgeIter {
+        self.hyperedges
+            .iter()
+            .map(|x| &x.0)
+            .cloned()
+            .collect_vec()
+            .into_iter()
     }
 
     /// add an edge to the hypergraph. Returns false if the edge is already in the hypergraph
-    pub fn insert_edge(&mut self, edge: &HashSet<V>) -> bool {
+    fn insert_edge(&mut self, edge: &HashSet<V>) -> bool {
         debug!("insert edge: {:?}", edge);
         self.vertices.extend(edge.clone());
         self.hyperedges.insert(Edge(edge.clone()))
     }
 
     /// add a vertex to the hypergraph. Returns false if the vertex is already in the hypergraph
-    pub fn insert_vertex(&mut self, v: V) -> bool {
+    fn insert_vertex(&mut self, v: V) -> bool {
         self.vertices.insert(v)
     }
-
+}
+impl<V> HGraph<V>
+where
+    V: Clone + Debug + PartialEq + Eq + Hash,
+{
     pub fn print(&self) -> String {
         let vtxs = self.vertices.iter().map(|x| format!("{:?}", x)).join(", ");
         let edges = self
@@ -164,7 +186,7 @@ where
     //     Self::edges_to_covers(&self.hyperedges)
     // }
 }
-pub fn build_graph(deps: &Dependencies) -> Hypergraph<Cluster<NamedVar>> {
+pub fn build_graph(deps: &Dependencies) -> HGraph<Cluster<NamedVar>> {
     todo!()
 }
 
@@ -184,7 +206,7 @@ where
         self.0.iter().for_each(|v| v.hash(state));
     }
 }
-pub fn pipeline(p: &crate::ProgramInferable) -> Hypergraph<Cluster<NamedVar>> {
+pub fn pipeline(p: &crate::ProgramInferable) -> HGraph<Cluster<NamedVar>> {
     let p = annotate::pipeline(&p).unwrap().0;
     let deps = DependencyEnv::new().scan(&p);
     build_graph(&deps)
