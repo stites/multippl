@@ -187,7 +187,26 @@ where
     // }
 }
 pub fn build_graph(deps: &Dependencies) -> HGraph<Cluster<NamedVar>> {
-    todo!()
+    let mut g = HGraph::default();
+    let mut edges: HashMap<NamedVar, HashSet<Cluster<NamedVar>>> = HashMap::new();
+    for family in deps.family_iter() {
+        let cluster = Cluster(family.clone());
+        g.insert_vertex(cluster.clone());
+        for var in family {
+            match edges.get_mut(&var) {
+                None => {
+                    edges.insert(var.clone(), HashSet::from([cluster.clone()]));
+                }
+                Some(fams) => {
+                    fams.insert(cluster.clone());
+                }
+            }
+        }
+    }
+    for edges in edges.values() {
+        g.insert_edge(edges);
+    }
+    g
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -206,6 +225,7 @@ where
         self.0.iter().for_each(|v| v.hash(state));
     }
 }
+
 pub fn pipeline(p: &crate::ProgramInferable) -> HGraph<Cluster<NamedVar>> {
     let p = annotate::pipeline(&p).unwrap().0;
     let deps = DependencyEnv::new().scan(&p);
