@@ -296,6 +296,7 @@ pub fn pipeline(p: &crate::ProgramInferable) -> HGraph<Cluster<NamedVar>> {
 //     cuts.iter().map(|(b, r)| b.clone()).take(n).collect()
 // }
 
+#[allow(unused_mut)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -309,19 +310,27 @@ mod tests {
     use tracing::*;
     use tracing_test::traced_test;
 
+    fn named_to_cluster(xs: &[&NamedVar]) -> Cluster<NamedVar> {
+        Cluster(xs.iter().map(Clone::clone).cloned().collect())
+    }
+
     macro_rules! assert_clusters {
         ($g:ident : $cvar:expr) => {{
             let cs = $g.vertices();
+            debug!("{:?}#{} in the following?", $cvar, calculate_hash(&$cvar));
+            for c in cs {
+                debug!("vertex: {:?}#{}", c, calculate_hash(&c));
+            }
             assert!(cs.contains(&$cvar), "expected {:?} in hypergraph. found: {:?}", $cvar, cs);
         }};
-        ($g:ident, : $xvar:expr $(, $var:expr)+) => {{
+        ($g:ident : $xvar:expr $(, $var:expr)+) => {{
             assert_clusters!($g : $xvar);
             $(
             assert_clusters!($g : $var);
             )+
         }};
         ($g:ident, vars: $xvar:expr) => {{
-            assert_clusters!($g : Cluster(HashSet::from([$xvar])));
+            assert_clusters!($g : named_to_cluster($xvar));
         }};
         ($g:ident, vars : $xvar:expr $(, $var:expr)+) => {{
             assert_clusters!($g, vars : $xvar);
@@ -330,8 +339,9 @@ mod tests {
             )+
         }};
     }
+
     macro_rules! assert_edges {
-        (@ $n2e:ident { $var:expr => $dep0:expr $(, $deps:expr)* }) => {{
+        (@ $n2e:ident { $var:expr => $deps:expr }) => {{
             let found = $n2e.get(&$var).unwrap_or_else(|| {
                 panic!(
                     "expected singleton cluster {:?} in graph. Found: {:?}",
@@ -339,27 +349,22 @@ mod tests {
                     $n2e.keys()
                 )
             });
-            let e0 = Edge($dep0.iter().map(|x| Cluster(HashSet::from(x.clone()))).collect());
+            let e0 = Edge($deps.iter().map(|x| named_to_cluster(x)).collect());
             assert!(found.contains(&e0));
         }};
 
-        ($g:ident { $var:expr => $dep0:expr $(, $deps:expr)* }) => {{
+        ($g:ident { $var0:expr => $dep0:expr $(, $var:expr => $deps:expr)*}) => {{
             let n2e = $g.names_to_edges();
-            let count = 1;
-            assert_edges!(@ n2e { $var => $dep0 $(, $deps:expr)* });
-            assert_eq!($g.hyperedges().count(), count);
+            let keys : HashSet<&NamedVar> = n2e.keys().collect();
+            let mut allvars = HashSet::from([&$var0]);
+            assert_edges!(@ n2e { $var0 => $dep0 });
+            $(
+                allvars.insert(&$var);
+                assert_edges!(@ n2e { $var => $deps });
+            )*
+            assert_eq!(keys, allvars, "expected assertions to cover all found keys (on the left)");
+            assert_eq!($g.hyperedges().count(), allvars.len(), "expected one edge per named variable");
         }};
-        // ($g:ident { $xvar:expr => $xdeps:expr $(, $var:expr => $deps:expr)* }) => {{
-            //     let n2e = $g.names_to_edges(); // -> HashMap<NamedVar, HashSet<Edge<Cluster<NamedVar>>>> {
-
-            //     let cs = $g.hyperedges();
-            //     let mut fam = HashSet::new();
-            //     fam.insert($f0.clone());
-            //     $(
-            //     fam.insert($var.clone());
-            //     )*
-            //     assert_eq!(ds, &fam, "var {:?}: expected {:?}, found: {:?}", $xvar, ds, fam);
-            // }}
     }
 
     #[test]
@@ -371,34 +376,54 @@ mod tests {
         let g = pipeline(&p);
 
         let xvar = named(0, "x");
-        assert_clusters!(g, vars: named(0, "x"));
+        assert_clusters!(g, vars: &[&named(0, "x")]);
         assert_eq!(g.vertices().len(), 1);
-        println!("{}", g.print());
+        debug!("{}", g.print());
 
-        assert_edges!(g { xvar => [[xvar]] } );
+        assert_edges!(g { xvar => [[&xvar]] } );
     }
 
-    // #[test]
-    // pub fn test_hypergraphs_with_boolean_operator() {
-    //     let p = program!(lets![
-    //         "x" ;= flip!(1/3);
-    //         "y" ;= flip!(1/3);
-    //         "z" ;= b!("x" && "y");
-    //         "q" ;= flip!(1/3);
-    //         "w" ;= b!("q" && "z");
-    //        ...? b!("z")
-    //     ]);
-    //     let g = pipeline(&p);
-    //     let xvar = named(0, "x");
-    //     let yvar = named(2, "y");
-    //     let zvar = named(4, "z");
-    //     let qvar = named(5, "q");
-    //     let wvar = named(7, "w");
-    //     // assert_root!(deps: xvar, yvar, qvar);
-    //     // assert_family!(deps: zvar => xvar, yvar);
-    //     // assert_family!(deps: wvar => qvar, zvar);
-    //     // assert_eq!(deps.len(), 5);
-    // }
+    #[test]
+    pub fn test_hypergraphs_with_boolean_operator() {
+        let subscriber = ::tracing_subscriber::FmtSubscriber::builder()
+            .with_env_filter(::tracing_subscriber::EnvFilter::from_default_env())
+            // .with_span_events(__internal_event_filter)
+            .with_test_writer()
+            .finish();
+        let _ = ::tracing::subscriber::set_global_default(subscriber);
+
+        let p = program!(lets![
+            "x" ;= flip!(1/3);
+            "y" ;= flip!(1/3);
+            "z" ;= b!("x" && "y");
+            "q" ;= flip!(1/3);
+            "w" ;= b!("q" && "z");
+           ...? b!("z")
+        ]);
+        let g = pipeline(&p);
+        let xvar = named(0, "x");
+        let yvar = named(2, "y");
+        let zvar = named(4, "z");
+        let qvar = named(5, "q");
+        let wvar = named(7, "w");
+
+        assert_clusters!(
+            g,
+            vars: &[&xvar],
+            &[&yvar],
+            &[&xvar, &yvar, &zvar],
+            &[&qvar],
+            &[&qvar, &zvar, &wvar]
+        );
+
+        assert_edges!(g {
+            xvar => [vec![&xvar], vec![&xvar, &yvar, &zvar]],
+            yvar => [vec![&yvar], vec![&xvar, &yvar, &zvar]],
+            zvar => [[&xvar, &yvar, &zvar], [&qvar, &zvar, &wvar]],
+            qvar => [vec![&qvar], vec![&qvar, &zvar, &wvar]],
+            wvar => [[&qvar, &zvar, &wvar]]
+        });
+    }
 
     // #[test]
     // pub fn test_hypergraphs_captures_tuples() {
