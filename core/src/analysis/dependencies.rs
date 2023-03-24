@@ -1,7 +1,10 @@
 use crate::annotate::grammar::*;
 use crate::grammar::*;
 
+use itertools::*;
+use std::collections::hash_map;
 use std::collections::{HashMap, HashSet};
+use std::vec;
 use tracing::*;
 
 #[derive(Default, Clone)]
@@ -19,6 +22,20 @@ impl Dependencies {
     }
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+    pub fn iter<'a>(&'a self) -> hash_map::Iter<'a, NamedVar, HashSet<NamedVar>> {
+        self.0.iter()
+    }
+    pub fn family_iter<'a>(&'a self) -> vec::IntoIter<HashSet<NamedVar>> {
+        self.0
+            .iter()
+            .map(|(v, ps)| {
+                let mut ps = ps.clone();
+                ps.insert(v.clone());
+                ps
+            })
+            .collect_vec()
+            .into_iter()
     }
 }
 pub struct DependencyEnv {
