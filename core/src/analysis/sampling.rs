@@ -18,6 +18,12 @@ use core::hash::Hash;
 use std::collections::{HashMap, HashSet};
 use tracing::*;
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct MaxUniqueId(pub u64);
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct MaxVarLabel(pub u64);
+
+
 pub struct InsertionEnv {
     cuts: Vec<Binding>,
     cut: Binding,

@@ -5,7 +5,7 @@ use std::collections::{HashMap, HashSet};
 use tracing::*;
 
 #[derive(Default, Clone)]
-struct Dependencies(pub HashMap<NamedVar, HashSet<NamedVar>>);
+pub struct Dependencies(pub HashMap<NamedVar, HashSet<NamedVar>>);
 impl Dependencies {
     pub fn insert(&mut self, var: NamedVar, deps: HashSet<NamedVar>) {
         self.0.insert(var, deps);
@@ -80,7 +80,7 @@ impl DependencyEnv {
         }
     }
 
-    fn scan(&mut self, p: &ProgramAnn) -> Dependencies {
+    pub fn scan(&mut self, p: &ProgramAnn) -> Dependencies {
         match p {
             Program::Body(b) => {
                 self.scan_expr(b);
