@@ -385,12 +385,12 @@ mod tests {
 
     #[test]
     pub fn test_hypergraphs_with_boolean_operator() {
-        let subscriber = ::tracing_subscriber::FmtSubscriber::builder()
-            .with_env_filter(::tracing_subscriber::EnvFilter::from_default_env())
-            // .with_span_events(__internal_event_filter)
-            .with_test_writer()
-            .finish();
-        let _ = ::tracing::subscriber::set_global_default(subscriber);
+        // let _ = ::tracing::subscriber::set_global_default(
+        //     ::tracing_subscriber::FmtSubscriber::builder()
+        //         .with_max_level(tracing::Level::DEBUG)
+        //         .without_time()
+        //         .finish(),
+        // );
 
         let p = program!(lets![
             "x" ;= flip!(1/3);
@@ -425,42 +425,52 @@ mod tests {
         });
     }
 
-    // #[test]
-    // pub fn test_hypergraphs_captures_tuples() {
-    //     let p = program!(lets![
-    //         "x" ;= flip!(1/3);
-    //         "y" ;= flip!(1/3);
-    //         "t" ;= b!("x", "y");
-    //         "f" ;= fst!("t");
-    //        ...? b!("t")
-    //     ]);
-    //     let p = annotate::pipeline(&p).unwrap().0;
-    //     let deps = DependencyEnv::new().scan(&p);
-    //     let xvar = named(0, "x");
-    //     let yvar = named(2, "y");
-    //     let tvar = named(4, "t");
-    //     let fvar = named(5, "f");
-    //     assert_root!(deps: xvar, yvar);
-    //     assert_family!(deps: tvar => xvar, yvar);
-    //     assert_family!(deps: fvar => tvar);
-    //     assert_eq!(deps.len(), 4);
-    // }
+    #[test]
+    pub fn test_hypergraphs_captures_tuples() {
+        let p = program!(lets![
+            "x" ;= flip!(1/3);
+            "y" ;= flip!(1/3);
+            "t" ;= b!("x", "y");
+            "f" ;= fst!("t");
+           ...? b!("t")
+        ]);
+        let g = pipeline(&p);
+        let xvar = named(0, "x");
+        let yvar = named(2, "y");
+        let tvar = named(4, "t");
+        let fvar = named(5, "f");
 
-    // #[test]
-    // pub fn test_hypergraphs_works_as_expected_for_samples() {
-    //     let p = program!(lets![
-    //        "x" ;= flip!(1/3);
-    //        "s" ;= sample!(var!("x"));
-    //        ...? b!("s")
-    //     ]);
-    //     let p = annotate::pipeline(&p).unwrap().0;
-    //     let deps = DependencyEnv::new().scan(&p);
-    //     let xvar = named(0, "x");
-    //     let svar = named(2, "s");
-    //     assert_root!(deps: xvar);
-    //     assert_family!(deps: svar => xvar);
-    //     assert_eq!(deps.len(), 2);
-    // }
+        assert_clusters!(
+            g,
+            vars: &[&xvar],
+            &[&yvar],
+            &[&xvar, &yvar, &tvar],
+            &[&tvar, &fvar]
+        );
+
+        assert_edges!(g {
+            xvar => [vec![&xvar], vec![&xvar, &yvar, &tvar]],
+            yvar => [vec![&yvar], vec![&xvar, &yvar, &tvar]],
+            tvar => [vec![&xvar, &yvar, &tvar], vec![&fvar, &tvar]],
+            fvar => [[&fvar, &tvar]]
+        });
+    }
+
+    #[test]
+    pub fn test_hypergraphs_works_as_expected_for_samples() {
+        let p = program!(lets![
+           "x" ;= flip!(1/3);
+           "s" ;= sample!(var!("x"));
+           ...? b!("s")
+        ]);
+        let p = annotate::pipeline(&p).unwrap().0;
+        let deps = DependencyEnv::new().scan(&p);
+        let xvar = named(0, "x");
+        let svar = named(2, "s");
+        assert_root!(deps: xvar);
+        assert_family!(deps: svar => xvar);
+        assert_eq!(deps.len(), 2);
+    }
 
     // #[test]
     // pub fn test_hypergraphs_ite_sample() {
