@@ -15,9 +15,16 @@ use rsdd::repr::var_order::VarOrder;
 use rsdd::repr::wmc::WmcParams;
 
 // use rsdd::util::hypergraph::*;
+use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use tracing::*;
+
+fn calculate_hash<T: Hash>(t: &T) -> u64 {
+    let mut s = DefaultHasher::new();
+    t.hash(&mut s);
+    s.finish()
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Edge<V>(HashSet<V>)
@@ -31,8 +38,10 @@ where
     where
         H: Hasher,
     {
-        self.0.len().hash(state);
-        self.0.iter().for_each(|v| v.hash(state));
+        let mut hashes = self.0.iter().map(calculate_hash).collect_vec();
+        hashes.sort();
+        let hashstr = hashes.into_iter().map(|x| x.to_string()).join("");
+        hashstr.hash(state);
     }
 }
 
@@ -252,8 +261,10 @@ where
     where
         H: Hasher,
     {
-        self.0.len().hash(state);
-        self.0.iter().for_each(|v| v.hash(state));
+        let mut hashes = self.0.iter().map(calculate_hash).collect_vec();
+        hashes.sort();
+        let hashstr = hashes.into_iter().map(|x| x.to_string()).join("");
+        hashstr.hash(state);
     }
 }
 
