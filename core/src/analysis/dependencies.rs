@@ -8,8 +8,8 @@ use std::vec;
 use tracing::*;
 
 #[derive(Default, Clone)]
-pub struct Dependencies(pub HashMap<NamedVar, HashSet<NamedVar>>);
-impl Dependencies {
+pub struct DependenceMap(pub HashMap<NamedVar, HashSet<NamedVar>>);
+impl DependenceMap {
     pub fn insert(&mut self, var: NamedVar, deps: HashSet<NamedVar>) {
         self.0.insert(var, deps);
     }
@@ -39,12 +39,12 @@ impl Dependencies {
     }
 }
 pub struct DependencyEnv {
-    dependencies: Dependencies,
+    map: DependenceMap,
 }
 impl DependencyEnv {
     pub fn new() -> Self {
         Self {
-            dependencies: Default::default(),
+            map: Default::default(),
         }
     }
     fn scan_anf(&self, a: &AnfAnn) -> HashSet<NamedVar> {
@@ -82,7 +82,7 @@ impl DependencyEnv {
             // FIXME ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
             ELetIn(nv, s, ebound, ebody) => {
                 let deps = self.scan_expr(ebound);
-                self.dependencies.insert(nv.clone(), deps);
+                self.map.insert(nv.clone(), deps);
                 self.scan_expr(ebody)
             }
             EIte(v, cond, t, f) => {
@@ -97,11 +97,11 @@ impl DependencyEnv {
         }
     }
 
-    pub fn scan(&mut self, p: &ProgramAnn) -> Dependencies {
+    pub fn scan(&mut self, p: &ProgramAnn) -> DependenceMap {
         match p {
             Program::Body(b) => {
                 self.scan_expr(b);
-                self.dependencies.clone()
+                self.map.clone()
             }
         }
     }

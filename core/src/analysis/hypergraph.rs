@@ -226,7 +226,7 @@ impl HGraph<Cluster<NamedVar>> {
         ret
     }
 }
-pub fn build_graph(deps: &Dependencies) -> HGraph<Cluster<NamedVar>> {
+pub fn build_graph(deps: &DependenceMap) -> HGraph<Cluster<NamedVar>> {
     let mut g = HGraph::default();
     let mut edges: HashMap<NamedVar, HashSet<Cluster<NamedVar>>> = HashMap::new();
     for family in deps.family_iter() {
