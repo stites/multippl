@@ -220,19 +220,21 @@ mod tests {
         let p = program!(lets![
             "x" ;= flip!(1/5);
             "y" ;= flip!(1/5);
-            "z" ;= ite!(
+            "z" ;= flip!(1/5);
+            "i" ;= ite!(
                 if ( var!("x") )
-                then { sample!(flip!(1/3)) }
-                else { var!("y") });
-            ...? b!("y")
+                then { sample!(var!("y")) }
+                else { var!("z") });
+            ...? b!("i")
         ]);
         let p = annotate::pipeline(&p).unwrap().0;
         let deps = DependencyEnv::new().scan(&p);
         let xvar = named(0, "x");
         let yvar = named(2, "y");
         let zvar = named(4, "z");
-        assert_root!(deps: xvar, yvar);
-        assert_family!(deps: zvar => xvar, yvar);
-        assert_eq!(deps.len(), 3);
+        let ivar = named(6, "i");
+        assert_root!(deps: xvar, yvar, zvar);
+        assert_family!(deps: ivar => xvar, yvar, zvar);
+        assert_eq!(deps.len(), 4);
     }
 }
