@@ -230,10 +230,11 @@ pub fn build_graph(deps: &DependenceMap) -> HGraph<Cluster<NamedVar>> {
     let mut g = HGraph::default();
     let mut edges: HashMap<NamedVar, HashSet<Cluster<NamedVar>>> = HashMap::new();
     for family in deps.family_iter() {
+        debug!("family: {:?}", family);
         let cluster = Cluster(Dep::vars(&family));
+        debug!("-> cluster: {:?}", cluster);
         g.insert_vertex(cluster.clone());
-        for dep in family {
-            let var = dep.named_var();
+        for var in &cluster.0 {
             match edges.get_mut(&var) {
                 None => {
                     edges.insert(var.clone(), HashSet::from([cluster.clone()]));
@@ -244,8 +245,9 @@ pub fn build_graph(deps: &DependenceMap) -> HGraph<Cluster<NamedVar>> {
             }
         }
     }
-    for edges in edges.values() {
-        g.insert_edge(edges);
+    for edge in edges.values() {
+        debug!("edge: {:?}", edge);
+        g.insert_edge(edge);
     }
     g
 }
@@ -317,6 +319,8 @@ mod tests {
 
     macro_rules! assert_clusters {
         ($g:ident : $cvar:expr) => {{
+            let span = tracing::span!(tracing::Level::DEBUG, "assert_clusters");
+            let _guard = span.enter();
             let cs = $g.vertices();
             debug!("{:?}#{} in the following?", $cvar, calculate_hash(&$cvar));
             for c in cs {
@@ -343,6 +347,9 @@ mod tests {
 
     macro_rules! assert_edges {
         (@ $n2e:ident { $var:expr => $deps:expr }) => {{
+            let span = tracing::span!(tracing::Level::DEBUG, "assert_edges");
+            let _guard = span.enter();
+
             let found = $n2e.get(&$var).unwrap_or_else(|| {
                 panic!(
                     "expected singleton cluster {:?} in graph. Found: {:?}",
@@ -351,11 +358,12 @@ mod tests {
                 )
             });
             let e0 = Edge($deps.iter().map(|x| named_to_cluster(x)).collect());
-            assert!(found.contains(&e0));
+            assert!(found.contains(&e0), "{:?} not found in {:?} entry. Got: {:?}", e0, $var, found);
         }};
 
-        ($g:ident { $var0:expr => $dep0:expr $(, $var:expr => $deps:expr)*}) => {{
+        ($g:ident { $var0:expr => $dep0:expr $(, $var:expr => $deps:expr)* $(,)?}) => {{
             let n2e = $g.names_to_edges();
+            debug!("names-to-edges: {:?}", n2e);
             let keys : HashSet<&NamedVar> = n2e.keys().collect();
             let mut allvars = HashSet::from([&$var0]);
             assert_edges!(@ n2e { $var0 => $dep0 });
@@ -386,13 +394,6 @@ mod tests {
 
     #[test]
     pub fn test_hypergraphs_with_boolean_operator() {
-        // let _ = ::tracing::subscriber::set_global_default(
-        //     ::tracing_subscriber::FmtSubscriber::builder()
-        //         .with_max_level(tracing::Level::DEBUG)
-        //         .without_time()
-        //         .finish(),
-        // );
-
         let p = program!(lets![
             "x" ;= flip!(1/3);
             "y" ;= flip!(1/3);
@@ -458,39 +459,53 @@ mod tests {
     }
 
     #[test]
-    pub fn test_hypergraphs_works_as_expected_for_samples() {
+    pub fn test_hypergraphs_treats_sample_statements_as_cuts() {
+        // crate::utils::enable_traced_test();
         let p = program!(lets![
            "x" ;= flip!(1/3);
            "s" ;= sample!(var!("x"));
            ...? b!("s")
         ]);
-        let p = annotate::pipeline(&p).unwrap().0;
-        let deps = DependencyEnv::new().scan(&p);
+        let g = pipeline(&p);
         let xvar = named(0, "x");
         let svar = named(2, "s");
-        assert_root!(deps: xvar);
-        assert_family!(deps: svar => xvar);
-        assert_eq!(deps.len(), 2);
+
+        assert_clusters!(g, vars: &[&xvar], &[&svar]);
+        assert_edges!(g {
+            xvar => [[&xvar]],
+            svar => [[&svar]]
+        });
     }
 
-    // #[test]
-    // pub fn test_hypergraphs_ite_sample() {
-    //     let p = program!(lets![
-    //         "x" ;= flip!(1/5);
-    //         "y" ;= flip!(1/5);
-    //         "z" ;= ite!(
-    //             if ( var!("x") )
-    //             then { sample!(flip!(1/3)) }
-    //             else { var!("y") });
-    //         ...? b!("y")
-    //     ]);
-    //     let p = annotate::pipeline(&p).unwrap().0;
-    //     let deps = DependencyEnv::new().scan(&p);
-    //     let xvar = named(0, "x");
-    //     let yvar = named(2, "y");
-    //     let zvar = named(4, "z");
-    //     assert_root!(deps: xvar, yvar);
-    //     assert_family!(deps: zvar => xvar, yvar);
-    //     assert_eq!(deps.len(), 3);
-    // }
+    #[test]
+    pub fn test_hypergraphs_ite_sample() {
+        let p = program!(lets![
+            "x" ;= flip!(1/5);
+            "y" ;= flip!(1/5);
+            "z" ;= flip!(1/5);
+            "i" ;= ite!(
+                if ( var!("x") )
+                then { sample!(var!("y")) }
+                else { var!("z") });
+            ...? b!("y")
+        ]);
+        let g = pipeline(&p);
+        let xvar = named(0, "x");
+        let yvar = named(2, "y");
+        let zvar = named(4, "z");
+        let ivar = named(6, "i");
+        assert_clusters!(
+            g,
+            vars: &[&xvar],
+            &[&yvar],
+            &[&zvar],
+            &[&ivar, &xvar, &zvar]
+        );
+        assert_edges!(g {
+            xvar => [vec![&xvar], vec![&ivar, &xvar, &zvar]],
+            yvar => [vec![&yvar]],
+            zvar => [vec![&zvar], vec![&ivar, &xvar, &zvar]],
+            ivar => [[&ivar, &xvar, &zvar]]
+        });
+    }
 }

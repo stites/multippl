@@ -4,6 +4,15 @@ use rsdd::repr::bdd::*;
 use rsdd::repr::var_label::*;
 use rsdd::repr::var_order::*;
 
+pub fn enable_traced_test() -> std::result::Result<(), ::tracing::subscriber::SetGlobalDefaultError>
+{
+    ::tracing::subscriber::set_global_default(
+        ::tracing_subscriber::FmtSubscriber::builder()
+            .with_max_level(tracing::Level::DEBUG)
+            .without_time()
+            .finish(),
+    )
+}
 pub fn leaf_variable(bdd: BddPtr) -> Option<VarLabel> {
     let n = bdd.into_node_safe()?;
     if (n.low == BddPtr::PtrTrue && n.high == BddPtr::PtrFalse)
