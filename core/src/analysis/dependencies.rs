@@ -153,6 +153,8 @@ impl DependencyEnv {
 }
 
 #[cfg(test)]
+#[allow(unused_mut)] // for optional patterns in test macros
+#[allow(unused_assignments)]
 mod tests {
     use super::*;
     use crate::annotate::grammar::named;
@@ -167,24 +169,37 @@ mod tests {
 
     macro_rules! assert_root {
         ($deps:ident : $xvar:expr $(, $var:expr)* $(,)?) => {{
-            let ds = $deps.unsafe_get(&$xvar).dependencies();
-            assert_eq!(ds, HashSet::new(), "{:?} deps should be empty", $xvar);
+            let ds = $deps.unsafe_get(&$xvar);
+            assert_eq!(ds, &HashSet::new(), "{:?} deps should be empty", $xvar);
 
             $(
-            let ds = $deps.unsafe_get(&$var).dependencies();
-            assert_eq!(ds, HashSet::new(), "{:?} deps should be empty", $var);
+            let ds = $deps.unsafe_get(&$var);
+            assert_eq!(ds, &HashSet::new(), "{:?} deps should be empty", $var);
             )*
         }}
     }
     macro_rules! assert_family {
-        ($deps:ident : $xvar:expr => $f0:expr $(, $var:expr)* $(,)?) => {{
-            let ds = $deps.unsafe_get(&$xvar).dependencies();
+        ($deps:ident : $xvar:expr => $f0:expr $(; sample = $sample0:literal)? $(, $var:expr  $(; sample = $sample:literal)?)* $(,)?) => {{
+            let ds = $deps.unsafe_get(&$xvar);
             let mut fam = HashSet::new();
-            fam.insert($f0.clone());
+            let mut sampled0 = false;
             $(
-            fam.insert($var.clone());
+                sampled0 = $sample0;
+            )?
+            let var0 = if sampled0 { Dep::Sample($f0.clone()) }  else {  Dep::Var($f0.clone()) };
+
+
+            fam.insert(var0);
+            $(
+            let mut sampled = false;
+            $(
+                sampled = $sample;
+            )?
+            let var = if sampled { Dep::Sample($var.clone()) }  else {  Dep::Var($var.clone()) };
+                println!("var: {:?}, sampled? {:?}", var, sampled);
+            fam.insert(var);
             )*
-            assert_eq!(ds, fam, "var {:?}: expected {:?}, found: {:?}", $xvar, ds, fam);
+            assert_eq!(ds, &fam, "var {:?}: expected {:?}, found: {:?}", $xvar, ds, fam);
         }}
     }
 
@@ -256,7 +271,7 @@ mod tests {
         let xvar = named(0, "x");
         let svar = named(2, "s");
         assert_root!(deps: xvar);
-        assert_family!(deps: svar => xvar);
+        assert_family!(deps: svar => xvar; sample = true);
         assert_eq!(deps.len(), 2);
     }
 
@@ -279,7 +294,7 @@ mod tests {
         let zvar = named(4, "z");
         let ivar = named(6, "i");
         assert_root!(deps: xvar, yvar, zvar);
-        assert_family!(deps: ivar => xvar, yvar, zvar);
+        assert_family!(deps: ivar => xvar, yvar; sample = true, zvar);
         assert_eq!(deps.len(), 4);
     }
 }
