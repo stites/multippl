@@ -7,31 +7,71 @@ use std::collections::{HashMap, HashSet};
 use std::vec;
 use tracing::*;
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum Dep {
+    Var(NamedVar),
+    Sample(NamedVar),
+}
+impl Dep {
+    pub fn named_var(&self) -> NamedVar {
+        match self {
+            Self::Var(x) => x.clone(),
+            Self::Sample(x) => x.clone(),
+        }
+    }
+    pub fn map<X>(&self, f: &dyn Fn(NamedVar) -> X) -> X {
+        match self {
+            Self::Var(x) => f(x.clone()),
+            Self::Sample(x) => f(x.clone()),
+        }
+    }
+    pub fn var(&self) -> Option<NamedVar> {
+        match self {
+            Self::Var(x) => Some(x.clone()),
+            Self::Sample(x) => None,
+        }
+    }
+    pub fn sample(&self) -> Option<NamedVar> {
+        match self {
+            Self::Var(x) => None,
+            Self::Sample(x) => Some(x.clone()),
+        }
+    }
+    pub fn as_dep(names: HashSet<NamedVar>, constructor: &dyn Fn(NamedVar) -> Dep) -> HashSet<Dep> {
+        names.into_iter().map(constructor).collect()
+    }
+    pub fn as_vars(names: HashSet<NamedVar>) -> HashSet<Dep> {
+        Self::as_dep(names, &Dep::Var)
+    }
+    pub fn vars(deps: &HashSet<Dep>) -> HashSet<NamedVar> {
+        deps.iter().map(|x| x.var()).flatten().collect()
+    }
+}
 #[derive(Default, Clone)]
-pub struct DependenceMap(pub HashMap<NamedVar, HashSet<NamedVar>>);
+pub struct DependenceMap(pub HashMap<NamedVar, HashSet<Dep>>);
 impl DependenceMap {
-    pub fn insert(&mut self, var: NamedVar, deps: HashSet<NamedVar>) {
+    pub fn insert(&mut self, var: NamedVar, deps: HashSet<Dep>) {
         self.0.insert(var, deps);
     }
-    pub fn get(&self, var: &NamedVar) -> Option<&HashSet<NamedVar>> {
+    pub fn get(&self, var: &NamedVar) -> Option<&HashSet<Dep>> {
         self.0.get(var)
     }
-    pub fn unsafe_get(&self, var: &NamedVar) -> &HashSet<NamedVar> {
+    pub fn unsafe_get(&self, var: &NamedVar) -> &HashSet<Dep> {
         self.get(var)
             .unwrap_or_else(|| panic!("{:?} not found in {:?}", var, self.0.keys()))
     }
     pub fn len(&self) -> usize {
         self.0.len()
     }
-    pub fn iter<'a>(&'a self) -> hash_map::Iter<'a, NamedVar, HashSet<NamedVar>> {
+    pub fn iter<'a>(&'a self) -> hash_map::Iter<'a, NamedVar, HashSet<Dep>> {
         self.0.iter()
     }
-    pub fn family_iter<'a>(&'a self) -> vec::IntoIter<HashSet<NamedVar>> {
+    pub fn family_iter<'a>(&'a self) -> vec::IntoIter<HashSet<Dep>> {
         self.0
             .iter()
             .map(|(v, ps)| {
                 let mut ps = ps.clone();
-                ps.insert(v.clone());
+                ps.insert(Dep::Var(v.clone()));
                 ps
             })
             .collect_vec()
@@ -65,20 +105,21 @@ impl DependencyEnv {
             Neg(bp) => self.scan_anf(bp),
         }
     }
-    fn scan_expr(&mut self, e: &ExprAnn) -> HashSet<NamedVar> {
+    fn scan_expr(&mut self, e: &ExprAnn) -> HashSet<Dep> {
         use crate::grammar::Expr::*;
         match e {
-            EAnf((), a) => self.scan_anf(a),
+            EAnf((), a) => Dep::as_vars(self.scan_anf(a)),
             // FIXME : definitely not desiarable, fix later
             // FIXME vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
-            EPrj((), i, a) => self.scan_anf(a),
-            EFst((), a) => self.scan_anf(a),
-            ESnd((), a) => self.scan_anf(a),
-            EProd((), az) => az
-                .iter()
-                .map(|a| self.scan_anf(a).into_iter())
-                .flatten()
-                .collect(),
+            EPrj((), i, a) => Dep::as_vars(self.scan_anf(a)),
+            EFst((), a) => Dep::as_vars(self.scan_anf(a)),
+            ESnd((), a) => Dep::as_vars(self.scan_anf(a)),
+            EProd((), az) => Dep::as_vars(
+                az.iter()
+                    .map(|a| self.scan_anf(a).into_iter())
+                    .flatten()
+                    .collect(),
+            ),
             // FIXME ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
             ELetIn(nv, s, ebound, ebody) => {
                 let deps = self.scan_expr(ebound);
@@ -86,13 +127,17 @@ impl DependencyEnv {
                 self.scan_expr(ebody)
             }
             EIte(v, cond, t, f) => {
-                let mut deps = self.scan_anf(cond);
+                let mut deps = Dep::as_vars(self.scan_anf(cond));
                 deps.extend(self.scan_expr(t));
                 deps.extend(self.scan_expr(f));
                 deps
             }
-            ESample((), e) => self.scan_expr(e),
-            EObserve((), a) => self.scan_anf(a),
+            ESample((), e) => self
+                .scan_expr(e)
+                .into_iter()
+                .map(&|x: Dep| x.map(&Dep::Sample))
+                .collect(),
+            EObserve((), a) => Dep::as_vars(self.scan_anf(a)),
             EFlip(_, p) => HashSet::new(),
         }
     }
@@ -121,25 +166,25 @@ mod tests {
     use tracing_test::traced_test;
 
     macro_rules! assert_root {
-        ($deps:ident : $xvar:expr $(, $var:expr)*) => {{
-            let ds = $deps.unsafe_get(&$xvar);
-            assert_eq!(ds, &HashSet::new(), "{:?} deps should be empty", $xvar);
+        ($deps:ident : $xvar:expr $(, $var:expr)* $(,)?) => {{
+            let ds = $deps.unsafe_get(&$xvar).dependencies();
+            assert_eq!(ds, HashSet::new(), "{:?} deps should be empty", $xvar);
 
             $(
-            let ds = $deps.unsafe_get(&$var);
-            assert_eq!(ds, &HashSet::new(), "{:?} deps should be empty", $var);
+            let ds = $deps.unsafe_get(&$var).dependencies();
+            assert_eq!(ds, HashSet::new(), "{:?} deps should be empty", $var);
             )*
         }}
     }
     macro_rules! assert_family {
-        ($deps:ident : $xvar:expr => $f0:expr $(, $var:expr)*) => {{
-            let ds = $deps.unsafe_get(&$xvar);
+        ($deps:ident : $xvar:expr => $f0:expr $(, $var:expr)* $(,)?) => {{
+            let ds = $deps.unsafe_get(&$xvar).dependencies();
             let mut fam = HashSet::new();
             fam.insert($f0.clone());
             $(
             fam.insert($var.clone());
             )*
-            assert_eq!(ds, &fam, "var {:?}: expected {:?}, found: {:?}", $xvar, ds, fam);
+            assert_eq!(ds, fam, "var {:?}: expected {:?}, found: {:?}", $xvar, ds, fam);
         }}
     }
 

@@ -230,9 +230,10 @@ pub fn build_graph(deps: &DependenceMap) -> HGraph<Cluster<NamedVar>> {
     let mut g = HGraph::default();
     let mut edges: HashMap<NamedVar, HashSet<Cluster<NamedVar>>> = HashMap::new();
     for family in deps.family_iter() {
-        let cluster = Cluster(family.clone());
+        let cluster = Cluster(Dep::vars(&family));
         g.insert_vertex(cluster.clone());
-        for var in family {
+        for dep in family {
+            let var = dep.named_var();
             match edges.get_mut(&var) {
                 None => {
                     edges.insert(var.clone(), HashSet::from([cluster.clone()]));
