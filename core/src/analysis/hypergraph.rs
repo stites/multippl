@@ -455,29 +455,55 @@ where
 
     /// cut a vertex out of the hypergraph
     fn edgecuts_ranked(&self) -> Vec<(V, Rank)> {
-        let check : HashMap<V, Vec<Rank>> = <Self as Hypergraph>::edgecuts_ranked(self).into_iter().fold(HashMap::new(),
+        <Self as Hypergraph>::edgecuts_ranked(self).into_iter().fold(HashMap::new(),
             |mut ranks, (e, r)| {
                 match self.intersections_inv.get(&e) {
                     None => panic!("expected all edges intersection map, perhaps you need to rebuild intersections"),
-                        Some(vs) => {
-                            for v in vs {
-                                match ranks.get_mut(&v) {
-                                    None => {ranks.insert(v.clone(), vec![r.clone()]); },
-                                    Some(rs) => {rs.push(r.clone());},
-                                }
+                    Some(vs) => {
+                        for v in vs {
+                            match ranks.get(&v.clone()) {
+                                None => {ranks.insert(v.clone(), r.clone()); },
+                                Some(rs) => {ranks.insert(v.clone(), max(vec![r, rs.clone()]).unwrap()); },
                             }
                         }
+                    }
                 }
-                    ranks
+                ranks
             }
-
-        );
-        check.into_iter().fold(vec![], |mut ret, (v, rs)| {
-            assert!(rs.iter().all(|r| r == &rs[0]));
-            ret.push((v, rs[0]));
-            ret
-        })
+        ).into_iter().collect()
     }
+
+    // /// cut a vertex out of the hypergraph
+    // fn edgecuts_ranked(&self) -> Vec<(V, Rank)> {
+    //     let check : HashMap<V, Vec<Rank>> = <Self as Hypergraph>::edgecuts_ranked(self).into_iter().fold(HashMap::new(),
+    //         |mut ranks, (e, r)| {
+    //             match self.intersections_inv.get(&e) {
+    //                 None => panic!("expected all edges intersection map, perhaps you need to rebuild intersections"),
+    //                     Some(vs) => {
+    //                         for v in vs {
+    //                             match ranks.get_mut(&v) {
+    //                                 None => {ranks.insert(v.clone(), vec![r.clone()]); },
+    //                                 Some(rs) => {rs.push(r.clone());},
+    //                             }
+    //                         }
+    //                     }
+    //             }
+    //                 ranks
+    //         }
+
+    //     );
+    //     check.into_iter().fold(vec![], |mut ret, (v, rs)| {
+    //         assert!(
+    //             rs.iter().all(|r| r == &rs[0]),
+    //             "expected all ranks for {:?} to be the same. Got: {:?}",
+    //             v,
+    //             rs
+    //         );
+    //         ret.push((v, rs[0]));
+    //         ret
+    //     })
+    // }
+
     fn edgecuts_sorted(&self) -> Vec<(V, Rank)> {
         let mut sorted_edges = self.edgecuts_ranked();
         sorted_edges.sort_by(|(_, a), (_, b)| b.cmp(&a));
@@ -551,6 +577,7 @@ pub fn pipeline(p: &crate::ProgramInferable) -> ClusterGraph<NamedVar> {
 #[cfg(test)]
 #[allow(unused_mut)]
 #[allow(unused_must_use)]
+#[allow(unused_assignments)]
 mod tests {
     use super::*;
     use crate::annotate::grammar::named;
@@ -578,7 +605,7 @@ mod tests {
             }
             assert!(cs.contains(&$cvar), "expected {:?} in hypergraph. found: {:?}", $cvar, cs);
         }};
-        ($g:ident : $xvar:expr $(, $var:expr)+) => {{
+        ($g:ident : $xvar:expr $(, $var:expr)+ $(,)?) => {{
             assert_clusters!($g : $xvar);
             $(
             assert_clusters!($g : $var);
@@ -587,7 +614,7 @@ mod tests {
         ($g:ident, vars: $xvar:expr) => {{
             assert_clusters!($g : named_to_cluster($xvar));
         }};
-        ($g:ident, vars : $xvar:expr $(, $var:expr)+) => {{
+        ($g:ident, vars : $xvar:expr $(, $var:expr)+ $(,)?) => {{
             assert_clusters!($g, vars : $xvar);
             $(
             assert_clusters!($g, vars : $var);
@@ -628,13 +655,21 @@ mod tests {
 
     type G = ClusterGraph<NamedVar>;
     macro_rules! tests_for_program {
-        ($prog:expr; $($name:ident: $test:expr,)*) => {
+        ($prog:expr; $($(#[ignore=$ignore:literal])? $(#[debug=$debug:literal])? $name:ident: $test:expr,)*) => {
         $(
             #[test]
             fn $name() {
-                let _ = crate::utils::enable_traced_test();
-                let g : ClusterGraph<NamedVar> = pipeline(&$prog);
-                ($test)(g);
+                let mut ignore = false;
+                $( ignore = $ignore; )?
+                if !ignore {
+                    let mut debug = true;
+                    $( debug = $debug; )?
+                    if debug {
+                        let _ = crate::utils::enable_traced_test();
+                    }
+                    let g : ClusterGraph<NamedVar> = pipeline(&$prog);
+                    ($test)(g);
+                }
             }
         )*
         }
@@ -645,19 +680,58 @@ mod tests {
             "x" ;= flip!(1/3);
            ...? b!("x")
         ]);
-        test_hypergraphs_for_simple_program: |g: G| {
+        simple_program_hypergraph: |g: G| {
             let xvar = named(0, "x");
             assert_clusters!(g, vars: &[&named(0, "x")]);
             assert_eq!(g.vertices().len(), 1);
             debug!("{}", g.graph.print());
             assert_edges!(g { xvar => [[&xvar]] } );
         },
-        test_cuts_for_simple_program: |g: G| {
+        simple_program_cuts: |g: G| {
             let ecs: Vec<(NamedVar, Rank)> = g.edgecuts_sorted();
             assert_eq!(ecs.len(), 1);
         },
     }
 
+    tests_for_program! {
+        program!(lets![
+            "x" ;= flip!(1/3);
+            "y" ;= b!("x");
+            "z" ;= b!("y");
+           ...? b!("z")
+        ]);
+        alias_hypergraph: |g: G| {
+            let xvar = named(0, "x");
+            let yvar = named(2, "y");
+            let zvar = named(3, "z");
+
+            assert_clusters!(
+                g,
+                vars: &[&xvar],
+                &[&yvar, &xvar],
+                &[&zvar, &yvar],
+            );
+
+            assert_edges!(g {
+                xvar => [vec![&xvar], vec![&xvar, &yvar]],
+                yvar => [vec![&yvar, &zvar], vec![&xvar, &yvar]],
+                zvar => [vec![&yvar, &zvar]],
+            });
+        },
+        alias_cuts: |g: G| {
+            let xvar = named(0, "x");
+            let yvar = named(2, "y");
+            let zvar = named(3, "z");
+
+
+            let ecs: Vec<(NamedVar, Rank)> = g.edgecuts_sorted();
+            let first_two = HashSet::from([&xvar, &yvar]);
+            assert_eq!(ecs.len(), 3);
+            assert!(first_two.contains(&ecs[0].0));
+            assert!(first_two.contains(&ecs[1].0));
+            assert!(zvar == ecs[2].0);
+        },
+    }
     tests_for_program! {
         program!(lets![
             "x" ;= flip!(1/3);
@@ -667,7 +741,7 @@ mod tests {
             "w" ;= b!("q" && "z");
            ...? b!("z")
         ]);
-        test_hypergraphs_with_boolean_operator: |g: G| {
+        boolean_operator_hypergraph: |g: G| {
             let xvar = named(0, "x");
             let yvar = named(2, "y");
             let zvar = named(4, "z");
@@ -691,12 +765,13 @@ mod tests {
                 wvar => [[&qvar, &zvar, &wvar]]
             });
         },
-        // test_cuts_with_boolean_operator: |g: G| {
-        //     let ecs: Vec<(NamedVar, Rank)> = g.edgecuts_sorted();
-        //     assert_eq!(ecs.len(), 5);
-        //     println!("{:?}", ecs);
-        //     todo!()
-        // },
+        #[ignore=true]
+        boolean_operator_cuts: |g: G| {
+            let ecs: Vec<(NamedVar, Rank)> = g.edgecuts_sorted();
+            assert_eq!(ecs.len(), 5);
+            println!("{:?}", ecs);
+            todo!()
+        },
     }
     tests_for_program! {
         program!(lets![
