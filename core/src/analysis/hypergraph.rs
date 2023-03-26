@@ -364,6 +364,7 @@ pub fn build_graph(deps: &DependenceMap) -> ClusterGraph<NamedVar> {
         debug!("edge: {:?}", edge);
         g.insert_edge(edge);
     }
+    g.rebuild_intersections();
     g
 }
 
@@ -455,7 +456,7 @@ mod tests {
         }};
 
         ($g:ident { $var0:expr => $dep0:expr $(, $var:expr => $deps:expr)* $(,)?}) => {{
-            let n2e = $g.names_to_edges();
+            let n2e = &$g.intersections;
             debug!("names-to-edges: {:?}", n2e);
             let keys : HashSet<&NamedVar> = n2e.keys().collect();
             let mut allvars = HashSet::from([&$var0]);
@@ -480,7 +481,7 @@ mod tests {
         let xvar = named(0, "x");
         assert_clusters!(g, vars: &[&named(0, "x")]);
         assert_eq!(g.vertices().len(), 1);
-        debug!("{}", g.print());
+        debug!("{}", g.graph.print());
 
         assert_edges!(g { xvar => [[&xvar]] } );
     }
