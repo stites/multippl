@@ -30,6 +30,7 @@ fn calculate_hash<T: Hash>(t: &T) -> u64 {
 pub struct Edge<V>(HashSet<V>)
 where
     V: Clone + Debug + PartialEq + Eq + Hash;
+
 impl<V> Hash for Edge<V>
 where
     V: Clone + Debug + PartialEq + Eq + Hash,
@@ -46,21 +47,113 @@ where
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Cover<'a, V>
+pub struct Cover<V>
 where
     V: Clone + Debug + PartialEq + Eq + Hash,
 {
     cover: HashSet<V>,
-    edges: HashSet<&'a Edge<V>>,
+    edges: HashSet<Edge<V>>,
+}
+impl<V> Hash for Cover<V>
+where
+    V: Clone + Debug + PartialEq + Eq + Hash,
+{
+    fn hash<H>(&self, state: &mut H)
+    where
+        H: Hasher,
+    {
+        let mut hashes = vec![];
+        let cover_hashes = self.cover.iter().map(calculate_hash).collect_vec();
+        hashes.extend(cover_hashes);
+        let edge_hashes = self.edges.iter().map(calculate_hash).collect_vec();
+        hashes.extend(edge_hashes);
+        hashes.sort();
+        let hashstr = hashes.into_iter().map(|x| x.to_string()).join("");
+        hashstr.hash(state);
+    }
 }
 
-pub trait Hypergraph {
+impl<V> Cover<V>
+where
+    V: Clone + Debug + PartialEq + Eq + Hash,
+{
+    pub fn from_edge(e: &Edge<V>) -> Self {
+        let vs: &HashSet<V> = &e.0;
+        Self {
+            cover: e.0.clone(),
+            edges: HashSet::from([e.clone()]),
+        }
+    }
+    pub fn from_edges(es: &HashSet<Edge<V>>) -> HashSet<Self> {
+        es.iter()
+            .map(Self::from_edge)
+            .fold(HashSet::new(), |covers, edge_cover| {
+                todo!()
+
+                // fn edges_to_covers(hyperedges: impl IntoIterator<Item = Edge<V>>) -> Vec<Cover<V>> {
+                //     let mut overlaps: Vec<Cover<V>> = vec![];
+                //     for edge in hyperedges {
+                //         let var = variable_intersection(&edge);
+                //         let overlaps_for_edge: Vec<Edge<V>> = overlaps
+                //             .iter()
+                //             .filter(|(_, oedge)| !oedge.0.is_disjoint(edge.0))
+                //             .cloned()
+                //             .collect_vec();
+
+                //         // if overlaps_for_edge.is_empty() {
+                //         //     overlaps.push((edge.clone(), vec![(edge, label)]))
+                //         // } else {
+                //         //     // update a cover
+                //         //     let mut new_cover = edge.clone();
+                //         //     let mut new_cover_edges = vec![(edge, label)];
+                //         //     let mut diff = 0;
+                //         //     for (cover_ix, cover, edges) in overlaps_for_edge {
+                //         //         new_cover.extend(cover.clone());
+                //         //         new_cover_edges.extend(edges);
+                //         //         overlaps.remove(cover_ix - diff);
+                //         //         diff += 1;
+                //         //     }
+                //         //     let nonempty_new_cover_edges = new_cover_edges
+                //         //         .into_iter()
+                //         //         .filter(|s| !s.0.is_empty())
+                //         //         .collect();
+                //         //     overlaps.push((
+                //         //         new_cover,
+                //         //         dedupe_labeled_hashset_refs(nonempty_new_cover_edges),
+                //         //     ));
+                //         // }
+                //     }
+                //     overlaps
+                // }
+            })
+    }
+}
+
+pub trait Hypergraph
+where
+    <Self as Hypergraph>::Vertex: Clone + Debug + PartialEq + Eq + Hash,
+{
     type Vertex;
-    type EdgeIter: Iterator<Item = HashSet<Self::Vertex>>;
     fn vertices(&self) -> &HashSet<Self::Vertex>;
-    fn hyperedges(&self) -> Self::EdgeIter;
+    fn hyperedges(&self) -> std::vec::IntoIter<Edge<Self::Vertex>>;
     fn insert_edge(&mut self, edge: &HashSet<Self::Vertex>) -> bool;
     fn insert_vertex(&mut self, v: Self::Vertex) -> bool;
+
+    /// cut a vertex out of the hypergraph
+    fn rank_edge_cuts(&self) -> Vec<(Edge<Self::Vertex>, Rank)> {
+        self.hyperedges()
+            .map(|edge| (edge.clone(), self.edge_cut_rank(&edge)))
+            .collect()
+    }
+
+    fn edge_cut_rank(&self, edge: &Edge<Self::Vertex>) -> Rank {
+        let nextedges: HashSet<Edge<Self::Vertex>> =
+            self.hyperedges().filter(|e| e != edge).collect();
+        Rank(Cover::from_edges(&nextedges).len())
+    }
+    // pub fn covers(&self) -> Vec<(HashSet<V>, Vec<(&HashSet<V>, &EL)>)> {
+    //     Self::edges_to_covers(&self.hyperedges)
+    // }
 }
 
 #[derive(Clone, Debug)]
@@ -87,17 +180,15 @@ where
     V: Clone + Debug + PartialEq + Eq + Hash,
 {
     type Vertex = V;
-    type EdgeIter = std::vec::IntoIter<HashSet<Self::Vertex>>;
 
     fn vertices(&self) -> &HashSet<V> {
         &self.vertices
     }
 
-    fn hyperedges<'a>(&self) -> Self::EdgeIter {
+    fn hyperedges<'a>(&self) -> std::vec::IntoIter<Edge<Self::Vertex>> {
         self.hyperedges
             .iter()
-            .map(|x| &x.0)
-            .cloned()
+            .map(|x| Edge(x.0.clone()))
             .collect_vec()
             .into_iter()
     }
@@ -133,101 +224,125 @@ where
         }
         s
     }
-
-    // /// cut a vertex out of the hypergraph
-    // pub fn rank_edge_cuts(&self) -> Vec<(&HashSet<V>, Rank)> {
-    //     self.hyperedges
-    //         .iter()
-    //         .map(|edge| (edge, self.edge_cut_rank(edge)))
-    //         .collect()
-    // }
-
-    // pub fn edge_cut_rank(&self, edge: &HashSet<V>) -> Rank {
-    //     let nextedges = self
-    //         .hyperedges
-    //         .iter()
-    //         .filter(|e| e != edge)
-    //         .cloned()
-    //         .collect_vec();
-    //     let newcovers : Vec<Cover<'a, V>> = Self::edges_to_covers(&nextedges);
-    //     Rank(newcovers.len())
-    // }
-
-    // fn edges_to_covers<'a> (
-    //     hyperedges: &'a HashSet<Edge<V>>,
-    // ) -> Cover<'a, V> {
-    //     let mut overlaps: Vec<(HashSet<V>, HashSet<&Edge<V>>)> = vec![];
-    //     for (edge, label) in hyperedges.iter() {
-    //         let overlaps_for_edge: Vec<(usize, HashSet<V>, Vec<(&HashSet<V>, &EL)>)> = overlaps
-    //             .iter()
-    //             .enumerate()
-    //             .filter(|(_, (oedge, _))| !oedge.is_disjoint(edge))
-    //             .map(|(a, (b, c))| (a, b.clone(), c.clone()))
-    //             .collect_vec();
-
-    //         if overlaps_for_edge.is_empty() {
-    //             overlaps.push((edge.clone(), vec![(edge, label)]))
-    //         } else {
-    //             // update a cover
-    //             let mut new_cover = edge.clone();
-    //             let mut new_cover_edges = vec![(edge, label)];
-    //             let mut diff = 0;
-    //             for (cover_ix, cover, edges) in overlaps_for_edge {
-    //                 new_cover.extend(cover.clone());
-    //                 new_cover_edges.extend(edges);
-    //                 overlaps.remove(cover_ix - diff);
-    //                 diff += 1;
-    //             }
-    //             let nonempty_new_cover_edges = new_cover_edges
-    //                 .into_iter()
-    //                 .filter(|s| !s.0.is_empty())
-    //                 .collect();
-    //             overlaps.push((
-    //                 new_cover,
-    //                 dedupe_labeled_hashset_refs(nonempty_new_cover_edges),
-    //             ));
-    //         }
-    //     }
-    //     overlaps
-    // }
-
-    // pub fn covers(&self) -> Vec<(HashSet<V>, Vec<(&HashSet<V>, &EL)>)> {
-    //     Self::edges_to_covers(&self.hyperedges)
-    // }
 }
-pub fn common_variables(clusters: &HashSet<Cluster<NamedVar>>) -> HashSet<NamedVar> {
-    let mut common = clusters
-        .iter()
-        .map(|x| x.0.clone())
-        .nth(0)
-        .expect("clusters should be non-empty");
-    for c in clusters.iter() {
-        common = common.intersection(&c.0).cloned().collect();
+#[derive(Clone, Debug)]
+pub struct ClusterGraph<V>
+where
+    V: Clone + Debug + PartialEq + Eq + Hash,
+{
+    graph: HGraph<Cluster<V>>,
+    intersections: HashMap<V, HashSet<Edge<Cluster<V>>>>,
+}
+impl<V> Default for ClusterGraph<V>
+where
+    V: Clone + Debug + PartialEq + Eq + Hash,
+{
+    fn default() -> Self {
+        Self {
+            graph: Default::default(),
+            intersections: Default::default(),
+        }
     }
-    common
 }
-impl HGraph<Cluster<NamedVar>> {
-    pub fn names_to_edges(&self) -> HashMap<NamedVar, HashSet<Edge<Cluster<NamedVar>>>> {
-        let mut ret: HashMap<NamedVar, HashSet<Edge<Cluster<NamedVar>>>> = HashMap::new();
+impl<V> Hypergraph for ClusterGraph<V>
+where
+    V: Clone + Debug + PartialEq + Eq + Hash,
+{
+    type Vertex = Cluster<V>;
+    fn vertices(&self) -> &HashSet<Self::Vertex> {
+        self.graph.vertices()
+    }
+
+    fn hyperedges<'a>(&self) -> std::vec::IntoIter<Edge<Self::Vertex>> {
+        self.graph.hyperedges()
+    }
+
+    /// add an edge to the hypergraph. Returns false if the edge is already in the hypergraph
+    fn insert_edge(&mut self, edge: &HashSet<Self::Vertex>) -> bool {
+        self.graph.insert_edge(edge)
+    }
+
+    /// add a vertex to the hypergraph. Returns false if the vertex is already in the hypergraph
+    fn insert_vertex(&mut self, v: Self::Vertex) -> bool {
+        self.graph.insert_vertex(v)
+    }
+}
+
+impl<V> ClusterGraph<V>
+where
+    V: Clone + Debug + PartialEq + Eq + Hash,
+{
+    pub fn variable_intersection(edge: &Edge<Cluster<V>>) -> V
+    where
+        V: Debug + PartialEq + Clone + Eq + Hash,
+    {
+        let common = Self::common_variables(&edge.0);
+        assert_eq!(common.len(), 1);
+        common.iter().nth(0).unwrap().clone()
+    }
+
+    pub fn common_variables(clusters: &HashSet<Cluster<V>>) -> HashSet<V>
+    where
+        V: Debug + PartialEq + Clone + Eq + Hash,
+    {
+        let mut common = clusters
+            .iter()
+            .map(|x| x.0.clone())
+            .nth(0)
+            .expect("clusters should be non-empty");
+        for c in clusters.iter() {
+            common = common.intersection(&c.0).cloned().collect();
+        }
+        common
+    }
+    pub fn rebuild_intersections(&mut self) {
+        let mut ret: HashMap<V, HashSet<Edge<Cluster<V>>>> = HashMap::new();
         for edge in self.hyperedges() {
-            for cluster in edge.iter() {
+            for cluster in edge.0.iter() {
                 for name in cluster.0.iter() {
                     match ret.get_mut(&name) {
                         None => {
-                            ret.insert(name.clone(), HashSet::from([Edge(edge.clone())]));
+                            ret.insert(name.clone(), HashSet::from([edge.clone()]));
                         }
                         Some(es) => {
-                            es.insert(Edge(edge.clone()));
+                            es.insert(edge.clone());
                         }
                     }
                 }
             }
         }
-        ret
+        self.intersections = ret;
     }
 }
-pub fn build_graph(deps: &DependenceMap) -> HGraph<Cluster<NamedVar>> {
-    let mut g = HGraph::default();
+
+#[derive(Clone, Copy, Hash, Debug, Eq, PartialEq, Ord, PartialOrd)]
+pub struct Rank(pub usize);
+
+impl HGraph<Cluster<NamedVar>> {}
+
+pub fn order_cuts(g: &ClusterGraph<NamedVar>) -> Vec<(NamedVar, Rank)> {
+    let mut ranking = vec![];
+    let mut sorted_edges = g.rank_edge_cuts();
+    sorted_edges.sort_by(|(_, a), (_, b)| b.cmp(&a));
+    for (edge, rank) in sorted_edges {
+        let var = ClusterGraph::variable_intersection(&edge);
+        ranking.push((var, rank));
+    }
+    ranking
+}
+pub fn top_k_cuts(cuts: &Vec<(NamedVar, Rank)>, n: usize) -> Vec<NamedVar> {
+    assert!(
+        n - 1 < cuts.len(),
+        "requested {} cuts, but only {} possible cut{} found",
+        n,
+        cuts.len(),
+        String::from(if cuts.len() == 1 { "" } else { "s" })
+    );
+    cuts.iter().map(|(b, r)| b.clone()).take(n).collect()
+}
+
+pub fn build_graph(deps: &DependenceMap) -> ClusterGraph<NamedVar> {
+    let mut g = ClusterGraph::default();
     let mut edges: HashMap<NamedVar, HashSet<Cluster<NamedVar>>> = HashMap::new();
     for family in deps.family_iter() {
         debug!("family: {:?}", family);
@@ -271,33 +386,11 @@ where
     }
 }
 
-pub fn pipeline(p: &crate::ProgramInferable) -> HGraph<Cluster<NamedVar>> {
+pub fn pipeline(p: &crate::ProgramInferable) -> ClusterGraph<NamedVar> {
     let p = annotate::pipeline(&p).unwrap().0;
     let deps = DependencyEnv::new().scan(&p);
     build_graph(&deps)
 }
-
-// #[derive(Clone, Copy, Hash, Debug, Eq, PartialEq, Ord, PartialOrd)]
-// pub struct Rank(pub usize);
-// pub fn order_cuts(g: &IteractionGraph) -> Vec<(Binding, Rank)> {
-//     let mut ranking = vec![];
-//     let mut sorted_edges = g.rank_edge_cuts();
-//     sorted_edges.sort_by(|(_, _, a), (_, _, b)| b.cmp(&a));
-//     for (edges, label, rank) in sorted_edges {
-//         ranking.push((label.clone(), rank));
-//     }
-//     ranking
-// }
-// pub fn top_k_cuts(cuts: &Vec<(Binding, Rank)>, n: usize) -> Vec<Binding> {
-//     assert!(
-//         n - 1 < cuts.len(),
-//         "requested {} cuts, but only {} possible cut{} found",
-//         n,
-//         cuts.len(),
-//         String::from(if cuts.len() == 1 { "" } else { "s" })
-//     );
-//     cuts.iter().map(|(b, r)| b.clone()).take(n).collect()
-// }
 
 #[allow(unused_mut)]
 #[cfg(test)]
