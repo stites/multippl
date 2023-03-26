@@ -207,19 +207,22 @@ where
     fn insert_edge(&mut self, edge: Edge<Self::Vertex>) -> bool;
     fn insert_vertex(&mut self, v: Self::Vertex) -> bool;
 
-    // /// cut a vertex out of the hypergraph
-    // fn rank_edge_cuts(&self) -> Vec<(Edge<Self::Vertex>, Rank)> {
-    //     self.hyperedges()
-    //         .map(|edge| (edge.clone(), self.edge_cut_rank(&edge)))
-    //         .collect()
-    // }
-
-    // fn edge_cut_rank(&self, edge: &Edge<Self::Vertex>) -> Rank {
-    //     let nextedges: HashSet<Edge<Self::Vertex>> =
-    //         self.hyperedges().filter(|e| e != edge).collect();
-    //     Rank(Cover::from_edges(&nextedges).len())
-    // }
-
+    /// cut a vertex out of the hypergraph
+    fn edgecuts_ranked(&self) -> Vec<(Edge<Self::Vertex>, Rank)> {
+        let all_covers = self.covers();
+        self.hyperedges()
+            .map(|edge| {
+                let mut simulation = all_covers.clone();
+                simulation.remove_edge(&edge);
+                (edge.clone(), Rank(simulation.size()))
+            })
+            .collect()
+    }
+    fn edgecuts_sorted(&self) -> Vec<(Edge<Self::Vertex>, Rank)> {
+        let mut sorted_edges = self.edgecuts_ranked();
+        sorted_edges.sort_by(|(_, a), (_, b)| b.cmp(&a));
+        sorted_edges
+    }
     fn covers(&self) -> AllCovers<Self::Vertex> {
         AllCovers::from_edges(self.hyperedges())
     }
@@ -357,6 +360,7 @@ where
     V: Clone + Debug + PartialEq + Eq + Hash,
 {
     graph: HGraph<Cluster<V>>,
+    intersections_inv: HashMap<Edge<Cluster<V>>, HashSet<V>>,
     intersections: HashMap<V, HashSet<Edge<Cluster<V>>>>,
 }
 impl<V> Default for ClusterGraph<V>
@@ -367,6 +371,7 @@ where
         Self {
             graph: Default::default(),
             intersections: Default::default(),
+            intersections_inv: Default::default(),
         }
     }
 }
@@ -405,6 +410,7 @@ where
         V: Debug + PartialEq + Clone + Eq + Hash,
     {
         let common = Self::common_variables(&edge.0);
+        debug!("{:?} common variables: {:?}", edge, common);
         assert_eq!(common.len(), 1);
         common.iter().nth(0).unwrap().clone()
     }
@@ -424,33 +430,58 @@ where
         common
     }
     pub fn rebuild_intersections(&mut self) {
-        let mut ret: HashMap<V, HashSet<Edge<Cluster<V>>>> = HashMap::new();
-        for edge in self.hyperedges() {
-            for cluster in edge.0.iter() {
-                for name in cluster.0.iter() {
-                    match ret.get_mut(&name) {
+        let ret: HashMap<Edge<Cluster<V>>, HashSet<V>> = self
+            .hyperedges()
+            .map(|edge| (edge.clone(), Self::common_variables(&edge.0)))
+            .collect();
+        self.intersections_inv = ret.clone();
+        self.intersections = ret
+            .clone()
+            .into_iter()
+            .fold(HashMap::new(), |mut inv, (e, vs)| {
+                for v in vs {
+                    match inv.get_mut(&v) {
                         None => {
-                            ret.insert(name.clone(), HashSet::from([edge.clone()]));
+                            inv.insert(v.clone(), HashSet::from([e.clone()]));
                         }
                         Some(es) => {
-                            es.insert(edge.clone());
+                            es.insert(e.clone());
                         }
                     }
                 }
-            }
-        }
-        self.intersections = ret;
+                inv
+            });
     }
 
-    // pub fn order_cuts(g: &ClusterGraph<V>) -> Vec<(V, Rank)> {
-    //     let mut ranking = vec![];
-    //     let mut sorted_edges = g.rank_edge_cuts();
+    /// cut a vertex out of the hypergraph
+    fn edgecuts_ranked(&self) -> Vec<(V, Rank)> {
+        let check : HashMap<V, Vec<Rank>> = <Self as Hypergraph>::edgecuts_ranked(self).into_iter().fold(HashMap::new(),
+            |mut ranks, (e, r)| {
+                match self.intersections_inv.get(&e) {
+                    None => panic!("expected all edges intersection map, perhaps you need to rebuild intersections"),
+                        Some(vs) => {
+                            for v in vs {
+                                match ranks.get_mut(&v) {
+                                    None => {ranks.insert(v.clone(), vec![r.clone()]); },
+                                    Some(rs) => {rs.push(r.clone());},
+                                }
+                            }
+                        }
+                }
+                    ranks
+            }
+
+        );
+        check.into_iter().fold(vec![], |mut ret, (v, rs)| {
+            assert!(rs.iter().all(|r| r == &rs[0]));
+            ret.push((v, rs[0]));
+            ret
+        })
+    }
+    // fn edgecuts_sorted(&self) -> Vec<(V, Rank)> {
+    //     let mut sorted_edges = self.edgecuts_ranked();
     //     sorted_edges.sort_by(|(_, a), (_, b)| b.cmp(&a));
-    //     for (edge, rank) in sorted_edges {
-    //         let var = ClusterGraph::variable_intersection(&edge);
-    //         ranking.push((var, rank));
-    //     }
-    //     ranking
+    //     sorted_edges
     // }
 }
 
