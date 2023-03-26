@@ -478,11 +478,11 @@ where
             ret
         })
     }
-    // fn edgecuts_sorted(&self) -> Vec<(V, Rank)> {
-    //     let mut sorted_edges = self.edgecuts_ranked();
-    //     sorted_edges.sort_by(|(_, a), (_, b)| b.cmp(&a));
-    //     sorted_edges
-    // }
+    fn edgecuts_sorted(&self) -> Vec<(V, Rank)> {
+        let mut sorted_edges = self.edgecuts_ranked();
+        sorted_edges.sort_by(|(_, a), (_, b)| b.cmp(&a));
+        sorted_edges
+    }
 }
 
 pub fn top_k_cuts(cuts: &Vec<(NamedVar, Rank)>, n: usize) -> Vec<NamedVar> {
@@ -548,8 +548,9 @@ pub fn pipeline(p: &crate::ProgramInferable) -> ClusterGraph<NamedVar> {
     build_graph(&deps)
 }
 
-#[allow(unused_mut)]
 #[cfg(test)]
+#[allow(unused_mut)]
+#[allow(unused_must_use)]
 mod tests {
     use super::*;
     use crate::annotate::grammar::named;
@@ -625,24 +626,40 @@ mod tests {
         }};
     }
 
-    #[test]
-    pub fn test_hypergraphs_for_simple_program() {
-        let p = program!(lets![
+    type G = ClusterGraph<NamedVar>;
+    macro_rules! tests_for_program {
+        ($prog:expr; $($name:ident: $test:expr,)*) => {
+        $(
+            #[test]
+            fn $name() {
+                let _ = crate::utils::enable_traced_test();
+                let g : ClusterGraph<NamedVar> = pipeline(&$prog);
+                ($test)(g);
+            }
+        )*
+        }
+    }
+
+    tests_for_program! {
+        program!(lets![
             "x" ;= flip!(1/3);
            ...? b!("x")
         ]);
-        let g = pipeline(&p);
-
-        let xvar = named(0, "x");
-        assert_clusters!(g, vars: &[&named(0, "x")]);
-        assert_eq!(g.vertices().len(), 1);
-        debug!("{}", g.graph.print());
-        assert_edges!(g { xvar => [[&xvar]] } );
+        test_hypergraphs_for_simple_program: |g: G| {
+            let xvar = named(0, "x");
+            assert_clusters!(g, vars: &[&named(0, "x")]);
+            assert_eq!(g.vertices().len(), 1);
+            debug!("{}", g.graph.print());
+            assert_edges!(g { xvar => [[&xvar]] } );
+        },
+        test_cuts_for_simple_program: |g: G| {
+            let ecs: Vec<(NamedVar, Rank)> = g.edgecuts_sorted();
+            assert_eq!(ecs.len(), 1);
+        },
     }
 
-    #[test]
-    pub fn test_hypergraphs_with_boolean_operator() {
-        let p = program!(lets![
+    tests_for_program! {
+        program!(lets![
             "x" ;= flip!(1/3);
             "y" ;= flip!(1/3);
             "z" ;= b!("x" && "y");
@@ -650,84 +667,100 @@ mod tests {
             "w" ;= b!("q" && "z");
            ...? b!("z")
         ]);
-        let g = pipeline(&p);
-        let xvar = named(0, "x");
-        let yvar = named(2, "y");
-        let zvar = named(4, "z");
-        let qvar = named(5, "q");
-        let wvar = named(7, "w");
+        test_hypergraphs_with_boolean_operator: |g: G| {
+            let xvar = named(0, "x");
+            let yvar = named(2, "y");
+            let zvar = named(4, "z");
+            let qvar = named(5, "q");
+            let wvar = named(7, "w");
 
-        assert_clusters!(
-            g,
-            vars: &[&xvar],
-            &[&yvar],
-            &[&xvar, &yvar, &zvar],
-            &[&qvar],
-            &[&qvar, &zvar, &wvar]
-        );
+            assert_clusters!(
+                g,
+                vars: &[&xvar],
+                &[&yvar],
+                &[&xvar, &yvar, &zvar],
+                &[&qvar],
+                &[&qvar, &zvar, &wvar]
+            );
 
-        assert_edges!(g {
-            xvar => [vec![&xvar], vec![&xvar, &yvar, &zvar]],
-            yvar => [vec![&yvar], vec![&xvar, &yvar, &zvar]],
-            zvar => [[&xvar, &yvar, &zvar], [&qvar, &zvar, &wvar]],
-            qvar => [vec![&qvar], vec![&qvar, &zvar, &wvar]],
-            wvar => [[&qvar, &zvar, &wvar]]
-        });
+            assert_edges!(g {
+                xvar => [vec![&xvar], vec![&xvar, &yvar, &zvar]],
+                yvar => [vec![&yvar], vec![&xvar, &yvar, &zvar]],
+                zvar => [[&xvar, &yvar, &zvar], [&qvar, &zvar, &wvar]],
+                qvar => [vec![&qvar], vec![&qvar, &zvar, &wvar]],
+                wvar => [[&qvar, &zvar, &wvar]]
+            });
+        },
+        // test_cuts_with_boolean_operator: |g: G| {
+        //     let ecs: Vec<(NamedVar, Rank)> = g.edgecuts_sorted();
+        //     assert_eq!(ecs.len(), 5);
+        //     println!("{:?}", ecs);
+        //     todo!()
+        // },
     }
-
-    #[test]
-    pub fn test_hypergraphs_captures_tuples() {
-        let p = program!(lets![
+    tests_for_program! {
+        program!(lets![
             "x" ;= flip!(1/3);
             "y" ;= flip!(1/3);
             "t" ;= b!("x", "y");
             "f" ;= fst!("t");
            ...? b!("t")
         ]);
-        let g = pipeline(&p);
-        let xvar = named(0, "x");
-        let yvar = named(2, "y");
-        let tvar = named(4, "t");
-        let fvar = named(5, "f");
+        test_hypergraphs_captures_tuples: |g: G| {
+            let xvar = named(0, "x");
+            let yvar = named(2, "y");
+            let tvar = named(4, "t");
+            let fvar = named(5, "f");
 
-        assert_clusters!(
-            g,
-            vars: &[&xvar],
-            &[&yvar],
-            &[&xvar, &yvar, &tvar],
-            &[&tvar, &fvar]
-        );
+            assert_clusters!(
+                g,
+                vars: &[&xvar],
+                &[&yvar],
+                &[&xvar, &yvar, &tvar],
+                &[&tvar, &fvar]
+            );
 
-        assert_edges!(g {
-            xvar => [vec![&xvar], vec![&xvar, &yvar, &tvar]],
-            yvar => [vec![&yvar], vec![&xvar, &yvar, &tvar]],
-            tvar => [vec![&xvar, &yvar, &tvar], vec![&fvar, &tvar]],
-            fvar => [[&fvar, &tvar]]
-        });
+            assert_edges!(g {
+                xvar => [vec![&xvar], vec![&xvar, &yvar, &tvar]],
+                yvar => [vec![&yvar], vec![&xvar, &yvar, &tvar]],
+                tvar => [vec![&xvar, &yvar, &tvar], vec![&fvar, &tvar]],
+                fvar => [[&fvar, &tvar]]
+            });
+        },
+        // test_cuts_with_boolean_operator: |g: G| {
+        //     let ecs: Vec<(NamedVar, Rank)> = g.edgecuts_sorted();
+        //     assert_eq!(ecs.len(), 5);
+        //     println!("{:?}", ecs);
+        //     todo!()
+        // },
     }
 
-    #[test]
-    pub fn test_hypergraphs_treats_sample_statements_as_cuts() {
-        // crate::utils::enable_traced_test();
-        let p = program!(lets![
+    tests_for_program! {
+        program!(lets![
            "x" ;= flip!(1/3);
            "s" ;= sample!(var!("x"));
            ...? b!("s")
         ]);
-        let g = pipeline(&p);
-        let xvar = named(0, "x");
-        let svar = named(2, "s");
+        test_hypergraphs_treats_sample_statements_as_cuts: |g: G| {
+            let xvar = named(0, "x");
+            let svar = named(2, "s");
 
-        assert_clusters!(g, vars: &[&xvar], &[&svar]);
-        assert_edges!(g {
-            xvar => [[&xvar]],
-            svar => [[&svar]]
-        });
+            assert_clusters!(g, vars: &[&xvar], &[&svar]);
+            assert_edges!(g {
+                xvar => [[&xvar]],
+                svar => [[&svar]]
+            });
+        },
+        // test_cuts_with_boolean_operator: |g: G| {
+        //     let ecs: Vec<(NamedVar, Rank)> = g.edgecuts_sorted();
+        //     assert_eq!(ecs.len(), 5);
+        //     println!("{:?}", ecs);
+        //     todo!()
+        // },
     }
 
-    #[test]
-    pub fn test_hypergraphs_ite_sample() {
-        let p = program!(lets![
+    tests_for_program! {
+        program!(lets![
             "x" ;= flip!(1/5);
             "y" ;= flip!(1/5);
             "z" ;= flip!(1/5);
@@ -737,23 +770,30 @@ mod tests {
                 else { var!("z") });
             ...? b!("y")
         ]);
-        let g = pipeline(&p);
-        let xvar = named(0, "x");
-        let yvar = named(2, "y");
-        let zvar = named(4, "z");
-        let ivar = named(6, "i");
-        assert_clusters!(
-            g,
-            vars: &[&xvar],
-            &[&yvar],
-            &[&zvar],
-            &[&ivar, &xvar, &zvar]
-        );
-        assert_edges!(g {
-            xvar => [vec![&xvar], vec![&ivar, &xvar, &zvar]],
-            yvar => [vec![&yvar]],
-            zvar => [vec![&zvar], vec![&ivar, &xvar, &zvar]],
-            ivar => [[&ivar, &xvar, &zvar]]
-        });
+        test_hypergraphs_ite_sample: |g: G| {
+            let xvar = named(0, "x");
+            let yvar = named(2, "y");
+            let zvar = named(4, "z");
+            let ivar = named(6, "i");
+            assert_clusters!(
+                g,
+                vars: &[&xvar],
+                &[&yvar],
+                &[&zvar],
+                &[&ivar, &xvar, &zvar]
+            );
+            assert_edges!(g {
+                xvar => [vec![&xvar], vec![&ivar, &xvar, &zvar]],
+                yvar => [vec![&yvar]],
+                zvar => [vec![&zvar], vec![&ivar, &xvar, &zvar]],
+                ivar => [[&ivar, &xvar, &zvar]]
+            });
+        },
+        // test_cuts_with_boolean_operator: |g: G| {
+        //     let ecs: Vec<(NamedVar, Rank)> = g.edgecuts_sorted();
+        //     assert_eq!(ecs.len(), 5);
+        //     println!("{:?}", ecs);
+        //     todo!()
+        // },
     }
 }
