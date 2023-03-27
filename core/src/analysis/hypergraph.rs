@@ -718,18 +718,18 @@ mod tests {
                 zvar => [vec![&yvar, &zvar]],
             });
         },
+        #[debug=false]
         alias_cuts: |g: G| {
             let xvar = named(0, "x");
             let yvar = named(2, "y");
             let zvar = named(3, "z");
-
-
-            let ecs: Vec<(NamedVar, Rank)> = g.edgecuts_sorted();
-            let first_two = HashSet::from([&xvar, &yvar]);
-            assert_eq!(ecs.len(), 3);
-            assert!(first_two.contains(&ecs[0].0));
-            assert!(first_two.contains(&ecs[1].0));
-            assert!(zvar == ecs[2].0);
+            let vec = g.edgecuts_sorted();
+            let ecs: HashMap<NamedVar, Rank> = vec.clone().into_iter().collect();
+            println!("{:?}", ecs);
+            assert_eq!(ecs.get(&xvar).unwrap(), &Rank(1));
+            assert_eq!(ecs.get(&yvar).unwrap(), &Rank(2));
+            assert_eq!(ecs.get(&zvar).unwrap(), &Rank(1));
+            assert_eq!(vec[0].0, yvar);
         },
     }
     tests_for_program! {
@@ -765,12 +765,22 @@ mod tests {
                 wvar => [[&qvar, &zvar, &wvar]]
             });
         },
-        #[ignore=true]
         boolean_operator_cuts: |g: G| {
-            let ecs: Vec<(NamedVar, Rank)> = g.edgecuts_sorted();
-            assert_eq!(ecs.len(), 5);
+            let xvar = named(0, "x");
+            let yvar = named(2, "y");
+            let zvar = named(4, "z");
+            let qvar = named(5, "q");
+            let wvar = named(7, "w");
+
+            let vec = g.edgecuts_sorted();
+            let ecs: HashMap<NamedVar, Rank> = vec.clone().into_iter().collect();
             println!("{:?}", ecs);
-            todo!()
+            assert_eq!(ecs.get(&xvar).unwrap(), &Rank(1));
+            assert_eq!(ecs.get(&yvar).unwrap(), &Rank(1));
+            assert_eq!(ecs.get(&zvar).unwrap(), &Rank(2));
+            assert_eq!(ecs.get(&qvar).unwrap(), &Rank(1));
+            assert_eq!(ecs.get(&wvar).unwrap(), &Rank(1));
+            assert_eq!(vec[0].0, zvar);
         },
     }
     tests_for_program! {
@@ -781,7 +791,7 @@ mod tests {
             "f" ;= fst!("t");
            ...? b!("t")
         ]);
-        test_hypergraphs_captures_tuples: |g: G| {
+        tuples_hypergraph: |g: G| {
             let xvar = named(0, "x");
             let yvar = named(2, "y");
             let tvar = named(4, "t");
@@ -802,12 +812,21 @@ mod tests {
                 fvar => [[&fvar, &tvar]]
             });
         },
-        // test_cuts_with_boolean_operator: |g: G| {
-        //     let ecs: Vec<(NamedVar, Rank)> = g.edgecuts_sorted();
-        //     assert_eq!(ecs.len(), 5);
-        //     println!("{:?}", ecs);
-        //     todo!()
-        // },
+        tuples_cuts: |g: G| {
+            let xvar = named(0, "x");
+            let yvar = named(2, "y");
+            let tvar = named(4, "t");
+            let fvar = named(5, "f");
+
+            let vec = g.edgecuts_sorted();
+            let ecs: HashMap<NamedVar, Rank> = vec.clone().into_iter().collect();
+            println!("{:?}", ecs);
+            assert_eq!(ecs.get(&xvar).unwrap(), &Rank(1));
+            assert_eq!(ecs.get(&yvar).unwrap(), &Rank(1));
+            assert_eq!(ecs.get(&tvar).unwrap(), &Rank(2));
+            assert_eq!(ecs.get(&fvar).unwrap(), &Rank(1));
+            assert_eq!(vec[0].0, tvar);
+        },
     }
 
     tests_for_program! {
@@ -816,7 +835,7 @@ mod tests {
            "s" ;= sample!(var!("x"));
            ...? b!("s")
         ]);
-        test_hypergraphs_treats_sample_statements_as_cuts: |g: G| {
+        sample_statements_cut_the_hypergraph: |g: G| {
             let xvar = named(0, "x");
             let svar = named(2, "s");
 
@@ -826,12 +845,16 @@ mod tests {
                 svar => [[&svar]]
             });
         },
-        // test_cuts_with_boolean_operator: |g: G| {
-        //     let ecs: Vec<(NamedVar, Rank)> = g.edgecuts_sorted();
-        //     assert_eq!(ecs.len(), 5);
-        //     println!("{:?}", ecs);
-        //     todo!()
-        // },
+        sample_statement_cuts: |g: G| {
+            let xvar = named(0, "x");
+            let svar = named(2, "s");
+
+            let vec = g.edgecuts_sorted();
+            let ecs: HashMap<NamedVar, Rank> = vec.clone().into_iter().collect();
+            println!("{:?}", ecs);
+            assert_eq!(ecs.get(&xvar).unwrap(), &Rank(1));
+            assert_eq!(ecs.get(&svar).unwrap(), &Rank(1));
+        },
     }
 
     tests_for_program! {
@@ -845,7 +868,7 @@ mod tests {
                 else { var!("z") });
             ...? b!("y")
         ]);
-        test_hypergraphs_ite_sample: |g: G| {
+        sampled_ite_hypergraph: |g: G| {
             let xvar = named(0, "x");
             let yvar = named(2, "y");
             let zvar = named(4, "z");
@@ -864,11 +887,20 @@ mod tests {
                 ivar => [[&ivar, &xvar, &zvar]]
             });
         },
-        // test_cuts_with_boolean_operator: |g: G| {
-        //     let ecs: Vec<(NamedVar, Rank)> = g.edgecuts_sorted();
-        //     assert_eq!(ecs.len(), 5);
-        //     println!("{:?}", ecs);
-        //     todo!()
-        // },
+        sampled_ite_cuts: |g: G| {
+            let xvar = named(0, "x");
+            let yvar = named(2, "y");
+            let zvar = named(4, "z");
+            let ivar = named(6, "i");
+
+            let vec = g.edgecuts_sorted();
+            let ecs: HashMap<NamedVar, Rank> = vec.clone().into_iter().collect();
+            println!("{:?}", ecs);
+            assert_eq!(ecs.get(&xvar).unwrap(), &Rank(2));
+            assert_eq!(ecs.get(&yvar).unwrap(), &Rank(1));
+            assert_eq!(ecs.get(&zvar).unwrap(), &Rank(2));
+            assert_eq!(ecs.get(&ivar).unwrap(), &Rank(2));
+            assert_eq!(vec[3].0, yvar);
+        },
     }
 }
