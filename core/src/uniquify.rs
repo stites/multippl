@@ -9,6 +9,9 @@ pub mod grammar {
     use std::fmt;
     use std::fmt::*;
 
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+    pub struct MaxUniqueId(pub u64);
+
     #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
     pub struct UniqueId(pub u64);
     impl UniqueId {
@@ -196,17 +199,18 @@ impl SymEnv {
         }
     }
 
-    pub fn uniquify(&mut self, p: &ProgramUD) -> Result<ProgramUnq, CompileError> {
+    pub fn uniquify(&mut self, p: &ProgramUD) -> Result<(ProgramUnq, MaxUniqueId), CompileError> {
         match p {
             Program::Body(e) => {
                 let eann = self.uniquify_expr(e)?;
-                Ok(Program::Body(eann))
+                let mx = MaxUniqueId(self.gensym);
+                Ok((Program::Body(eann), mx))
             }
         }
     }
 }
 
-pub fn pipeline(p: &crate::ProgramInferable) -> Result<ProgramUnq, CompileError> {
+pub fn pipeline(p: &crate::ProgramInferable) -> Result<(ProgramUnq, MaxUniqueId), CompileError> {
     let p = crate::typecheck::pipeline(p)?;
     let mut senv = SymEnv::default();
     senv.uniquify(&p)

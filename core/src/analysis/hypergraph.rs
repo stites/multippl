@@ -454,7 +454,7 @@ where
     }
 
     /// cut a vertex out of the hypergraph
-    fn edgecuts_ranked(&self) -> Vec<(V, Rank)> {
+    pub fn edgecuts_ranked(&self) -> Vec<(V, Rank)> {
         <Self as Hypergraph>::edgecuts_ranked(self).into_iter().fold(HashMap::new(),
             |mut ranks, (e, r)| {
                 match self.intersections_inv.get(&e) {
@@ -473,38 +473,7 @@ where
         ).into_iter().collect()
     }
 
-    // /// cut a vertex out of the hypergraph
-    // fn edgecuts_ranked(&self) -> Vec<(V, Rank)> {
-    //     let check : HashMap<V, Vec<Rank>> = <Self as Hypergraph>::edgecuts_ranked(self).into_iter().fold(HashMap::new(),
-    //         |mut ranks, (e, r)| {
-    //             match self.intersections_inv.get(&e) {
-    //                 None => panic!("expected all edges intersection map, perhaps you need to rebuild intersections"),
-    //                     Some(vs) => {
-    //                         for v in vs {
-    //                             match ranks.get_mut(&v) {
-    //                                 None => {ranks.insert(v.clone(), vec![r.clone()]); },
-    //                                 Some(rs) => {rs.push(r.clone());},
-    //                             }
-    //                         }
-    //                     }
-    //             }
-    //                 ranks
-    //         }
-
-    //     );
-    //     check.into_iter().fold(vec![], |mut ret, (v, rs)| {
-    //         assert!(
-    //             rs.iter().all(|r| r == &rs[0]),
-    //             "expected all ranks for {:?} to be the same. Got: {:?}",
-    //             v,
-    //             rs
-    //         );
-    //         ret.push((v, rs[0]));
-    //         ret
-    //     })
-    // }
-
-    fn edgecuts_sorted(&self) -> Vec<(V, Rank)> {
+    pub fn edgecuts_sorted(&self) -> Vec<(V, Rank)> {
         let mut sorted_edges = self.edgecuts_ranked();
         sorted_edges.sort_by(|(_, a), (_, b)| b.cmp(&a));
         sorted_edges
@@ -512,13 +481,6 @@ where
 }
 
 pub fn top_k_cuts(cuts: &Vec<(NamedVar, Rank)>, n: usize) -> Vec<NamedVar> {
-    assert!(
-        n - 1 < cuts.len(),
-        "requested {} cuts, but only {} possible cut{} found",
-        n,
-        cuts.len(),
-        String::from(if cuts.len() == 1 { "" } else { "s" })
-    );
     cuts.iter().map(|(b, r)| b.clone()).take(n).collect()
 }
 

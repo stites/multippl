@@ -322,7 +322,7 @@ pub fn pipeline(
     ),
     CompileError,
 > {
-    let p = crate::uniquify::pipeline(p)?;
+    let p = crate::uniquify::pipeline(p)?.0;
     let mut lenv = LabelEnv::new();
     lenv.annotate(&p)
 }

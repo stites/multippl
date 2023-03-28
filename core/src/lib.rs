@@ -101,7 +101,7 @@ pub fn make_mgr_h(p: &ProgramInferable) -> Result<Mgr> {
     let p = typeinference(p)?;
     let p = typecheck(&p)?;
     let mut senv = SymEnv::default();
-    let p = senv.uniquify(&p)?;
+    let p = senv.uniquify(&p)?.0;
     let mut lenv = LabelEnv::new();
     let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
 
@@ -119,7 +119,7 @@ pub fn runner_h(p: &ProgramInferable, mgr: &mut Mgr, opt: &Options) -> Result<(C
     let p = typeinference(p)?;
     let p = typecheck(&p)?;
     let mut senv = SymEnv::default();
-    let p = senv.uniquify(&p)?;
+    let p = senv.uniquify(&p)?.0;
     let mut lenv = LabelEnv::new();
     let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
 
