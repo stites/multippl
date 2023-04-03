@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+fd . --no-ignore --type file --extension csv --exec sed -i '1p; /gridsize/d' {} \;
