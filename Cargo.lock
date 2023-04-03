@@ -1493,7 +1493,7 @@ checksum = "456c603be3e8d448b072f410900c09faf164fbce2d480456f50eea6e25f9c848"
 [[package]]
 name = "rsdd"
 version = "0.1.0"
-source = "git+https://github.com/stites/rsdd?branch=yodel-additions#f60a59c92fd076155b92f674a1378e71e90a91c3"
+source = "git+https://github.com/stites/rsdd?branch=yodel-additions#aa637ff6d02ac85e30e2bc9d087ae9224a969884"
 dependencies = [
  "bit-set",
  "bumpalo",
@@ -1502,6 +1502,7 @@ dependencies = [
  "dimacs",
  "dot",
  "fnv",
+ "itertools",
  "libc",
  "maplit",
  "num",

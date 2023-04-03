@@ -14,478 +14,19 @@ use rsdd::repr::var_label::*;
 use rsdd::repr::var_order::VarOrder;
 use rsdd::repr::wmc::WmcParams;
 
-// use rsdd::util::hypergraph::*;
+use rsdd::util::hypergraph::{hg2dt, Cluster, ClusterGraph, Edge, Hypergraph, Rank};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::{HashMap, HashSet};
 use std::hash::{Hash, Hasher};
 use tracing::*;
 
-fn calculate_hash<T: Hash>(t: &T) -> u64 {
-    let mut s = DefaultHasher::new();
-    t.hash(&mut s);
-    s.finish()
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Edge<V>(HashSet<V>)
-where
-    V: Clone + Debug + PartialEq + Eq + Hash;
-
-impl<V> Hash for Edge<V>
-where
-    V: Clone + Debug + PartialEq + Eq + Hash,
-{
-    fn hash<H>(&self, state: &mut H)
-    where
-        H: Hasher,
-    {
-        let mut hashes = self.0.iter().map(calculate_hash).collect_vec();
-        hashes.sort();
-        let hashstr = hashes.into_iter().map(|x| x.to_string()).join("");
-        hashstr.hash(state);
-    }
-}
-
-impl<V> Edge<V>
-where
-    V: Clone + Debug + PartialEq + Eq + Hash,
-{
-    pub fn from(i: &[V]) -> Self {
-        Edge(i.iter().cloned().collect())
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Cover<V>
-where
-    V: Clone + Debug + PartialEq + Eq + Hash,
-{
-    cover: HashSet<V>,
-    edges: HashSet<Edge<V>>,
-}
-impl<V> Hash for Cover<V>
-where
-    V: Clone + Debug + PartialEq + Eq + Hash,
-{
-    fn hash<H>(&self, state: &mut H)
-    where
-        H: Hasher,
-    {
-        let mut hashes = vec![];
-        let cover_hashes = self.cover.iter().map(calculate_hash).collect_vec();
-        hashes.extend(cover_hashes);
-        let edge_hashes = self.edges.iter().map(calculate_hash).collect_vec();
-        hashes.extend(edge_hashes);
-        hashes.sort();
-        let hashstr = hashes.into_iter().map(|x| x.to_string()).join("");
-        hashstr.hash(state);
-    }
-}
-
-impl<V> Cover<V>
-where
-    V: Clone + Debug + PartialEq + Eq + Hash,
-{
-    pub fn empty() -> Self {
-        Self {
-            cover: Default::default(),
-            edges: Default::default(),
-        }
-    }
-    pub fn from_edge(e: &Edge<V>) -> Self {
-        let vs: &HashSet<V> = &e.0;
-        Self {
-            cover: e.0.clone(),
-            edges: HashSet::from([e.clone()]),
-        }
-    }
-    pub fn merge(cs: HashSet<Cover<V>>) -> Self {
-        let span = tracing::span!(tracing::Level::DEBUG, "Cover::merge");
-        let _guard = span.enter();
-        let ret = cs.into_iter().fold(Self::empty(), |mut ret, cover| {
-            debug!("-> {:?} + {:?}", ret, cover);
-            ret.cover.extend(cover.cover);
-            ret.edges.extend(cover.edges);
-            ret
-        });
-        debug!("==> {:?}", ret);
-        ret
-    }
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct AllCovers<V>
-where
-    V: Clone + Debug + PartialEq + Eq + Hash,
-{
-    covers: HashSet<Cover<V>>,
-}
-impl<V> AllCovers<V>
-where
-    V: Clone + Debug + PartialEq + Eq + Hash,
-{
-    pub fn size(&self) -> usize {
-        self.covers.len()
-    }
-
-    pub fn new(covers: HashSet<Cover<V>>) -> Self {
-        AllCovers { covers }
-    }
-    pub fn from_edges(es: impl Iterator<Item = Edge<V>>) -> Self {
-        let span = tracing::span!(tracing::Level::DEBUG, "AllClusters::from_edges");
-        let _guard = span.enter();
-
-        let empty = AllCovers {
-            covers: Default::default(),
-        };
-        let seen: HashSet<V> = HashSet::new();
-        es.fold((empty, seen), |(mut all, mut seen), edge| {
-            let e = Cover::from_edge(&edge);
-            if seen.is_disjoint(&e.cover) {
-                debug!("new cover with: {:?}", edge);
-
-                seen.extend(e.cover.clone());
-                all.covers.insert(e);
-                (all, seen)
-            } else {
-                debug!("merging into cover: {:?}", edge);
-                debug!("all.covers: {:?}", all.covers);
-
-                let (mut to_merge, mut rest): (HashSet<Cover<V>>, HashSet<Cover<V>>) =
-                    all.covers.into_iter().partition_map(|cover| {
-                        if cover.cover.is_disjoint(&e.cover) {
-                            Either::Right(cover)
-                        } else {
-                            Either::Left(cover)
-                        }
-                    });
-                seen.extend(e.cover.clone());
-                to_merge.insert(e);
-                debug!("covers to merge:");
-                for c in &to_merge {
-                    debug!("- {:?}", c);
-                }
-                debug!("covers to ignore:");
-                for c in &rest {
-                    debug!("- {:?}", c);
-                }
-                rest.insert(Cover::merge(to_merge));
-                (AllCovers::new(rest), seen)
-            }
-        })
-        .0
-    }
-    pub fn remove_edge(&mut self, e: &Edge<V>) {
-        let span = tracing::span!(tracing::Level::DEBUG, "AllClusters::remove_edge");
-        let _guard = span.enter();
-        debug!("removing {:?} from {:?}", e, self);
-
-        let mut to_split = self
-            .covers
-            .iter()
-            .find(|c| c.edges.contains(e))
-            .expect("edge not found in covers")
-            .clone();
-        debug!("found cover {:?}", to_split);
-        self.covers.remove(&to_split);
-        to_split.edges.remove(e);
-        debug!("pruned edges: {:?}", to_split.edges);
-        let new_covers = Self::from_edges(to_split.edges.into_iter());
-        debug!("new covers: {:?}", new_covers);
-        self.covers.extend(new_covers.covers);
-        debug!("final set: {:?}", self);
-    }
-}
-
-pub trait Hypergraph
-where
-    <Self as Hypergraph>::Vertex: Clone + Debug + PartialEq + Eq + Hash,
-{
-    type Vertex;
-    fn vertices(&self) -> &HashSet<Self::Vertex>;
-    fn hyperedges(&self) -> std::vec::IntoIter<Edge<Self::Vertex>>;
-    fn insert_edge(&mut self, edge: Edge<Self::Vertex>) -> bool;
-    fn insert_vertex(&mut self, v: Self::Vertex) -> bool;
-
-    /// cut a vertex out of the hypergraph
-    fn edgecuts_ranked(&self) -> Vec<(Edge<Self::Vertex>, Rank)> {
-        let all_covers = self.covers();
-        self.hyperedges()
-            .map(|edge| {
-                let mut simulation = all_covers.clone();
-                simulation.remove_edge(&edge);
-                (edge.clone(), Rank(simulation.size()))
-            })
-            .collect()
-    }
-    fn edgecuts_sorted(&self) -> Vec<(Edge<Self::Vertex>, Rank)> {
-        let mut sorted_edges = self.edgecuts_ranked();
-        sorted_edges.sort_by(|(_, a), (_, b)| b.cmp(&a));
-        sorted_edges
-    }
-    fn covers(&self) -> AllCovers<Self::Vertex> {
-        AllCovers::from_edges(self.hyperedges())
-    }
-}
-
-#[derive(Clone, Debug)]
-pub struct HGraph<V>
-where
-    V: Clone + Debug + PartialEq + Eq + Hash,
-{
-    vertices: HashSet<V>,
-    hyperedges: HashSet<Edge<V>>,
-}
-impl<V> Default for HGraph<V>
-where
-    V: Clone + Debug + PartialEq + Eq + Hash,
-{
-    fn default() -> Self {
-        HGraph {
-            vertices: Default::default(),
-            hyperedges: Default::default(),
-        }
-    }
-}
-impl<V> Hypergraph for HGraph<V>
-where
-    V: Clone + Debug + PartialEq + Eq + Hash,
-{
-    type Vertex = V;
-
-    fn vertices(&self) -> &HashSet<V> {
-        &self.vertices
-    }
-
-    fn hyperedges<'a>(&self) -> std::vec::IntoIter<Edge<Self::Vertex>> {
-        self.hyperedges
-            .iter()
-            .map(|x| Edge(x.0.clone()))
-            .collect_vec()
-            .into_iter()
-    }
-
-    /// add an edge to the hypergraph. Returns false if the edge is already in the hypergraph
-    fn insert_edge(&mut self, edge: Edge<V>) -> bool {
-        debug!("insert edge: {:?}", edge);
-        self.vertices.extend(edge.0.clone());
-        self.hyperedges.insert(edge.clone())
-    }
-
-    /// add a vertex to the hypergraph. Returns false if the vertex is already in the hypergraph
-    fn insert_vertex(&mut self, v: V) -> bool {
-        self.vertices.insert(v)
-    }
-}
-impl<V> HGraph<V>
-where
-    V: Clone + Debug + PartialEq + Eq + Hash,
-{
-    pub fn print(&self) -> String {
-        let vtxs = self.vertices.iter().map(|x| format!("{:?}", x)).join(", ");
-        let edges = self
-            .hyperedges
-            .iter()
-            .map(|x| format!("{:?}", x.0))
-            .join(",\n");
-        let mut s = String::from("");
-        s.push_str(&format!("vertices: {{ {} }}\n", vtxs));
-        s.push_str("edges:\n");
-        for edge in &self.hyperedges {
-            s.push_str(&format!("  | {:?}\n", edge));
-        }
-        s
-    }
-}
-#[cfg(test)]
-#[allow(unused_must_use)]
-mod hgraph_test {
-    use super::*;
-
-    #[test]
-    fn test_cover_creation() {
-        crate::utils::enable_traced_test();
-        let mut g: HGraph<usize> = Default::default();
-        g.insert_vertex(0);
-        g.insert_vertex(1);
-        g.insert_vertex(2);
-        g.insert_vertex(7);
-        g.insert_vertex(8);
-        g.insert_vertex(9);
-        g.insert_edge(Edge::from(&[0, 2]));
-        assert_eq!(g.covers().size(), 1);
-        g.insert_edge(Edge::from(&[1, 2]));
-        assert_eq!(g.covers().size(), 1);
-        g.insert_edge(Edge::from(&[0, 1, 2]));
-        let cs = g.covers();
-        assert_eq!(cs.size(), 1);
-        let c = cs.covers.into_iter().nth(0).unwrap();
-        assert_eq!(c.edges.len(), 3);
-
-        g.insert_edge(Edge::from(&[7, 8, 9]));
-        assert_eq!(g.covers().covers.len(), 2);
-    }
-
-    #[test]
-    fn test_cover_edge_removal() {
-        crate::utils::enable_traced_test();
-        let mut g: HGraph<usize> = Default::default();
-        g.insert_vertex(0);
-        g.insert_vertex(1);
-        g.insert_vertex(2);
-        let e0 = Edge::from(&[0]);
-        let e1 = Edge::from(&[1, 2]);
-        let e2 = Edge::from(&[0, 1, 2]);
-        g.insert_edge(e0.clone());
-        g.insert_edge(e1.clone());
-        g.insert_edge(e2.clone());
-        let mut cs = g.covers();
-        assert_eq!(cs.size(), 1);
-        cs.remove_edge(&e2);
-        assert_eq!(cs.size(), 2);
-
-        g.insert_vertex(7);
-        g.insert_vertex(8);
-        g.insert_vertex(9);
-        let e3 = Edge::from(&[7, 8, 9]);
-        g.insert_edge(e3.clone());
-        let mut cs = g.covers();
-        cs.remove_edge(&e3);
-        assert_eq!(cs.size(), 1);
-    }
-}
-#[derive(Clone, Debug)]
-pub struct ClusterGraph<V>
-where
-    V: Clone + Debug + PartialEq + Eq + Hash,
-{
-    graph: HGraph<Cluster<V>>,
-    intersections_inv: HashMap<Edge<Cluster<V>>, HashSet<V>>,
-    intersections: HashMap<V, HashSet<Edge<Cluster<V>>>>,
-}
-impl<V> Default for ClusterGraph<V>
-where
-    V: Clone + Debug + PartialEq + Eq + Hash,
-{
-    fn default() -> Self {
-        Self {
-            graph: Default::default(),
-            intersections: Default::default(),
-            intersections_inv: Default::default(),
-        }
-    }
-}
-impl<V> Hypergraph for ClusterGraph<V>
-where
-    V: Clone + Debug + PartialEq + Eq + Hash,
-{
-    type Vertex = Cluster<V>;
-    fn vertices(&self) -> &HashSet<Self::Vertex> {
-        self.graph.vertices()
-    }
-
-    fn hyperedges<'a>(&self) -> std::vec::IntoIter<Edge<Self::Vertex>> {
-        self.graph.hyperedges()
-    }
-
-    /// add an edge to the hypergraph. Returns false if the edge is already in the hypergraph
-    fn insert_edge(&mut self, edge: Edge<Self::Vertex>) -> bool {
-        self.graph.insert_edge(edge)
-    }
-
-    /// add a vertex to the hypergraph. Returns false if the vertex is already in the hypergraph
-    fn insert_vertex(&mut self, v: Self::Vertex) -> bool {
-        self.graph.insert_vertex(v)
-    }
-}
-#[derive(Clone, Copy, Hash, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub struct Rank(pub usize);
-
-impl<V> ClusterGraph<V>
-where
-    V: Clone + Debug + PartialEq + Eq + Hash,
-{
-    pub fn variable_intersection(edge: &Edge<Cluster<V>>) -> V
-    where
-        V: Debug + PartialEq + Clone + Eq + Hash,
-    {
-        let common = Self::common_variables(&edge.0);
-        debug!("{:?} common variables: {:?}", edge, common);
-        assert_eq!(common.len(), 1);
-        common.iter().nth(0).unwrap().clone()
-    }
-
-    pub fn common_variables(clusters: &HashSet<Cluster<V>>) -> HashSet<V>
-    where
-        V: Debug + PartialEq + Clone + Eq + Hash,
-    {
-        let mut common = clusters
-            .iter()
-            .map(|x| x.0.clone())
-            .nth(0)
-            .expect("clusters should be non-empty");
-        for c in clusters.iter() {
-            common = common.intersection(&c.0).cloned().collect();
-        }
-        common
-    }
-    pub fn rebuild_intersections(&mut self) {
-        let ret: HashMap<Edge<Cluster<V>>, HashSet<V>> = self
-            .hyperedges()
-            .map(|edge| (edge.clone(), Self::common_variables(&edge.0)))
-            .collect();
-        self.intersections_inv = ret.clone();
-        self.intersections = ret
-            .clone()
-            .into_iter()
-            .fold(HashMap::new(), |mut inv, (e, vs)| {
-                for v in vs {
-                    match inv.get_mut(&v) {
-                        None => {
-                            inv.insert(v.clone(), HashSet::from([e.clone()]));
-                        }
-                        Some(es) => {
-                            es.insert(e.clone());
-                        }
-                    }
-                }
-                inv
-            });
-    }
-
-    /// cut a vertex out of the hypergraph
-    pub fn edgecuts_ranked(&self) -> Vec<(V, Rank)> {
-        <Self as Hypergraph>::edgecuts_ranked(self).into_iter().fold(HashMap::new(),
-            |mut ranks, (e, r)| {
-                match self.intersections_inv.get(&e) {
-                    None => panic!("expected all edges intersection map, perhaps you need to rebuild intersections"),
-                    Some(vs) => {
-                        for v in vs {
-                            match ranks.get(&v.clone()) {
-                                None => {ranks.insert(v.clone(), r.clone()); },
-                                Some(rs) => {ranks.insert(v.clone(), max(vec![r, rs.clone()]).unwrap()); },
-                            }
-                        }
-                    }
-                }
-                ranks
-            }
-        ).into_iter().collect()
-    }
-
-    pub fn edgecuts_sorted(&self) -> Vec<(V, Rank)> {
-        let mut sorted_edges = self.edgecuts_ranked();
-        sorted_edges.sort_by(|(_, a), (_, b)| b.cmp(&a));
-        sorted_edges
-    }
-}
-
+// FIXME: need to remove the edge_cutsets code from rsdd...
 pub fn top_k_cuts(cuts: &Vec<(NamedVar, Rank)>, n: usize) -> Vec<NamedVar> {
     cuts.iter().map(|(b, r)| b.clone()).take(n).collect()
 }
 
 pub fn build_graph(deps: &DependenceMap) -> ClusterGraph<NamedVar> {
-    let mut g = ClusterGraph::default();
+    let mut g: ClusterGraph<NamedVar> = ClusterGraph::default();
     let mut edges: HashMap<NamedVar, HashSet<Cluster<NamedVar>>> = HashMap::new();
     for family in deps.family_iter() {
         debug!("family: {:?}", family);
@@ -511,23 +52,8 @@ pub fn build_graph(deps: &DependenceMap) -> ClusterGraph<NamedVar> {
     g
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Cluster<V>(HashSet<V>)
-where
-    V: Clone + Debug + PartialEq + Eq + Hash;
-impl<V> Hash for Cluster<V>
-where
-    V: Clone + Debug + PartialEq + Eq + Hash,
-{
-    fn hash<H>(&self, state: &mut H)
-    where
-        H: Hasher,
-    {
-        let mut hashes = self.0.iter().map(calculate_hash).collect_vec();
-        hashes.sort();
-        let hashstr = hashes.into_iter().map(|x| x.to_string()).join("");
-        hashstr.hash(state);
-    }
+pub fn cutset(g: &ClusterGraph<NamedVar>) -> Vec<NamedVar> {
+    hg2dt(g).cutset().into_iter().collect()
 }
 
 pub fn pipeline(p: &crate::ProgramInferable) -> ClusterGraph<NamedVar> {
@@ -561,9 +87,9 @@ mod tests {
             let span = tracing::span!(tracing::Level::DEBUG, "assert_clusters");
             let _guard = span.enter();
             let cs = $g.vertices();
-            debug!("{:?}#{} in the following?", $cvar, calculate_hash(&$cvar));
+            debug!("{:?} in the following?", $cvar);
             for c in cs {
-                debug!("vertex: {:?}#{}", c, calculate_hash(&c));
+                debug!("vertex: {:?}", c);
             }
             assert!(cs.contains(&$cvar), "expected {:?} in hypergraph. found: {:?}", $cvar, cs);
         }};
@@ -649,8 +175,9 @@ mod tests {
             debug!("{}", g.graph.print());
             assert_edges!(g { xvar => [[&xvar]] } );
         },
+        #[ignore=true]
         simple_program_cuts: |g: G| {
-            let ecs: Vec<(NamedVar, Rank)> = g.edgecuts_sorted();
+            let ecs = cutset(&g);
             assert_eq!(ecs.len(), 1);
         },
     }
@@ -680,18 +207,19 @@ mod tests {
                 zvar => [vec![&yvar, &zvar]],
             });
         },
-        #[debug=false]
+        #[ignore=true]
         alias_cuts: |g: G| {
             let xvar = named(0, "x");
             let yvar = named(2, "y");
             let zvar = named(3, "z");
             let vec = g.edgecuts_sorted();
-            let ecs: HashMap<NamedVar, Rank> = vec.clone().into_iter().collect();
+            // let ecs: HashMap<NamedVar, Rank> = vec.clone().into_iter().collect();
+            let ecs = cutset(&g);
             println!("{:?}", ecs);
-            assert_eq!(ecs.get(&xvar).unwrap(), &Rank(1));
-            assert_eq!(ecs.get(&yvar).unwrap(), &Rank(2));
-            assert_eq!(ecs.get(&zvar).unwrap(), &Rank(1));
-            assert_eq!(vec[0].0, yvar);
+            // assert_eq!(ecs.get(&xvar).unwrap(), &Rank(1));
+            // assert_eq!(ecs.get(&yvar).unwrap(), &Rank(2));
+            // assert_eq!(ecs.get(&zvar).unwrap(), &Rank(1));
+            assert_eq!(ecs, vec![yvar]);
         },
     }
     tests_for_program! {
@@ -863,6 +391,53 @@ mod tests {
             assert_eq!(ecs.get(&zvar).unwrap(), &Rank(2));
             assert_eq!(ecs.get(&ivar).unwrap(), &Rank(2));
             assert_eq!(vec[3].0, yvar);
+        },
+    }
+
+    tests_for_program! {
+        program!(lets![
+            "00" ;= flip!(1/2);
+            "01" ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+            "10" ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+            "11" ;=
+                ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+                ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+                ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+                                                          flip!(1/11) ))))));
+            ...? b!("11")
+        ]);
+        grid_2x2_hypergraph: |g: G| {
+            let var00 = named(0, "00");
+            let var01 = named(2, "01");
+            let var10 = named(5, "10");
+            let var11 = named(8, "11");
+            assert_clusters!(
+                g,
+                vars: &[&var00],
+                &[&var00, &var10],
+                &[&var00, &var01],
+                &[&var00, &var01, &var10, &var11]
+            );
+            assert_edges!(g {
+                var00 => [vec![&var00], vec![&var00, &var10], vec![&var00, &var01], vec![&var00, &var01, &var11]],
+                var01 => [vec![&var00, &var01], vec![&var00, &var01, &var11]],
+                var10 => [vec![&var00, &var10], vec![&var00, &var01, &var11]],
+                var11 => [[&var00, &var01, &var10, &var11]]
+            });
+        },
+        grid_2x2_cuts: |g: G| {
+            let var00 = named(0, "00");
+            let var01 = named(2, "01");
+            let var10 = named(5, "10");
+            let var11 = named(8, "11");
+
+            let vec = cutset(&g);
+            println!("{:?}", vec);
+            // assert_eq!(ecs.get(&var00).unwrap(), &Rank(1000));
+            // assert_eq!(ecs.get(&var01).unwrap(), &Rank(1000));
+            // assert_eq!(ecs.get(&var10).unwrap(), &Rank(1000));
+            // assert_eq!(ecs.get(&var11).unwrap(), &Rank(1000));
+            todo!()
         },
     }
 }

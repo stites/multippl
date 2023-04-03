@@ -55,13 +55,13 @@ impl InsertionEnv {
             ELetIn(v, s, ebound, ebody) => {
                 let cut = self.current_cut.as_ref().unwrap();
                 println!("> {:?} ?= {:?} == {}", cut, v, cut.id() == v.id());
+                println!("{:?}", e);
                 if cut.id() == v.id() {
-                    println!("{:?}", e);
-                    println!("> {:?} ?= {:?} == {}", cut, v, true);
                     let smpl = ESample((), ebound.clone());
-                    ELetIn(v.clone(), s.to_string(), Box::new(smpl), ebody.clone())
+                    let fin = ELetIn(v.clone(), s.to_string(), Box::new(smpl), ebody.clone());
+                    println!(" ==> {:?}", fin);
+                    fin
                 } else {
-                    println!("{:?}", e);
                     ELetIn(
                         v.clone(),
                         s.to_string(),
@@ -139,17 +139,27 @@ impl InsertionEnv {
 }
 
 // technically, we can run this on a ProgramUniq and go backwards to get the /true/ annotated user program
-pub fn insert_sample_statements(p: &crate::ProgramInferable, mx: usize) -> ProgramAnn {
+pub fn insert_sample_statements(p: &crate::ProgramInferable) -> ProgramAnn {
+    let (p, mx_id) = prelude(p);
+    insert_sample_statements_h(&p, mx_id)
+}
+
+// technically, we can run this on a ProgramUniq and go backwards to get the /true/ annotated user program
+pub fn prelude(p: &crate::ProgramInferable) -> (ProgramAnn, MaxUniqueId) {
     use crate::analysis::*;
     let (puniq, mx_id) = crate::uniquify::pipeline(p).unwrap();
     let mut lenv = LabelEnv::new();
     let pann = lenv.annotate(&puniq).unwrap().0;
+    (pann, mx_id)
+}
+
+pub fn insert_sample_statements_h(pann: &ProgramAnn, mx_id: MaxUniqueId) -> ProgramAnn {
+    use crate::analysis::*;
     let deps = dependencies::DependencyEnv::new().scan(&pann);
     let g = hypergraph::build_graph(&deps);
-    let cuts = g.edgecuts_sorted();
+    let cuts = crate::analysis::hypergraph::cutset(&g);
     println!("{:?}", cuts);
-    let ncuts = hypergraph::top_k_cuts(&cuts, mx);
-    let mut env = InsertionEnv::new(ncuts, mx_id);
+    let mut env = InsertionEnv::new(cuts, mx_id);
     env.apply_cuts(&pann)
 }
 
@@ -167,254 +177,163 @@ mod tests {
     use tracing_test::traced_test;
 
     #[test]
-    pub fn test_interaction_graph_for_simple_program() {
+    pub fn test_trivial_program() {
         let p = program!(lets![
             "x" ;= flip!(1/3);
            ...? b!("x")
         ]);
-        let pann = insert_sample_statements(&p, 1);
+        let pann = insert_sample_statements(&p);
         let p1_expected = program!(lets![
             "x" ;= sample!(flip!(1/3));
            ...? b!("x")
         ]);
         let pann_expected = crate::annotate::pipeline(&p1_expected).unwrap().0;
         assert_eq!(&pann, &pann_expected);
-        let pann10 = insert_sample_statements(&p, 10);
+        let pann10 = insert_sample_statements(&p);
         assert_eq!(&pann, &pann10);
     }
 
-    // #[test]
-    // pub fn test_interaction_graph_with_boolean_operator() {
-    //     let p = program!(lets![
-    //         "x" ;= flip!(1/3);
-    //         "y" ;= flip!(1/3);
-    //         "z" ;= b!("x" && "y");
-    //        ...? b!("z")
-    //     ]);
-    //     let (g, uid, lbl) = pipeline(&p).unwrap();
-    //     assert_eq!(g.vertices.len(), 2);
-    //     println!("{}", g.print());
-    //     assert_eq!(g.hyperedges.len(), 3, "edge for each line");
-    //     for (ix, (id, s)) in [(0, "x"), (2, "y"), (4, "z")].iter().enumerate() {
-    //         let (_, nvar) = g.hyperedges[ix].clone();
-    //         assert_eq!(nvar, Binding::Let(named(*id, s)));
-    //     }
-    //     let cuts = order_cuts(&g);
-    //     assert_eq!(cuts.len(), 3);
-    //     let pann = crate::annotate::pipeline(&p).unwrap().0;
-    //     let cs = top_k_cuts(&cuts, 1);
-    //     println!("{:#?}", cuts);
-    //     let mut env = InsertionEnv::new(cs, uid, lbl);
-    //     let p1 = env.apply_cuts(&pann);
-    //     let p1_expected = program!(lets![
-    //         "x" ;= flip!(1/3);
-    //         "y" ;= flip!(1/3);
-    //         "z" ;= sample!(b!("x" && "y"));
-    //        ...? b!("z")
-    //     ]);
-    //     let pann_expected = crate::annotate::pipeline(&p1_expected).unwrap().0;
-    //     assert_eq!(&p1, &pann_expected);
-    // }
+    #[test]
+    pub fn test_alias() {
+        let p = program!(lets![
+            "x" ;= flip!(1/3);
+            "y" ;= b!("x");
+            "z" ;= b!("y");
+           ...? b!("z")
+        ]);
+        let pann = insert_sample_statements(&p);
+        let p_expected = program!(lets![
+            "x" ;= flip!(1/3);
+            "y" ;= sample!(b!("x"));
+            "z" ;= b!("y");
+           ...? b!("z")
+        ]);
+        let pann_expected = crate::annotate::pipeline(&p_expected).unwrap().0;
+        assert_eq!(&pann, &pann_expected);
+    }
 
-    // #[test]
-    // pub fn test_interaction_graph_works_with_conjoined_query() {
-    //     let p = program!(lets![
-    //         "x" ;= flip!(0.0);
-    //         "y" ;= flip!(0.0);
-    //        ...? b!("x" && "y")
-    //     ]);
-    //     let (g, uid, lbl) = hypergraph::pipeline(&p).unwrap();
-    //     let cuts = order_cuts(&g);
-    //     assert_eq!(cuts.len(), 3);
-    //     let pann = crate::annotate::pipeline(&p).unwrap().0;
-    //     let cs = top_k_cuts(&cuts, 1);
-    //     for c in &cuts {
-    //         println!("{:?}", c);
-    //     }
-    //     let mut env = InsertionEnv::new(cs, uid, lbl);
-    //     let p1 = env.apply_cuts(&pann);
-    //     let p1_expected = program!(lets![
-    //         "x" ;= flip!(0.0);
-    //         "y" ;= flip!(0.0);
-    //         "__s#4" ;= sample!(b!("x" && "y"));
-    //        ...? b!("__s#4")
-    //     ]);
-    //     let pann_expected = crate::annotate::pipeline(&p1_expected).unwrap().0;
-    //     assert_eq!(&p1, &pann_expected);
-    // }
+    #[test]
+    pub fn test_boolean_operator() {
+        let p = program!(lets![
+            "x" ;= flip!(1/3);
+            "y" ;= flip!(1/3);
+            "z" ;= b!("x" && "y");
+            "q" ;= flip!(1/3);
+            "w" ;= b!("q" && "z");
+           ...? b!("z")
+        ]);
+        let pann = insert_sample_statements(&p);
+        let p_expected = program!(lets![
+            "x" ;= flip!(1/3);
+            "y" ;= flip!(1/3);
+            "z" ;= sample!(b!("x" && "y"));
+            "q" ;= flip!(1/3);
+            "w" ;= b!("q" && "z");
+           ...? b!("z")
+        ]);
+        let pann_expected = crate::annotate::pipeline(&p_expected).unwrap().0;
+        assert_eq!(&pann, &pann_expected);
+    }
 
-    // #[test]
-    // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_interaction_graph_captures_correct_edge_with_aliases() {
-    //     let p = program!(lets![
-    //         "x" ;= flip!(1/3);
-    //         "y" ;= flip!(1/3);
-    //         "z" ;= flip!(1/3);
-    //         "a" ;= b!("x" && "y" && "z");
-    //        ...? b!("a")
-    //     ]);
-    //     let g = pipeline(&p).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 3);
-    //     assert_eq!(g.hyperedges.len(), 4, "edge for each line");
-    //     let query = &g.hyperedges.last().unwrap().0;
-    //     assert_eq!(query.len(), 3, "query depends on every variable above");
-    //     order_cuts(&g);
-    // }
+    #[test]
+    pub fn test_tuples() {
+        let p = program!(lets![
+            "x" ;= flip!(1/3);
+            "y" ;= flip!(1/3);
+            "t" ;= b!("x", "y");
+            "f" ;= fst!("t");
+           ...? b!("t")
+        ]);
+        let pann = insert_sample_statements(&p);
+        let p_expected = program!(lets![
+            "x" ;= flip!(1/3);
+            "y" ;= flip!(1/3);
+            "t" ;= sample!(b!("x", "y"));
+            "f" ;= fst!("t");
+           ...? b!("t")
+        ]);
+        let pann_expected = crate::annotate::pipeline(&p_expected).unwrap().0;
+        assert_eq!(&pann, &pann_expected);
+    }
 
-    // #[test]
-    // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_interaction_works_as_expected_for_samples() {
-    //     let shared_var = program!(lets![
-    //        "x" ;= flip!(1/3);
-    //        "l" ;= sample!(var!("x"));
-    //        "r" ;= sample!(var!("x"));
-    //        ...? b!("r")
-    //     ]);
-    //     let g = pipeline(&shared_var).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 1);
-    //     let es = g.hyperedges.clone();
-    //     assert_eq!(g.hyperedges.len(), 3, "edge for each line");
-    //     let n = &es[0].1;
-    //     assert_eq!(n, &Binding::Let(named(0, "x")));
-    //     let (e, n) = &es[1];
-    //     assert_eq!(n, &Binding::NamedSample(named(2, "l")));
-    //     assert_eq!(e, &HashSet::from([PlanPtr(0)]));
-    //     let (e, n) = &es[2];
-    //     assert_eq!(n, &Binding::NamedSample(named(3, "r")));
-    //     assert_eq!(e, &HashSet::from([PlanPtr(0)]));
-    // }
+    #[test]
+    pub fn test_2x2_triu() {
+        let grid2x2_triu = program!(lets![
+            "00" ;= flip!(1/2);
+            "01" ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+            "10" ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+            ...? b!("01", "10")
+        ]);
+        let pann = insert_sample_statements(&grid2x2_triu);
+        let p_expected = program!(lets![
+            "00" ;= sample!(flip!(1/2));
+            "01" ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+            "10" ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+            ...? b!("01", "10")
+        ]);
+        let pann_expected = crate::annotate::pipeline(&p_expected).unwrap().0;
+        assert_eq!(&pann, &pann_expected);
+    }
 
-    // #[test]
-    // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_interaction_shared_tuples_get_separated() {
-    //     let shared_tuple = program!(lets![
-    //        "x" ;= flip!(1/3);
-    //        "y" ;= flip!(1/3);
-    //        "z" ;= sample!(b!("x", "y"));
-    //        ...? b!("z")
-    //     ]);
-    //     let g = pipeline(&shared_tuple).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 2);
-    //     for (edge, nvar) in &g.hyperedges {
-    //         println!("nvar: {:?}", nvar);
-    //         println!("edge: {:?}", edge);
-    //     }
-    //     assert_eq!(g.hyperedges.len(), 4, "needs a tuple for each position");
-    //     order_cuts(&g);
-    // }
+    #[test]
+    #[ignore = "should go in hypergraph: there are no meaningful cuts here"]
+    pub fn test_interaction_2x2_tril() {
+        let grid2x2_tril = program!(lets![
+            "01" ;= flip!(1/3);
+            "10" ;= flip!(1/4);
+            "11" ;=
+                ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(3/7) ) : (
+                ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(3/8) ) : (
+                ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(3/9) ) : (
+                                                          flip!(3/11) ))))));
+            ...? b!("11")
+        ]);
+        let pann = insert_sample_statements(&grid2x2_tril);
+        let p_expected = program!(lets![
+            "01" ;= flip!(1/3);
+            "10" ;= flip!(1/4);
+            "11" ;=
+                ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(3/7) ) : (
+                ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(3/8) ) : (
+                ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(3/9) ) : (
+                                                          flip!(3/11) ))))));
+            ...? b!("11")
+        ]);
+        let pann_expected = crate::annotate::pipeline(&p_expected).unwrap().0;
+        assert_eq!(&pann, &pann_expected);
+    }
 
-    // #[test]
-    // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_interaction_ite_sample() {
-    //     let ite = program!(lets![
-    //         "x" ;= flip!(1/5);
-    //         "y" ;= ite!(
-    //             if ( var!("x") )
-    //             then { sample!(flip!(1/3)) }
-    //             else { flip!(1/4) });
-    //         ...? b!("y")
-    //     ]);
-    //     let g = pipeline(&ite).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 3);
-    //     for (edge, nvar) in &g.hyperedges {
-    //         println!("nvar: {:?}", nvar);
-    //         println!("edge: {:?}", edge);
-    //     }
-    //     assert_eq!(g.hyperedges.len(), 2, "edge for each line");
-    //     // let query = &g.hyperedges.last().unwrap().0;
-    //     // assert_eq!(query.len(), 3, "query depends on every variable above");
-    //     // order_cuts(&g);
-    // }
-
-    // #[test]
-    // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_interaction_ite_nested_let() {
-    //     let ite_with_nested_lets = program!(lets![
-    //         "x" ;= flip!(2/3);
-    //         "y" ;= ite!(
-    //             if ( var!("x") )
-    //                 then { lets![
-    //                          "q" ;= flip!(1/4);
-    //                          "_" ;= observe!(b!("q" || "x"));
-    //                          ...? b!("q")
-    //                 ] }
-    //             else { flip!(1/5) });
-    //         "_" ;= observe!(b!("x" || "y"));
-    //         ...? b!("x")
-    //     ]);
-    //     let g = pipeline(&ite_with_nested_lets).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 3);
-    //     assert_eq!(g.hyperedges.len(), 5, "edge for each line");
-    //     for (edge, nvar) in &g.hyperedges {
-    //         println!("nvar: {:?}", nvar);
-    //         println!("edge: {:?}", edge);
-    //     }
-    //     let query = &g.hyperedges.last().unwrap().0;
-    //     assert_eq!(query.len(), 3, "query depends on every variable above");
-    //     order_cuts(&g);
-    // }
-
-    // #[test]
-    // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_interaction_2x2_triu() {
-    //     let grid2x2_triu = program!(lets![
-    //         "00" ;= flip!(1/2);
-    //         "01" ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-    //         "10" ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-    //         ...? b!("01", "10")
-    //     ]);
-    //     let g = pipeline(&grid2x2_triu).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 5);
-    //     assert_eq!(g.hyperedges.len(), 3, "each var + ite");
-    //     order_cuts(&g);
-    // }
-
-    // #[test]
-    // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_interaction_2x2_tril() {
-    //     let grid2x2_tril = program!(lets![
-    //         "01" ;= flip!(1/3);
-    //         "10" ;= flip!(1/4);
-    //         "11" ;=
-    //             ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(3/7) ) : (
-    //             ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(3/8) ) : (
-    //             ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(3/9) ) : (
-    //                                                       flip!(3/11) ))))));
-    //         ...? b!("11")
-    //     ]);
-    //     let g = pipeline(&grid2x2_tril).unwrap().0;
-    //     for (edge, nvar) in &g.hyperedges {
-    //         println!("nvar: {:?}", nvar);
-    //         println!("edge: {:?}", edge);
-    //     }
-    //     assert_eq!(g.vertices.len(), 6, "one per flip");
-    //     assert_eq!(g.hyperedges.len(), 3, "one per flip + ite");
-    //     let query = &g.hyperedges.last().unwrap().0;
-    //     assert_eq!(query.len(), 6, "var 11 depends on every variable above");
-    //     order_cuts(&g);
-    // }
-
-    // #[test]
-    // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]
-    // pub fn test_interaction_2x2_full() {
-    //     let grid2x2 = program!(lets![
-    //         "00" ;= flip!(1/2);
-    //         "01" ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
-    //         "10" ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
-    //         "11" ;=
-    //             ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
-    //             ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
-    //             ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
-    //                                                       flip!(1/11) ))))));
-    //         ...? b!("11")
-    //     ]);
-    //     let g = pipeline(&grid2x2).unwrap().0;
-    //     assert_eq!(g.vertices.len(), 9);
-    //     assert_eq!(g.hyperedges.len(), 4, "vertex + 3xITE");
-    //     let query = &g.hyperedges.last().unwrap().0;
-    //     assert_eq!(query.len(), 9, "query depends on every variable above");
-    //     order_cuts(&g);
-    // }
+    #[test]
+    #[ignore = "write this in hypergraph first"]
+    pub fn test_interaction_2x2_full() {
+        let grid2x2 = program!(lets![
+            "00" ;= flip!(1/2);
+            "01" ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+            "10" ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+            "11" ;=
+                ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+                ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+                ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+                                                          flip!(1/11) ))))));
+            ...? b!("11")
+        ]);
+        let (pann, mx) = prelude(&grid2x2);
+        let pann = insert_sample_statements_h(&pann, mx);
+        let pann = insert_sample_statements_h(&pann, mx);
+        let p_expected = program!(lets![
+            "00" ;= flip!(1/2);
+            "01" ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
+            "10" ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
+            "11" ;=
+                ite!(( b!((  b!(@anf "10")) && (  b!(@anf "01"))) ) ? ( flip!(1/7) ) : (
+                ite!(( b!((  b!(@anf "10")) && (not!("01"))) ) ? ( flip!(1/8) ) : (
+                ite!(( b!((  not!("10")) && (  b!(@anf "01"))) ) ? ( flip!(1/9) ) : (
+                                                          flip!(1/11) ))))));
+            ...? b!("11")
+        ]);
+        let pann_expected = crate::annotate::pipeline(&p_expected).unwrap().0;
+        assert_eq!(&pann, &pann_expected);
+    }
 
     // #[test]
     // #[ignore = "cross over from hypergraph.rs -- needs to be revamped for sampling test"]

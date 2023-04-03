@@ -27,8 +27,8 @@ rpath = false
 lto = true              # +++ whole-program optimization: true for a "fat" LTO program, "thin" for a less aggressive form
 
 [workspace.dependencies]
-# rsdd = { path = "../rsdd" }
-rsdd = { git = "https://github.com/stites/rsdd", branch = "yodel-additions" }
+# rsdd = { path = "../rsdd" , features =["hypergraph"]}
+rsdd = { git = "https://github.com/stites/rsdd", branch = "yodel-additions", features =["hypergraph"]}
 rand = "0.8.5"
 itertools = "0.10.3"
 tracing = "0.1.37"
