@@ -307,19 +307,37 @@
               ;
             # shell block
             env.DEVSHELL = "devshell+flake.nix";
-            enterShell = pkgs.lib.strings.concatStringsSep "\n" ([
-                ''
-                  echo ""
-                  echo "Hello from $DEVSHELL!"
-                  echo "Some tools this environment is equipped with:"
-                  echo ""
-                ''
-              ]
-              ++ (builtins.map (
-                  p: "echo \"${p.pname}\t\t-- ${p.meta.description}\""
-                )
+            enterShell = with builtins; let
+              over = p: def: f:
+                if hasAttr "pname" p
+                then f
+                else def;
+              n =
+                foldl' (mx: p: let
+                  l = over p (stringLength p.name) (stringLength p.pname);
+                in
+                  if l > mx
+                  then l
+                  else mx)
+                0
+                packages;
+            in
+              pkgs.lib.strings.concatStringsSep "\n" ([
+                  ''
+                    echo ""
+                    echo "Hello from $DEVSHELL!"
+                    echo "Some tools this environment is equipped with:"
+                    echo ""
+                  ''
+                ]
+                ++ (builtins.map (p: let
+                  name = over p p.name p.pname;
+                  padSize = n - (stringLength name);
+                  rightpad = pkgs.lib.strings.fixedWidthString padSize " " "";
+                  description = over p "${p}" p.meta.description;
+                in "echo \"${name}${rightpad}\t-- ${description}\"")
                 packages)
-              ++ ["echo \"\""]);
+                ++ ["echo \"\""]);
           }
         ];
       };
