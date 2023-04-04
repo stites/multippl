@@ -23,11 +23,11 @@ use yodel::grids::*;
 use yodel::inference::*;
 use yodel::typeinf::grammar::*;
 
-pub mod csv;
+pub mod csv_rw;
 mod data;
 pub mod generate;
 pub mod tasks;
-use crate::csv::*;
+use crate::csv_rw::*;
 use crate::data::*;
 use crate::tasks::*;
 

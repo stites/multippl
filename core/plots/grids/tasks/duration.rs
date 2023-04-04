@@ -1,4 +1,4 @@
-use crate::csv::*;
+use crate::csv_rw::*;
 use crate::*;
 use std::time::Instant;
 use yodel::inference::*;
@@ -80,7 +80,7 @@ pub fn stats(path: String) {
             let ostr = pth.to_str();
             let pstr = ostr.unwrap();
             println!("Processing... {}", pstr);
-            let rows = crate::csv::read_csv(pstr).unwrap();
+            let rows = crate::csv_rw::read_csv(pstr).unwrap();
             data.extend(rows.clone());
         }
     }
