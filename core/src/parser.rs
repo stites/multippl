@@ -166,23 +166,13 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ExprInferable {
             let anf = parse_anf(src, c, *n);
             return Expr::EAnf((), Box::new(anf));
         }
-        // finished with Anf expressions
         "fst" => {
-            // assert_children!(k, 1, n, c);
-            // let mut _c = c.clone();
-            // let mut cs = n.named_children(&mut _c);
-            // let a = cs.next().unwrap();
-            // let anf = parse_anf(src, c, a);
-            // return Expr::EAnf((), Box::new(anf));
             todo!();
         }
         "snd" => {
-            // assert!(n.named_child_count() == 1, "{k} #named_children: {}, ", n.named_child_count());
-            // let mut _c = c.clone();
-            // let mut cs = n.named_children(&mut _c);
-            // let a = cs.next().unwrap();
-            // let anf = parse_anf(src, c, a);
-            // Expr::EAnf((), Box::new(anf))
+            todo!();
+        }
+        "prj" => {
             todo!();
         }
         // EPrj(<EPrjExt as ξ<X>>::Ext, usize, Box<Anf<X>>),
@@ -290,6 +280,33 @@ mod parser_tests {
         assert_eq!(
             parse(r#"a && b && c"#).unwrap(),
             program!(b!("a" && "b" && "c"))
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn prods() {
+        assert_eq!(parse(r#"(a, b, c)"#).unwrap(), program!(b!("a", "b", "c")));
+        assert_eq!(
+            parse(r#"let x = (a, b) in fst x"#).unwrap(),
+            program!(lets!["x" ;= b!("a", "b"); ...? fst!("x")])
+        );
+        assert_eq!(
+            parse(r#"let x = (a, b) in snd x"#).unwrap(),
+            program!(lets!["x" ;= b!("a", "b"); ...? snd!("x")])
+        );
+        assert_eq!(
+            parse(r#"let x = (a, b) in prj 0 x"#).unwrap(),
+            program!(lets!["x" ;= b!("a", "b"); ...? prj!(0, "x")])
+        );
+    }
+
+    #[test]
+    #[ignore]
+    fn one_ite() {
+        assert_eq!(
+            parse(r#"if true then x else y"#).unwrap(),
+            program!(ite!( if ( b!(true) ) then { b!("x")  } else { b!("x") } ))
         );
     }
 
