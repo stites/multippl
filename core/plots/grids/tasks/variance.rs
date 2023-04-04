@@ -164,9 +164,9 @@ pub fn main(path: String, args: RunArgs) {
     } else {
         runs = args.runs;
         runchecks = args.runchecks;
-        assert!(runchecks < runs);
-        let ratio = (runs as f64 / runchecks as f64) as usize;
-        assert!(ratio < 4);
+        // assert!(runchecks < runs);
+        // let ratio = (runs as f64 / runchecks as f64) as usize;
+        // assert!(ratio < 4);
     }
     let mut csvname = String::from("");
     info!("checking l1  : {:?}", args.l1);
