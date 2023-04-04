@@ -92,6 +92,7 @@ enum CommandType {
     Duration(duration::RunArgs),
     Variance(variance::RunArgs),
     DurationStats,
+    VarianceStats(variance::StatArgs),
 }
 
 fn main() -> MyResult<()> {
@@ -122,6 +123,7 @@ fn main() -> MyResult<()> {
         Duration(args) => crate::duration::main(path, args.clone()),
         DurationStats => crate::duration::stats(path),
         Variance(args) => crate::variance::main(path, args.clone()),
+        VarianceStats(args) => crate::variance::stats(path, args.clone()),
     }
     // build_chart(rows);
     Ok(())

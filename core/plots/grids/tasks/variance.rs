@@ -126,11 +126,97 @@ fn runner(
     // todo!()
     // (key, todo!(), todo!(), todo!(), todo!())
 }
+#[derive(Parser, Debug, Clone)]
+pub struct StatArgs {
+    #[arg(long, short)]
+    pub gridsize: usize,
+    #[arg(long, short)]
+    pub comptype: CompileType,
+    #[arg(long, short)]
+    pub determinism: Det,
+    #[arg(long, short, default_value_t = 10000)]
+    pub steps: usize,
+    #[arg(long, short, default_value_t = 100)]
+    pub stepcheck: usize,
+    #[arg(long, short, default_value_t = 10)]
+    pub runs: u64,
+}
 
-// pub fn stats(path: String) {
-//     let paths = fs::read_dir(path).unwrap();
-//     todo!()
-// }
+pub fn read_csv(path: &str) -> MyResult<Vec<DataPoint>> {
+    let file = fs::OpenOptions::new().read(true).open(path).unwrap();
+    let mut rdr = ReaderBuilder::new()
+        .delimiter(b'\t')
+        .has_headers(true)
+        .from_reader(file);
+    let mut rows = vec![];
+    for result in rdr.deserialize() {
+        // The iterator yields MyResult<StringRecord, Error>, so we check the
+        // error here.
+        let record: DataPoint = result?;
+        rows.push(record);
+    }
+    Ok(rows)
+}
+
+pub fn stats(path: String, args: StatArgs) {
+    // println!("found #{}", paths.len());
+    // println!("found {:?}", paths);
+    let key = SummaryKey {
+        comptype: args.comptype,
+        gridsize: args.gridsize,
+        determinism: args.determinism,
+    };
+    let mut data: Vec<Vec<DataPoint>> = vec![];
+    for ix in 0..args.runs {
+        let csv = csvname(&args, ix as u64);
+        info!("...reading csv {:?}", csv);
+        let s = path.clone() + &csv;
+        let p = std::path::Path::new(&s);
+        if p.metadata().unwrap().is_file() {
+            let cpth = p.canonicalize().unwrap();
+            let pth = cpth.as_path();
+            let ostr = pth.to_str();
+            let pstr = ostr.unwrap();
+            println!("Processing... {}", pstr);
+            let rows = read_csv(pstr).unwrap();
+            data.push(rows);
+        }
+    }
+    let mut avgscsv = csvname(&args, 0);
+    avgscsv += "-avgs";
+    for step in 0..data[0].len() {
+        let mut sum = 0.0;
+        for run in 0..args.runs {
+            sum += data[run as usize][step].l1;
+        }
+        let avgpt = DataPoint {
+            key,
+            step,
+            l1: sum / (args.runs as f64),
+        };
+        write_csv_row(&avgscsv, &avgpt);
+    }
+}
+
+pub trait VArgs {
+    fn gridsize(&self) -> usize;
+    fn determinism(&self) -> Det;
+    fn steps(&self) -> usize;
+    fn stepcheck(&self) -> usize;
+}
+pub fn csvname(args: &impl VArgs, ix: u64) -> String {
+    let mut csvname = String::from("");
+    csvname += &format!("grid{:?}x{:?}-", args.gridsize(), args.gridsize());
+    csvname += "approx-"; // must be approx
+    csvname += &format!("d{:?}-", args.determinism());
+    csvname += &format!("n{:?}-", args.steps());
+    csvname += &format!("c{:?}-", args.stepcheck());
+    let startseed: u64 = (args.gridsize() as u64) * 100;
+    let seed = startseed + ix;
+    csvname += &format!("s{:?}", seed);
+    csvname += ".csv";
+    csvname
+}
 
 #[derive(Parser, Debug, Clone)]
 pub struct RunArgs {
@@ -158,6 +244,34 @@ pub struct RunArgs {
     pub debug: bool,
 }
 
+impl VArgs for StatArgs {
+    fn gridsize(&self) -> usize {
+        self.gridsize
+    }
+    fn determinism(&self) -> Det {
+        self.determinism
+    }
+    fn steps(&self) -> usize {
+        self.steps
+    }
+    fn stepcheck(&self) -> usize {
+        self.stepcheck
+    }
+}
+impl VArgs for RunArgs {
+    fn gridsize(&self) -> usize {
+        self.gridsize
+    }
+    fn determinism(&self) -> Det {
+        self.determinism
+    }
+    fn steps(&self) -> usize {
+        self.steps
+    }
+    fn stepcheck(&self) -> usize {
+        self.stepcheck
+    }
+}
 pub fn main(path: String, args: RunArgs) {
     let steps;
     let stepcheck;
@@ -174,30 +288,24 @@ pub fn main(path: String, args: RunArgs) {
         // let ratio = (steps as f64 / stepcheck as f64) as usize;
         // assert!(ratio < 4);
     }
-    let mut csvname = String::from("");
     info!("checking l1  : {:?}", args.l1);
     info!("overwrite csv: {:?}", args.overwrite_csv);
     info!("gridsize     : {:?}x{:?}", args.gridsize, args.gridsize);
-    csvname += &format!("grid{:?}x{:?}-", args.gridsize, args.gridsize);
     info!("comptype     : {:?}", args.comptype);
-    csvname += "approx-"; // must be approx
     info!("determinism  : {:?}", args.determinism);
-    csvname += &format!("d{:?}-", args.determinism);
     info!("steps        : {:?}", steps);
-    csvname += &format!("n{:?}-", steps);
     info!("step check   : {:?}", stepcheck);
     info!("# runs       : {:?}", args.runs);
-    csvname += &format!("c{:?}-", stepcheck);
     let startseed: u64 = args.seed.unwrap_or_else(|| (args.gridsize as u64) * 100);
     info!("start seed   : {:?}", startseed);
     let _ = fs::create_dir_all(path.clone());
 
     for ix in 0..args.runs {
         let seed = startseed + (ix as u64);
-        let mut csv = csvname.clone();
-        csv += &format!("s{:?}", seed);
-        csv += ".csv";
-        let csv = args.csv.clone().unwrap_or_else(|| csv);
+        let csv: String = args
+            .csv
+            .clone()
+            .unwrap_or_else(|| csvname(&args, ix as u64));
         info!("...outputting to csv {}", csv);
         let csvpath = &(path.clone() + &csv);
         // let (key, data, expectations, ws, result) = runner(
