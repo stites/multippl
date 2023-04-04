@@ -11,7 +11,7 @@ for gridsize in 3 4; do
               --gridsize $gridsize \
               --comptype approx \
               --determinism $determinism \
-              --steps 10000 \
+              --steps 1000000 \
               --runs 3; then
             noti -o -m "${gridsize} ${determinism} done"
          fi
