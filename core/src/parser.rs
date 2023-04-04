@@ -118,18 +118,49 @@ fn parse_anf_node(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable {
     }
 }
 
+fn parse_float_h(src: &[u8], c: &mut TreeCursor, n: Node) -> f64 {
+    let utf8 = n.utf8_text(src).unwrap();
+    let fstr = String::from_utf8(utf8.into()).unwrap();
+    fstr.parse::<f64>().unwrap()
+}
+fn parse_float(src: &[u8], c: &mut TreeCursor, n: Node) -> f64 {
+    match n.named_child_count() {
+        0 => parse_float_h(src, c, n),
+        1 => {
+            let mut c_ = c.clone();
+            let mut cs = n.named_children(&mut c_);
+            let fnode = cs.next().unwrap();
+            parse_float_h(src, c, fnode)
+        }
+        2 => panic!("impossible"),
+        3 => {
+            // division operation
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let l = cs.next().unwrap();
+            let l = parse_float(src, c, l);
+
+            let op = cs.next().unwrap();
+            let utf8 = op.utf8_text(src).unwrap();
+            let op = String::from_utf8(utf8.into()).unwrap();
+            assert!(
+                op == "/".to_string(),
+                "invalid program found!\nsexp: {}",
+                n.to_sexp()
+            );
+
+            let r = cs.next().unwrap();
+            let r = parse_float(src, c, r);
+
+            l / r
+        }
+        _ => panic!("unexpected"),
+    }
+}
 fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ExprInferable {
     let k = n.kind();
     match k {
-        // values
-        "float" => {
-            assert!(n.named_child_count() == 1, "{k} #named_children: {}\nsexp: {}", n.named_child_count(), n.to_sexp());
-            todo!()
-        }
-        "float_op" => {
-            assert!(n.named_child_count() == 2, "{k} #named_children: {}\nsexp: {}", n.named_child_count(), n.to_sexp());
-            todo!()
-        }
         "anf" => {
             println!("{}", n.to_sexp());
             let anf = parse_anf(src, c, *n);
@@ -137,20 +168,22 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ExprInferable {
         }
         // finished with Anf expressions
         "fst" => {
-            assert_children!(k, 1, n, c);
-            let mut _c = c.clone();
-            let mut cs = n.named_children(&mut _c);
-            let a = cs.next().unwrap();
-            let anf = parse_anf(src, c, a);
-            return Expr::EAnf((), Box::new(anf));
+            // assert_children!(k, 1, n, c);
+            // let mut _c = c.clone();
+            // let mut cs = n.named_children(&mut _c);
+            // let a = cs.next().unwrap();
+            // let anf = parse_anf(src, c, a);
+            // return Expr::EAnf((), Box::new(anf));
+            todo!();
         }
         "snd" => {
-            assert!(n.named_child_count() == 1, "{k} #named_children: {}, ", n.named_child_count());
-            let mut _c = c.clone();
-            let mut cs = n.named_children(&mut _c);
-            let a = cs.next().unwrap();
-            let anf = parse_anf(src, c, a);
-            Expr::EAnf((), Box::new(anf))
+            // assert!(n.named_child_count() == 1, "{k} #named_children: {}, ", n.named_child_count());
+            // let mut _c = c.clone();
+            // let mut cs = n.named_children(&mut _c);
+            // let a = cs.next().unwrap();
+            // let anf = parse_anf(src, c, a);
+            // Expr::EAnf((), Box::new(anf))
+            todo!();
         }
         // EPrj(<EPrjExt as ξ<X>>::Ext, usize, Box<Anf<X>>),
         "prod" => {
@@ -172,36 +205,41 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ExprInferable {
             todo!()
         }
         "let_binding" => {
-            // assert!(n.named_child_count() == 4, "{k} #named_children: {}\nsexp: {}", n.named_child_count(), n.to_sexp());
-            assert_children!(k, 4, n, c);
+            assert_children!(k, 3, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
-            let l = cs.next(); println!("{l:?}");
-            let l = cs.next(); println!("{l:?}");
-            let l = cs.next(); println!("{l:?}");
-            let l = cs.next(); println!("{l:?}");
-            let l = cs.next(); println!("{l:?}");
-            let l = cs.next(); println!("{l:?}");
-            let l = cs.next(); println!("{l:?}");
-            let l = cs.next(); println!("{l:?}");
 
-            todo!()
+            let ident = cs.next().unwrap();
+            let utf8 = ident.utf8_text(src).unwrap();
+            let ident = String::from_utf8(utf8.into()).unwrap();
+
+            let bindee = cs.next().unwrap();
+            let bindee = parse_expr(src, c, &bindee);
+
+            let body = cs.next().unwrap();
+            let body = parse_expr(src, c, &body);
+            Expr::ELetIn(None, ident, Box::new(bindee), Box::new(body))
         }
         "ite_binding" => {
             assert!(n.named_child_count() == 4, "{k} #named_children: {}\nsexp: {}", n.named_child_count(), n.to_sexp());
             todo!()
         }
         "flip" => {
-            assert!(n.named_child_count() == 1, "{k} #named_children: {}\nsexp: {}", n.named_child_count(), n.to_sexp());
-            todo!()
+            println!("{}", n.to_sexp());
+            let f = parse_float(src, c, *n);
+            Expr::EFlip((), f)
         }
         "observe" => {
-            assert!(n.named_child_count() == 1, "{k} #named_children: {}\nsexp: {}", n.named_child_count(), n.to_sexp());
-            todo!()
+            let anf = parse_anf(src, c, *n);
+            Expr::EObserve((), Box::new(anf))
         }
         "sample" => {
-            assert!(n.named_child_count() == 1, "{k} #named_children: {}\nsexp: {}", n.named_child_count(), n.to_sexp());
-            todo!()
+            println!("{}", n.to_sexp());
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+            let subp = cs.next().unwrap();
+            let e = parse_expr(src, c, &subp);
+            Expr::ESample((), Box::new(e))
         }
         s => panic!(
             "unexpected tree-sitter node kind `{}` (#named_children: {})! Likely, you need to rebuild the tree-sitter parser\nsexp: {}", s, n.named_child_count(), n.to_sexp()
@@ -270,13 +308,117 @@ mod parser_tests {
     ///     (anf (bool))
     ///   (anf (identifier))))
     #[test]
-    #[ignore]
     fn one_let() {
         let code = r#"let x = true in x"#;
         let expr = parse(code);
         assert_eq!(
             expr.unwrap(),
             program!(lets!["x" ;= b!("true"); in var!("x")])
+        );
+    }
+
+    /// ======================
+    /// exact: one untyped flip
+    /// ======================
+    ///
+    /// let x = flip (1/3) in
+    /// x
+    /// ---
+    ///
+    /// (source_file
+    ///   (let_binding
+    ///     (identifier) (flip (float) (float_op) (float))
+    ///     (anf (identifier))))
+    #[test]
+    fn one_untyped_flip() {
+        assert_eq!(
+            parse(r#"let x = flip 0.5 in x"#).unwrap(),
+            program!(lets!["x" ;= flip!(0.5); in var!("x")])
+        );
+        assert_eq!(
+            parse(r#"let x = flip (1/3) in x"#).unwrap(),
+            program!(lets!["x" ;= flip!(1.0/3.0); in var!("x")])
+        );
+    }
+
+    /// ===========================
+    /// exact: observed two flips
+    /// ===========================
+    ///
+    /// let x = flip 0.3333 in
+    /// let y = flip 1/4 in
+    /// let _ = observe (x || y) in
+    /// x
+    ///
+    /// ---
+    ///
+    ///
+    /// (source_file
+    ///   (let_binding
+    ///     (identifier)
+    ///     (flip (float))
+    ///   (let_binding
+    ///     (identifier)
+    ///     (flip (float) (float_op) (float))
+    ///   (let_binding
+    ///     (identifier)
+    ///     (observe (anf (anf (identifier)) (bool_biop) (anf (identifier))))
+    ///   (anf (identifier))))))
+    #[test]
+    fn observed_two_flips() {
+        let code = r#"
+        let x = flip 0.3333 in
+        let y = flip 1/4 in
+        let _ = observe (x || y) in
+        x"#;
+        let expr = parse(code);
+        assert_eq!(
+            expr.unwrap(),
+            program!(lets![
+                "x" ;= flip!(0.3333);
+                "y" ;= flip!(1.0/4.0);
+                "_" ;= observe!(b!("x" || "y"));
+                ...? b!("x")])
+        );
+    }
+
+    /// ======================
+    /// approx: observed two flips
+    /// ======================
+    ///
+    /// let x = sample (flip 1/3) in
+    /// let y = flip 1/4 in
+    /// let _ = observe (x || y) in
+    /// x
+    ///
+    /// ---
+    ///
+    /// (source_file
+    ///   (let_binding
+    ///     (identifier)
+    ///     (sample (flip (float) (float_op) (float)))
+    ///   (let_binding
+    ///     (identifier)
+    ///     (flip (float) (float_op) (float))
+    ///   (let_binding
+    ///     (identifier)
+    ///     (observe (anf (anf (identifier)) (bool_biop) (anf (identifier))))
+    ///   (anf (identifier))))))
+    #[test]
+    fn observed_two_flips_with_sample() {
+        let code = r#"
+        let x = sample (flip 1/3) in
+        let y = flip 1/4 in
+        let _ = observe (x || y) in
+        x"#;
+        let expr = parse(code);
+        assert_eq!(
+            expr.unwrap(),
+            program!(lets![
+                "x" ;= sample!(flip!(1.0/3.0));
+                "y" ;= flip!(1.0/4.0);
+                "_" ;= observe!(b!("x" || "y"));
+                ...? b!("x")])
         );
     }
 }
