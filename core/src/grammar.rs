@@ -418,6 +418,29 @@ where
             _ => self.clone(),
         }
     }
+    pub fn insert_observe(&self, e: Expr<X>) -> Expr<X> {
+        use Expr::*;
+        match self {
+            ELetIn(ex, s, x, body) => {
+                let body = match &**body {
+                    ELetIn(_, _, _, _) => body.insert_observe(e),
+                    _ => ELetIn(
+                        ex.clone(),
+                        "_".to_string(),
+                        Box::new(e.clone()),
+                        body.clone(),
+                    ),
+                };
+                ELetIn(
+                    ex.clone(),
+                    s.to_string(),
+                    Box::new(*x.clone()),
+                    Box::new(body),
+                )
+            }
+            _ => self.clone(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -501,6 +524,12 @@ where
         use Program::*;
         match self {
             Body(e) => e.query(),
+        }
+    }
+    pub fn insert_observe(&self, e: Expr<X>) -> Program<X> {
+        use Program::*;
+        match self {
+            Body(b) => Body(b.insert_observe(e)),
         }
     }
 }

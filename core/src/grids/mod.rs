@@ -13,6 +13,7 @@ use std::collections::{HashMap, HashSet, VecDeque};
 use tracing::*;
 use tracing_test::traced_test;
 
+pub mod generate;
 #[cfg(test)]
 mod tests;
 

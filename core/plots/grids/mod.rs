@@ -25,7 +25,6 @@ use yodel::typeinf::grammar::*;
 
 pub mod csv_rw;
 mod data;
-pub mod generate;
 pub mod tasks;
 use crate::csv_rw::*;
 use crate::data::*;

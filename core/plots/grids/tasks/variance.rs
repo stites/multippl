@@ -1,6 +1,7 @@
 use crate::*;
 use csv::{ReaderBuilder, WriterBuilder};
 use std::time::Instant;
+use yodel::grids::generate;
 use yodel::inference::*;
 
 pub struct QueryRet(Vec<f64>);
@@ -48,7 +49,8 @@ fn ess(ws: &[Importance]) -> f64 {
     // 1.0 / ws.iter().map(Importance::weight).sum::<f64>()
     todo!()
 }
-fn runner(
+fn runner_h(
+    prg: ProgramInferable,
     gridsize: usize,
     comptype: CompileType,
     determinism: Det,
@@ -56,7 +58,7 @@ fn runner(
     _runchecks: usize,
     seed: Option<u64>,
     l1: bool,
-    csvpath: (&str, bool),
+    csvpath: &str,
 ) {
     // ) -> (
     //     SummaryKey,
@@ -65,22 +67,9 @@ fn runner(
     //     Vec<Importance>,
     //     Vec<QueryRet>,
     // ) {
-    if fs::metadata(csvpath.0).is_ok() && !csvpath.1 {
-        error!("csv file {} exists! Refusing to run.", csvpath.0);
-        std::process::exit(0x0001);
-    }
-    let csvpath = csvpath.0;
-    let _ = write_csv_header(csvpath);
-
     debug!("begin running");
     use CompileType::*;
-    let synthesize_seed = 5;
-    let prg = generate::program(
-        gridsize,
-        comptype.use_sampled(),
-        synthesize_seed,
-        determinism.to_f64(),
-    );
+
     let opts = yodel::Options::new(seed, false, false, 0);
     let key = SummaryKey {
         comptype,
@@ -122,10 +111,67 @@ fn runner(
             println!("------------------------------");
         }
     }
-
-    // todo!()
-    // (key, todo!(), todo!(), todo!(), todo!())
 }
+fn runner(
+    sliding_obs: bool,
+    gridsize: usize,
+    comptype: CompileType,
+    determinism: Det,
+    runs: usize,
+    _runchecks: usize,
+    seed: Option<u64>,
+    l1: bool,
+    csvpath: (&str, bool),
+) {
+    let synthesize_seed = 5;
+    let prg = generate::program(
+        gridsize,
+        comptype.use_sampled(),
+        synthesize_seed,
+        determinism.to_f64(),
+    );
+    if !sliding_obs {
+        let csv = csvpath.0.to_owned() + ".csv";
+        if fs::metadata(&csv).is_ok() && !csvpath.1 {
+            error!("csv file {} exists! Refusing to run.", csv);
+            std::process::exit(0x0001);
+        }
+        let _ = write_csv_header(&csv);
+        runner_h(
+            prg,
+            gridsize,
+            comptype,
+            determinism,
+            runs,
+            _runchecks,
+            seed,
+            l1,
+            &csv,
+        )
+    } else {
+        for (i, p) in generate::sliding_observes(&prg).iter().enumerate() {
+            let csv = csvpath.0.to_owned() + &format!("obs{}.csv", i);
+            if fs::metadata(&csv).is_ok() && !csvpath.1 {
+                error!("csv file {} exists! Refusing to run.", csv);
+                std::process::exit(0x0001);
+            }
+            let _ = write_csv_header(&csv);
+            println!("{:#?}", p);
+            runner_h(
+                p.clone(),
+                gridsize,
+                comptype,
+                determinism,
+                runs,
+                _runchecks,
+                seed,
+                l1,
+                &csv,
+            )
+        }
+    }
+}
+
 #[derive(Parser, Debug, Clone)]
 pub struct StatArgs {
     #[arg(long, short)]
@@ -168,7 +214,8 @@ pub fn stats(path: String, args: StatArgs) {
     };
     let mut data: Vec<Vec<DataPoint>> = vec![];
     for ix in 0..args.runs {
-        let csv = csvname(&args, ix as u64);
+        let mut csv = csvname_noext(&args, ix as u64);
+        csv += ".csv";
         info!("...reading csv {:?}", csv);
         let s = path.clone() + &csv;
         let p = std::path::Path::new(&s);
@@ -182,8 +229,8 @@ pub fn stats(path: String, args: StatArgs) {
             data.push(rows);
         }
     }
-    let mut avgscsv = csvname(&args, 0);
-    avgscsv += "-avgs";
+    let mut avgscsv = csvname_noext(&args, 0);
+    avgscsv += "-avgs.csv";
     for step in 0..data[0].len() {
         let mut sum = 0.0;
         for run in 0..args.runs {
@@ -194,7 +241,7 @@ pub fn stats(path: String, args: StatArgs) {
             step,
             l1: sum / (args.runs as f64),
         };
-        write_csv_row(&avgscsv, &avgpt);
+        let _ = write_csv_row(&avgscsv, &avgpt);
     }
 }
 
@@ -204,7 +251,7 @@ pub trait VArgs {
     fn steps(&self) -> usize;
     fn stepcheck(&self) -> usize;
 }
-pub fn csvname(args: &impl VArgs, ix: u64) -> String {
+pub fn csvname_noext(args: &impl VArgs, ix: u64) -> String {
     let mut csvname = String::from("");
     csvname += &format!("grid{:?}x{:?}-", args.gridsize(), args.gridsize());
     csvname += "approx-"; // must be approx
@@ -214,7 +261,6 @@ pub fn csvname(args: &impl VArgs, ix: u64) -> String {
     let startseed: u64 = (args.gridsize() as u64) * 100;
     let seed = startseed + ix;
     csvname += &format!("s{:?}", seed);
-    csvname += ".csv";
     csvname
 }
 
@@ -242,6 +288,8 @@ pub struct RunArgs {
     pub overwrite_csv: bool,
     #[arg(long, short, default_value_t = false)]
     pub debug: bool,
+    #[arg(long, short, default_value_t = false)]
+    pub sliding_obs: bool,
 }
 
 impl VArgs for StatArgs {
@@ -302,14 +350,15 @@ pub fn main(path: String, args: RunArgs) {
 
     for ix in 0..args.runs {
         let seed = startseed + (ix as u64);
-        let csv: String = args
+        let csv_noext: String = args
             .csv
             .clone()
-            .unwrap_or_else(|| csvname(&args, ix as u64));
-        info!("...outputting to csv {}", csv);
-        let csvpath = &(path.clone() + &csv);
+            .unwrap_or_else(|| csvname_noext(&args, ix as u64));
+        info!("...outputting to csv {} (no extension)", csv_noext);
+        let csvpath_noext = &(path.clone() + &csv_noext);
         // let (key, data, expectations, ws, result) = runner(
         runner(
+            args.sliding_obs,
             args.gridsize,
             args.comptype,
             args.determinism,
@@ -317,7 +366,7 @@ pub fn main(path: String, args: RunArgs) {
             stepcheck,
             Some(seed),
             args.l1,
-            (csvpath, args.overwrite_csv),
+            (csvpath_noext, args.overwrite_csv),
         );
     }
 }
