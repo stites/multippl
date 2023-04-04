@@ -255,6 +255,10 @@
               (python3.withPackages (p:
                 with p; [
                   graphviz
+                  matplotlib
+                  seaborn
+                  numpy
+                  pandas
                 ]))
               # plotters dependencies
               zlib.dev

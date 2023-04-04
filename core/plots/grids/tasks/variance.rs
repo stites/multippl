@@ -156,7 +156,6 @@ fn runner(
                 std::process::exit(0x0001);
             }
             let _ = write_csv_header(&csv);
-            println!("{:#?}", p);
             runner_h(
                 p.clone(),
                 gridsize,
