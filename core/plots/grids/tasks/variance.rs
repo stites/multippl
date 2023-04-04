@@ -1,5 +1,5 @@
 use crate::*;
-use csv::{ReaderBuilder, WriterBuilder};
+use ::csv::{ReaderBuilder, WriterBuilder};
 use std::time::Instant;
 use yodel::inference::*;
 
