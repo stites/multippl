@@ -118,7 +118,7 @@ impl Row {
     }
 }
 
-#[derive(Clone, Copy, Hash, Eq, PartialEq, Debug)]
+#[derive(Clone, Copy, Hash, Eq, PartialEq, Debug, serde::Deserialize)]
 pub enum Det {
     Zero,
     TwentyFivePer,
@@ -175,7 +175,7 @@ impl Det {
         }
     }
 }
-#[derive(Clone, Copy, Hash, Eq, PartialEq, Debug)]
+#[derive(Clone, Copy, Hash, Eq, PartialEq, Debug, serde::Deserialize)]
 pub struct SummaryKey {
     pub comptype: CompileType,
     pub gridsize: usize,
