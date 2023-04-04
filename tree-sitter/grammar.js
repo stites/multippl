@@ -13,11 +13,12 @@ module.exports = grammar({
       $.observe,
       $.sample,
       // seq($._function_name, '(', $.anf ,')'),
-      $.anf,
       $.ann,
       $.fst,
       $.snd,
+      $.prj,
       $.prod,
+      $.anf,
       seq('(', $._expr, ')')
     ),
     ty: $ => choice($.tBool, $.tProd),
@@ -30,7 +31,10 @@ module.exports = grammar({
 
     fst: $ => seq('fst', $.anf),
     snd: $ => seq('snd', $.anf),
-    prj: $ => seq('prj', $.index, $.anf),
+    prj: $ => choice(
+        seq('prj',  $.index, $.anf ),
+        seq('prj', '(', $.index, ',', $.anf, ')'),
+    ),
     index: $ => /\d+/,
 
     prod: $ => choice(

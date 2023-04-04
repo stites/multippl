@@ -31,10 +31,6 @@
         },
         {
           "type": "SYMBOL",
-          "name": "anf"
-        },
-        {
-          "type": "SYMBOL",
           "name": "ann"
         },
         {
@@ -47,7 +43,15 @@
         },
         {
           "type": "SYMBOL",
+          "name": "prj"
+        },
+        {
+          "type": "SYMBOL",
           "name": "prod"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "anf"
         },
         {
           "type": "SEQ",
@@ -183,19 +187,53 @@
       ]
     },
     "prj": {
-      "type": "SEQ",
+      "type": "CHOICE",
       "members": [
         {
-          "type": "STRING",
-          "value": "prj"
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "prj"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "index"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "anf"
+            }
+          ]
         },
         {
-          "type": "SYMBOL",
-          "name": "index"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "anf"
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "prj"
+            },
+            {
+              "type": "STRING",
+              "value": "("
+            },
+            {
+              "type": "SYMBOL",
+              "name": "index"
+            },
+            {
+              "type": "STRING",
+              "value": ","
+            },
+            {
+              "type": "SYMBOL",
+              "name": "anf"
+            },
+            {
+              "type": "STRING",
+              "value": ")"
+            }
+          ]
         }
       ]
     },

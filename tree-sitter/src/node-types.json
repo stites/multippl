@@ -67,6 +67,10 @@
           "named": true
         },
         {
+          "type": "prj",
+          "named": true
+        },
+        {
           "type": "prod",
           "named": true
         },
@@ -171,6 +175,10 @@
           "named": true
         },
         {
+          "type": "prj",
+          "named": true
+        },
+        {
           "type": "prod",
           "named": true
         },
@@ -226,6 +234,10 @@
           "named": true
         },
         {
+          "type": "prj",
+          "named": true
+        },
+        {
           "type": "prod",
           "named": true
         },
@@ -254,6 +266,25 @@
       "types": [
         {
           "type": "anf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "prj",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "anf",
+          "named": true
+        },
+        {
+          "type": "index",
           "named": true
         }
       ]
@@ -308,6 +339,10 @@
         },
         {
           "type": "observe",
+          "named": true
+        },
+        {
+          "type": "prj",
           "named": true
         },
         {
@@ -374,6 +409,10 @@
         },
         {
           "type": "observe",
+          "named": true
+        },
+        {
+          "type": "prj",
           "named": true
         },
         {

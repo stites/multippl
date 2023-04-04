@@ -167,34 +167,45 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ExprInferable {
             return Expr::EAnf((), Box::new(anf));
         }
         "fst" => {
-            todo!();
+            let mut c_ = c.clone();
+            let mut cs = n.named_children(&mut c_);
+            let anf = cs.next().unwrap();
+            let anf = parse_anf(src, c, anf);
+            Expr::EFst(None, Box::new(anf))
         }
         "snd" => {
-            todo!();
+            let mut c_ = c.clone();
+            let mut cs = n.named_children(&mut c_);
+            let anf = cs.next().unwrap();
+            let anf = parse_anf(src, c, anf);
+            Expr::ESnd(None, Box::new(anf))
         }
         "prj" => {
-            todo!();
+            let mut c_ = c.clone();
+            let mut cs = n.named_children(&mut c_);
+
+            let i = cs.next().unwrap();
+            let utf8 = i.utf8_text(src).unwrap();
+            let istr = String::from_utf8(utf8.into()).unwrap();
+            let ix = istr.parse::<usize>().unwrap();
+
+            let anf = cs.next().unwrap();
+            let anf = parse_anf(src, c, anf);
+            Expr::EPrj(None, ix, Box::new(anf))
         }
-        // EPrj(<EPrjExt as ξ<X>>::Ext, usize, Box<Anf<X>>),
         "prod" => {
-            assert!(n.named_child_count() == 2, "{k} #named_children: {}\nsexp: {}", n.named_child_count(), n.to_sexp());
+            let mut anfs = vec![];
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
-            let l = cs.next().unwrap();
-            let l = parse_anf(src, c, l);
-
-            let r = cs.next().unwrap();
-            let r = parse_anf(src, c, r);
-
-            assert!(cs.next().is_none(), "{k}");
-            // Expr::EProd(
-            //     Box::new(l),
-            //     Box::new(r),
-            //     Box::new(Ty::Prod(Box::new(tyl), Box::new(tyr))),
-            // )
-            todo!()
+            for _ in 0..n.named_child_count() {
+                let a = cs.next().unwrap();
+                let a = parse_anf(src, c, a);
+                anfs.push(a);
+            }
+            Expr::EProd(None, anfs)
         }
         "let_binding" => {
+            println!("{}", n.to_sexp());
             assert_children!(k, 3, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
@@ -211,8 +222,20 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ExprInferable {
             Expr::ELetIn(None, ident, Box::new(bindee), Box::new(body))
         }
         "ite_binding" => {
-            assert!(n.named_child_count() == 4, "{k} #named_children: {}\nsexp: {}", n.named_child_count(), n.to_sexp());
-            todo!()
+            println!("{}", n.to_sexp());
+            assert_children!(k, 3, n, c);
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let pred = cs.next().unwrap();
+            let pred = parse_anf(src, c, pred);
+
+            let tbranch = cs.next().unwrap();
+            let tbranch = parse_expr(src, c, &tbranch);
+
+            let fbranch = cs.next().unwrap();
+            let fbranch = parse_expr(src, c, &fbranch);
+            Expr::EIte(None, Box::new(pred), Box::new(tbranch), Box::new(fbranch))
         }
         "flip" => {
             println!("{}", n.to_sexp());
@@ -284,7 +307,6 @@ mod parser_tests {
     }
 
     #[test]
-    #[ignore]
     fn prods() {
         assert_eq!(parse(r#"(a, b, c)"#).unwrap(), program!(b!("a", "b", "c")));
         assert_eq!(
@@ -296,17 +318,16 @@ mod parser_tests {
             program!(lets!["x" ;= b!("a", "b"); ...? snd!("x")])
         );
         assert_eq!(
-            parse(r#"let x = (a, b) in prj 0 x"#).unwrap(),
+            parse(r#"let x = (a, b) in (prj 0 x)"#).unwrap(),
             program!(lets!["x" ;= b!("a", "b"); ...? prj!(0, "x")])
         );
     }
 
     #[test]
-    #[ignore]
     fn one_ite() {
         assert_eq!(
             parse(r#"if true then x else y"#).unwrap(),
-            program!(ite!( if ( b!(true) ) then { b!("x")  } else { b!("x") } ))
+            program!(ite!( if ( b!(true) ) then { b!("x")  } else { b!("y") } ))
         );
     }
 
