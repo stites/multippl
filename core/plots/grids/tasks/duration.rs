@@ -20,10 +20,7 @@ fn runner(
         determinism,
     );
     let start = Instant::now();
-    let opts = yodel::Options {
-        seed,
-        ..Default::default()
-    };
+    let opts = yodel::Options::new(seed, false, false, 0);
     let stats = match comptype {
         Exact => exact_with(&prg).1,
         Approx => importance_weighting_h(1, &prg, &opts).1,

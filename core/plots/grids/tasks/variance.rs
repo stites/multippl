@@ -81,10 +81,7 @@ fn runner(
         synthesize_seed,
         determinism.to_f64(),
     );
-    let opts = yodel::Options {
-        seed,
-        ..Default::default()
-    };
+    let opts = yodel::Options::new(seed, false, false, 0);
     let key = SummaryKey {
         comptype,
         gridsize,

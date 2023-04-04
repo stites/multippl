@@ -668,8 +668,11 @@ impl Iterator for SamplingIter {
         if self.current_step >= self.max_steps {
             return None;
         }
-        match crate::runner_h(&self.program, &mut self.manager, &self.opt) {
-            Ok((cs, inv)) => {
+        match crate::runner_h_h(&self.program, &mut self.manager, &self.opt) {
+            Ok((cs, inv, rng)) => {
+                let mut newopt = self.opt.clone();
+                newopt.seed = rng;
+                self.opt = newopt;
                 let c = cs.as_output()?;
                 let step = self.current_step;
 
@@ -678,6 +681,7 @@ impl Iterator for SamplingIter {
                 self.max_stats = self.max_stats.largest_of(&stats);
                 let expectations = Expectations::new(c.importance.clone(), query_result.clone());
                 self.current_exp.mut_add(&expectations);
+
                 let stop = Instant::now();
                 let duration = stop.duration_since(self.start);
                 Some(SamplingResult {

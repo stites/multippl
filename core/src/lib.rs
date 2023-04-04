@@ -27,16 +27,17 @@ mod tests;
 
 #[derive(Default, Debug, Clone)]
 pub struct Options {
-    pub seed: Option<u64>,
+    // pub seed: Option<u64>,
+    pub seed: Option<StdRng>,
     pub debug: bool, // overrides seed
     pub opt: bool,   // use optimizations
     pub stats_window: u64,
 }
 impl Options {
     pub fn rng(&self) -> StdRng {
-        match self.seed {
+        match &self.seed {
             None => rand::SeedableRng::from_entropy(),
-            Some(s) => rand::SeedableRng::seed_from_u64(s),
+            Some(s) => s.clone(),
         }
     }
     pub fn stoch() -> Self {
@@ -44,7 +45,7 @@ impl Options {
     }
     pub fn seed(s: u64) -> Self {
         Self {
-            seed: Some(s),
+            seed: Some(rand::SeedableRng::seed_from_u64(s)),
             ..Default::default()
         }
     }
@@ -62,7 +63,7 @@ impl Options {
         stats_window: u64, // use optimizations
     ) -> Self {
         Self {
-            seed,
+            seed: seed.map(|s| rand::SeedableRng::seed_from_u64(s)),
             debug,
             opt,
             stats_window,
@@ -115,6 +116,15 @@ pub fn make_mgr(p: &ProgramInferable) -> Mgr {
 }
 
 pub fn runner_h(p: &ProgramInferable, mgr: &mut Mgr, opt: &Options) -> Result<(Compiled, InvMap)> {
+    let (a, b, c) = runner_h_h(p, mgr, opt)?;
+    Ok((a, b))
+}
+
+pub fn runner_h_h(
+    p: &ProgramInferable,
+    mgr: &mut Mgr,
+    opt: &Options,
+) -> Result<(Compiled, InvMap, Option<StdRng>)> {
     // , Analysis)> {
     let p = typeinference(p)?;
     let p = typecheck(&p)?;
@@ -122,10 +132,6 @@ pub fn runner_h(p: &ProgramInferable, mgr: &mut Mgr, opt: &Options) -> Result<(C
     let p = senv.uniquify(&p)?.0;
     let mut lenv = LabelEnv::new();
     let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
-
-    // let mut aenv = AnalysisEnv::new(&varmap);
-    // let (p, ab) = aenv.decorate(&p, opt.opt)?;
-    // let ig = aenv.interaction_graph()?;
 
     let mut rng = opt.rng();
     let orng = if opt.debug { None } else { Some(&mut rng) };
@@ -135,7 +141,7 @@ pub fn runner_h(p: &ProgramInferable, mgr: &mut Mgr, opt: &Options) -> Result<(C
 
     let c = compile(&mut env, &p)?;
     tracing::debug!("hurray!");
-    Ok((c, inv)) // , ab))
+    Ok((c, inv, env.rng.cloned()))
 }
 
 #[cfg(test)]
