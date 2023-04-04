@@ -277,6 +277,21 @@
         "type": "github"
       }
     },
+    "nixlib": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_2"
+      },
+      "locked": {
+        "lastModified": 1680641464,
+        "narHash": "sha256-Hor3gilytJ6UV8uwFBRHv16e3Hsausvx2laBOBn8VQk=",
+        "path": "/home/stites/git/nix/nixlib",
+        "type": "path"
+      },
+      "original": {
+        "path": "/home/stites/git/nix/nixlib",
+        "type": "path"
+      }
+    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1671359686,
@@ -326,6 +341,20 @@
       }
     },
     "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1680242334,
+        "narHash": "sha256-HlCbTg1oj6cWLtdQ9Gi8p27t4bde9cSWgtmWrBXdh8w=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "f30990fc98b8468eba13d75f6c4c2190a61073ea",
+        "type": "github"
+      },
+      "original": {
+        "id": "nixpkgs",
+        "type": "indirect"
+      }
+    },
+    "nixpkgs_3": {
       "locked": {
         "lastModified": 1678898370,
         "narHash": "sha256-xTICr1j+uat5hk9FyuPOFGxpWHdJRibwZC+ATi0RbtE=",
@@ -459,7 +488,8 @@
           "crane",
           "flake-utils"
         ],
-        "nixpkgs": "nixpkgs_2",
+        "nixlib": "nixlib",
+        "nixpkgs": "nixpkgs_3",
         "pre-commit-hooks": "pre-commit-hooks",
         "rsdd": "rsdd_2"
       }

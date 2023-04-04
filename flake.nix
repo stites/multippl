@@ -14,6 +14,9 @@
     advisory-db.url = "github:rustsec/advisory-db";
     advisory-db.flake = false;
 
+    #nixlib.url = "github:stites/nixlib";
+    nixlib.url = "path:/home/stites/git/nix/nixlib";
+
     # clean up dependencies
     flake-utils.follows = "crane/flake-utils";
     devenv.inputs.flake-compat.follows = "crane/flake-compat";
@@ -32,6 +35,7 @@
     self,
     nixpkgs,
     devenv,
+    nixlib,
     ...
   } @ inputs: let
     flklib = inputs.flake-utils.lib;
@@ -189,45 +193,10 @@
         default = inputs.flake-utils.lib.mkApp {
           drv = my-crate;
         };
-        cachix-push = with pkgs;
-        with lib.strings; let
-          script = writeScriptBin "cachix-push" (concatStringsSep "\n" [
-            # Push flake inputs: as flake inputs are downloaded from the
-            # internet, they can disappear
-            ''
-              nix flake archive --json \
-                | jq -r '.path,(.inputs|to_entries[].value.path)' \
-                | ${pkgs.cachix}/bin/cachix push ${cache}
-            ''
-            # Pushing runtime closure of all packages in a flake:
-            ''
-              nix build --json \
-                | jq -r '.[].outputs | to_entries[].value' \
-                | ${pkgs.cachix}/bin/cachix push ${cache}
-            ''
-            # Pushing shell environment
-            ''
-              nix develop --profile dev-profile
-              ${pkgs.cachix}/bin/cachix push mycache dev-profile
-            ''
-          ]);
-        in {
-          type = "app";
-          program = "${script}/bin/cachix-push";
-        };
-
-        cachix-pull = with pkgs;
-        with lib.strings; let
-          script = writeScriptBin "cachix-pull" (concatStringsSep "\n" [
-            # Optional as we already set substituters above
-            # "${pkgs.cachix}/bin/cachix use ${cache}"
-            "nix build" # build with cachix
-            "nix develop --profile dev-profile --command 'exit 0'" # build dev shell with cachix
-            # this last line is important for bootstrapping, especially if you use nix-direnv
-          ]);
-        in {
-          type = "app";
-          program = "${script}/bin/cachix-pull";
+        cachix-pull = nixlib.lib.apps.cachix-pull {inherit pkgs;};
+        cachix-push = nixlib.lib.apps.cachix-push {
+          inherit pkgs;
+          cache = "stites";
         };
       };
 
@@ -311,37 +280,11 @@
               ;
             # shell block
             env.DEVSHELL = "devshell+flake.nix";
-            enterShell = with builtins; let
-              over = p: def: f:
-                if hasAttr "pname" p
-                then f
-                else def;
-              n =
-                foldl' (mx: p: let
-                  l = over p (stringLength p.name) (stringLength p.pname);
-                in
-                  if l > mx
-                  then l
-                  else mx)
-                0
-                packages;
-            in
-              pkgs.lib.strings.concatStringsSep "\n" ([
-                  ''
-                    echo ""
-                    echo "Hello from $DEVSHELL!"
-                    echo "Some tools this environment is equipped with:"
-                    echo ""
-                  ''
-                ]
-                ++ (builtins.map (p: let
-                  name = over p p.name p.pname;
-                  padSize = n - (stringLength name);
-                  rightpad = pkgs.lib.strings.fixedWidthString padSize " " "";
-                  description = over p "${p}" p.meta.description;
-                in "echo \"${name}${rightpad}\t-- ${description}\"")
-                packages)
-                ++ ["echo \"\""]);
+            enterShell = pkgs.lib.strings.concatStringsSep "\n" [
+              ''echo "Hello from $DEVSHELL!"''
+              (nixlib.lib.menu {inherit pkgs packages;})
+              ''echo ""''
+            ];
           }
         ];
       };
