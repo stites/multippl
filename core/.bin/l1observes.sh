@@ -5,7 +5,7 @@ for gridsize in 3 4; do
         for determinism in 0.0; do
             if cargo run --release --bin plot-grids --features=plots -- \
                   -v 1 \
-                  --path "out/obs/$gridsize-$determinism/" \
+                  --path "out/obs/$gridsize-$determinism-$clausesize/" \
                   variance \
                   --sliding-obs $clausesize \
                   --overwrite-csv \
