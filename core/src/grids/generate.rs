@@ -1,5 +1,6 @@
 use crate::grids::*;
 use crate::typeinf::grammar::ProgramInferable;
+use itertools::*;
 use rsdd::sample::probability::Probability;
 
 pub fn program(size: usize, sampled: bool, prg_seed: u64, determinism: f64) -> ProgramInferable {
@@ -16,20 +17,43 @@ pub fn program(size: usize, sampled: bool, prg_seed: u64, determinism: f64) -> P
     make::grid(schema)
 }
 
-pub fn sliding_observes(p0: &ProgramInferable) -> Vec<ProgramInferable> {
+pub struct ObsId(pub Vec<usize>);
+impl ToString for ObsId {
+    fn to_string(&self) -> String {
+        self.0.iter().map(|x| x.to_string()).join(":")
+    }
+}
+pub fn disjunction(vars: Vec<AnfInferable>) -> AnfInferable {
+    println!("{:?}", vars);
+    vars.into_iter()
+        .fold(None, |fin, var| match fin {
+            None => Some(var),
+            Some(prev) => Some(Anf::Or(Box::new(prev), Box::new(var))),
+        })
+        .unwrap()
+}
+
+pub fn sliding_observes(
+    p0: &ProgramInferable,
+    clause_size: usize,
+) -> Vec<(ObsId, ProgramInferable)> {
     use Expr::*;
-    let mut ps = vec![];
     match p0.query() {
-        EProd(_, qs) => {
-            for q in qs {
+        EProd(_, qs) => qs
+            .iter()
+            .enumerate()
+            .combinations(clause_size)
+            .map(|ivars| {
+                let ixs = ivars.iter().map(|(i, _)| *i).collect_vec();
+                let vars = ivars.into_iter().map(|(_, v)| v.clone()).collect_vec();
+                let obs = disjunction(vars);
                 let p = p0.clone();
-                let pnew = p.insert_observe(EObserve((), Box::new(q)));
-                ps.push(pnew);
-            }
-        }
+                let p = p.insert_observe(EObserve((), Box::new(obs)));
+                (ObsId(ixs), p)
+            })
+            .collect_vec(),
         _ => panic!("impossible"),
     }
-    ps
 }
 
 pub fn program_sliding_observes(
@@ -37,6 +61,7 @@ pub fn program_sliding_observes(
     sampled: bool,
     prg_seed: u64,
     determinism: f64,
-) -> Vec<ProgramInferable> {
-    sliding_observes(&program(size, sampled, prg_seed, determinism))
+    clause_size: usize,
+) -> Vec<(ObsId, ProgramInferable)> {
+    sliding_observes(&program(size, sampled, prg_seed, determinism), clause_size)
 }

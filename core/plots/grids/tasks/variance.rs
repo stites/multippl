@@ -113,7 +113,7 @@ fn runner_h(
     }
 }
 fn runner(
-    sliding_obs: bool,
+    sliding_obs: usize,
     gridsize: usize,
     comptype: CompileType,
     determinism: Det,
@@ -130,12 +130,13 @@ fn runner(
         synthesize_seed,
         determinism.to_f64(),
     );
-    if !sliding_obs {
+    if sliding_obs == 0 {
         let csv = csvpath.0.to_owned() + ".csv";
         if fs::metadata(&csv).is_ok() && !csvpath.1 {
             error!("csv file {} exists! Refusing to run.", csv);
             std::process::exit(0x0001);
         }
+        info!("...outputting to csv {}", csv);
         let _ = write_csv_header(&csv);
         runner_h(
             prg,
@@ -149,12 +150,13 @@ fn runner(
             &csv,
         )
     } else {
-        for (i, p) in generate::sliding_observes(&prg).iter().enumerate() {
-            let csv = csvpath.0.to_owned() + &format!("obs{}.csv", i);
+        for (obsid, p) in generate::sliding_observes(&prg, sliding_obs).iter() {
+            let csv = csvpath.0.to_owned() + &format!("obs{}.csv", obsid.to_string());
             if fs::metadata(&csv).is_ok() && !csvpath.1 {
                 error!("csv file {} exists! Refusing to run.", csv);
                 std::process::exit(0x0001);
             }
+            info!("...outputting to csv {}", csv);
             let _ = write_csv_header(&csv);
             runner_h(
                 p.clone(),
@@ -287,8 +289,8 @@ pub struct RunArgs {
     pub overwrite_csv: bool,
     #[arg(long, short, default_value_t = false)]
     pub debug: bool,
-    #[arg(long, short, default_value_t = false)]
-    pub sliding_obs: bool,
+    #[arg(long, short, default_value_t = 0)]
+    pub sliding_obs: usize,
 }
 
 impl VArgs for StatArgs {
@@ -353,7 +355,6 @@ pub fn main(path: String, args: RunArgs) {
             .csv
             .clone()
             .unwrap_or_else(|| csvname_noext(&args, ix as u64));
-        info!("...outputting to csv {} (no extension)", csv_noext);
         let csvpath_noext = &(path.clone() + &csv_noext);
         // let (key, data, expectations, ws, result) = runner(
         runner(
