@@ -279,17 +279,33 @@
     },
     "nixlib": {
       "inputs": {
+        "nixlib": "nixlib_2",
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1680641464,
-        "narHash": "sha256-Hor3gilytJ6UV8uwFBRHv16e3Hsausvx2laBOBn8VQk=",
+        "lastModified": 1680726774,
+        "narHash": "sha256-aZVlF/Yos7LfIsxMk9pwSeZFGQXE3wtdLqsL7C4igtM=",
         "path": "/home/stites/git/nix/nixlib",
         "type": "path"
       },
       "original": {
         "path": "/home/stites/git/nix/nixlib",
         "type": "path"
+      }
+    },
+    "nixlib_2": {
+      "locked": {
+        "lastModified": 1680397293,
+        "narHash": "sha256-wBpJ73+tJ8fZSWb4tzNbAVahC4HSo2QG3nICDy4ExBQ=",
+        "owner": "nix-community",
+        "repo": "nixpkgs.lib",
+        "rev": "b18d328214ca3c627d3cc3f51fd9d1397fdbcd7a",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "nixpkgs.lib",
+        "type": "github"
       }
     },
     "nixpkgs": {

@@ -193,9 +193,8 @@
         default = inputs.flake-utils.lib.mkApp {
           drv = my-crate;
         };
-        cachix-pull = nixlib.lib.apps.cachix-pull {inherit pkgs;};
-        cachix-push = nixlib.lib.apps.cachix-push {
-          inherit pkgs;
+        cachix-pull = pkgs.callPackage nixlib.lib.my.apps.cachix-pull {};
+        cachix-push = pkgs.callPackage nixlib.lib.my.apps.cachix-push {
           cache = "stites";
         };
       };
@@ -282,7 +281,7 @@
             env.DEVSHELL = "devshell+flake.nix";
             enterShell = pkgs.lib.strings.concatStringsSep "\n" [
               ''echo "Hello from $DEVSHELL!"''
-              (nixlib.lib.menu {inherit pkgs packages;})
+              (nixlib.lib.my.menu {inherit packages;})
               ''echo ""''
             ];
           }
