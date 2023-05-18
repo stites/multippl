@@ -238,6 +238,8 @@
               freetype
               expat
               fontconfig
+
+              hunspellDicts.en_US-large
             ];
           }
           rec {
