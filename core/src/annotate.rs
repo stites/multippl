@@ -123,12 +123,6 @@ pub mod grammar {
     impl ξ<Annotated> for EAnfExt {
         type Ext = ();
     }
-    impl ξ<Annotated> for EFstExt {
-        type Ext = ();
-    }
-    impl ξ<Annotated> for ESndExt {
-        type Ext = ();
-    }
     impl ξ<Annotated> for EPrjExt {
         // sampleable
         type Ext = ();
@@ -245,8 +239,6 @@ impl LabelEnv {
         match e {
             EAnf(_, a) => Ok(EAnf((), Box::new(self.annotate_anf(a)?))),
             EPrj(_, i, a) => Ok(EPrj((), *i, Box::new(self.annotate_anf(a)?))),
-            EFst(_, a) => Ok(EFst((), Box::new(self.annotate_anf(a)?))),
-            ESnd(_, a) => Ok(ESnd((), Box::new(self.annotate_anf(a)?))),
             EProd(_, anfs) => Ok(EProd((), self.annotate_anfs(anfs)?)),
             ELetIn(id, s, ebound, ebody) => {
                 let nvar = NamedVar {

@@ -40,8 +40,6 @@ pub trait ξ<X> {
     type Ext;
 }
 pub struct EAnfExt;
-pub struct EFstExt;
-pub struct ESndExt;
 pub struct EPrjExt;
 pub struct EProdExt;
 pub struct ELetInExt;
@@ -150,8 +148,6 @@ where
 pub enum Expr<X>
 where
     EAnfExt: ξ<X>,
-    EFstExt: ξ<X>,
-    ESndExt: ξ<X>,
     EPrjExt: ξ<X>,
     EProdExt: ξ<X>,
     ELetInExt: ξ<X>,
@@ -164,8 +160,6 @@ where
 {
     EAnf(<EAnfExt as ξ<X>>::Ext, Box<Anf<X>>),
 
-    EFst(<EFstExt as ξ<X>>::Ext, Box<Anf<X>>),
-    ESnd(<ESndExt as ξ<X>>::Ext, Box<Anf<X>>),
     EPrj(<EPrjExt as ξ<X>>::Ext, usize, Box<Anf<X>>),
     EProd(<EProdExt as ξ<X>>::Ext, Vec<Anf<X>>),
 
@@ -185,8 +179,6 @@ where
 impl<X> Debug for Expr<X>
 where
     EAnfExt: ξ<X>,
-    EFstExt: ξ<X>,
-    ESndExt: ξ<X>,
     EPrjExt: ξ<X>,
     EProdExt: ξ<X>,
     ELetInExt: ξ<X>,
@@ -197,8 +189,6 @@ where
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
     <EAnfExt as ξ<X>>::Ext: Debug,
-    <EFstExt as ξ<X>>::Ext: Debug,
-    <ESndExt as ξ<X>>::Ext: Debug,
     <EPrjExt as ξ<X>>::Ext: Debug,
     <EProdExt as ξ<X>>::Ext: Debug,
     <ELetInExt as ξ<X>>::Ext: Debug,
@@ -213,8 +203,6 @@ where
         use Expr::*;
         match self {
             EAnf(ext, a) => f.write_fmt(format_args!("Anf({:?},{:?})", ext, a)),
-            EFst(ext, a) => f.debug_tuple("Fst").field(&ext).field(a).finish(),
-            ESnd(ext, a) => f.debug_tuple("Snd").field(&ext).field(a).finish(),
             EPrj(ext, i, a) => f.debug_tuple("Prj").field(&ext).field(i).field(a).finish(),
             EProd(ext, anfs) => f.debug_tuple("Prod").field(&ext).field(anfs).finish(),
             ELetIn(ext, s, bindee, body) => f
@@ -240,8 +228,6 @@ where
 impl<X> Clone for Expr<X>
 where
     EAnfExt: ξ<X>,
-    EFstExt: ξ<X>,
-    ESndExt: ξ<X>,
     EPrjExt: ξ<X>,
     EProdExt: ξ<X>,
     ELetInExt: ξ<X>,
@@ -253,8 +239,6 @@ where
     AValExt: ξ<X>,
 
     <EAnfExt as ξ<X>>::Ext: Clone,
-    <EFstExt as ξ<X>>::Ext: Clone,
-    <ESndExt as ξ<X>>::Ext: Clone,
     <EPrjExt as ξ<X>>::Ext: Clone,
     <EProdExt as ξ<X>>::Ext: Clone,
     <ELetInExt as ξ<X>>::Ext: Clone,
@@ -269,8 +253,6 @@ where
         use Expr::*;
         match self {
             EAnf(ext, a) => EAnf(ext.clone(), a.clone()),
-            EFst(ext, a) => EFst(ext.clone(), a.clone()),
-            ESnd(ext, a) => ESnd(ext.clone(), a.clone()),
             EPrj(ext, i, a) => EPrj(ext.clone(), *i, a.clone()),
             EProd(ext, anfs) => EProd(ext.clone(), anfs.clone()),
             ELetIn(ext, s, bindee, body) => {
@@ -286,8 +268,6 @@ where
 impl<X> PartialEq for Expr<X>
 where
     EAnfExt: ξ<X>,
-    EFstExt: ξ<X>,
-    ESndExt: ξ<X>,
     EPrjExt: ξ<X>,
     EProdExt: ξ<X>,
     ELetInExt: ξ<X>,
@@ -297,8 +277,6 @@ where
     ESampleExt: ξ<X>,
 
     <EAnfExt as ξ<X>>::Ext: PartialEq,
-    <EFstExt as ξ<X>>::Ext: PartialEq,
-    <ESndExt as ξ<X>>::Ext: PartialEq,
     <EPrjExt as ξ<X>>::Ext: PartialEq,
     <EProdExt as ξ<X>>::Ext: PartialEq,
     <ELetInExt as ξ<X>>::Ext: PartialEq,
@@ -315,8 +293,6 @@ where
         use Expr::*;
         match (self, o) {
             (EAnf(ext0, a0), EAnf(ext1, a1)) => ext0 == ext1 && a0 == a1,
-            (EFst(ext0, a0), EFst(ext1, a1)) => ext0 == ext1 && a0 == a1,
-            (ESnd(ext0, a0), ESnd(ext1, a1)) => ext0 == ext1 && a0 == a1,
             (EPrj(ext0, i0, a0), EPrj(ext1, i1, a1)) => ext0 == ext1 && i0 == i1 && a0 == a1,
             (EProd(ext0, anfs0), EProd(ext1, anfs1)) => ext0 == ext1 && anfs0 == anfs1,
             (ELetIn(ext0, s0, bindee0, body0), ELetIn(ext1, s1, bindee1, body1)) => {
@@ -365,8 +341,6 @@ impl Γ {
 impl<X> Expr<X>
 where
     EAnfExt: ξ<X>,
-    EFstExt: ξ<X>,
-    ESndExt: ξ<X>,
     EPrjExt: ξ<X>,
     EProdExt: ξ<X>,
     ELetInExt: ξ<X>,
@@ -375,8 +349,6 @@ where
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
     <EAnfExt as ξ<X>>::Ext: Debug + Clone,
-    <EFstExt as ξ<X>>::Ext: Debug + Clone,
-    <ESndExt as ξ<X>>::Ext: Debug + Clone,
     <EPrjExt as ξ<X>>::Ext: Debug + Clone,
     <EProdExt as ξ<X>>::Ext: Debug + Clone,
     <ELetInExt as ξ<X>>::Ext: Debug + Clone,
@@ -447,8 +419,6 @@ where
 pub enum Program<X>
 where
     EAnfExt: ξ<X>,
-    EFstExt: ξ<X>,
-    ESndExt: ξ<X>,
     EPrjExt: ξ<X>,
     EProdExt: ξ<X>,
     ELetInExt: ξ<X>,
@@ -457,8 +427,6 @@ where
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
     <EAnfExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <EFstExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <ESndExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <EPrjExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <EProdExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <ELetInExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
@@ -478,8 +446,6 @@ where
 impl<X> Program<X>
 where
     EAnfExt: ξ<X>,
-    EFstExt: ξ<X>,
-    ESndExt: ξ<X>,
     EPrjExt: ξ<X>,
     EProdExt: ξ<X>,
     ELetInExt: ξ<X>,
@@ -488,8 +454,6 @@ where
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
     <EAnfExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <EFstExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <ESndExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <EPrjExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <EProdExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <ELetInExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
@@ -543,12 +507,6 @@ impl ξ<UD> for AValExt {
     type Ext = ();
 }
 impl ξ<UD> for EAnfExt {
-    type Ext = ();
-}
-impl ξ<UD> for EFstExt {
-    type Ext = ();
-}
-impl ξ<UD> for ESndExt {
     type Ext = ();
 }
 impl ξ<UD> for EPrjExt {

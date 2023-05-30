@@ -20,12 +20,6 @@ pub mod grammar {
     impl ξ<Typed> for EAnfExt {
         type Ext = ();
     }
-    impl ξ<Typed> for EFstExt {
-        type Ext = Ty;
-    }
-    impl ξ<Typed> for ESndExt {
-        type Ext = Ty;
-    }
     impl ξ<Typed> for EPrjExt {
         type Ext = Ty;
     }
@@ -76,8 +70,6 @@ pub fn as_type(e: &grammar::ExprTyped) -> Ty {
     use Expr::*;
     match e {
         EAnf(_, anf) => anf.as_type(),
-        EFst(t, _) => t.clone(),
-        ESnd(t, _) => t.clone(),
         EPrj(t, _, _) => t.clone(),
         EProd(t, _) => t.clone(),
         ELetIn(t, _, _, _) => t.body.clone(),
@@ -125,8 +117,6 @@ pub fn typecheck_expr(e: &grammar::ExprTyped) -> Result<ExprUD, CompileError> {
             // assert!(aty.left() == Some(*ty.clone()), "actual {:?} != expected {:?}. type is: {:?}", aty.left(), Some(*ty.clone()), ty);
             Ok(EPrj((), *i, Box::new(typecheck_anf(a)?)))
         }
-        EFst(_ty, a) => Ok(EFst((), Box::new(typecheck_anf(a)?))),
-        ESnd(_ty, a) => Ok(ESnd((), Box::new(typecheck_anf(a)?))),
         EProd(_ty, anfs) => Ok(EProd((), typecheck_anfs(anfs)?)),
         ELetIn(_ty, s, ebound, ebody) => Ok(ELetIn(
             (),

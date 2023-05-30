@@ -58,12 +58,6 @@ pub mod grammar {
     impl ξ<Trace> for EAnfExt {
         type Ext = Box<Compiled>;
     }
-    impl ξ<Trace> for EFstExt {
-        type Ext = Box<Compiled>;
-    }
-    impl ξ<Trace> for ESndExt {
-        type Ext = Box<Compiled>;
-    }
     impl ξ<Trace> for EPrjExt {
         type Ext = Box<Compiled>;
     }
@@ -220,20 +214,6 @@ impl<'a> Env<'a> {
                 }
                 let c = Compiled::Output(o);
                 Ok((c.clone(), EAnf(Box::new(c), Box::new(atr))))
-            }
-            EFst(_, a) => {
-                let span = tracing::span!(tracing::Level::DEBUG, "fst");
-                let _enter = span.enter();
-                debug!("{:?}", a);
-                let c = self.eval_expr(ctx, &EPrj((), 0, a.clone()))?;
-                Ok(c)
-            }
-            ESnd(_, a) => {
-                let span = tracing::span!(tracing::Level::DEBUG, "snd");
-                let _enter = span.enter();
-                debug!("{:?}", a);
-                let c = self.eval_expr(ctx, &EPrj((), 1, a.clone()))?;
-                Ok(c)
             }
             EProd(_, anfs) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "prod");

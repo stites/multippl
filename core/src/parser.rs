@@ -171,14 +171,14 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ExprInferable {
             let mut cs = n.named_children(&mut c_);
             let anf = cs.next().unwrap();
             let anf = parse_anf(src, c, anf);
-            Expr::EFst(None, Box::new(anf))
+            Expr::EPrj(None, 0, Box::new(anf))
         }
         "snd" => {
             let mut c_ = c.clone();
             let mut cs = n.named_children(&mut c_);
             let anf = cs.next().unwrap();
             let anf = parse_anf(src, c, anf);
-            Expr::ESnd(None, Box::new(anf))
+            Expr::EPrj(None, 1, Box::new(anf))
         }
         "prj" => {
             let mut c_ = c.clone();

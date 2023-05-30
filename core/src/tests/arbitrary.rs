@@ -51,8 +51,6 @@ where
 impl<X: 'static> Arbitrary for Expr<X>
 where
     EAnfExt: ξ<X>,
-    EFstExt: ξ<X>,
-    ESndExt: ξ<X>,
     EPrjExt: ξ<X>,
     EProdExt: ξ<X>,
     ELetInExt: ξ<X>,
@@ -61,8 +59,6 @@ where
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
     <EAnfExt as ξ<X>>::Ext: Arbitrary,
-    <EFstExt as ξ<X>>::Ext: Arbitrary,
-    <ESndExt as ξ<X>>::Ext: Arbitrary,
     <EPrjExt as ξ<X>>::Ext: Arbitrary,
     <EProdExt as ξ<X>>::Ext: Arbitrary,
     <ELetInExt as ξ<X>>::Ext: Arbitrary,
@@ -76,37 +72,35 @@ where
     <AValExt as ξ<X>>::Ext: Arbitrary,
 {
     fn arbitrary(g: &mut Gen) -> Expr<X> {
-        let x = g.choose(&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).copied();
+        let x = g.choose(&[0, 1, 2, 3, 4, 5, 6, 7]).copied();
         match x {
             None => panic!("impossible: choose vec has len > 0"),
             Some(0) => Expr::EAnf(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            Some(1) => Expr::EFst(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            Some(2) => Expr::ESnd(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            Some(3) => Expr::EProd(
+            Some(1) => Expr::EProd(
                 Arbitrary::arbitrary(g),
                 (0..2).map(|_i| Anf::arbitrary(g)).collect_vec(),
             ),
-            Some(4) => {
+            Some(2) => {
                 let var = String::arbitrary(g);
                 let bind = Arbitrary::arbitrary(g);
                 let body = Arbitrary::arbitrary(g);
                 Expr::ELetIn(Arbitrary::arbitrary(g), var, bind, body)
             }
-            Some(5) => {
+            Some(3) => {
                 let p = Arbitrary::arbitrary(g);
                 let t = Arbitrary::arbitrary(g);
                 let f = Arbitrary::arbitrary(g);
                 Expr::EIte(Arbitrary::arbitrary(g), p, t, f)
             }
-            Some(6) => {
+            Some(4) => {
                 let r = u8::arbitrary(g); // 256
                 Expr::EFlip(
                     Arbitrary::arbitrary(g),
                     <u8 as Into<f64>>::into(r) / <u8 as Into<f64>>::into(u8::MAX),
                 )
             }
-            Some(7) => Expr::EObserve(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            Some(8) => Expr::ESample(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
+            Some(5) => Expr::EObserve(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
+            Some(6) => Expr::ESample(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
             _ => panic!("impossible"),
         }
     }
@@ -115,8 +109,6 @@ impl<X> Arbitrary for Program<X>
 where
     X: Clone + 'static,
     EAnfExt: ξ<X>,
-    EFstExt: ξ<X>,
-    ESndExt: ξ<X>,
     EPrjExt: ξ<X>,
     EProdExt: ξ<X>,
     ELetInExt: ξ<X>,
@@ -125,8 +117,6 @@ where
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
     <EAnfExt as ξ<X>>::Ext: Arbitrary + Debug + Clone + PartialEq,
-    <EFstExt as ξ<X>>::Ext: Arbitrary + Debug + Clone + PartialEq,
-    <ESndExt as ξ<X>>::Ext: Arbitrary + Debug + Clone + PartialEq,
     <EPrjExt as ξ<X>>::Ext: Arbitrary + Debug + Clone + PartialEq,
     <EProdExt as ξ<X>>::Ext: Arbitrary + Debug + Clone + PartialEq,
     <ELetInExt as ξ<X>>::Ext: Arbitrary + Debug + Clone + PartialEq,

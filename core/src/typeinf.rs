@@ -17,12 +17,6 @@ pub mod grammar {
     impl ξ<Inferable> for EAnfExt {
         type Ext = ();
     }
-    impl ξ<Inferable> for EFstExt {
-        type Ext = Option<Ty>;
-    }
-    impl ξ<Inferable> for ESndExt {
-        type Ext = Option<Ty>;
-    }
     impl ξ<Inferable> for EPrjExt {
         type Ext = Option<Ty>;
     }
@@ -81,8 +75,6 @@ pub fn typeinference_expr(e: &grammar::ExprInferable) -> Result<ExprTyped, Compi
             // ignore types for now.
             Ok(EPrj(ignored_type(), *i, Box::new(typeinference_anf(a)?)))
         }
-        EFst(_ty, a) => Ok(EFst(ignored_type(), Box::new(typeinference_anf(a)?))),
-        ESnd(_ty, a) => Ok(ESnd(ignored_type(), Box::new(typeinference_anf(a)?))),
         EProd(_ty, anfs) => Ok(EProd(ignored_type(), typeinference_anfs(anfs)?)),
         ELetIn(_ty, s, ebound, ebody) => Ok(ELetIn(
             LetInTypes {

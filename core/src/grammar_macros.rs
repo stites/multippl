@@ -160,7 +160,7 @@ macro_rules! snd {
         snd!(b!(@anf $x))
     }};
     ( $x:expr ) => {{
-        $crate::grammar::Expr::<$crate::typeinf::grammar::Inferable>::ESnd(None, Box::new($x))
+        $crate::grammar::Expr::<$crate::typeinf::grammar::Inferable>::EPrj(None, 1, Box::new($x))
     }};
 }
 
@@ -190,7 +190,7 @@ macro_rules! fst {
         fst!(b!(@anf $x))
     }};
     ( $x:expr ) => {{
-        $crate::grammar::Expr::<$crate::typeinf::grammar::Inferable>::EFst(None, Box::new($x))
+        $crate::grammar::Expr::<$crate::typeinf::grammar::Inferable>::EPrj(None, 0, Box::new($x))
     }};
 }
 #[macro_export]

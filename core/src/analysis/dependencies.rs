@@ -112,8 +112,6 @@ impl DependencyEnv {
             // FIXME : definitely not desiarable, fix later
             // FIXME vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
             EPrj((), i, a) => Dep::as_vars(self.scan_anf(a)),
-            EFst((), a) => Dep::as_vars(self.scan_anf(a)),
-            ESnd((), a) => Dep::as_vars(self.scan_anf(a)),
             EProd((), az) => Dep::as_vars(
                 az.iter()
                     .map(|a| self.scan_anf(a).into_iter())

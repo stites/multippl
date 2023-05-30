@@ -59,12 +59,6 @@ pub mod grammar {
     impl ξ<Uniquify> for EAnfExt {
         type Ext = ();
     }
-    impl ξ<Uniquify> for EFstExt {
-        type Ext = ();
-    }
-    impl ξ<Uniquify> for ESndExt {
-        type Ext = ();
-    }
     impl ξ<Uniquify> for EPrjExt {
         // sampleable
         type Ext = ();
@@ -169,8 +163,6 @@ impl SymEnv {
         match e {
             EAnf(_, a) => Ok(EAnf((), Box::new(self.uniquify_anf(a)?))),
             EPrj(_ty, i, a) => Ok(EPrj((), *i, Box::new(self.uniquify_anf(a)?))),
-            EFst(_ty, a) => Ok(EFst((), Box::new(self.uniquify_anf(a)?))),
-            ESnd(_ty, a) => Ok(ESnd((), Box::new(self.uniquify_anf(a)?))),
             EProd(_ty, anfs) => Ok(EProd((), self.uniquify_anfs(anfs)?)),
             ELetIn(_ty, s, ebound, ebody) => {
                 // too lazy to do something smarter
