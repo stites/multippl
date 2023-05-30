@@ -556,6 +556,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "distributions"
+version = "0.1.0"
+dependencies = [
+ "rand 0.8.5",
+]
+
+[[package]]
 name = "dlib"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"

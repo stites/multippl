@@ -211,15 +211,16 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1673479455,
-        "narHash": "sha256-2mdgW6VEDD0tCcF8YvhfL7ELUq3sy6Z9owUVw01Umgk=",
+        "lastModified": 1681922867,
+        "narHash": "sha256-pW9jfrL8HGTdrrfD/rU/b148648enJRt3nvCx+vbuDc=",
         "owner": "leanprover",
         "repo": "lake",
-        "rev": "7795eda4076d10532e7a8d592ef5117f1868421e",
+        "rev": "6544bc7e102eaaaed6d727ef61d78fc194deaf4c",
         "type": "github"
       },
       "original": {
         "owner": "leanprover",
+        "ref": "6544bc7",
         "repo": "lake",
         "type": "github"
       }

@@ -75,15 +75,22 @@
           repl = {
             description = "Start the cabal repl";
             exec = ''
-              cd "$FLAKE_ROOT"/steno
+              cd "$FLAKE_ROOT"/hs
               cabal v2-repl "$@"
+            '';
+            category = "Dev Tools";
+          };
+          reload = {
+            description = "run direnv reload";
+            exec = ''
+              direnv reload
             '';
             category = "Dev Tools";
           };
           dev = {
             description = "Start watchexec";
             exec = ''
-              watchexec "cabal v2-run steno -- $*"
+              watchexec -w src/ -w yodel.cabal "cabal v2-build yodel -- $*"
             '';
             category = "Dev Tools";
           };
@@ -94,13 +101,7 @@
           };
         };
         devenv.shells.default = {
-          languages.rust.enable = true;
-          packages = with pkgs; [
-            # rust dependencies
-            pkg-config
-            hidapi
-            systemd.dev
-          ];
+          #languages.haskell.enable = true;
         };
         devShells.default = with pkgs;
           lib.mkForce (mkShell {

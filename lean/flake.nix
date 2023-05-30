@@ -1,19 +1,24 @@
 {
   nixConfig.trusted-substituters = "https://lean4.cachix.org/";
   nixConfig.trusted-public-keys = "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= lean4.cachix.org-1:mawtxSxcaiWE24xCXXgh3qnvlTkyU7evRRnGeAhD4Wk=";
-  nixConfig.max-jobs = "auto";  # Allow building multiple derivations in parallel
-  nixConfig.keep-outputs = true;  # Do not garbage-collect build time-only dependencies (e.g. clang)
+  nixConfig.max-jobs = "auto"; # Allow building multiple derivations in parallel
+  nixConfig.keep-outputs = true; # Do not garbage-collect build time-only dependencies (e.g. clang)
 
   description = "A project in lean";
 
   inputs = {
-    # devenv requires 22.11 compatability, so we pin nixpkgs to this package set.
+    # devenv requires 22.11 compatibility, so we pin nixpkgs to this package set.
     devenv.url = "github:cachix/devenv";
     nixpkgs.follows = "devenv/nixpkgs";
 
     # next, we include lean, and
-    lean.url = "github:leanprover/lean4";
+    lean.url = "github:leanprover/lean4?submodules=1";
     lean.inputs.nixpkgs.follows = "devenv/nixpkgs";
+
+    lake.url = "github:leanprover/lake/6544bc7";
+    #lake.url = "github:leanprover/lean4?submodules=1&dir=src/lake";
+    lake.inputs.lean.follows = "lean";
+    lake.inputs.flake-utils.follows = "flake-utils";
 
     # and we re-use lean's flake-utils:
     flake-utils.follows = "lean/flake-utils";
@@ -43,9 +48,6 @@
     cli.flake = false;
     lean-ink.url = github:leanprover/LeanInk;
     lean-ink.flake = false;
-    lake.url = github:leanprover/lake;
-    lake.inputs.lean.follows = "lean";
-    lake.inputs.flake-utils.follows = "flake-utils";
 
     # take the streaming library from:
     kha-aoc-2022.url = github:Kha/aoc-2022;
@@ -55,8 +57,12 @@
     kha-aoc-2022.inputs.std4.follows = "std4";
   };
 
-  outputs = inputs@{ self, lean, ... }: inputs.flake-utils.lib.eachDefaultSystem (system:
-    let
+  outputs = inputs @ {
+    self,
+    lean,
+    ...
+  }:
+    inputs.flake-utils.lib.eachDefaultSystem (system: let
       myPackageName = "BddIS";
       pkgs = import inputs.nixpkgs {
         inherit system;
@@ -65,7 +71,7 @@
           (final: prev: {
             inherit (leanPkgs) lean-bin-dev lake-dev emacs-dev;
             vscode-dev = final.vscode-with-extensions.override {
-              vscodeExtensions = [ leanPkgs.vscode-lean4 pkgs.vscode-extensions.vscodevim.vim ];
+              vscodeExtensions = [leanPkgs.vscode-lean4 pkgs.vscode-extensions.vscodevim.vim];
             };
           })
         ];
@@ -75,9 +81,9 @@
       myLeanPkg = leanPkgs.buildLeanPackage {
         name = myPackageName;
         src = ./.;
-        roots = [ myPackageName ];
+        roots = [myPackageName];
         #deps = [ std4 inputs.kha-aoc-2022.defaultPackage ];
-        deps = [ std4 ];
+        deps = [std4];
         libName = myPackageName;
         # executableName = myPackageName;
       };
@@ -91,15 +97,18 @@
         name = "Mathlib";
         src = inputs.mathlib4;
         precompilePackage = true;
-        deps = [ aesop quote std4
-                 # optional doc-gen4
-               ];
+        deps = [
+          aesop
+          quote
+          std4
+          # optional doc-gen4
+        ];
       };
       aesop = leanPkgs.buildLeanPackage {
         name = "Aesop";
         src = inputs.aesop;
         precompilePackage = true;
-        deps = [ std4 ];
+        deps = [std4];
       };
       quote = leanPkgs.buildLeanPackage {
         name = "Qq";
@@ -156,62 +165,88 @@
       #   dontInstall = true;
       # };
     in {
-      packages = myLeanPkg // {
-        inherit (leanPkgs) lean;
-        default = myLeanPkg.modRoot;
-      };
+      packages =
+        myLeanPkg
+        // rec {
+          inherit (leanPkgs) lean;
+          default = myLeanPkg.modRoot;
+          # https://github.com/Kha/lean4/commit/25db543d8d47cd82d44cfd90314086956509da8d
+          Lake = leanPkgs.buildLeanPackage {
+            name = "Lake";
+            src = inputs.lake;
+          };
+          Lake-Main = leanPkgs.buildLeanPackage {
+            name = "Lake.Main";
+            executableName = "lake";
+            deps = [Lake];
+            linkFlags = pkgs.lib.optional pkgs.stdenv.isLinux "-rdynamic";
+            src = inputs.lake;
+          };
+          lake = with pkgs;
+          with leanPkgs;
+            runCommand "lake" {nativeBuildInputs = [pkgs.makeWrapper];} ''
+              mkdir -p $out/bin
+              cp -r ${Lake-Main.executable}/* $out
+              wrapProgram $out/bin/lake --prefix LEAN_PATH : ${Lake.modRoot}
+            '';
+        };
 
       devShells.default = inputs.devenv.lib.mkShell {
         inherit inputs pkgs;
-        modules = [ {
-          # set up some nice, out-of-the-box dev support:
-          languages.nix.enable = true;
-          difftastic.enable = true; # https://devenv.sh/integrations/difftastic/
-          pre-commit.hooks.shellcheck.enable = true;
+        modules = [
+          {
+            # set up some nice, out-of-the-box dev support:
+            languages.nix.enable = true;
+            difftastic.enable = true; # https://devenv.sh/integrations/difftastic/
+            pre-commit.hooks.shellcheck.enable = true;
 
-          packages = with pkgs; [
-            lldb
-            rr-unstable
-            watchexec
-            lean-bin-dev emacs-dev
-          ];
-
-          env.GREET = "devenv";
-          # taken from Mathlib, but not really applicable for most use-cases
-          scripts = {
-            hello.exec = pkgs.lib.concatStringsSep "\n" [
-              "echo"
-              ''echo "Hello from $GREET! Here are some nifty dev tools to use for this project:"''
-              "echo"
-              # packages
-              ''
-              echo "watchexec   -- ${pkgs.watchexec.meta.description}"
-              echo "lldb        -- ${pkgs.lldb.meta.description}"
-              echo "rr          -- ${pkgs.rr-unstable.meta.description}"
-              echo "lean        -- the lean 4 compiler"
-              ''
-
-              ''echo''
-              # scripts
-
-              #''echo "emacs-dev   -- pinned emacs with pre-configured lean4-mode"''
-              #''echo "code        -- (script) launch vscode with lean4 plugins"''
-              ''
-              echo "mk-lib-root -- (script) Generate ${myPackageName}.lean from all lean files"
-              echo "watch       -- (script) watchexec wrapper to watch all top-level lean files and flake.nix"
-              echo
-              ''
+            packages = with pkgs; [
+              self.packages.${system}.lake
+              lldb
+              rr-unstable
+              watchexec
+              lean-bin-dev
+              emacs-dev
+              #lake-dev
             ];
-            code.exec = "${pkgs.vscode-dev}/bin/vscode-dev";
-            # Add all new *.lean files to ${myPackageName}.lean
-            mk-lib-root.exec = ''
-              cd $(git rev-parse --show-toplevel)
-              find . -name '*.lean' -not -name '${myPackageName}.lean' | env LC_ALL=C sort | cut -d '/' -f 2- | sed 's/\\.lean//;s,/,.,g;s/^/import /' > ${myPackageName}.lean
-            '';
-            watch.exec = ''${pkgs.watchexec}/bin/watchexec -w *.lean -w flake.nix "nix build && echo '               ...compiled!' && echo"'';
-          };
-          enterShell = "hello";
-        } ];
+
+            env.GREET = "devenv";
+            # taken from Mathlib, but not really applicable for most use-cases
+            scripts = {
+              hello.exec = pkgs.lib.concatStringsSep "\n" [
+                "echo"
+                ''echo "Hello from $GREET! Here are some nifty dev tools to use for this project:"''
+                "echo"
+                # packages
+                ''
+                  echo "watchexec   -- ${pkgs.watchexec.meta.description}"
+                  echo "lldb        -- ${pkgs.lldb.meta.description}"
+                  echo "rr          -- ${pkgs.rr-unstable.meta.description}"
+                  echo "lean        -- the lean 4 compiler"
+                ''
+
+                ''echo''
+                # scripts
+
+                #''echo "emacs-dev   -- pinned emacs with pre-configured lean4-mode"''
+                #''echo "code        -- (script) launch vscode with lean4 plugins"''
+                ''
+                  echo "mk-lib-root -- (script) Generate ${myPackageName}.lean from all lean files"
+                  echo "watch       -- (script) watchexec wrapper to watch all top-level lean files and flake.nix"
+                  echo
+                ''
+              ];
+              code.exec = "${pkgs.vscode-dev}/bin/vscode-dev";
+              # Add all new *.lean files to ${myPackageName}.lean
+              mk-lib-root.exec = ''
+                cd $(git rev-parse --show-toplevel)
+                find . -name '*.lean' -not -name '${myPackageName}.lean' | env LC_ALL=C sort | cut -d '/' -f 2- | sed 's/\\.lean//;s,/,.,g;s/^/import /' > ${myPackageName}.lean
+              '';
+              watch.exec = ''${pkgs.watchexec}/bin/watchexec -w *.lean -w flake.nix "nix build && echo '               ...compiled!' && echo"'';
+            };
+            enterShell = "hello";
+          }
+        ];
       };
     });
 }
