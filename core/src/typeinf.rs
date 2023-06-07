@@ -9,7 +9,7 @@ pub mod grammar {
     pub struct Inferable;
 
     impl ξ<Inferable> for AVarExt {
-        type Ext = Option<Ty>;
+        type Ext = Option<ETy>;
     }
     impl ξ<Inferable> for AValExt {
         type Ext = ();
@@ -18,16 +18,16 @@ pub mod grammar {
         type Ext = ();
     }
     impl ξ<Inferable> for EPrjExt {
-        type Ext = Option<Ty>;
+        type Ext = Option<ETy>;
     }
     impl ξ<Inferable> for EProdExt {
-        type Ext = Option<Ty>;
+        type Ext = Option<ETy>;
     }
     impl ξ<Inferable> for ELetInExt {
         type Ext = Option<LetInTypes>;
     }
     impl ξ<Inferable> for EIteExt {
-        type Ext = Option<Ty>;
+        type Ext = Option<ETy>;
     }
     impl ξ<Inferable> for EFlipExt {
         type Ext = ();
@@ -47,7 +47,7 @@ pub mod grammar {
 pub fn typeinference_anf(a: &grammar::AnfInferable) -> Result<AnfTyped, CompileError> {
     use crate::grammar::Anf::*;
     match a {
-        AVar(ty, s) => Ok(AVar(Ty::EBool, s.clone())),
+        AVar(ty, s) => Ok(AVar(ETy::EBool, s.clone())),
         AVal(_, v) => Ok(AVal((), v.clone())),
         And(bl, br) => Ok(And(
             Box::new(typeinference_anf(bl)?),
@@ -63,8 +63,8 @@ pub fn typeinference_anf(a: &grammar::AnfInferable) -> Result<AnfTyped, CompileE
 pub fn typeinference_anfs(anfs: &[grammar::AnfInferable]) -> Result<Vec<AnfTyped>, CompileError> {
     anfs.iter().map(typeinference_anf).collect()
 }
-fn ignored_type() -> Ty {
-    Ty::EBool
+fn ignored_type() -> ETy {
+    ETy::EBool
 }
 
 pub fn typeinference_expr(e: &grammar::EExprInferable) -> Result<EExprTyped, CompileError> {

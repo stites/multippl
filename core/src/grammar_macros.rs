@@ -3,14 +3,14 @@
 macro_rules! typ {
     ($ty:ty) => {{
         if TypeId::of::<$ty>() == TypeId::of::<bool>() {
-            $crate::grammar::Ty::EBool
+            $crate::grammar::ETy::EBool
         } else {
             todo!()
         }
     }};
     ($ty:expr) => {{
         if $ty == TypeId::of::<bool>() {
-            $crate::grammar::Ty::EBool
+            $crate::grammar::ETy::EBool
         } else {
             todo!()
         }
@@ -19,13 +19,13 @@ macro_rules! typ {
 #[macro_export]
 macro_rules! B {
     () => {{
-        $crate::grammar::Ty::EBool
+        $crate::grammar::ETy::EBool
     }};
 }
 #[macro_export]
 macro_rules! P {
     ( $l:expr , $r:expr ) => {{
-        $crate::grammar::Ty::EProd(Box::new($l), Box::new($r))
+        $crate::grammar::ETy::EProd(Box::new($l), Box::new($r))
     }};
 }
 
@@ -70,10 +70,10 @@ macro_rules! var {
 #[macro_export]
 macro_rules! b {
     (B) => {
-        $crate::grammar::Ty::EBool
+        $crate::grammar::ETy::EBool
     };
     ( ) => {
-        $crate::grammar::Ty::EBool
+        $crate::grammar::ETy::EBool
     };
     (@anf $x:literal ; $ty:expr) => {
         if $x.to_string() == "true" || $x.to_string() == "false" {
@@ -94,10 +94,10 @@ macro_rules! b {
         anf!(b!(@anf $x ; $ty))
     };
     ( B , B ) => {{
-        $crate::grammar::Ty::EProd(vec![Ty::EBool, Ty::EBool])
+        $crate::grammar::ETy::EProd(vec![Ty::EBool, ETy::EBool])
     }};
     ( B , B, B ) => {{
-        $crate::grammar::Ty::EProd(vec![Ty::EBool, Ty::EBool, Ty::EBool])
+        $crate::grammar::ETy::EProd(vec![Ty::EBool, ETy::EBool, ETy::EBool])
     }};
     ( $x:literal, $( $xs:literal ),+  ) => {{
         let mut prod = vec![b!(@anf $x)];

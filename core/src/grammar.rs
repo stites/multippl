@@ -11,24 +11,24 @@ use std::collections::HashMap;
 use std::string::String;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Ty {
+pub enum ETy {
     EBool,
-    EProd(Vec<Ty>),
+    EProd(Vec<ETy>),
 }
-impl Ty {
-    pub fn right(&self) -> Option<Ty> {
+impl ETy {
+    pub fn right(&self) -> Option<ETy> {
         match self {
-            Ty::EBool => None,
-            Ty::EProd(tys) => match &tys[..] {
+            ETy::EBool => None,
+            ETy::EProd(tys) => match &tys[..] {
                 [_, r] => Some(r.clone()),
                 _ => None,
             },
         }
     }
-    pub fn left(&self) -> Option<Ty> {
+    pub fn left(&self) -> Option<ETy> {
         match self {
-            Ty::EBool => None,
-            Ty::EProd(tys) => match &tys[..] {
+            ETy::EBool => None,
+            ETy::EProd(tys) => match &tys[..] {
                 [l, _] => Some(l.clone()),
                 _ => None,
             },
@@ -64,11 +64,11 @@ impl EVal {
             EProd(_) => true,
         }
     }
-    pub fn as_type(&self) -> Ty {
+    pub fn as_type(&self) -> ETy {
         use EVal::*;
         match self {
-            EBool(_) => Ty::EBool,
-            EProd(vs) => Ty::EProd(vs.iter().map(|x| x.as_type()).collect_vec()),
+            EBool(_) => ETy::EBool,
+            EProd(vs) => ETy::EProd(vs.iter().map(|x| x.as_type()).collect_vec()),
         }
     }
 }
@@ -314,24 +314,24 @@ where
     }
 }
 #[derive(Default, Debug, Clone)]
-pub struct Γ(pub Vec<(String, Ty)>);
+pub struct Γ(pub Vec<(String, ETy)>);
 impl Γ {
-    pub fn get(&self, x: String) -> Option<Ty> {
+    pub fn get(&self, x: String) -> Option<ETy> {
         self.0
             .iter()
             .find(|(e, _)| *e == x)
             .map(|(_, t)| t)
             .cloned()
     }
-    pub fn push(&mut self, x: String, ty: &Ty) {
+    pub fn push(&mut self, x: String, ty: &ETy) {
         self.0.push((x, ty.clone()));
     }
-    pub fn append(&self, x: String, ty: &Ty) -> Γ {
+    pub fn append(&self, x: String, ty: &ETy) -> Γ {
         let mut ctx = self.0.clone();
         ctx.push((x, ty.clone()));
         Γ(ctx)
     }
-    pub fn typechecks(&self, x: String, ty: &Ty) -> bool {
+    pub fn typechecks(&self, x: String, ty: &ETy) -> bool {
         self.get(x).map(|t| t == *ty).is_some()
     }
 }

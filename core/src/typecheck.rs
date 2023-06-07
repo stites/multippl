@@ -8,11 +8,11 @@ pub mod grammar {
     pub struct Typed;
     #[derive(Debug, PartialEq, Clone)]
     pub struct LetInTypes {
-        pub bindee: Ty,
-        pub body: Ty,
+        pub bindee: ETy,
+        pub body: ETy,
     }
     impl ξ<Typed> for AVarExt {
-        type Ext = Ty;
+        type Ext = ETy;
     }
     impl ξ<Typed> for AValExt {
         type Ext = ();
@@ -21,16 +21,16 @@ pub mod grammar {
         type Ext = ();
     }
     impl ξ<Typed> for EPrjExt {
-        type Ext = Ty;
+        type Ext = ETy;
     }
     impl ξ<Typed> for EProdExt {
-        type Ext = Ty;
+        type Ext = ETy;
     }
     impl ξ<Typed> for ELetInExt {
         type Ext = LetInTypes;
     }
     impl ξ<Typed> for EIteExt {
-        type Ext = Ty;
+        type Ext = ETy;
     }
     impl ξ<Typed> for EFlipExt {
         type Ext = ();
@@ -46,27 +46,27 @@ pub mod grammar {
     pub type EExprTyped = EExpr<Typed>;
     pub type ProgramTyped = Program<Typed>;
     impl AnfTyped {
-        pub fn as_type(&self) -> Ty {
+        pub fn as_type(&self) -> ETy {
             use Anf::*;
             match self {
                 AVar(t, _) => t.clone(),
                 AVal(_, v) => v.as_type(),
-                _ => Ty::EBool,
+                _ => ETy::EBool,
             }
         }
-        pub fn is_type(&self, ty: &Ty) -> bool {
+        pub fn is_type(&self, ty: &ETy) -> bool {
             self.as_type() == *ty
         }
         pub fn var(s: String) -> AnfTyped {
-            Anf::AVar(Ty::EBool, s)
+            Anf::AVar(ETy::EBool, s)
         }
     }
 }
 
-pub fn is_type(e: &grammar::EExprTyped, ty: &Ty) -> bool {
+pub fn is_type(e: &grammar::EExprTyped, ty: &ETy) -> bool {
     as_type(e) == *ty
 }
-pub fn as_type(e: &grammar::EExprTyped) -> Ty {
+pub fn as_type(e: &grammar::EExprTyped) -> ETy {
     use EExpr::*;
     match e {
         EAnf(_, anf) => anf.as_type(),
@@ -74,9 +74,9 @@ pub fn as_type(e: &grammar::EExprTyped) -> Ty {
         EProd(t, _) => t.clone(),
         ELetIn(t, _, _, _) => t.body.clone(),
         EIte(t, _, _, _) => t.clone(),
-        EFlip(_, _) => Ty::EBool,
-        EObserve(_, _) => Ty::EBool,
-        ESample(_, _) => Ty::EBool,
+        EFlip(_, _) => ETy::EBool,
+        EObserve(_, _) => ETy::EBool,
+        ESample(_, _) => ETy::EBool,
     }
 }
 
