@@ -5,6 +5,8 @@
 #![allow(unused_variables)]
 #![allow(clippy::all)]
 
+pub mod data;
+
 pub use rsdd::sample::probability::Probability;
 pub mod compile;
 pub mod grammar;

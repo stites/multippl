@@ -1,9 +1,3 @@
-pub mod compiled;
-pub mod context;
-pub mod errors;
-pub mod importance;
-pub mod weighting;
-
 // use crate::analysis::grammar::*;
 use crate::annotate::grammar::*;
 use crate::grammar::*;
@@ -32,11 +26,11 @@ use tracing::*;
 
 pub type Mgr = BddManager<AllTable<BddPtr>>;
 
-pub use crate::compile::compiled::{Compiled, Output, SubstMap};
-pub use crate::compile::context::Context;
-pub use crate::compile::errors::{CompileError, Result};
-pub use crate::compile::importance::{Importance, I};
-pub use crate::compile::weighting::{Weight, WeightMap};
+pub use crate::data::context::Context;
+pub use crate::data::errors::{CompileError, Result};
+pub use crate::data::importance::{Importance, I};
+pub use crate::data::output::{Compiled, Output, SubstMap};
+pub use crate::data::{Weight, WeightMap};
 use CompileError::*;
 
 pub mod grammar {

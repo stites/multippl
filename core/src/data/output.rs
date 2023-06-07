@@ -1,7 +1,7 @@
 use crate::annotate::grammar::Var;
-use crate::compile::context::Context;
-use crate::compile::importance::{Importance, I};
-use crate::compile::weighting::{Weight, WeightMap};
+use crate::data::context::Context;
+use crate::data::importance::{Importance, I};
+use crate::data::{Weight, WeightMap};
 use crate::uniquify::grammar::UniqueId;
 use itertools::izip;
 use num_traits::identities::Zero;
