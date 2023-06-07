@@ -1,3 +1,5 @@
+pub mod render;
+
 use rsdd::builder::bdd_builder::*;
 use rsdd::builder::cache::all_app::*;
 use rsdd::repr::bdd::*;

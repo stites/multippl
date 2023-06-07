@@ -1,10 +1,10 @@
 use crate::annotate::grammar::*;
 use crate::compile::*;
 use crate::grammar::*;
-use crate::render::*;
 use crate::run;
 use crate::typecheck::grammar::ProgramTyped;
 use crate::uniquify::grammar::*;
+use crate::utils::render::*;
 use crate::*;
 use itertools::*;
 use rsdd::repr::bdd::*;
@@ -519,8 +519,8 @@ pub fn importance_weighting_h(
     // let mut debug_inv = None;
 
     for _step in 1..=steps {
-        match crate::runner_h(p, &mut mgr, opt) {
-            Ok((cs, inv)) => {
+        match crate::runner_with_stdrng(p, &mut mgr, opt) {
+            Ok((cs, inv, _)) => {
                 is_debug = match cs {
                     Compiled::Output(_) => false,
                     Compiled::Debug(_) => {
@@ -668,7 +668,7 @@ impl Iterator for SamplingIter {
         if self.current_step >= self.max_steps {
             return None;
         }
-        match crate::runner_h_h(&self.program, &mut self.manager, &self.opt) {
+        match crate::runner_with_stdrng(&self.program, &mut self.manager, &self.opt) {
             Ok((cs, inv, rng)) => {
                 let mut newopt = self.opt.clone();
                 newopt.seed = rng;

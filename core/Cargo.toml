@@ -23,6 +23,7 @@ tracing-test = { workspace = true }
 tree-sitter = { workspace = true }
 tree-sitter-yodel = { path = "../tree-sitter" }
 
+# depends on rustc-serialize v0.3.24 which will be deprecated
 num-traits = "0.2"
 
 plotters = { version = "0.3.4", optional = true }

@@ -1,9 +1,10 @@
 use crate::compile::*;
 use crate::grammar::*;
 use crate::inference::*;
-use crate::render::*;
 use crate::typeinf::grammar::*;
+use crate::utils::render::*;
 use crate::*;
+
 use itertools::*;
 use rsdd::sample::probability::*;
 use std::any::{Any, TypeId};
@@ -13,6 +14,7 @@ use tracing::*;
 use tracing_test::*;
 
 mod arbitrary;
+
 const USE_OPT: bool = false;
 const USE_DEBUG: bool = false;
 

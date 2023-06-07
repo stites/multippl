@@ -18,7 +18,6 @@ pub mod typeinf;
 mod analysis;
 mod annotate;
 mod parser;
-mod render;
 mod typecheck;
 mod uniquify;
 mod utils;
@@ -88,15 +87,34 @@ pub fn run(p: &ProgramInferable) -> Result<(Mgr, Output)> {
     let (m, c) = runner(p, &Default::default())?;
     Ok((m, c.as_output().unwrap()))
 }
-pub fn run_h(p: &ProgramInferable, mgr: &mut Mgr) -> Result<Output> {
-    let c = runner_h(p, mgr, &Default::default())?;
-    Ok(c.0.as_output().unwrap())
-}
 
 pub fn runner(p: &ProgramInferable, opt: &Options) -> Result<(Mgr, Compiled)> {
     let mut mgr = make_mgr(p);
-    let (c, _) = runner_h(p, &mut mgr, opt)?;
+    let (c, _, _) = runner_with_stdrng(p, &mut mgr, opt)?;
     Ok((mgr, c))
+}
+
+pub fn runner_with_stdrng(
+    p: &ProgramInferable,
+    mgr: &mut Mgr,
+    opt: &Options,
+) -> Result<(Compiled, InvMap, Option<StdRng>)> {
+    let p = typeinference(p)?;
+    let p = typecheck(&p)?;
+    let mut senv = SymEnv::default();
+    let p = senv.uniquify(&p)?.0;
+    let mut lenv = LabelEnv::new();
+    let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
+
+    let mut rng = opt.rng();
+    let orng = if opt.debug { None } else { Some(&mut rng) };
+    let mut env = Env::new(mgr, orng, opt.opt, inv.clone());
+
+    env.varmap = Some(varmap);
+
+    let c = compile(&mut env, &p)?;
+    tracing::debug!("hurray!");
+    Ok((c, inv, env.rng.cloned()))
 }
 
 pub fn make_mgr_h(p: &ProgramInferable) -> Result<Mgr> {
@@ -109,61 +127,10 @@ pub fn make_mgr_h(p: &ProgramInferable) -> Result<Mgr> {
 
     Ok(Mgr::new_default_order(mxlbl as usize))
 }
+
 pub fn make_mgr(p: &ProgramInferable) -> Mgr {
     match make_mgr_h(p) {
         Ok(m) => m,
         Err(e) => panic!("{}", e),
     }
-}
-
-pub fn runner_h(p: &ProgramInferable, mgr: &mut Mgr, opt: &Options) -> Result<(Compiled, InvMap)> {
-    let (a, b, c) = runner_h_h(p, mgr, opt)?;
-    Ok((a, b))
-}
-
-pub fn runner_h_h(
-    p: &ProgramInferable,
-    mgr: &mut Mgr,
-    opt: &Options,
-) -> Result<(Compiled, InvMap, Option<StdRng>)> {
-    // , Analysis)> {
-    let p = typeinference(p)?;
-    let p = typecheck(&p)?;
-    let mut senv = SymEnv::default();
-    let p = senv.uniquify(&p)?.0;
-    let mut lenv = LabelEnv::new();
-    let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
-
-    let mut rng = opt.rng();
-    let orng = if opt.debug { None } else { Some(&mut rng) };
-    let mut env = Env::new(mgr, orng, opt.opt, inv.clone()); // , ab.clone()); // technically don't need this if I use the decorated vars in a clever way
-
-    env.varmap = Some(varmap);
-
-    let c = compile(&mut env, &p)?;
-    tracing::debug!("hurray!");
-    Ok((c, inv, env.rng.cloned()))
-}
-
-#[cfg(test)]
-mod active_tests {
-    // use super::*;
-    // use crate::annotate::LabelEnv;
-    // use crate::compile::*;
-    // use crate::compile::{compile, CompileError, Compiled, Env, Output, Result};
-    // use crate::grammar::*;
-    // use crate::grammar_macros::*;
-    // use crate::typecheck::{grammar::EExprTyped, typecheck};
-    // use crate::uniquify::SymEnv;
-    // use inference::*;
-    // use rsdd::builder::bdd_builder::*;
-    // use rsdd::builder::cache::all_app::*;
-
-    // use rsdd::repr::bdd::*;
-    // use rsdd::repr::ddnnf::DDNNFPtr;
-    // use rsdd::repr::var_label::*;
-    // use rsdd::*;
-    // use tests::*;
-    // use tracing::*;
-    // use tracing_test::traced_test;
 }
