@@ -12,14 +12,14 @@ use std::string::String;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Ty {
-    Bool,
-    Prod(Vec<Ty>),
+    EBool,
+    EProd(Vec<Ty>),
 }
 impl Ty {
     pub fn right(&self) -> Option<Ty> {
         match self {
-            Ty::Bool => None,
-            Ty::Prod(tys) => match &tys[..] {
+            Ty::EBool => None,
+            Ty::EProd(tys) => match &tys[..] {
                 [_, r] => Some(r.clone()),
                 _ => None,
             },
@@ -27,8 +27,8 @@ impl Ty {
     }
     pub fn left(&self) -> Option<Ty> {
         match self {
-            Ty::Bool => None,
-            Ty::Prod(tys) => match &tys[..] {
+            Ty::EBool => None,
+            Ty::EProd(tys) => match &tys[..] {
                 [l, _] => Some(l.clone()),
                 _ => None,
             },
@@ -52,23 +52,23 @@ pub struct AVarExt;
 pub struct AValExt;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Val {
-    Bool(bool),
-    Prod(Vec<Val>),
+pub enum EVal {
+    EBool(bool),
+    EProd(Vec<EVal>),
 }
-impl Val {
+impl EVal {
     pub fn is_prod(&self) -> bool {
-        use Val::*;
+        use EVal::*;
         match self {
-            Bool(_) => false,
-            Prod(_) => true,
+            EBool(_) => false,
+            EProd(_) => true,
         }
     }
     pub fn as_type(&self) -> Ty {
-        use Val::*;
+        use EVal::*;
         match self {
-            Bool(_) => Ty::Bool,
-            Prod(vs) => Ty::Prod(vs.iter().map(|x| x.as_type()).collect_vec()),
+            EBool(_) => Ty::EBool,
+            EProd(vs) => Ty::EProd(vs.iter().map(|x| x.as_type()).collect_vec()),
         }
     }
 }
@@ -79,7 +79,7 @@ where
     AValExt: ξ<X>,
 {
     AVar(<AVarExt as ξ<X>>::Ext, String),
-    AVal(<AValExt as ξ<X>>::Ext, Val),
+    AVal(<AValExt as ξ<X>>::Ext, EVal),
 
     // TODO: not sure this is where I should add booleans, but it makes
     // the observe statements stay closer to the semantics: ~observe anf~
@@ -99,7 +99,7 @@ where
         use Anf::*;
         match self {
             AVar(ext, s) => f.write_fmt(format_args!("Var({:?}) {}", ext, s)),
-            AVal(ext, v) => f.write_fmt(format_args!("Val({:?}) {:?}", ext, v)),
+            AVal(ext, v) => f.write_fmt(format_args!("EVal({:?}) {:?}", ext, v)),
             And(l, r) => f.write_fmt(format_args!("And({:?} && {:?})", l, r)),
             Or(l, r) => f.write_fmt(format_args!("Or({:?} || {:?})", l, r)),
             Neg(n) => f.write_fmt(format_args!("!({:?})", n)),
@@ -204,7 +204,7 @@ where
         match self {
             EAnf(ext, a) => f.write_fmt(format_args!("Anf({:?},{:?})", ext, a)),
             EPrj(ext, i, a) => f.debug_tuple("Prj").field(&ext).field(i).field(a).finish(),
-            EProd(ext, anfs) => f.debug_tuple("Prod").field(&ext).field(anfs).finish(),
+            EProd(ext, anfs) => f.debug_tuple("EProd").field(&ext).field(anfs).finish(),
             ELetIn(ext, s, bindee, body) => f
                 .debug_struct("LetIn")
                 .field("ext", &ext)

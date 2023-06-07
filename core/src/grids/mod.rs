@@ -361,10 +361,10 @@ pub mod make {
                 use OneParentStrategy::*;
                 match schema.choose_strategy_one() {
                     True => {
-                        Expr::EAnf((), Box::new(Anf::AVal((), Val::Bool(true))))
+                        Expr::EAnf((), Box::new(Anf::AVal((), EVal::EBool(true))))
                     },
                     False => {
-                        Expr::EAnf((), Box::new(Anf::AVal((), Val::Bool(false))))
+                        Expr::EAnf((), Box::new(Anf::AVal((), EVal::EBool(false))))
                     },
                     Pos => {
                         Expr::EAnf((), Box::new(Anf::AVar(None, parent.as_string())))
@@ -414,10 +414,10 @@ pub mod make {
                 use TwoParentStrategy::*;
                 match schema.choose_strategy_two() {
                     True => {
-                        Expr::EAnf((), Box::new(Anf::AVal((), Val::Bool(true))))
+                        Expr::EAnf((), Box::new(Anf::AVal((), EVal::EBool(true))))
                     },
                     False => {
-                        Expr::EAnf((), Box::new(Anf::AVal((), Val::Bool(false))))
+                        Expr::EAnf((), Box::new(Anf::AVal((), EVal::EBool(false))))
                     },
                     Conjunct => {
                         let p1 = Anf::AVar(None, p1s);

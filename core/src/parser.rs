@@ -112,7 +112,7 @@ fn parse_anf_node(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable {
             } else {
                 panic!("impossible")
             };
-            Anf::AVal((), Val::Bool(b))
+            Anf::AVal((), EVal::EBool(b))
         }
         _ => panic!("invalid program found!\nsexp: {}", n.to_sexp()),
     }

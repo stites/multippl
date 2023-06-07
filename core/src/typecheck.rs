@@ -51,14 +51,14 @@ pub mod grammar {
             match self {
                 AVar(t, _) => t.clone(),
                 AVal(_, v) => v.as_type(),
-                _ => Ty::Bool,
+                _ => Ty::EBool,
             }
         }
         pub fn is_type(&self, ty: &Ty) -> bool {
             self.as_type() == *ty
         }
         pub fn var(s: String) -> AnfTyped {
-            Anf::AVar(Ty::Bool, s)
+            Anf::AVar(Ty::EBool, s)
         }
     }
 }
@@ -74,9 +74,9 @@ pub fn as_type(e: &grammar::ExprTyped) -> Ty {
         EProd(t, _) => t.clone(),
         ELetIn(t, _, _, _) => t.body.clone(),
         EIte(t, _, _, _) => t.clone(),
-        EFlip(_, _) => Ty::Bool,
-        EObserve(_, _) => Ty::Bool,
-        ESample(_, _) => Ty::Bool,
+        EFlip(_, _) => Ty::EBool,
+        EObserve(_, _) => Ty::EBool,
+        ESample(_, _) => Ty::EBool,
     }
 }
 

@@ -47,7 +47,7 @@ pub mod grammar {
 pub fn typeinference_anf(a: &grammar::AnfInferable) -> Result<AnfTyped, CompileError> {
     use crate::grammar::Anf::*;
     match a {
-        AVar(ty, s) => Ok(AVar(Ty::Bool, s.clone())),
+        AVar(ty, s) => Ok(AVar(Ty::EBool, s.clone())),
         AVal(_, v) => Ok(AVal((), v.clone())),
         And(bl, br) => Ok(And(
             Box::new(typeinference_anf(bl)?),
@@ -64,7 +64,7 @@ pub fn typeinference_anfs(anfs: &[grammar::AnfInferable]) -> Result<Vec<AnfTyped
     anfs.iter().map(typeinference_anf).collect()
 }
 fn ignored_type() -> Ty {
-    Ty::Bool
+    Ty::EBool
 }
 
 pub fn typeinference_expr(e: &grammar::ExprInferable) -> Result<ExprTyped, CompileError> {

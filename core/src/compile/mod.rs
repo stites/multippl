@@ -161,11 +161,11 @@ impl<'a> Env<'a> {
                     Ok((c.clone(), AVar(Box::new(c), s.to_string())))
                 }
             },
-            AVal(_, Val::Bool(b)) => {
+            AVal(_, EVal::EBool(b)) => {
                 let c = Output::from_anf_dists(ctx, vec![BddPtr::from_bool(*b)]);
-                Ok((c.clone(), AVal(Box::new(c), Val::Bool(*b))))
+                Ok((c.clone(), AVal(Box::new(c), EVal::EBool(*b))))
             }
-            AVal(_, Val::Prod(vs)) => Err(CompileError::Todo()),
+            AVal(_, EVal::EProd(vs)) => Err(CompileError::Todo()),
             And(bl, br) => {
                 let (ltr, rtr, o) = self.eval_anf_binop(ctx, bl, br, &BddManager::and)?;
                 Ok((o, And(Box::new(ltr), Box::new(rtr))))
@@ -336,7 +336,7 @@ impl<'a> Env<'a> {
                 let (pred, atr) = self.eval_anf(ctx, cond)?;
                 if !pred.dists.len() == 1 {
                     return Err(TypeError(format!(
-                        "Expected Bool for ITE condition\nGot: {cond:?}\n{ctx:?}",
+                        "Expected EBool for ITE condition\nGot: {cond:?}\n{ctx:?}",
                     )));
                 }
                 let pred_dist = pred.dists[0];
