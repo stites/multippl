@@ -1,6 +1,6 @@
 {
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/release-23.05";
     flake-parts.url = "github:hercules-ci/flake-parts";
     haskell-flake.url = "github:srid/haskell-flake";
 
@@ -37,7 +37,7 @@
         _module.args.pkgs = inputs.nixpkgs.legacyPackages.${system};
         haskellProjects.default = {
           packages = {
-            yodel.root = ./.;
+            #yodel.root = ./.;
           };
           devShell = {
             tools = hp:
