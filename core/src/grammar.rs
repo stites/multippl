@@ -145,7 +145,7 @@ where
 }
 
 #[allow(clippy::enum_variant_names)]
-pub enum Expr<X>
+pub enum EExpr<X>
 where
     EAnfExt: ξ<X>,
     EPrjExt: ξ<X>,
@@ -165,18 +165,23 @@ where
 
     // TODO Ignore function calls for now
     // EApp(String, Box<Anf>),
-    ELetIn(<ELetInExt as ξ<X>>::Ext, String, Box<Expr<X>>, Box<Expr<X>>),
+    ELetIn(
+        <ELetInExt as ξ<X>>::Ext,
+        String,
+        Box<EExpr<X>>,
+        Box<EExpr<X>>,
+    ),
     EIte(
         <EIteExt as ξ<X>>::Ext,
         Box<Anf<X>>,
-        Box<Expr<X>>,
-        Box<Expr<X>>,
+        Box<EExpr<X>>,
+        Box<EExpr<X>>,
     ),
     EFlip(<EFlipExt as ξ<X>>::Ext, f64),
     EObserve(<EObserveExt as ξ<X>>::Ext, Box<Anf<X>>),
-    ESample(<ESampleExt as ξ<X>>::Ext, Box<Expr<X>>),
+    ESample(<ESampleExt as ξ<X>>::Ext, Box<EExpr<X>>),
 }
-impl<X> Debug for Expr<X>
+impl<X> Debug for EExpr<X>
 where
     EAnfExt: ξ<X>,
     EPrjExt: ξ<X>,
@@ -200,7 +205,7 @@ where
     <AValExt as ξ<X>>::Ext: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use Expr::*;
+        use EExpr::*;
         match self {
             EAnf(ext, a) => f.write_fmt(format_args!("Anf({:?},{:?})", ext, a)),
             EPrj(ext, i, a) => f.debug_tuple("Prj").field(&ext).field(i).field(a).finish(),
@@ -225,7 +230,7 @@ where
         }
     }
 }
-impl<X> Clone for Expr<X>
+impl<X> Clone for EExpr<X>
 where
     EAnfExt: ξ<X>,
     EPrjExt: ξ<X>,
@@ -250,7 +255,7 @@ where
     <AValExt as ξ<X>>::Ext: Clone,
 {
     fn clone(&self) -> Self {
-        use Expr::*;
+        use EExpr::*;
         match self {
             EAnf(ext, a) => EAnf(ext.clone(), a.clone()),
             EPrj(ext, i, a) => EPrj(ext.clone(), *i, a.clone()),
@@ -265,7 +270,7 @@ where
         }
     }
 }
-impl<X> PartialEq for Expr<X>
+impl<X> PartialEq for EExpr<X>
 where
     EAnfExt: ξ<X>,
     EPrjExt: ξ<X>,
@@ -290,7 +295,7 @@ where
     <AValExt as ξ<X>>::Ext: PartialEq,
 {
     fn eq(&self, o: &Self) -> bool {
-        use Expr::*;
+        use EExpr::*;
         match (self, o) {
             (EAnf(ext0, a0), EAnf(ext1, a1)) => ext0 == ext1 && a0 == a1,
             (EPrj(ext0, i0, a0), EPrj(ext1, i1, a1)) => ext0 == ext1 && i0 == i1 && a0 == a1,
@@ -335,10 +340,10 @@ impl Γ {
 //   name : String
 //   arg : String × Ty
 //   ret : Ty
-//   body : Expr
+//   body : EExpr
 // deriving Repr
 
-impl<X> Expr<X>
+impl<X> EExpr<X>
 where
     EAnfExt: ξ<X>,
     EPrjExt: ξ<X>,
@@ -362,10 +367,10 @@ where
     <AValExt as ξ<X>>::Ext: Debug + Clone,
 {
     pub fn is_sample(&self) -> bool {
-        matches!(self, Expr::ESample(_, _))
+        matches!(self, EExpr::ESample(_, _))
     }
-    pub fn strip_samples1(&self) -> Expr<X> {
-        use Expr::*;
+    pub fn strip_samples1(&self) -> EExpr<X> {
+        use EExpr::*;
         match self {
             ESample(_, e) => e.strip_samples1(),
             ELetIn(ex, s, x, y) => ELetIn(
@@ -383,15 +388,15 @@ where
             e => e.clone(),
         }
     }
-    pub fn query(&self) -> Expr<X> {
-        use Expr::*;
+    pub fn query(&self) -> EExpr<X> {
+        use EExpr::*;
         match self {
             ELetIn(ex, s, x, y) => y.query(),
             _ => self.clone(),
         }
     }
-    pub fn insert_observe(&self, e: Expr<X>) -> Expr<X> {
-        use Expr::*;
+    pub fn insert_observe(&self, e: EExpr<X>) -> EExpr<X> {
+        use EExpr::*;
         match self {
             ELetIn(ex, s, x, body) => {
                 let body = match &**body {
@@ -439,7 +444,7 @@ where
     <AVarExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <AValExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
 {
-    Body(Expr<X>),
+    Body(EExpr<X>),
     // TODO
     // | define (f: Func) (rest: Program) : Program
 }
@@ -484,13 +489,13 @@ where
             }
         }
     }
-    pub fn query(&self) -> Expr<X> {
+    pub fn query(&self) -> EExpr<X> {
         use Program::*;
         match self {
             Body(e) => e.query(),
         }
     }
-    pub fn insert_observe(&self, e: Expr<X>) -> Program<X> {
+    pub fn insert_observe(&self, e: EExpr<X>) -> Program<X> {
         use Program::*;
         match self {
             Body(b) => Body(b.insert_observe(e)),
@@ -532,5 +537,5 @@ impl ξ<UD> for ESampleExt {
 }
 
 pub type AnfUD = Anf<UD>;
-pub type ExprUD = Expr<UD>;
+pub type EExprUD = EExpr<UD>;
 pub type ProgramUD = Program<UD>;

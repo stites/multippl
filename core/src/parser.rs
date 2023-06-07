@@ -1,4 +1,4 @@
-use crate::typeinf::grammar::{AnfInferable, ExprInferable, ProgramInferable};
+use crate::typeinf::grammar::{AnfInferable, EExprInferable, ProgramInferable};
 use itertools::Itertools;
 use std::collections::VecDeque;
 use tree_sitter::*;
@@ -158,27 +158,27 @@ fn parse_float(src: &[u8], c: &mut TreeCursor, n: Node) -> f64 {
         _ => panic!("unexpected"),
     }
 }
-fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ExprInferable {
+fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExprInferable {
     let k = n.kind();
     match k {
         "anf" => {
             println!("{}", n.to_sexp());
             let anf = parse_anf(src, c, *n);
-            return Expr::EAnf((), Box::new(anf));
+            return EExpr::EAnf((), Box::new(anf));
         }
         "fst" => {
             let mut c_ = c.clone();
             let mut cs = n.named_children(&mut c_);
             let anf = cs.next().unwrap();
             let anf = parse_anf(src, c, anf);
-            Expr::EPrj(None, 0, Box::new(anf))
+            EExpr::EPrj(None, 0, Box::new(anf))
         }
         "snd" => {
             let mut c_ = c.clone();
             let mut cs = n.named_children(&mut c_);
             let anf = cs.next().unwrap();
             let anf = parse_anf(src, c, anf);
-            Expr::EPrj(None, 1, Box::new(anf))
+            EExpr::EPrj(None, 1, Box::new(anf))
         }
         "prj" => {
             let mut c_ = c.clone();
@@ -191,7 +191,7 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ExprInferable {
 
             let anf = cs.next().unwrap();
             let anf = parse_anf(src, c, anf);
-            Expr::EPrj(None, ix, Box::new(anf))
+            EExpr::EPrj(None, ix, Box::new(anf))
         }
         "prod" => {
             let mut anfs = vec![];
@@ -202,7 +202,7 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ExprInferable {
                 let a = parse_anf(src, c, a);
                 anfs.push(a);
             }
-            Expr::EProd(None, anfs)
+            EExpr::EProd(None, anfs)
         }
         "let_binding" => {
             println!("{}", n.to_sexp());
@@ -219,7 +219,7 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ExprInferable {
 
             let body = cs.next().unwrap();
             let body = parse_expr(src, c, &body);
-            Expr::ELetIn(None, ident, Box::new(bindee), Box::new(body))
+            EExpr::ELetIn(None, ident, Box::new(bindee), Box::new(body))
         }
         "ite_binding" => {
             println!("{}", n.to_sexp());
@@ -235,16 +235,16 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ExprInferable {
 
             let fbranch = cs.next().unwrap();
             let fbranch = parse_expr(src, c, &fbranch);
-            Expr::EIte(None, Box::new(pred), Box::new(tbranch), Box::new(fbranch))
+            EExpr::EIte(None, Box::new(pred), Box::new(tbranch), Box::new(fbranch))
         }
         "flip" => {
             println!("{}", n.to_sexp());
             let f = parse_float(src, c, *n);
-            Expr::EFlip((), f)
+            EExpr::EFlip((), f)
         }
         "observe" => {
             let anf = parse_anf(src, c, *n);
-            Expr::EObserve((), Box::new(anf))
+            EExpr::EObserve((), Box::new(anf))
         }
         "sample" => {
             println!("{}", n.to_sexp());
@@ -252,7 +252,7 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ExprInferable {
             let mut cs = n.named_children(&mut _c);
             let subp = cs.next().unwrap();
             let e = parse_expr(src, c, &subp);
-            Expr::ESample((), Box::new(e))
+            EExpr::ESample((), Box::new(e))
         }
         s => panic!(
             "unexpected tree-sitter node kind `{}` (#named_children: {})! Likely, you need to rebuild the tree-sitter parser\nsexp: {}", s, n.named_child_count(), n.to_sexp()

@@ -86,7 +86,7 @@ pub mod grammar {
         type Ext = ();
     }
 
-    pub type ExprUnq = Expr<Uniquify>;
+    pub type EExprUnq = EExpr<Uniquify>;
     pub type ProgramUnq = Program<Uniquify>;
 }
 
@@ -158,8 +158,8 @@ impl SymEnv {
         anfs.iter().map(|a| self.uniquify_anf(a)).collect()
     }
 
-    pub fn uniquify_expr(&mut self, e: &ExprUD) -> Result<ExprUnq, CompileError> {
-        use crate::grammar::Expr::*;
+    pub fn uniquify_expr(&mut self, e: &EExprUD) -> Result<EExprUnq, CompileError> {
+        use crate::grammar::EExpr::*;
         match e {
             EAnf(_, a) => Ok(EAnf((), Box::new(self.uniquify_anf(a)?))),
             EPrj(_ty, i, a) => Ok(EPrj((), *i, Box::new(self.uniquify_anf(a)?))),
@@ -215,7 +215,7 @@ mod tests {
     use crate::grammar::*;
     use crate::grammar_macros::*;
     use crate::typecheck::pipeline;
-    use crate::typeinf::grammar::{ExprInferable, ProgramInferable};
+    use crate::typeinf::grammar::{EExprInferable, ProgramInferable};
     use crate::*;
     use tracing::*;
     use tracing_test::traced_test;
@@ -224,7 +224,7 @@ mod tests {
     fn invalid_observe() {
         let res = SymEnv::default().uniquify(&pipeline(&program!(observe!(b!("x")))).unwrap());
         assert!(res.is_err());
-        let mk = |ret: ExprInferable| {
+        let mk = |ret: EExprInferable| {
             Program::Body(lets![
                 "x" ; b!() ;= flip!(1/3);
                 "y" ; b!() ;= sample!(

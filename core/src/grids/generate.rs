@@ -37,7 +37,7 @@ pub fn sliding_observes(
     p0: &ProgramInferable,
     clause_size: usize,
 ) -> Vec<(ObsId, ProgramInferable)> {
-    use Expr::*;
+    use EExpr::*;
     match p0.query() {
         EProd(_, qs) => qs
             .iter()

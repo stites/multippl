@@ -75,7 +75,7 @@ impl Options {
 use crate::annotate::{InvMap, LabelEnv};
 use crate::compile::{compile, CompileError, Compiled, Env, Mgr, Output, Result};
 use crate::typecheck::{
-    grammar::{ExprTyped, ProgramTyped},
+    grammar::{EExprTyped, ProgramTyped},
     typecheck,
 };
 use crate::typeinf::grammar::ProgramInferable;
@@ -152,7 +152,7 @@ mod active_tests {
     // use crate::compile::{compile, CompileError, Compiled, Env, Output, Result};
     // use crate::grammar::*;
     // use crate::grammar_macros::*;
-    // use crate::typecheck::{grammar::ExprTyped, typecheck};
+    // use crate::typecheck::{grammar::EExprTyped, typecheck};
     // use crate::uniquify::SymEnv;
     // use inference::*;
     // use rsdd::builder::bdd_builder::*;

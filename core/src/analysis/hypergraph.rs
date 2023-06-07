@@ -72,7 +72,7 @@ mod tests {
     use crate::compile::*;
     use crate::grammar::*;
     use crate::grammar_macros::*;
-    use crate::typecheck::grammar::{ExprTyped, ProgramTyped};
+    use crate::typecheck::grammar::{EExprTyped, ProgramTyped};
     use crate::typecheck::typecheck;
     use crate::*;
     use tracing::*;

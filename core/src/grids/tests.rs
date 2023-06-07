@@ -62,7 +62,7 @@ macro_rules! pmap {
         probmap
     }};
 }
-pub fn full_2x2_query() -> ExprInferable {
+pub fn full_2x2_query() -> EExprInferable {
     b!("00", "01", "10", "11")
 }
 
@@ -125,7 +125,7 @@ fn test_grid_2x2_schema() {
 #[test]
 fn test_make_2x2_tril() {
     use crate::grammar::Anf::*;
-    use crate::grammar::Expr::*;
+    use crate::grammar::EExpr::*;
     use Parents::*;
     let query = b!("11");
     let probmap = make_2x2_pmap();
@@ -159,7 +159,7 @@ fn test_make_2x2_tril() {
 #[test]
 fn test_make_2x2_diag() {
     use crate::grammar::Anf::*;
-    use crate::grammar::Expr::*;
+    use crate::grammar::EExpr::*;
     use Parents::*;
     let query = b!("11");
     let probmap = make_2x2_pmap();
@@ -216,7 +216,7 @@ fn test_make_2x2_diag() {
 #[test]
 fn test_grid_2x2_compiles() {
     use crate::grammar::Anf::*;
-    use crate::grammar::Expr::*;
+    use crate::grammar::EExpr::*;
     let query = b!("11");
     let probmap = make_2x2_pmap();
     let schema =
@@ -270,7 +270,7 @@ fn test_grid_2x2_compiles() {
 
 #[test]
 fn test_grid2x2_inference() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         Program::Body(lets![
             "00"  ;= flip!(1/2);
             "01"  ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -360,7 +360,7 @@ pub fn make_3x3_pmap() -> HashMap<(Ix, Parents<bool>), Probability> {
         9 / 11 @ pkey!((2 1 false, 1 2 false) => 2 2)
     ]
 }
-pub fn full_3x3_query() -> ExprInferable {
+pub fn full_3x3_query() -> EExprInferable {
     b!("00", "01", "10", "02", "20", "11", "12", "21", "22")
 }
 
@@ -459,7 +459,7 @@ fn test_make_3x3_tril() {
 #[test]
 fn test_make_3x3_diag() {
     use crate::grammar::Anf::*;
-    use crate::grammar::Expr::*;
+    use crate::grammar::EExpr::*;
     use Parents::*;
     let query = b!("11");
     let probmap = make_3x3_pmap();
@@ -496,7 +496,7 @@ fn test_make_3x3_diag() {
 #[test]
 fn test_grid_3x3_compiles() {
     use crate::grammar::Anf::*;
-    use crate::grammar::Expr::*;
+    use crate::grammar::EExpr::*;
     let query = b!("11");
     let probmap = make_3x3_pmap();
     let schema =
@@ -549,7 +549,7 @@ fn test_grid_3x3_compiles() {
 #[test]
 // #[traced_test]
 fn test_grid3x3_inference() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         Program::Body(lets![
             "00"  ;= flip!(1/2);
             "01"  ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -630,7 +630,7 @@ fn test_grid3x3_inference() {
 #[test]
 // #[traced_test]
 fn test_grid3x3_sampled_inference() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         Program::Body(lets![
             "00"  ;= flip!(1/2);
             "01"  ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );

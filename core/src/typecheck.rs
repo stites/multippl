@@ -43,7 +43,7 @@ pub mod grammar {
     }
 
     pub type AnfTyped = Anf<Typed>;
-    pub type ExprTyped = Expr<Typed>;
+    pub type EExprTyped = EExpr<Typed>;
     pub type ProgramTyped = Program<Typed>;
     impl AnfTyped {
         pub fn as_type(&self) -> Ty {
@@ -63,11 +63,11 @@ pub mod grammar {
     }
 }
 
-pub fn is_type(e: &grammar::ExprTyped, ty: &Ty) -> bool {
+pub fn is_type(e: &grammar::EExprTyped, ty: &Ty) -> bool {
     as_type(e) == *ty
 }
-pub fn as_type(e: &grammar::ExprTyped) -> Ty {
-    use Expr::*;
+pub fn as_type(e: &grammar::EExprTyped) -> Ty {
+    use EExpr::*;
     match e {
         EAnf(_, anf) => anf.as_type(),
         EPrj(t, _, _) => t.clone(),
@@ -107,8 +107,8 @@ pub fn typecheck_anfs(anfs: &[grammar::AnfTyped]) -> Result<Vec<AnfUD>, CompileE
     anfs.iter().map(typecheck_anf).collect()
 }
 
-pub fn typecheck_expr(e: &grammar::ExprTyped) -> Result<ExprUD, CompileError> {
-    use crate::grammar::Expr::*;
+pub fn typecheck_expr(e: &grammar::EExprTyped) -> Result<EExprUD, CompileError> {
+    use crate::grammar::EExpr::*;
     match e {
         EAnf(_, a) => Ok(EAnf((), Box::new(typecheck_anf(a)?))),
         EPrj(_ty, i, a) => {

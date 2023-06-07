@@ -80,7 +80,7 @@ pub mod grammar {
         type Ext = Box<Compiled>;
     }
 
-    pub type ExprTr = Expr<Trace>;
+    pub type EExprTr = EExpr<Trace>;
     pub type ProgramTr = Program<Trace>;
 }
 use grammar::*;
@@ -188,8 +188,8 @@ impl<'a> Env<'a> {
             None => Compiled::Output(c),
         })
     }
-    pub fn eval_expr(&mut self, ctx: &Context, e: &ExprAnn) -> Result<(Compiled, ExprTr)> {
-        use Expr::*;
+    pub fn eval_expr(&mut self, ctx: &Context, e: &EExprAnn) -> Result<(Compiled, EExprTr)> {
+        use EExpr::*;
         match e {
             EAnf(_, a) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "anf");
@@ -308,7 +308,7 @@ impl<'a> Env<'a> {
                             .collect::<Result<Vec<Output>>>()?;
                         Ok((cbodies, bodiestr))
                     })
-                    .collect::<Result<Vec<(Vec<Output>, ExprTr)>>>()?
+                    .collect::<Result<Vec<(Vec<Output>, EExprTr)>>>()?
                     .into_iter()
                     .fold(
                         (vec![], None),
@@ -461,7 +461,7 @@ impl<'a> Env<'a> {
                         }).collect::<Result<Vec<Output>>>()?;
                         Ok((c, ftr))
                     })
-                    .collect::<Result<Vec<(Vec<Output>, ExprTr)>>>()?
+                    .collect::<Result<Vec<(Vec<Output>, EExprTr)>>>()?
                     .into_iter()
                     .fold(
                         (vec![], None),
@@ -680,7 +680,7 @@ impl<'a> Env<'a> {
         }
     }
 }
-pub fn debug(env: &mut Env, p: &ProgramAnn) -> Result<(Compiled, ExprTr)> {
+pub fn debug(env: &mut Env, p: &ProgramAnn) -> Result<(Compiled, EExprTr)> {
     match p {
         Program::Body(e) => {
             debug!("========================================================");

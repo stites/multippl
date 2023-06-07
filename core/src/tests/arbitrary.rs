@@ -3,18 +3,18 @@ use itertools::*;
 use quickcheck::*;
 use std::fmt::Debug;
 
-impl Arbitrary for Val {
+impl Arbitrary for EVal {
     fn arbitrary(g: &mut Gen) -> Self {
         let x = g.choose(&[None, Some(true), Some(false), Some(true), Some(false)]);
         match x {
             None => panic!("impossible: choose vec has len > 0"),
-            Some(Some(b)) => Val::Bool(*b),
+            Some(Some(b)) => EVal::EBool(*b),
             Some(None) => {
                 // let arb = u8::arbitrary(g);
                 // let len = (arb % 3) + 2; // only generate between 2-4 tuples
-                // Val::Prod((0..len).map(|_i| Self::arbitrary(g)).collect_vec())
+                // EVal::EProd((0..len).map(|_i| Self::arbitrary(g)).collect_vec())
                 // ...actually, just work with 2-tuples for now.
-                Val::Prod((0..2).map(|_i| Self::arbitrary(g)).collect_vec())
+                EVal::EProd((0..2).map(|_i| Self::arbitrary(g)).collect_vec())
             }
         }
     }
@@ -32,7 +32,7 @@ where
         match x {
             None => panic!("impossible: choose vec has len > 0"),
             Some(0) => Anf::<X>::AVar(Arbitrary::arbitrary(g), String::arbitrary(g)),
-            Some(1) => Anf::AVal(Arbitrary::arbitrary(g), Val::arbitrary(g)),
+            Some(1) => Anf::AVal(Arbitrary::arbitrary(g), EVal::arbitrary(g)),
             Some(2) => {
                 let x = g.choose(&[0, 1, 2_u8]);
                 match x {
@@ -48,7 +48,7 @@ where
     }
 }
 
-impl<X: 'static> Arbitrary for Expr<X>
+impl<X: 'static> Arbitrary for EExpr<X>
 where
     EAnfExt: ξ<X>,
     EPrjExt: ξ<X>,
@@ -71,12 +71,12 @@ where
     <AVarExt as ξ<X>>::Ext: Arbitrary,
     <AValExt as ξ<X>>::Ext: Arbitrary,
 {
-    fn arbitrary(g: &mut Gen) -> Expr<X> {
+    fn arbitrary(g: &mut Gen) -> EExpr<X> {
         let x = g.choose(&[0, 1, 2, 3, 4, 5, 6, 7]).copied();
         match x {
             None => panic!("impossible: choose vec has len > 0"),
-            Some(0) => Expr::EAnf(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            Some(1) => Expr::EProd(
+            Some(0) => EExpr::EAnf(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
+            Some(1) => EExpr::EProd(
                 Arbitrary::arbitrary(g),
                 (0..2).map(|_i| Anf::arbitrary(g)).collect_vec(),
             ),
@@ -84,23 +84,23 @@ where
                 let var = String::arbitrary(g);
                 let bind = Arbitrary::arbitrary(g);
                 let body = Arbitrary::arbitrary(g);
-                Expr::ELetIn(Arbitrary::arbitrary(g), var, bind, body)
+                EExpr::ELetIn(Arbitrary::arbitrary(g), var, bind, body)
             }
             Some(3) => {
                 let p = Arbitrary::arbitrary(g);
                 let t = Arbitrary::arbitrary(g);
                 let f = Arbitrary::arbitrary(g);
-                Expr::EIte(Arbitrary::arbitrary(g), p, t, f)
+                EExpr::EIte(Arbitrary::arbitrary(g), p, t, f)
             }
             Some(4) => {
                 let r = u8::arbitrary(g); // 256
-                Expr::EFlip(
+                EExpr::EFlip(
                     Arbitrary::arbitrary(g),
                     <u8 as Into<f64>>::into(r) / <u8 as Into<f64>>::into(u8::MAX),
                 )
             }
-            Some(5) => Expr::EObserve(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
-            Some(6) => Expr::ESample(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
+            Some(5) => EExpr::EObserve(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
+            Some(6) => EExpr::ESample(Arbitrary::arbitrary(g), Arbitrary::arbitrary(g)),
             _ => panic!("impossible"),
         }
     }
@@ -130,6 +130,6 @@ where
     <AValExt as ξ<X>>::Ext: Arbitrary + Debug + Clone + PartialEq,
 {
     fn arbitrary(g: &mut Gen) -> Program<X> {
-        Program::Body(Expr::arbitrary(g))
+        Program::Body(EExpr::arbitrary(g))
     }
 }

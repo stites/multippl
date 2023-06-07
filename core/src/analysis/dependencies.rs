@@ -105,8 +105,8 @@ impl DependencyEnv {
             Neg(bp) => self.scan_anf(bp),
         }
     }
-    fn scan_expr(&mut self, e: &ExprAnn) -> HashSet<Dep> {
-        use crate::grammar::Expr::*;
+    fn scan_expr(&mut self, e: &EExprAnn) -> HashSet<Dep> {
+        use crate::grammar::EExpr::*;
         match e {
             EAnf((), a) => Dep::as_vars(self.scan_anf(a)),
             // FIXME : definitely not desiarable, fix later
@@ -159,7 +159,7 @@ mod tests {
     use crate::compile::*;
     use crate::grammar::*;
     use crate::grammar_macros::*;
-    use crate::typecheck::grammar::{ExprTyped, ProgramTyped};
+    use crate::typecheck::grammar::{EExprTyped, ProgramTyped};
     use crate::typecheck::typecheck;
     use crate::*;
     use tracing::*;

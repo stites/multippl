@@ -61,7 +61,7 @@ pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &Pr
 //         debug: false,
 //         seed: Some(3),
 //     };
-//     let mk = |ret: ExprInferable| {
+//     let mk = |ret: EExprInferable| {
 //         Program::Body(lets![
 //             "x" ;= flip!(1/3);
 //             "y" ;= sample!(
@@ -155,7 +155,7 @@ pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &Pr
 #[test]
 // #[traced_test]
 fn free_variables_0() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         program!(lets![
            "x" ;= flip!(1/3);
            "y" ;= sample!(var!("x"));
@@ -252,7 +252,7 @@ pub fn check_approx1(s: &str, f: f64, p: &ProgramInferable, n: usize) {
 #[test]
 // #[traced_test]
 fn free_variable_2_inv() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         Program::Body(lets![
             "x" ;= flip!(1/3);
             "y" ;= sample!(
@@ -376,7 +376,7 @@ fn program01() {
 }
 #[test]
 fn program02() {
-    let mk02 = |ret: ExprInferable| {
+    let mk02 = |ret: EExprInferable| {
         Program::Body(lets![
             "x" ;= flip!(1.0/3.0);
             "y" ;= flip!(1.0/4.0);
@@ -391,7 +391,7 @@ fn program02() {
 
 #[test]
 fn program03() {
-    let mk03 = |ret: ExprInferable| {
+    let mk03 = |ret: EExprInferable| {
         Program::Body(lets![
             "x"  ;= flip!(1.0/3.0);
             "y"  ;= flip!(1.0/4.0);
@@ -408,7 +408,7 @@ fn program03() {
 // #[test]
 // // #[traced_test]
 // fn program04_seeded() {
-//     let mk04 = |ret: ExprInferable| {
+//     let mk04 = |ret: EExprInferable| {
 //         Program::Body(lets![
 //             "x"  ;= sample!(flip!(1/3));
 //             "y"  ;= flip!(1/4);
@@ -427,7 +427,7 @@ fn program03() {
 
 #[test]
 fn program04_approx() {
-    let mk04 = |ret: ExprInferable| {
+    let mk04 = |ret: EExprInferable| {
         program!(lets![
             "x"  ;= sample!(flip!(1/3));
             "y"  ;= flip!(1/4);
@@ -468,7 +468,7 @@ fn tuple0() {
         ])
     };
     check_exact("tuples0/T,T", vec![1.0, 1.0], &p);
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         program!(lets![
             "y" ;= b!(true);
             "z" ;= b!("y", true);
@@ -482,7 +482,7 @@ fn tuple0() {
 #[test]
 // #[traced_test]
 fn tuple1() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         Program::Body(lets![
             "x"     ;= flip!(1.0/3.0);
             "y"     ;= flip!(1.0/4.0);
@@ -563,7 +563,7 @@ macro_rules! free_variable_2_tests {
     $(
         #[test]
         fn $name() {
-            let mk = |ret: ExprInferable| {
+            let mk = |ret: EExprInferable| {
                 Program::Body(lets![
                     "x" ;= flip!(1/3);
                     "y" ;= sample!(
@@ -589,7 +589,7 @@ free_variable_2_tests! {
 
 #[test]
 fn free_variables_shared() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         Program::Body(lets![
            "x" ;= flip!(1/3);
            "l" ;= sample!(var!("x"));
@@ -616,7 +616,7 @@ fn free_variables_shared_tuple() {
 
 #[test]
 fn ite_00() {
-    let mk = |p: ExprInferable| {
+    let mk = |p: EExprInferable| {
         Program::Body(ite!(
                     if ( p )
                     then { flip!(1/3) }
@@ -628,7 +628,7 @@ fn ite_00() {
 
 #[test]
 fn ite_0() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         Program::Body(lets![
             "b" ;= ite!(
                 if ( b!(true) )
@@ -642,7 +642,7 @@ fn ite_0() {
 
 #[test]
 fn ite_1() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         Program::Body(lets![
             "x" ;= flip!(1/3);
             "y" ;= ite!(
@@ -661,7 +661,7 @@ fn ite_1() {
 
 #[test]
 fn ite_2() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         Program::Body(lets![
             "x" ;= flip!(1/3);
             "y" ;= ite!(
@@ -708,7 +708,7 @@ fn ite_3_with_one_sample_hard1_simplified_even_more_false() {
 // ============================================================ //
 #[test]
 fn nested_1() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         Program::Body(lets![
             "x"  ;= sample!(sample!(flip!(1/3)));
             "y"  ;= flip!(1/4);
@@ -725,7 +725,7 @@ fn nested_1() {
 
 #[test]
 fn nested_2() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         Program::Body(lets![
             "x"  ;= flip!(2/5);
             "y"  ;= sample!(
@@ -771,7 +771,7 @@ fn nested_2() {
 #[test]
 // #[traced_test]
 fn grid2x2_warmup0() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         Program::Body(lets![
             "00"  ;= flip!(1/2);
             "01"  ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -785,7 +785,7 @@ fn grid2x2_warmup0() {
 }
 #[test]
 fn grid2x2_warmup1() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         Program::Body(lets![
             "01"  ;= flip!(1/3) ;
             "10"  ;= flip!(1/4) ;
@@ -805,7 +805,7 @@ fn grid2x2_warmup1() {
 ///   (1,0) -> (1,1)
 #[test]
 fn grid2x2() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         Program::Body(lets![
             "00"  ;= flip!(1/2);
             "01"  ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -826,7 +826,7 @@ fn grid2x2() {
 
 #[test]
 fn grid2x2_sampled() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         Program::Body(lets![
             "00"  ;= flip!(1/2);
             "01_10" ;= sample!(
@@ -866,7 +866,7 @@ fn grid2x2_sampled() {
 ///   (2,0) -> (2,1) -> (2,2)
 #[test]
 fn grid3x3_sampled_diag() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         Program::Body(lets![
             "00"  ;= flip!(1/2);
             "01"  ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -942,7 +942,7 @@ fn grid3x3_sampled_diag() {
 ///   (2,0) -> (2,1) -> (2,2)
 #[test]
 fn grid3x3() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         Program::Body(lets![
             "00"  ;= flip!(1/2);
             "01"  ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -989,7 +989,7 @@ fn grid3x3() {
 
 #[test]
 fn ite_3_with_one_sample_hard1_simplified_more() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         program!(lets![
             "x" ;= flip!(3/5);
             "y" ;= ite!(
@@ -1015,7 +1015,7 @@ fn ite_3_with_one_sample_hard1_simplified_more() {
 fn manual_ite() {
     use rsdd::builder::bdd_builder::*;
     use rsdd::repr::wmc::*;
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         program!(lets![
             "x" ;= flip!(3/5);
             "y" ;= ite!(
@@ -1169,7 +1169,7 @@ fn manual_ite() {
 
 #[test]
 fn ite_3_with_one_sample_hard1_simplified() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         program!(lets![
             "x" ;= flip!(1/5);
             "y" ;= ite!(
@@ -1194,7 +1194,7 @@ fn ite_3_with_one_sample_hard1_simplified() {
 
 #[test]
 fn ite_3_with_one_sample_easy_x() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         program!(lets![
             "x" ;= flip!(2/3);
             "y" ;= ite!(
@@ -1210,7 +1210,7 @@ fn ite_3_with_one_sample_easy_x() {
 
 #[test]
 fn ite_3_with_one_sample_hard1() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         program!(lets![
             "x" ;= flip!(2/3);
             "y" ;= ite!(
@@ -1239,7 +1239,7 @@ fn ite_3_with_one_sample_hard1() {
 
 #[test]
 fn ite_3_with_one_sample_easy_x_or_y() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         program!(lets![
             "x" ;= flip!(2/3);
             "y" ;= ite!(
@@ -1256,7 +1256,7 @@ fn ite_3_with_one_sample_easy_x_or_y() {
 #[test]
 #[ignore]
 fn free_variable_2_approx_again() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         program!(lets![
             "x" ;= flip!(1/3);
             "y" ;= sample!(
@@ -1282,7 +1282,7 @@ fn free_variable_2_approx_again() {
 // #[traced_test]
 #[ignore = "seems to be a problem, but we can punt on this because I'm not sure observes _should_ nest"]
 fn ite_3_with_one_sample_hard1_extra() {
-    let mk = |ret: ExprInferable| {
+    let mk = |ret: EExprInferable| {
         program!(lets![
             "x" ;= flip!(2/3);
             "w" ;= flip!(2/7);

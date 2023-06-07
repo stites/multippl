@@ -44,8 +44,8 @@ impl InsertionEnv {
         let (uid, s) = self._fresh_name();
         Var::Named(NamedVar { id: uid, name: s })
     }
-    pub fn sample_expr(&mut self, e: &ExprAnn) -> ExprAnn {
-        use crate::grammar::Expr::*;
+    pub fn sample_expr(&mut self, e: &EExprAnn) -> EExprAnn {
+        use crate::grammar::EExpr::*;
         match e {
             // EAnf(_, a) => e.clone(),
             // EPrj(_, i, a) => e.clone(),
@@ -170,7 +170,7 @@ mod tests {
     use crate::compile::*;
     use crate::grammar::*;
     use crate::grammar_macros::*;
-    use crate::typecheck::grammar::{ExprTyped, ProgramTyped};
+    use crate::typecheck::grammar::{EExprTyped, ProgramTyped};
     use crate::typecheck::typecheck;
     use crate::*;
     use tracing::*;

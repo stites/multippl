@@ -150,7 +150,7 @@ pub mod grammar {
         type Ext = ();
     }
 
-    pub type ExprAnn = Expr<Annotated>;
+    pub type EExprAnn = EExpr<Annotated>;
     pub type ProgramAnn = Program<Annotated>;
 }
 
@@ -234,8 +234,8 @@ impl LabelEnv {
     pub fn annotate_anfs(&mut self, anfs: &[AnfUnq]) -> Result<Vec<AnfAnn>, CompileError> {
         anfs.iter().map(|a| self.annotate_anf(a)).collect()
     }
-    pub fn annotate_expr(&mut self, e: &ExprUnq) -> Result<ExprAnn, CompileError> {
-        use crate::grammar::Expr::*;
+    pub fn annotate_expr(&mut self, e: &EExprUnq) -> Result<EExprAnn, CompileError> {
+        use crate::grammar::EExpr::*;
         match e {
             EAnf(_, a) => Ok(EAnf((), Box::new(self.annotate_anf(a)?))),
             EPrj(_, i, a) => Ok(EPrj((), *i, Box::new(self.annotate_anf(a)?))),
@@ -324,7 +324,7 @@ mod tests {
     use crate::compile::*;
     use crate::grammar::*;
     use crate::grammar_macros::*;
-    use crate::typecheck::grammar::{ExprTyped, ProgramTyped};
+    use crate::typecheck::grammar::{EExprTyped, ProgramTyped};
     use crate::typecheck::typecheck;
     use crate::*;
     use tracing::*;

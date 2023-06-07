@@ -1,6 +1,6 @@
 use crate::compile::CompileError;
 use crate::grammar::*;
-use crate::typecheck::grammar::{AnfTyped, ExprTyped, LetInTypes, ProgramTyped};
+use crate::typecheck::grammar::{AnfTyped, EExprTyped, LetInTypes, ProgramTyped};
 
 pub mod grammar {
     use super::*;
@@ -40,7 +40,7 @@ pub mod grammar {
     }
 
     pub type AnfInferable = Anf<Inferable>;
-    pub type ExprInferable = Expr<Inferable>;
+    pub type EExprInferable = EExpr<Inferable>;
     pub type ProgramInferable = Program<Inferable>;
 }
 
@@ -67,8 +67,8 @@ fn ignored_type() -> Ty {
     Ty::EBool
 }
 
-pub fn typeinference_expr(e: &grammar::ExprInferable) -> Result<ExprTyped, CompileError> {
-    use crate::grammar::Expr::*;
+pub fn typeinference_expr(e: &grammar::EExprInferable) -> Result<EExprTyped, CompileError> {
+    use crate::grammar::EExpr::*;
     match e {
         EAnf(_, a) => Ok(EAnf((), Box::new(typeinference_anf(a)?))),
         EPrj(_ty, i, a) => {
