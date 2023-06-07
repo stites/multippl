@@ -16,11 +16,10 @@ pub mod inference;
 pub mod typeinf;
 
 mod analysis;
-mod typecheck;
-// mod analysis2;
 mod annotate;
 mod parser;
 mod render;
+mod typecheck;
 mod uniquify;
 mod utils;
 
