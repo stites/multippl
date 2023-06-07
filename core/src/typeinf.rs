@@ -39,7 +39,7 @@ pub mod grammar {
         type Ext = ();
     }
 
-    pub type AnfInferable = Anf<Inferable>;
+    pub type AnfInferable = Anf<Inferable, EVal>;
     pub type EExprInferable = EExpr<Inferable>;
     pub type ProgramInferable = Program<Inferable>;
 }

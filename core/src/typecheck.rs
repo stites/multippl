@@ -42,7 +42,7 @@ pub mod grammar {
         type Ext = ();
     }
 
-    pub type AnfTyped = Anf<Typed>;
+    pub type AnfTyped = Anf<Typed, EVal>;
     pub type EExprTyped = EExpr<Typed>;
     pub type ProgramTyped = Program<Typed>;
     impl AnfTyped {

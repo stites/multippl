@@ -51,6 +51,14 @@ pub struct ESampleExt;
 pub struct AVarExt;
 pub struct AValExt;
 
+pub struct SAnfExt;
+pub struct SLetInExt;
+pub struct SSeqExt;
+pub struct SIteExt;
+pub struct SReturnExt;
+pub struct SFlipExt;
+pub struct SExactExt;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum EVal {
     EBool(bool),
@@ -73,25 +81,26 @@ impl EVal {
     }
 }
 
-pub enum Anf<X>
+pub enum Anf<X, Val>
 where
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
 {
     AVar(<AVarExt as ξ<X>>::Ext, String),
-    AVal(<AValExt as ξ<X>>::Ext, EVal),
+    AVal(<AValExt as ξ<X>>::Ext, Val),
 
     // TODO: not sure this is where I should add booleans, but it makes
     // the observe statements stay closer to the semantics: ~observe anf~
-    And(Box<Anf<X>>, Box<Anf<X>>),
-    Or(Box<Anf<X>>, Box<Anf<X>>),
-    Neg(Box<Anf<X>>),
+    And(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    Or(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    Neg(Box<Anf<X, Val>>),
 }
 
-impl<X> Debug for Anf<X>
+impl<X, Y> Debug for Anf<X, Y>
 where
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
+    Y: Debug,
     <AVarExt as ξ<X>>::Ext: Debug,
     <AValExt as ξ<X>>::Ext: Debug,
 {
@@ -106,10 +115,11 @@ where
         }
     }
 }
-impl<X> Clone for Anf<X>
+impl<X, Y> Clone for Anf<X, Y>
 where
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
+    Y: Clone,
     <AVarExt as ξ<X>>::Ext: Clone,
     <AValExt as ξ<X>>::Ext: Clone,
 {
@@ -124,10 +134,11 @@ where
         }
     }
 }
-impl<X> PartialEq for Anf<X>
+impl<X, Y> PartialEq for Anf<X, Y>
 where
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
+    Y: PartialEq,
     <AVarExt as ξ<X>>::Ext: PartialEq,
     <AValExt as ξ<X>>::Ext: PartialEq,
 {
@@ -158,10 +169,10 @@ where
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
 {
-    EAnf(<EAnfExt as ξ<X>>::Ext, Box<Anf<X>>),
+    EAnf(<EAnfExt as ξ<X>>::Ext, Box<Anf<X, EVal>>),
 
-    EPrj(<EPrjExt as ξ<X>>::Ext, usize, Box<Anf<X>>),
-    EProd(<EProdExt as ξ<X>>::Ext, Vec<Anf<X>>),
+    EPrj(<EPrjExt as ξ<X>>::Ext, usize, Box<Anf<X, EVal>>),
+    EProd(<EProdExt as ξ<X>>::Ext, Vec<Anf<X, EVal>>),
 
     // TODO Ignore function calls for now
     // EApp(String, Box<Anf>),
@@ -173,14 +184,59 @@ where
     ),
     EIte(
         <EIteExt as ξ<X>>::Ext,
-        Box<Anf<X>>,
+        Box<Anf<X, EVal>>,
         Box<EExpr<X>>,
         Box<EExpr<X>>,
     ),
     EFlip(<EFlipExt as ξ<X>>::Ext, f64),
-    EObserve(<EObserveExt as ξ<X>>::Ext, Box<Anf<X>>),
+    EObserve(<EObserveExt as ξ<X>>::Ext, Box<Anf<X, EVal>>),
     ESample(<ESampleExt as ξ<X>>::Ext, Box<EExpr<X>>),
 }
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum SVal {
+    SBool(bool),
+}
+
+#[allow(clippy::enum_variant_names)]
+pub enum SExpr<X>
+where
+    SAnfExt: ξ<X>,
+    SLetInExt: ξ<X>,
+    SSeqExt: ξ<X>,
+    SIteExt: ξ<X>,
+    SFlipExt: ξ<X>,
+    SExactExt: ξ<X>,
+
+    EAnfExt: ξ<X>,
+    EPrjExt: ξ<X>,
+    EProdExt: ξ<X>,
+    ELetInExt: ξ<X>,
+    EIteExt: ξ<X>,
+    EFlipExt: ξ<X>,
+    EObserveExt: ξ<X>,
+    ESampleExt: ξ<X>,
+    AVarExt: ξ<X>,
+    AValExt: ξ<X>,
+{
+    SAnf(<SAnfExt as ξ<X>>::Ext, Box<Anf<X, SVal>>),
+    SLetIn(
+        <SLetInExt as ξ<X>>::Ext,
+        String,
+        Box<SExpr<X>>,
+        Box<SExpr<X>>,
+    ),
+    SSeq(<SSeqExt as ξ<X>>::Ext, Box<SExpr<X>>, Box<SExpr<X>>),
+    SIte(
+        <SIteExt as ξ<X>>::Ext,
+        Box<Anf<X, SVal>>,
+        Box<SExpr<X>>,
+        Box<SExpr<X>>,
+    ),
+    SFlip(<SFlipExt as ξ<X>>::Ext, f64),
+    SExact(<SExactExt as ξ<X>>::Ext, Box<EExpr<X>>),
+}
+
 impl<X> Debug for EExpr<X>
 where
     EAnfExt: ξ<X>,
@@ -230,6 +286,74 @@ where
         }
     }
 }
+
+impl<X> Debug for SExpr<X>
+where
+    EAnfExt: ξ<X>,
+    EPrjExt: ξ<X>,
+    EProdExt: ξ<X>,
+    ELetInExt: ξ<X>,
+    EIteExt: ξ<X>,
+    EFlipExt: ξ<X>,
+    EObserveExt: ξ<X>,
+    ESampleExt: ξ<X>,
+    <EAnfExt as ξ<X>>::Ext: Debug,
+    <EPrjExt as ξ<X>>::Ext: Debug,
+    <EProdExt as ξ<X>>::Ext: Debug,
+    <ELetInExt as ξ<X>>::Ext: Debug,
+    <EIteExt as ξ<X>>::Ext: Debug,
+    <EFlipExt as ξ<X>>::Ext: Debug,
+    <EObserveExt as ξ<X>>::Ext: Debug,
+    <ESampleExt as ξ<X>>::Ext: Debug,
+
+    SAnfExt: ξ<X>,
+    SLetInExt: ξ<X>,
+    SSeqExt: ξ<X>,
+    SIteExt: ξ<X>,
+    SFlipExt: ξ<X>,
+    SExactExt: ξ<X>,
+    <SAnfExt as ξ<X>>::Ext: Debug,
+    <SLetInExt as ξ<X>>::Ext: Debug,
+    <SSeqExt as ξ<X>>::Ext: Debug,
+    <SIteExt as ξ<X>>::Ext: Debug,
+    <SFlipExt as ξ<X>>::Ext: Debug,
+    <SExactExt as ξ<X>>::Ext: Debug,
+
+    AVarExt: ξ<X>,
+    AValExt: ξ<X>,
+    <AVarExt as ξ<X>>::Ext: Debug,
+    <AValExt as ξ<X>>::Ext: Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use SExpr::*;
+        match self {
+            SAnf(ext, a) => f.write_fmt(format_args!("Anf({:?},{:?})", ext, a)),
+            SLetIn(ext, s, bindee, body) => f
+                .debug_struct("SLetIn")
+                .field("ext", &ext)
+                .field("var", s)
+                .field("bindee", bindee)
+                .field("body", body)
+                .finish(),
+            SSeq(ext, e1, e2) => f
+                .debug_struct("SSeq")
+                .field("ext", &ext)
+                .field("e1", e1)
+                .field("e2", e2)
+                .finish(),
+            SIte(ext, p, tru, fls) => f
+                .debug_struct("Ite")
+                .field("ext", &ext)
+                .field("predicate", p)
+                .field("truthy", tru)
+                .field("falsey", fls)
+                .finish(),
+            SFlip(ext, p) => f.write_fmt(format_args!("Flip({:?}, {:?})", ext, p)),
+            SExact(ext, e) => f.debug_tuple("Exact").field(&ext).field(e).finish(),
+        }
+    }
+}
+
 impl<X> Clone for EExpr<X>
 where
     EAnfExt: ξ<X>,
@@ -267,6 +391,58 @@ where
             EFlip(ext, p) => EFlip(ext.clone(), *p),
             EObserve(ext, a) => EObserve(ext.clone(), a.clone()),
             ESample(ext, e) => ESample(ext.clone(), e.clone()),
+        }
+    }
+}
+
+impl<X> Clone for SExpr<X>
+where
+    EAnfExt: ξ<X>,
+    EPrjExt: ξ<X>,
+    EProdExt: ξ<X>,
+    ELetInExt: ξ<X>,
+    EIteExt: ξ<X>,
+    EFlipExt: ξ<X>,
+    EObserveExt: ξ<X>,
+    ESampleExt: ξ<X>,
+    AVarExt: ξ<X>,
+    AValExt: ξ<X>,
+
+    <EAnfExt as ξ<X>>::Ext: Clone,
+    <EPrjExt as ξ<X>>::Ext: Clone,
+    <EProdExt as ξ<X>>::Ext: Clone,
+    <ELetInExt as ξ<X>>::Ext: Clone,
+    <EIteExt as ξ<X>>::Ext: Clone,
+    <EFlipExt as ξ<X>>::Ext: Clone,
+    <EObserveExt as ξ<X>>::Ext: Clone,
+    <ESampleExt as ξ<X>>::Ext: Clone,
+    <AVarExt as ξ<X>>::Ext: Clone,
+    <AValExt as ξ<X>>::Ext: Clone,
+
+    SAnfExt: ξ<X>,
+    SLetInExt: ξ<X>,
+    SSeqExt: ξ<X>,
+    SIteExt: ξ<X>,
+    SFlipExt: ξ<X>,
+    SExactExt: ξ<X>,
+    <SAnfExt as ξ<X>>::Ext: Clone,
+    <SLetInExt as ξ<X>>::Ext: Clone,
+    <SSeqExt as ξ<X>>::Ext: Clone,
+    <SIteExt as ξ<X>>::Ext: Clone,
+    <SFlipExt as ξ<X>>::Ext: Clone,
+    <SExactExt as ξ<X>>::Ext: Clone,
+{
+    fn clone(&self) -> Self {
+        use SExpr::*;
+        match self {
+            SAnf(ext, a) => SAnf(ext.clone(), a.clone()),
+            SLetIn(ext, s, bindee, body) => {
+                SLetIn(ext.clone(), s.clone(), bindee.clone(), body.clone())
+            }
+            SSeq(ext, e1, e2) => SSeq(ext.clone(), e1.clone(), e2.clone()),
+            SIte(ext, p, tru, fls) => SIte(ext.clone(), p.clone(), tru.clone(), fls.clone()),
+            SFlip(ext, p) => SFlip(ext.clone(), *p),
+            SExact(ext, e) => SExact(ext.clone(), e.clone()),
         }
     }
 }
@@ -309,6 +485,63 @@ where
             (EFlip(ext0, p0), EFlip(ext1, p1)) => ext0 == ext1 && p0 == p1,
             (EObserve(ext0, a0), EObserve(ext1, a1)) => ext0 == ext1 && a0 == a1,
             (ESample(ext0, e0), ESample(ext1, e1)) => ext0 == ext1 && e0 == e1,
+            (_, _) => false,
+        }
+    }
+}
+
+impl<X> PartialEq for SExpr<X>
+where
+    EAnfExt: ξ<X>,
+    EPrjExt: ξ<X>,
+    EProdExt: ξ<X>,
+    ELetInExt: ξ<X>,
+    EIteExt: ξ<X>,
+    EFlipExt: ξ<X>,
+    EObserveExt: ξ<X>,
+    ESampleExt: ξ<X>,
+
+    <EAnfExt as ξ<X>>::Ext: PartialEq,
+    <EPrjExt as ξ<X>>::Ext: PartialEq,
+    <EProdExt as ξ<X>>::Ext: PartialEq,
+    <ELetInExt as ξ<X>>::Ext: PartialEq,
+    <EIteExt as ξ<X>>::Ext: PartialEq,
+    <EFlipExt as ξ<X>>::Ext: PartialEq,
+    <EObserveExt as ξ<X>>::Ext: PartialEq,
+    <ESampleExt as ξ<X>>::Ext: PartialEq,
+    AVarExt: ξ<X>,
+    AValExt: ξ<X>,
+    <AVarExt as ξ<X>>::Ext: PartialEq,
+    <AValExt as ξ<X>>::Ext: PartialEq,
+
+    SAnfExt: ξ<X>,
+    SLetInExt: ξ<X>,
+    SSeqExt: ξ<X>,
+    SIteExt: ξ<X>,
+    SFlipExt: ξ<X>,
+    SExactExt: ξ<X>,
+    <SAnfExt as ξ<X>>::Ext: PartialEq,
+    <SLetInExt as ξ<X>>::Ext: PartialEq,
+    <SSeqExt as ξ<X>>::Ext: PartialEq,
+    <SIteExt as ξ<X>>::Ext: PartialEq,
+    <SFlipExt as ξ<X>>::Ext: PartialEq,
+    <SExactExt as ξ<X>>::Ext: PartialEq,
+{
+    fn eq(&self, o: &Self) -> bool {
+        use SExpr::*;
+        match (self, o) {
+            (SAnf(ext0, a0), SAnf(ext1, a1)) => ext0 == ext1 && a0 == a1,
+            (SSeq(ext0, e01, e02), SSeq(ext1, e11, e12)) => {
+                ext0 == ext1 && e01 == e11 && e02 == e12
+            }
+            (SLetIn(ext0, s0, bindee0, body0), SLetIn(ext1, s1, bindee1, body1)) => {
+                ext0 == ext1 && s0 == s1 && bindee0 == bindee1 && body0 == body1
+            }
+            (SIte(ext0, p0, tru0, fls0), SIte(ext1, p1, tru1, fls1)) => {
+                ext0 == ext1 && p0 == p1 && tru0 == tru1 && fls0 == fls1
+            }
+            (SFlip(ext0, p0), SFlip(ext1, p1)) => ext0 == ext1 && p0 == p1,
+            (SExact(ext0, e0), SExact(ext1, e1)) => ext0 == ext1 && e0 == e1,
             (_, _) => false,
         }
     }
@@ -536,6 +769,6 @@ impl ξ<UD> for ESampleExt {
     type Ext = ();
 }
 
-pub type AnfUD = Anf<UD>;
+pub type AnfUD = Anf<UD, EVal>;
 pub type EExprUD = EExpr<UD>;
 pub type ProgramUD = Program<UD>;

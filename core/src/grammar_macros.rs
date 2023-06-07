@@ -39,29 +39,29 @@ macro_rules! anf {
 #[macro_export]
 macro_rules! val {
     ( $x:ident ) => {
-        anf!($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable>::AVal((), $crate::grammar::EVal::EBool($x)))
+        anf!($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVal((), $crate::grammar::EVal::EBool($x)))
     };
     ( $y:literal, $( $x:literal ),+ ) => {{
         let mut fin = Box::new($crate::grammar::EVal::EBool($y));
         $(
             fin = Box::new($crate::grammar::Anf::EProd(fin, Box::new($crate::grammar::EVal::EBool($x))));
         )+
-        anf!($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable>::AVal((), *fin))
+        anf!($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVal((), *fin))
     }};
 }
 
 #[macro_export]
 macro_rules! var {
     (@ $x:expr ) => {
-        $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable>::AVar(None, $x.to_string())
+        $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVar(None, $x.to_string())
     };
     ( $x:expr ) => {
         anf!(var!(@ $x))
     };
     ( $y:literal, $( $x:literal ),+ ) => {{
-        let mut fin = anf!($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable>::AVar(None, $y.to_string()));
+        let mut fin = anf!($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVar(None, $y.to_string()));
         $(
-            fin = Box::new($crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EProd((), fin, Box::new(anf!(Anf::<$crate::typeinf::grammar::Inferable>::AVar(None, $x.to_string())))));
+            fin = Box::new($crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EProd((), fin, Box::new(anf!(Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVar(None, $x.to_string())))));
         )+
        *fin
     }};
@@ -77,9 +77,9 @@ macro_rules! b {
     };
     (@anf $x:literal ; $ty:expr) => {
         if $x.to_string() == "true" || $x.to_string() == "false" {
-            $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable>::AVal((), $crate::grammar::EVal::EBool($x.to_string() == "true"))
+            $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVal((), $crate::grammar::EVal::EBool($x.to_string() == "true"))
         } else {
-            $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable>::AVar($ty, $x.to_string())
+            $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVar($ty, $x.to_string())
         }
     };
     (@anf $x:literal) => {
@@ -124,23 +124,23 @@ macro_rules! b {
         *fin
     }};
     ( $y:literal || $( $x:literal )||+ ) => {{
-        let mut fin = Box::new($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable>::AVar(None, $y.to_string()));
+        let mut fin = Box::new($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVar(None, $y.to_string()));
         $(
-            fin = Box::new($crate::grammar::Anf::Or(fin, Box::new($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable>::AVar(None, $x.to_string()))));
+            fin = Box::new($crate::grammar::Anf::Or(fin, Box::new($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVar(None, $x.to_string()))));
         )+
         anf!(*fin)
     }};
     (@anf $y:literal && $( $x:literal )&&+ ) => {{
-        let mut fin = Box::new($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable>::AVar(None, $y.to_string()));
+        let mut fin = Box::new($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVar(None, $y.to_string()));
         $(
-            fin = Box::new($crate::grammar::Anf::And(fin, Box::new($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable>::AVar(None, $x.to_string()))));
+            fin = Box::new($crate::grammar::Anf::And(fin, Box::new($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVar(None, $x.to_string()))));
         )+
         *fin
     }};
     (@anf $y:literal || $( $x:literal )||+ ) => {{
-        let mut fin = Box::new($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable>::AVar(None, $y.to_string()));
+        let mut fin = Box::new($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVar(None, $y.to_string()));
         $(
-            fin = Box::new($crate::grammar::Anf::Or(fin, Box::new($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable>::AVar(None, $x.to_string()))));
+            fin = Box::new($crate::grammar::Anf::Or(fin, Box::new($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVar(None, $x.to_string()))));
         )+
         *fin
     }};
@@ -167,7 +167,7 @@ macro_rules! snd {
 #[macro_export]
 macro_rules! not {
     (@ $x:expr ) => {{
-        let x = $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable>::AVar(None, $x.to_string());
+        let x = $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVar(None, $x.to_string());
         $crate::grammar::Anf::Neg(Box::new(x))
     }};
     ( $x:expr ) => {{

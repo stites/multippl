@@ -118,7 +118,7 @@ pub mod grammar {
     impl ξ<Annotated> for AValExt {
         type Ext = ();
     }
-    pub type AnfAnn = Anf<Annotated>;
+    pub type AnfAnn = Anf<Annotated, EVal>;
 
     impl ξ<Annotated> for EAnfExt {
         type Ext = ();

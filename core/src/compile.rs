@@ -47,7 +47,7 @@ pub mod grammar {
     impl ξ<Trace> for AValExt {
         type Ext = Box<Output>;
     }
-    pub type AnfTr = Anf<Trace>;
+    pub type AnfTr = Anf<Trace, EVal>;
 
     impl ξ<Trace> for EAnfExt {
         type Ext = Box<Compiled>;

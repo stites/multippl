@@ -54,7 +54,7 @@ pub mod grammar {
     impl ξ<Uniquify> for AValExt {
         type Ext = ();
     }
-    pub type AnfUnq = Anf<Uniquify>;
+    pub type AnfUnq = Anf<Uniquify, EVal>;
 
     impl ξ<Uniquify> for EAnfExt {
         type Ext = ();
