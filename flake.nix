@@ -3,11 +3,8 @@
   nixConfig.extra-trusted-public-keys = "stites.cachix.org-1:JN1rOOglf6VA+2aFsZnpkGUFfutdBIP1LbANgiJ940s=";
 
   inputs = {
-    # nixpkgs.url = "github:NixOS/nixpkgs/nixos-22.11";
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     devenv.url = "github:cachix/devenv";
-    crane.url = "github:ipetkov/crane/v0.11.3";
-    crane.inputs.nixpkgs.follows = "nixpkgs";
+    crane.url = "github:ipetkov/crane/v0.12.2";
     dice.url = "github:stites/dice.nix";
     rsdd.url = "github:stites/rsdd/yodel-additions?dir=nix";
     # rsdd.url = "path:/home/stites/git/rust/rsdd/nix";
@@ -18,6 +15,7 @@
     nixlib.url = "path:/home/stites/git/nix/nixlib";
 
     # clean up dependencies
+    nixpkgs.follows = "crane/nixpkgs";
     flake-utils.follows = "crane/flake-utils";
     devenv.inputs.flake-compat.follows = "crane/flake-compat";
     devenv.inputs.nixpkgs.follows = "nixpkgs";
@@ -39,52 +37,12 @@
     ...
   } @ inputs: let
     flklib = inputs.flake-utils.lib;
-    mk-sys-package = prev: name: _pkg:
-      prev.rustBuilder.rustLib.makeOverride {
-        inherit name;
-        overrideAttrs = drv: {
-          propagatedBuildInputs =
-            drv.propagatedBuildInputs
-            ++ (with prev; [
-              cmake
-              pkg-config
-              _pkg
-            ]);
-          propagatedNativeBuildInputs =
-            (
-              if builtins.hasAttr drv "propagatedNativeBuildInputs"
-              then drv.propagatedNativeBuildInputs
-              else []
-            )
-            ++ (with prev; [
-              cmake
-              pkg-config
-              _pkg
-            ]);
-        };
-      };
+    mk-sys-package = import ./nix/mk-sys-package.nix;
   in
     flklib.eachSystem (with flklib.system; [x86_64-linux]) (system: let
       pkgs = import nixpkgs {
         inherit system;
-        overlays = [
-          (final: prev: {
-            fontconfig = with prev;
-              fontconfig.overrideAttrs (old: {
-                propagatedNativeBuildInputs =
-                  (
-                    lib.optionals (builtins.hasAttr "propagatedNativeBuildInputs" old)
-                    old.propagatedNativeBuildInputs
-                  )
-                  ++ [
-                    zlib.dev
-                    bzip2.dev
-                    libpng.dev
-                    brotli.dev
-                  ];
-              });
-          })
-        ];
+        overlays = [(import ./nix/fontconfig-overlay.nix)];
       };
       craneLib = (inputs.crane.mkLib pkgs).overrideScope' (final: prev: {
         rsdd = inputs.rsdd.packages.${system}.rsdd;
@@ -142,40 +100,7 @@
           doCheck = false; # use nextest in `nix flake check` for tests
         });
     in {
-      checks =
-        {
-          inherit my-crate;
-          my-crate-clippy = craneLib.cargoClippy (commonArgs
-            // {
-              inherit cargoArtifacts;
-              cargoClippyExtraArgs = "--all-targets -- --deny warnings";
-            });
-          my-crate-doc = craneLib.cargoDoc (commonArgs
-            // {
-              inherit cargoArtifacts;
-            });
-          my-crate-fmt = craneLib.cargoFmt {
-            inherit src;
-          };
-          # maybe in the far far future this can be uncommented
-          # my-crate-audit = craneLib.cargoAudit {
-          #   inherit src;
-          #   inherit (inputs) advisory-db;
-          # };
-          my-crate-nextest = craneLib.cargoNextest (commonArgs
-            // {
-              inherit cargoArtifacts;
-              partitions = 1;
-              partitionType = "count";
-            });
-        }
-        // lib.optionalAttrs (system == flklib.system.x86_64-linux) {
-          my-crate-coverage = craneLib.cargoTarpaulin (commonArgs
-            // {
-              inherit cargoArtifacts;
-            });
-        };
-
+      checks = import ./nix/checks.nix {inherit lib system my-crate craneLib commonArgs cargoArtifacts;};
       packages.default = my-crate;
       packages.dev = my-dev-crate;
       packages.dev-test = craneLib.cargoNextest (commonArgs
@@ -198,96 +123,6 @@
           cache = "stites";
         };
       };
-
-      devShells.default = devenv.lib.mkShell {
-        inherit inputs pkgs;
-        modules = [
-          {
-            # git configuration block
-            pre-commit.hooks = {
-              shellcheck.enable = true;
-              clippy.enable = true;
-              hunspell.enable = true;
-              alejandra.enable = true; # nix formatter
-              # statix.enable = true; # lints for nix, but apparently borked
-              rustfmt.enable = true;
-              typos.enable = true;
-            };
-          }
-          {
-            # ad-hoc dev packages
-            packages = with pkgs; [
-              # dice cli:
-              inputs.dice.packages.${system}.default
-              # python for the rsdd visualizer
-              (python3.withPackages (p:
-                with p; [
-                  graphviz
-                  matplotlib
-                  seaborn
-                  numpy
-                  pandas
-                ]))
-              # plotters dependencies
-              zlib.dev
-              bzip2.dev
-              libpng.dev
-              brotli.dev
-              cmake
-              pkg-config
-              freetype
-              expat
-              fontconfig
-
-              hunspellDicts.en_US-large
-            ];
-          }
-          rec {
-            # rust dev block
-            languages.rust.enable = true;
-
-            # add a rust-repl
-            scripts.repl.exec = "${pkgs.evcxr}/bin/evcxr";
-
-            # https://devenv.sh/reference/options/
-            packages =
-              with pkgs;
-                [
-                  lldb
-
-                  cargo
-                  rustc
-                  rustfmt
-                  rust-analyzer
-                  clippy
-                  cargo-watch
-                  cargo-nextest
-                  cargo-expand # expand macros and inspect the output
-                  cargo-llvm-lines # count number of lines of LLVM IR of a generic function
-                  cargo-inspect
-                  cargo-criterion
-                  evcxr # make sure repl is in a gc-root
-                  cargo-play # quickly run a rust file that has a main function
-
-                  # tree-sitter-specific
-                  tree-sitter
-                ]
-                ++ lib.optionals stdenv.isDarwin []
-                ++ lib.optionals stdenv.isLinux [
-                  cargo-rr
-                  rr-unstable
-                ]
-              # ++ builtins.attrValues self.checks
-              ;
-            # shell block
-            env.DEVSHELL = "devshell+flake.nix";
-            enterShell = pkgs.lib.strings.concatStringsSep "\n" [
-              ''echo "Hello from $DEVSHELL!"''
-              (nixlib.lib.my.menu {inherit packages;})
-              ''echo ""''
-            ];
-          }
-        ];
-      };
+      devShells.default = import ./nix/shell.nix {inherit inputs pkgs lib;};
     });
 }

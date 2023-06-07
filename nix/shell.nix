@@ -1,0 +1,95 @@
+{
+  inputs,
+  pkgs,
+  lib,
+}:
+inputs.devenv.lib.mkShell {
+  inherit inputs pkgs;
+  modules = [
+    {
+      # git configuration block
+      pre-commit.hooks = {
+        shellcheck.enable = true;
+        clippy.enable = true;
+        hunspell.enable = true;
+        alejandra.enable = true; # nix formatter
+        # statix.enable = true; # lints for nix, but apparently borked
+        rustfmt.enable = true;
+        typos.enable = true;
+      };
+    }
+    {
+      # ad-hoc dev packages
+      packages = with pkgs; [
+        # dice cli:
+        inputs.dice.packages.${system}.default
+        # python for the rsdd visualizer
+        (python3.withPackages (p:
+          with p; [
+            graphviz
+            matplotlib
+            seaborn
+            numpy
+            pandas
+          ]))
+        # plotters dependencies
+        zlib.dev
+        bzip2.dev
+        libpng.dev
+        brotli.dev
+        cmake
+        pkg-config
+        freetype
+        expat
+        fontconfig
+
+        hunspellDicts.en_US-large
+      ];
+    }
+    rec {
+      # rust dev block
+      languages.rust.enable = true;
+
+      # add a rust-repl
+      scripts.repl.exec = "${pkgs.evcxr}/bin/evcxr";
+
+      # https://devenv.sh/reference/options/
+      packages =
+        with pkgs;
+          [
+            lldb
+
+            cargo
+            rustc
+            rustfmt
+            rust-analyzer
+            clippy
+            cargo-watch
+            cargo-nextest
+            cargo-expand # expand macros and inspect the output
+            cargo-llvm-lines # count number of lines of LLVM IR of a generic function
+            cargo-inspect
+            cargo-criterion
+            evcxr # make sure repl is in a gc-root
+            cargo-play # quickly run a rust file that has a main function
+
+            # tree-sitter-specific
+            tree-sitter
+          ]
+          ++ lib.optionals stdenv.isDarwin []
+          ++ lib.optionals stdenv.isLinux [
+            cargo-rr
+            rr-unstable
+          ]
+        # ++ builtins.attrValues self.checks
+        ;
+      # shell block
+      env.DEVSHELL = "devshell+flake.nix";
+      enterShell = pkgs.lib.strings.concatStringsSep "\n" [
+        ''echo "Hello from $DEVSHELL!"''
+        (inputs.nixlib.lib.my.menu {inherit packages;})
+        ''echo ""''
+      ];
+    }
+  ];
+}
