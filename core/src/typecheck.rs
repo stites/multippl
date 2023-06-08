@@ -41,6 +41,27 @@ pub mod grammar {
     impl ξ<Typed> for ESampleExt {
         type Ext = ();
     }
+    impl ξ<Typed> for ESample2Ext {
+        type Ext = ();
+    }
+    impl ξ<Typed> for SAnfExt {
+        type Ext = ();
+    }
+    impl ξ<Typed> for SLetInExt {
+        type Ext = ();
+    }
+    impl ξ<Typed> for SSeqExt {
+        type Ext = ();
+    }
+    impl ξ<Typed> for SIteExt {
+        type Ext = ();
+    }
+    impl ξ<Typed> for SFlipExt {
+        type Ext = ();
+    }
+    impl ξ<Typed> for SExactExt {
+        type Ext = ();
+    }
 
     pub type AnfTyped = Anf<Typed, EVal>;
     pub type EExprTyped = EExpr<Typed>;
@@ -77,6 +98,7 @@ pub fn as_type(e: &grammar::EExprTyped) -> ETy {
         EFlip(_, _) => ETy::EBool,
         EObserve(_, _) => ETy::EBool,
         ESample(_, _) => ETy::EBool,
+        ESample2(_, e) => todo!(),
     }
 }
 
@@ -133,6 +155,7 @@ pub fn typecheck_expr(e: &grammar::EExprTyped) -> Result<EExprUD, CompileError> 
         EFlip(_, param) => Ok(EFlip((), *param)),
         EObserve(_, a) => Ok(EObserve((), Box::new(typecheck_anf(a)?))),
         ESample(_, e) => Ok(ESample((), Box::new(typecheck_expr(e)?))),
+        ESample2(_, e) => todo!(),
     }
 }
 

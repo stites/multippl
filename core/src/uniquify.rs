@@ -31,24 +31,8 @@ pub mod grammar {
 
     #[derive(Debug, PartialEq, Clone)]
     pub struct Uniquify;
-    // #[derive(Debug, PartialEq, Clone)]
-    // pub struct Variables {
-    //     pub above: Vec<UniqueId>,
-    //     pub below: Vec<UniqueId>,
-    //     pub id: UniqueId,
-    // }
-    // impl Variables {
-    //     pub fn new(id: UniqueId) -> Variables {
-    //         Variables {
-    //             id,
-    //             above: Default::default(),
-    //             below: Default::default(),
-    //         }
-    //     }
-    // }
+
     impl ξ<Uniquify> for AVarExt {
-        // vars up/down
-        // Vars are "sample-able"
         type Ext = UniqueId;
     }
     impl ξ<Uniquify> for AValExt {
@@ -83,6 +67,27 @@ pub mod grammar {
         type Ext = ();
     }
     impl ξ<Uniquify> for ESampleExt {
+        type Ext = ();
+    }
+    impl ξ<Uniquify> for ESample2Ext {
+        type Ext = ();
+    }
+    impl ξ<Uniquify> for SAnfExt {
+        type Ext = ();
+    }
+    impl ξ<Uniquify> for SLetInExt {
+        type Ext = ();
+    }
+    impl ξ<Uniquify> for SSeqExt {
+        type Ext = ();
+    }
+    impl ξ<Uniquify> for SIteExt {
+        type Ext = ();
+    }
+    impl ξ<Uniquify> for SFlipExt {
+        type Ext = ();
+    }
+    impl ξ<Uniquify> for SExactExt {
         type Ext = ();
     }
 
@@ -188,6 +193,7 @@ impl SymEnv {
                 Ok(EObserve((), Box::new(anf)))
             }
             ESample(_, e) => Ok(ESample((), Box::new(self.uniquify_expr(e)?))),
+            ESample2(_, e) => todo!(),
         }
     }
 

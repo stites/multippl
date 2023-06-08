@@ -47,6 +47,7 @@ pub struct EIteExt;
 pub struct EFlipExt;
 pub struct EObserveExt;
 pub struct ESampleExt;
+pub struct ESample2Ext;
 // fucking ridicuous
 pub struct AVarExt;
 pub struct AValExt;
@@ -166,8 +167,16 @@ where
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
+    ESample2Ext: ξ<X>,
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
+
+    SAnfExt: ξ<X>,
+    SLetInExt: ξ<X>,
+    SSeqExt: ξ<X>,
+    SIteExt: ξ<X>,
+    SFlipExt: ξ<X>,
+    SExactExt: ξ<X>,
 {
     EAnf(<EAnfExt as ξ<X>>::Ext, Box<Anf<X, EVal>>),
 
@@ -191,6 +200,8 @@ where
     EFlip(<EFlipExt as ξ<X>>::Ext, f64),
     EObserve(<EObserveExt as ξ<X>>::Ext, Box<Anf<X, EVal>>),
     ESample(<ESampleExt as ξ<X>>::Ext, Box<EExpr<X>>),
+    // FIXME: ESample2 becomes ESample
+    ESample2(<ESample2Ext as ξ<X>>::Ext, Box<SExpr<X>>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -216,6 +227,7 @@ where
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
+    ESample2Ext: ξ<X>,
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
 {
@@ -247,6 +259,7 @@ where
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
+    ESample2Ext: ξ<X>,
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
     <EAnfExt as ξ<X>>::Ext: Debug,
@@ -257,8 +270,22 @@ where
     <EFlipExt as ξ<X>>::Ext: Debug,
     <EObserveExt as ξ<X>>::Ext: Debug,
     <ESampleExt as ξ<X>>::Ext: Debug,
+    <ESample2Ext as ξ<X>>::Ext: Debug,
     <AVarExt as ξ<X>>::Ext: Debug,
     <AValExt as ξ<X>>::Ext: Debug,
+
+    SAnfExt: ξ<X>,
+    SLetInExt: ξ<X>,
+    SSeqExt: ξ<X>,
+    SIteExt: ξ<X>,
+    SFlipExt: ξ<X>,
+    SExactExt: ξ<X>,
+    <SAnfExt as ξ<X>>::Ext: Debug,
+    <SLetInExt as ξ<X>>::Ext: Debug,
+    <SSeqExt as ξ<X>>::Ext: Debug,
+    <SIteExt as ξ<X>>::Ext: Debug,
+    <SFlipExt as ξ<X>>::Ext: Debug,
+    <SExactExt as ξ<X>>::Ext: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use EExpr::*;
@@ -283,6 +310,7 @@ where
             EFlip(ext, p) => f.write_fmt(format_args!("Flip({:?}, {:?})", ext, p)),
             EObserve(ext, a) => f.debug_tuple("Observe").field(&ext).field(a).finish(),
             ESample(ext, e) => f.debug_tuple("Sample").field(&ext).field(e).finish(),
+            ESample2(ext, e) => f.debug_tuple("Sample").field(&ext).field(e).finish(),
         }
     }
 }
@@ -297,6 +325,7 @@ where
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
+    ESample2Ext: ξ<X>,
     <EAnfExt as ξ<X>>::Ext: Debug,
     <EPrjExt as ξ<X>>::Ext: Debug,
     <EProdExt as ξ<X>>::Ext: Debug,
@@ -305,6 +334,7 @@ where
     <EFlipExt as ξ<X>>::Ext: Debug,
     <EObserveExt as ξ<X>>::Ext: Debug,
     <ESampleExt as ξ<X>>::Ext: Debug,
+    <ESample2Ext as ξ<X>>::Ext: Debug,
 
     SAnfExt: ξ<X>,
     SLetInExt: ξ<X>,
@@ -364,6 +394,7 @@ where
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
+    ESample2Ext: ξ<X>,
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
 
@@ -375,8 +406,22 @@ where
     <EFlipExt as ξ<X>>::Ext: Clone,
     <EObserveExt as ξ<X>>::Ext: Clone,
     <ESampleExt as ξ<X>>::Ext: Clone,
+    <ESample2Ext as ξ<X>>::Ext: Clone,
     <AVarExt as ξ<X>>::Ext: Clone,
     <AValExt as ξ<X>>::Ext: Clone,
+
+    SAnfExt: ξ<X>,
+    SLetInExt: ξ<X>,
+    SSeqExt: ξ<X>,
+    SIteExt: ξ<X>,
+    SFlipExt: ξ<X>,
+    SExactExt: ξ<X>,
+    <SAnfExt as ξ<X>>::Ext: Clone,
+    <SLetInExt as ξ<X>>::Ext: Clone,
+    <SSeqExt as ξ<X>>::Ext: Clone,
+    <SIteExt as ξ<X>>::Ext: Clone,
+    <SFlipExt as ξ<X>>::Ext: Clone,
+    <SExactExt as ξ<X>>::Ext: Clone,
 {
     fn clone(&self) -> Self {
         use EExpr::*;
@@ -391,6 +436,7 @@ where
             EFlip(ext, p) => EFlip(ext.clone(), *p),
             EObserve(ext, a) => EObserve(ext.clone(), a.clone()),
             ESample(ext, e) => ESample(ext.clone(), e.clone()),
+            ESample2(ext, e) => ESample2(ext.clone(), e.clone()),
         }
     }
 }
@@ -405,6 +451,7 @@ where
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
+    ESample2Ext: ξ<X>,
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
 
@@ -416,6 +463,7 @@ where
     <EFlipExt as ξ<X>>::Ext: Clone,
     <EObserveExt as ξ<X>>::Ext: Clone,
     <ESampleExt as ξ<X>>::Ext: Clone,
+    <ESample2Ext as ξ<X>>::Ext: Clone,
     <AVarExt as ξ<X>>::Ext: Clone,
     <AValExt as ξ<X>>::Ext: Clone,
 
@@ -456,6 +504,7 @@ where
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
+    ESample2Ext: ξ<X>,
 
     <EAnfExt as ξ<X>>::Ext: PartialEq,
     <EPrjExt as ξ<X>>::Ext: PartialEq,
@@ -465,10 +514,24 @@ where
     <EFlipExt as ξ<X>>::Ext: PartialEq,
     <EObserveExt as ξ<X>>::Ext: PartialEq,
     <ESampleExt as ξ<X>>::Ext: PartialEq,
+    <ESample2Ext as ξ<X>>::Ext: PartialEq,
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
     <AVarExt as ξ<X>>::Ext: PartialEq,
     <AValExt as ξ<X>>::Ext: PartialEq,
+
+    SAnfExt: ξ<X>,
+    SLetInExt: ξ<X>,
+    SSeqExt: ξ<X>,
+    SIteExt: ξ<X>,
+    SFlipExt: ξ<X>,
+    SExactExt: ξ<X>,
+    <SAnfExt as ξ<X>>::Ext: PartialEq,
+    <SLetInExt as ξ<X>>::Ext: PartialEq,
+    <SSeqExt as ξ<X>>::Ext: PartialEq,
+    <SIteExt as ξ<X>>::Ext: PartialEq,
+    <SFlipExt as ξ<X>>::Ext: PartialEq,
+    <SExactExt as ξ<X>>::Ext: PartialEq,
 {
     fn eq(&self, o: &Self) -> bool {
         use EExpr::*;
@@ -500,6 +563,7 @@ where
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
+    ESample2Ext: ξ<X>,
 
     <EAnfExt as ξ<X>>::Ext: PartialEq,
     <EPrjExt as ξ<X>>::Ext: PartialEq,
@@ -509,6 +573,7 @@ where
     <EFlipExt as ξ<X>>::Ext: PartialEq,
     <EObserveExt as ξ<X>>::Ext: PartialEq,
     <ESampleExt as ξ<X>>::Ext: PartialEq,
+    <ESample2Ext as ξ<X>>::Ext: PartialEq,
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
     <AVarExt as ξ<X>>::Ext: PartialEq,
@@ -586,6 +651,7 @@ where
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
+    ESample2Ext: ξ<X>,
     <EAnfExt as ξ<X>>::Ext: Debug + Clone,
     <EPrjExt as ξ<X>>::Ext: Debug + Clone,
     <EProdExt as ξ<X>>::Ext: Debug + Clone,
@@ -594,10 +660,23 @@ where
     <EFlipExt as ξ<X>>::Ext: Debug + Clone,
     <EObserveExt as ξ<X>>::Ext: Debug + Clone,
     <ESampleExt as ξ<X>>::Ext: Debug + Clone,
+    <ESample2Ext as ξ<X>>::Ext: Debug + Clone,
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
     <AVarExt as ξ<X>>::Ext: Debug + Clone,
     <AValExt as ξ<X>>::Ext: Debug + Clone,
+    SAnfExt: ξ<X>,
+    SLetInExt: ξ<X>,
+    SSeqExt: ξ<X>,
+    SIteExt: ξ<X>,
+    SFlipExt: ξ<X>,
+    SExactExt: ξ<X>,
+    <SAnfExt as ξ<X>>::Ext: Debug + Clone,
+    <SLetInExt as ξ<X>>::Ext: Debug + Clone,
+    <SSeqExt as ξ<X>>::Ext: Debug + Clone,
+    <SIteExt as ξ<X>>::Ext: Debug + Clone,
+    <SFlipExt as ξ<X>>::Ext: Debug + Clone,
+    <SExactExt as ξ<X>>::Ext: Debug + Clone,
 {
     pub fn is_sample(&self) -> bool {
         matches!(self, EExpr::ESample(_, _))
@@ -664,6 +743,7 @@ where
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
+    ESample2Ext: ξ<X>,
     <EAnfExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <EPrjExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <EProdExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
@@ -672,10 +752,23 @@ where
     <EFlipExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <EObserveExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <ESampleExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <ESample2Ext as ξ<X>>::Ext: Debug + Clone + PartialEq,
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
     <AVarExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <AValExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    SAnfExt: ξ<X>,
+    SLetInExt: ξ<X>,
+    SSeqExt: ξ<X>,
+    SIteExt: ξ<X>,
+    SFlipExt: ξ<X>,
+    SExactExt: ξ<X>,
+    <SAnfExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <SLetInExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <SSeqExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <SIteExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <SFlipExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <SExactExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
 {
     Body(EExpr<X>),
     // TODO
@@ -691,6 +784,7 @@ where
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
+    ESample2Ext: ξ<X>,
     <EAnfExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <EPrjExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <EProdExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
@@ -699,10 +793,23 @@ where
     <EFlipExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <EObserveExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <ESampleExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <ESample2Ext as ξ<X>>::Ext: Debug + Clone + PartialEq,
     AVarExt: ξ<X>,
     AValExt: ξ<X>,
     <AVarExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <AValExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    SAnfExt: ξ<X>,
+    SLetInExt: ξ<X>,
+    SSeqExt: ξ<X>,
+    SIteExt: ξ<X>,
+    SFlipExt: ξ<X>,
+    SExactExt: ξ<X>,
+    <SAnfExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <SLetInExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <SSeqExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <SIteExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <SFlipExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <SExactExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
 {
     pub fn strip_samples(&self) -> Program<X> {
         use Program::*;
@@ -766,6 +873,28 @@ impl ξ<UD> for EObserveExt {
     type Ext = ();
 }
 impl ξ<UD> for ESampleExt {
+    type Ext = ();
+}
+impl ξ<UD> for ESample2Ext {
+    type Ext = ();
+}
+
+impl ξ<UD> for SAnfExt {
+    type Ext = ();
+}
+impl ξ<UD> for SLetInExt {
+    type Ext = ();
+}
+impl ξ<UD> for SSeqExt {
+    type Ext = ();
+}
+impl ξ<UD> for SIteExt {
+    type Ext = ();
+}
+impl ξ<UD> for SFlipExt {
+    type Ext = ();
+}
+impl ξ<UD> for SExactExt {
     type Ext = ();
 }
 

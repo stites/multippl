@@ -149,6 +149,28 @@ pub mod grammar {
     impl ξ<Annotated> for ESampleExt {
         type Ext = ();
     }
+    impl ξ<Annotated> for ESample2Ext {
+        type Ext = ();
+    }
+
+    impl ξ<Annotated> for SAnfExt {
+        type Ext = ();
+    }
+    impl ξ<Annotated> for SLetInExt {
+        type Ext = ();
+    }
+    impl ξ<Annotated> for SSeqExt {
+        type Ext = ();
+    }
+    impl ξ<Annotated> for SIteExt {
+        type Ext = ();
+    }
+    impl ξ<Annotated> for SFlipExt {
+        type Ext = ();
+    }
+    impl ξ<Annotated> for SExactExt {
+        type Ext = ();
+    }
 
     pub type EExprAnn = EExpr<Annotated>;
     pub type ProgramAnn = Program<Annotated>;
@@ -273,6 +295,7 @@ impl LabelEnv {
                 Ok(EObserve((), Box::new(anf)))
             }
             ESample(_, e) => Ok(ESample((), Box::new(self.annotate_expr(e)?))),
+            ESample2(_, e) => todo!(),
         }
     }
 

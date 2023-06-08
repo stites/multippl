@@ -135,6 +135,7 @@ impl DependencyEnv {
                 .into_iter()
                 .map(&|x: Dep| x.map(&Dep::Sample))
                 .collect(),
+            ESample2(_, e) => todo!(),
             EObserve((), a) => Dep::as_vars(self.scan_anf(a)),
             EFlip(_, p) => HashSet::new(),
         }

@@ -73,6 +73,27 @@ pub mod grammar {
     impl ξ<Trace> for ESampleExt {
         type Ext = Box<Compiled>;
     }
+    impl ξ<Trace> for ESample2Ext {
+        type Ext = Box<Compiled>;
+    }
+    impl ξ<Trace> for SAnfExt {
+        type Ext = ();
+    }
+    impl ξ<Trace> for SLetInExt {
+        type Ext = ();
+    }
+    impl ξ<Trace> for SSeqExt {
+        type Ext = ();
+    }
+    impl ξ<Trace> for SIteExt {
+        type Ext = ();
+    }
+    impl ξ<Trace> for SFlipExt {
+        type Ext = ();
+    }
+    impl ξ<Trace> for SExactExt {
+        type Ext = ();
+    }
 
     pub type EExprTr = EExpr<Trace>;
     pub type ProgramTr = Program<Trace>;
@@ -552,6 +573,7 @@ impl<'a> Env<'a> {
                 let c = Compiled::Output(o);
                 Ok((c.clone(), EObserve(Box::new(c), Box::new(atr))))
             }
+            ESample2(_, e) => todo!(),
             ESample(_, e) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "sample");
                 let _enter = span.enter();
