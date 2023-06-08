@@ -1,4 +1,4 @@
-use crate::compile::CompileError;
+use crate::data::errors::{CompileError, Result};
 use crate::grammar::*;
 use crate::typecheck::grammar::{AnfTyped, EExprTyped, LetInTypes, ProgramTyped};
 
@@ -60,12 +60,12 @@ pub mod grammar {
         type Ext = ();
     }
 
-    pub type AnfInferable = Anf<Inferable, EVal>;
+    pub type AnfInferable<X> = Anf<Inferable, X>;
     pub type EExprInferable = EExpr<Inferable>;
     pub type ProgramInferable = Program<Inferable>;
 }
 
-pub fn typeinference_anf(a: &grammar::AnfInferable) -> Result<AnfTyped, CompileError> {
+pub fn typeinference_anf<X:Clone>(a: &grammar::AnfInferable<X>) -> Result<AnfTyped<X>> {
     use crate::grammar::Anf::*;
     match a {
         AVar(ty, s) => Ok(AVar(ETy::EBool, s.clone())),
@@ -81,14 +81,14 @@ pub fn typeinference_anf(a: &grammar::AnfInferable) -> Result<AnfTyped, CompileE
         Neg(bl) => Ok(Neg(Box::new(typeinference_anf(bl)?))),
     }
 }
-pub fn typeinference_anfs(anfs: &[grammar::AnfInferable]) -> Result<Vec<AnfTyped>, CompileError> {
+pub fn typeinference_anfs<X:Clone>(anfs: &[grammar::AnfInferable<X>]) -> Result<Vec<AnfTyped<X>>> {
     anfs.iter().map(typeinference_anf).collect()
 }
 fn ignored_type() -> ETy {
     ETy::EBool
 }
 
-pub fn typeinference_expr(e: &grammar::EExprInferable) -> Result<EExprTyped, CompileError> {
+pub fn typeinference_expr(e: &grammar::EExprInferable) -> Result<EExprTyped> {
     use crate::grammar::EExpr::*;
     match e {
         EAnf(_, a) => Ok(EAnf((), Box::new(typeinference_anf(a)?))),
@@ -119,12 +119,12 @@ pub fn typeinference_expr(e: &grammar::EExprInferable) -> Result<EExprTyped, Com
     }
 }
 
-pub fn typeinference(p: &grammar::ProgramInferable) -> Result<ProgramTyped, CompileError> {
+pub fn typeinference(p: &grammar::ProgramInferable) -> Result<ProgramTyped> {
     match p {
-        Program::Body(e) => Ok(Program::Body(typeinference_expr(e)?)),
+        Program::EBody(e) => Ok(Program::EBody(typeinference_expr(e)?)),
     }
 }
 
-pub fn pipeline(p: &grammar::ProgramInferable) -> Result<ProgramTyped, CompileError> {
+pub fn pipeline(p: &grammar::ProgramInferable) -> Result<ProgramTyped> {
     typeinference(p)
 }

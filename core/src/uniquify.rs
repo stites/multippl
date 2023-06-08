@@ -38,7 +38,7 @@ pub mod grammar {
     impl ξ<Uniquify> for AValExt {
         type Ext = ();
     }
-    pub type AnfUnq = Anf<Uniquify, EVal>;
+    pub type AnfUnq<X> = Anf<Uniquify, X>;
 
     impl ξ<Uniquify> for EAnfExt {
         type Ext = ();
@@ -51,16 +51,12 @@ pub mod grammar {
         type Ext = ();
     }
     impl ξ<Uniquify> for ELetInExt {
-        // vars up/down
-        // binders are "sample-able"
         type Ext = UniqueId;
     }
     impl ξ<Uniquify> for EIteExt {
         type Ext = ();
     }
     impl ξ<Uniquify> for EFlipExt {
-        // vars up/down
-        // flip is sample-able
         type Ext = UniqueId;
     }
     impl ξ<Uniquify> for EObserveExt {
@@ -76,7 +72,7 @@ pub mod grammar {
         type Ext = ();
     }
     impl ξ<Uniquify> for SLetInExt {
-        type Ext = ();
+        type Ext = UniqueId;
     }
     impl ξ<Uniquify> for SSeqExt {
         type Ext = ();
@@ -140,7 +136,7 @@ impl SymEnv {
             Some(sym) => Ok(sym),
         }
     }
-    pub fn uniquify_anf(&mut self, a: &AnfUD) -> Result<AnfUnq, CompileError> {
+    pub fn uniquify_anf<X:Clone>(&mut self, a: &AnfUD<X>) -> Result<AnfUnq<X>, CompileError> {
         use crate::grammar::Anf::*;
         match a {
             AVar(_, s) => {
@@ -159,7 +155,7 @@ impl SymEnv {
             Neg(bl) => Ok(Neg(Box::new(self.uniquify_anf(bl)?))),
         }
     }
-    pub fn uniquify_anfs(&mut self, anfs: &[AnfUD]) -> Result<Vec<AnfUnq>, CompileError> {
+    pub fn uniquify_anfs<X:Clone>(&mut self, anfs: &[AnfUD<X>]) -> Result<Vec<AnfUnq<X>>, CompileError> {
         anfs.iter().map(|a| self.uniquify_anf(a)).collect()
     }
 
@@ -199,10 +195,10 @@ impl SymEnv {
 
     pub fn uniquify(&mut self, p: &ProgramUD) -> Result<(ProgramUnq, MaxUniqueId), CompileError> {
         match p {
-            Program::Body(e) => {
+            Program::EBody(e) => {
                 let eann = self.uniquify_expr(e)?;
                 let mx = MaxUniqueId(self.gensym);
-                Ok((Program::Body(eann), mx))
+                Ok((Program::EBody(eann), mx))
             }
         }
     }
@@ -231,7 +227,7 @@ mod tests {
         let res = SymEnv::default().uniquify(&pipeline(&program!(observe!(b!("x")))).unwrap());
         assert!(res.is_err());
         let mk = |ret: EExprInferable| {
-            Program::Body(lets![
+            Program::EBody(lets![
                 "x" ; b!() ;= flip!(1/3);
                 "y" ; b!() ;= sample!(
                     lets![

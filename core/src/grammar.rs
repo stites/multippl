@@ -8,6 +8,7 @@ use core::fmt::Debug;
 use itertools::Itertools;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
+use std::marker::PhantomData;
 use std::string::String;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -35,6 +36,10 @@ impl ETy {
         }
     }
 }
+#[derive(Debug, Clone, PartialEq)]
+pub enum STy {
+    SBool,
+}
 
 pub trait ξ<X> {
     type Ext;
@@ -49,8 +54,12 @@ pub struct EObserveExt;
 pub struct ESampleExt;
 pub struct ESample2Ext;
 // fucking ridicuous
-pub struct AVarExt;
-pub struct AValExt;
+pub struct AVarExt<Val> {
+    vartype: PhantomData<Val>,
+}
+pub struct AValExt<Val> {
+    valtype: PhantomData<Val>,
+}
 
 pub struct SAnfExt;
 pub struct SLetInExt;
@@ -65,15 +74,20 @@ pub enum EVal {
     EBool(bool),
     EProd(Vec<EVal>),
 }
-impl EVal {
-    pub fn is_prod(&self) -> bool {
+
+pub trait IsTyped<T> {
+    fn is_prod(&self) -> bool;
+    fn as_type(&self) -> T;
+}
+impl IsTyped<ETy> for EVal {
+    fn is_prod(&self) -> bool {
         use EVal::*;
         match self {
             EBool(_) => false,
             EProd(_) => true,
         }
     }
-    pub fn as_type(&self) -> ETy {
+    fn as_type(&self) -> ETy {
         use EVal::*;
         match self {
             EBool(_) => ETy::EBool,
@@ -84,11 +98,11 @@ impl EVal {
 
 pub enum Anf<X, Val>
 where
-    AVarExt: ξ<X>,
-    AValExt: ξ<X>,
+    AVarExt<Val>: ξ<X>,
+    AValExt<Val>: ξ<X>,
 {
-    AVar(<AVarExt as ξ<X>>::Ext, String),
-    AVal(<AValExt as ξ<X>>::Ext, Val),
+    AVar(<AVarExt<Val> as ξ<X>>::Ext, String),
+    AVal(<AValExt<Val> as ξ<X>>::Ext, Val),
 
     // TODO: not sure this is where I should add booleans, but it makes
     // the observe statements stay closer to the semantics: ~observe anf~
@@ -97,13 +111,13 @@ where
     Neg(Box<Anf<X, Val>>),
 }
 
-impl<X, Y> Debug for Anf<X, Y>
+impl<X, Val> Debug for Anf<X, Val>
 where
-    AVarExt: ξ<X>,
-    AValExt: ξ<X>,
-    Y: Debug,
-    <AVarExt as ξ<X>>::Ext: Debug,
-    <AValExt as ξ<X>>::Ext: Debug,
+    AVarExt<Val>: ξ<X>,
+    AValExt<Val>: ξ<X>,
+    Val: Debug,
+    <AVarExt<Val> as ξ<X>>::Ext: Debug,
+    <AValExt<Val> as ξ<X>>::Ext: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Anf::*;
@@ -116,13 +130,13 @@ where
         }
     }
 }
-impl<X, Y> Clone for Anf<X, Y>
+impl<X, Val> Clone for Anf<X, Val>
 where
-    AVarExt: ξ<X>,
-    AValExt: ξ<X>,
-    Y: Clone,
-    <AVarExt as ξ<X>>::Ext: Clone,
-    <AValExt as ξ<X>>::Ext: Clone,
+    AVarExt<Val>: ξ<X>,
+    AValExt<Val>: ξ<X>,
+    Val: Clone,
+    <AVarExt<Val> as ξ<X>>::Ext: Clone,
+    <AValExt<Val> as ξ<X>>::Ext: Clone,
 {
     fn clone(&self) -> Self {
         use Anf::*;
@@ -135,13 +149,13 @@ where
         }
     }
 }
-impl<X, Y> PartialEq for Anf<X, Y>
+impl<X, Val> PartialEq for Anf<X, Val>
 where
-    AVarExt: ξ<X>,
-    AValExt: ξ<X>,
-    Y: PartialEq,
-    <AVarExt as ξ<X>>::Ext: PartialEq,
-    <AValExt as ξ<X>>::Ext: PartialEq,
+    AVarExt<Val>: ξ<X>,
+    AValExt<Val>: ξ<X>,
+    Val: PartialEq,
+    <AVarExt<Val> as ξ<X>>::Ext: PartialEq,
+    <AValExt<Val> as ξ<X>>::Ext: PartialEq,
 {
     fn eq(&self, o: &Self) -> bool {
         use Anf::*;
@@ -168,8 +182,8 @@ where
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
     ESample2Ext: ξ<X>,
-    AVarExt: ξ<X>,
-    AValExt: ξ<X>,
+    AVarExt<EVal>: ξ<X>,
+    AValExt<EVal>: ξ<X>,
 
     SAnfExt: ξ<X>,
     SLetInExt: ξ<X>,
@@ -177,6 +191,8 @@ where
     SIteExt: ξ<X>,
     SFlipExt: ξ<X>,
     SExactExt: ξ<X>,
+    AValExt<SVal>: ξ<X>,
+    AVarExt<SVal>: ξ<X>,
 {
     EAnf(<EAnfExt as ξ<X>>::Ext, Box<Anf<X, EVal>>),
 
@@ -208,6 +224,17 @@ where
 pub enum SVal {
     SBool(bool),
 }
+impl IsTyped<STy> for SVal {
+    fn is_prod(&self) -> bool {
+        false
+    }
+    fn as_type(&self) -> STy {
+        use SVal::*;
+        match self {
+            SBool(_) => STy::SBool,
+        }
+    }
+}
 
 #[allow(clippy::enum_variant_names)]
 pub enum SExpr<X>
@@ -218,6 +245,8 @@ where
     SIteExt: ξ<X>,
     SFlipExt: ξ<X>,
     SExactExt: ξ<X>,
+    AVarExt<SVal>: ξ<X>,
+    AValExt<SVal>: ξ<X>,
 
     EAnfExt: ξ<X>,
     EPrjExt: ξ<X>,
@@ -228,8 +257,8 @@ where
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
     ESample2Ext: ξ<X>,
-    AVarExt: ξ<X>,
-    AValExt: ξ<X>,
+    AVarExt<EVal>: ξ<X>,
+    AValExt<EVal>: ξ<X>,
 {
     SAnf(<SAnfExt as ξ<X>>::Ext, Box<Anf<X, SVal>>),
     SLetIn(
@@ -260,8 +289,8 @@ where
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
     ESample2Ext: ξ<X>,
-    AVarExt: ξ<X>,
-    AValExt: ξ<X>,
+    AVarExt<EVal>: ξ<X>,
+    AVarExt<SVal>: ξ<X>,
     <EAnfExt as ξ<X>>::Ext: Debug,
     <EPrjExt as ξ<X>>::Ext: Debug,
     <EProdExt as ξ<X>>::Ext: Debug,
@@ -271,8 +300,12 @@ where
     <EObserveExt as ξ<X>>::Ext: Debug,
     <ESampleExt as ξ<X>>::Ext: Debug,
     <ESample2Ext as ξ<X>>::Ext: Debug,
-    <AVarExt as ξ<X>>::Ext: Debug,
-    <AValExt as ξ<X>>::Ext: Debug,
+    <AVarExt<EVal> as ξ<X>>::Ext: Debug,
+    <AVarExt<SVal> as ξ<X>>::Ext: Debug,
+    AValExt<EVal>: ξ<X>,
+    AValExt<SVal>: ξ<X>,
+    <AValExt<EVal> as ξ<X>>::Ext: Debug,
+    <AValExt<SVal> as ξ<X>>::Ext: Debug,
 
     SAnfExt: ξ<X>,
     SLetInExt: ξ<X>,
@@ -349,10 +382,14 @@ where
     <SFlipExt as ξ<X>>::Ext: Debug,
     <SExactExt as ξ<X>>::Ext: Debug,
 
-    AVarExt: ξ<X>,
-    AValExt: ξ<X>,
-    <AVarExt as ξ<X>>::Ext: Debug,
-    <AValExt as ξ<X>>::Ext: Debug,
+    AVarExt<EVal>: ξ<X>,
+    AVarExt<SVal>: ξ<X>,
+    <AVarExt<EVal> as ξ<X>>::Ext: Debug,
+    <AVarExt<SVal> as ξ<X>>::Ext: Debug,
+    AValExt<EVal>: ξ<X>,
+    AValExt<SVal>: ξ<X>,
+    <AValExt<EVal> as ξ<X>>::Ext: Debug,
+    <AValExt<SVal> as ξ<X>>::Ext: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use SExpr::*;
@@ -395,8 +432,15 @@ where
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
     ESample2Ext: ξ<X>,
-    AVarExt: ξ<X>,
-    AValExt: ξ<X>,
+
+    AVarExt<EVal>: ξ<X>,
+    AVarExt<SVal>: ξ<X>,
+    <AVarExt<EVal> as ξ<X>>::Ext: Clone,
+    <AVarExt<SVal> as ξ<X>>::Ext: Clone,
+    AValExt<EVal>: ξ<X>,
+    AValExt<SVal>: ξ<X>,
+    <AValExt<EVal> as ξ<X>>::Ext: Clone,
+    <AValExt<SVal> as ξ<X>>::Ext: Clone,
 
     <EAnfExt as ξ<X>>::Ext: Clone,
     <EPrjExt as ξ<X>>::Ext: Clone,
@@ -407,8 +451,6 @@ where
     <EObserveExt as ξ<X>>::Ext: Clone,
     <ESampleExt as ξ<X>>::Ext: Clone,
     <ESample2Ext as ξ<X>>::Ext: Clone,
-    <AVarExt as ξ<X>>::Ext: Clone,
-    <AValExt as ξ<X>>::Ext: Clone,
 
     SAnfExt: ξ<X>,
     SLetInExt: ξ<X>,
@@ -452,8 +494,15 @@ where
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
     ESample2Ext: ξ<X>,
-    AVarExt: ξ<X>,
-    AValExt: ξ<X>,
+    AVarExt<EVal>: ξ<X>,
+    AVarExt<SVal>: ξ<X>,
+    <AVarExt<EVal> as ξ<X>>::Ext: Clone,
+    <AVarExt<SVal> as ξ<X>>::Ext: Clone,
+
+    AValExt<EVal>: ξ<X>,
+    AValExt<SVal>: ξ<X>,
+    <AValExt<EVal> as ξ<X>>::Ext: Clone,
+    <AValExt<SVal> as ξ<X>>::Ext: Clone,
 
     <EAnfExt as ξ<X>>::Ext: Clone,
     <EPrjExt as ξ<X>>::Ext: Clone,
@@ -464,8 +513,6 @@ where
     <EObserveExt as ξ<X>>::Ext: Clone,
     <ESampleExt as ξ<X>>::Ext: Clone,
     <ESample2Ext as ξ<X>>::Ext: Clone,
-    <AVarExt as ξ<X>>::Ext: Clone,
-    <AValExt as ξ<X>>::Ext: Clone,
 
     SAnfExt: ξ<X>,
     SLetInExt: ξ<X>,
@@ -515,10 +562,14 @@ where
     <EObserveExt as ξ<X>>::Ext: PartialEq,
     <ESampleExt as ξ<X>>::Ext: PartialEq,
     <ESample2Ext as ξ<X>>::Ext: PartialEq,
-    AVarExt: ξ<X>,
-    AValExt: ξ<X>,
-    <AVarExt as ξ<X>>::Ext: PartialEq,
-    <AValExt as ξ<X>>::Ext: PartialEq,
+    AVarExt<SVal>: ξ<X>,
+    AVarExt<EVal>: ξ<X>,
+    <AVarExt<SVal> as ξ<X>>::Ext: PartialEq,
+    <AVarExt<EVal> as ξ<X>>::Ext: PartialEq,
+    AValExt<EVal>: ξ<X>,
+    AValExt<SVal>: ξ<X>,
+    <AValExt<EVal> as ξ<X>>::Ext: PartialEq,
+    <AValExt<SVal> as ξ<X>>::Ext: PartialEq,
 
     SAnfExt: ξ<X>,
     SLetInExt: ξ<X>,
@@ -574,10 +625,14 @@ where
     <EObserveExt as ξ<X>>::Ext: PartialEq,
     <ESampleExt as ξ<X>>::Ext: PartialEq,
     <ESample2Ext as ξ<X>>::Ext: PartialEq,
-    AVarExt: ξ<X>,
-    AValExt: ξ<X>,
-    <AVarExt as ξ<X>>::Ext: PartialEq,
-    <AValExt as ξ<X>>::Ext: PartialEq,
+    AVarExt<EVal>: ξ<X>,
+    AVarExt<SVal>: ξ<X>,
+    <AVarExt<EVal> as ξ<X>>::Ext: PartialEq,
+    <AVarExt<SVal> as ξ<X>>::Ext: PartialEq,
+    AValExt<EVal>: ξ<X>,
+    AValExt<SVal>: ξ<X>,
+    <AValExt<EVal> as ξ<X>>::Ext: PartialEq,
+    <AValExt<SVal> as ξ<X>>::Ext: PartialEq,
 
     SAnfExt: ξ<X>,
     SLetInExt: ξ<X>,
@@ -661,10 +716,15 @@ where
     <EObserveExt as ξ<X>>::Ext: Debug + Clone,
     <ESampleExt as ξ<X>>::Ext: Debug + Clone,
     <ESample2Ext as ξ<X>>::Ext: Debug + Clone,
-    AVarExt: ξ<X>,
-    AValExt: ξ<X>,
-    <AVarExt as ξ<X>>::Ext: Debug + Clone,
-    <AValExt as ξ<X>>::Ext: Debug + Clone,
+    AVarExt<EVal>: ξ<X>,
+    AVarExt<SVal>: ξ<X>,
+    <AVarExt<EVal> as ξ<X>>::Ext: Debug + Clone,
+    <AVarExt<SVal> as ξ<X>>::Ext: Debug + Clone,
+    AValExt<EVal>: ξ<X>,
+    AValExt<SVal>: ξ<X>,
+    <AValExt<EVal> as ξ<X>>::Ext: Debug + Clone,
+    <AValExt<SVal> as ξ<X>>::Ext: Debug + Clone,
+
     SAnfExt: ξ<X>,
     SLetInExt: ξ<X>,
     SSeqExt: ξ<X>,
@@ -753,10 +813,14 @@ where
     <EObserveExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <ESampleExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <ESample2Ext as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    AVarExt: ξ<X>,
-    AValExt: ξ<X>,
-    <AVarExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <AValExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    AVarExt<EVal>: ξ<X>,
+    AVarExt<SVal>: ξ<X>,
+    <AVarExt<EVal> as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <AVarExt<SVal> as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    AValExt<EVal>: ξ<X>,
+    AValExt<SVal>: ξ<X>,
+    <AValExt<EVal> as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <AValExt<SVal> as ξ<X>>::Ext: Debug + Clone + PartialEq,
     SAnfExt: ξ<X>,
     SLetInExt: ξ<X>,
     SSeqExt: ξ<X>,
@@ -770,7 +834,8 @@ where
     <SFlipExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <SExactExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
 {
-    Body(EExpr<X>),
+    EBody(EExpr<X>),
+    SBody(SExpr<X>),
     // TODO
     // | define (f: Func) (rest: Program) : Program
 }
@@ -794,10 +859,14 @@ where
     <EObserveExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <ESampleExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <ESample2Ext as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    AVarExt: ξ<X>,
-    AValExt: ξ<X>,
-    <AVarExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <AValExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    AVarExt<EVal>: ξ<X>,
+    AVarExt<SVal>: ξ<X>,
+    AValExt<EVal>: ξ<X>,
+    AValExt<SVal>: ξ<X>,
+    <AVarExt<EVal> as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <AVarExt<SVal> as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <AValExt<EVal> as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <AValExt<SVal> as ξ<X>>::Ext: Debug + Clone + PartialEq,
     SAnfExt: ξ<X>,
     SLetInExt: ξ<X>,
     SSeqExt: ξ<X>,
@@ -814,41 +883,51 @@ where
     pub fn strip_samples(&self) -> Program<X> {
         use Program::*;
         match self {
-            Body(e) => {
+            SBody(e) => todo!(),
+            EBody(e) => {
                 // FIXME: this shouldn't be necessary and I think I already fixed the bug that causes this.
-                let mut cur = e.strip_samples1();
-                loop {
-                    let nxt = cur.strip_samples1();
+                todo!();
+                // let mut cur = e.strip_samples1();
+                // loop {
+                //     let nxt = cur.strip_samples1();
 
-                    if nxt == cur {
-                        return Body(nxt);
-                    } else {
-                        cur = nxt;
-                    }
-                }
+                //     if nxt == cur {
+                //         return EBody(nxt);
+                //     } else {
+                //         cur = nxt;
+                //     }
+                // }
             }
         }
     }
     pub fn query(&self) -> EExpr<X> {
         use Program::*;
         match self {
-            Body(e) => e.query(),
+            EBody(e) => todo!(), // e.query(),
+            SBody(e) => todo!(), // e.query(),
         }
     }
     pub fn insert_observe(&self, e: EExpr<X>) -> Program<X> {
         use Program::*;
         match self {
-            Body(b) => Body(b.insert_observe(e)),
+            EBody(b) => todo!(), //  Body(b.insert_observe(e)),
+            SBody(b) => todo!(), //  Body(b.insert_observe(e)),
         }
     }
 }
 
 // UD comprises of the default, undecorated grammar. Grammar.rs seems to be the best place for this.
 pub struct UD;
-impl ξ<UD> for AVarExt {
+impl ξ<UD> for AVarExt<SVal> {
     type Ext = ();
 }
-impl ξ<UD> for AValExt {
+impl ξ<UD> for AVarExt<EVal> {
+    type Ext = ();
+}
+impl ξ<UD> for AValExt<EVal> {
+    type Ext = ();
+}
+impl ξ<UD> for AValExt<SVal> {
     type Ext = ();
 }
 impl ξ<UD> for EAnfExt {
@@ -898,6 +977,7 @@ impl ξ<UD> for SExactExt {
     type Ext = ();
 }
 
-pub type AnfUD = Anf<UD, EVal>;
+pub type AnfUD<X> = Anf<UD, X>;
 pub type EExprUD = EExpr<UD>;
+pub type SExprUD = SExpr<UD>;
 pub type ProgramUD = Program<UD>;

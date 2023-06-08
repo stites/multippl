@@ -143,7 +143,7 @@ impl DependencyEnv {
 
     pub fn scan(&mut self, p: &ProgramAnn) -> DependenceMap {
         match p {
-            Program::Body(b) => {
+            Program::EBody(b) => {
                 self.scan_expr(b);
                 self.map.clone()
             }

@@ -38,15 +38,15 @@ pub fn tree_parser(code: String) -> Option<Tree> {
 //   prec.left(5, seq($.bool_unop, $.anf)),
 // ),
 
-fn parse_anf_child_h(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable {
+fn parse_anf_child_h(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable<EVal> {
     let mut c_ = c.clone();
     let mut cs = n.named_children(&mut c_);
     let a = cs.next().unwrap();
     parse_anf(src, c, a)
 }
-fn parse_anf(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable {
+fn parse_anf(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable<EVal> {
     match n.named_child_count() {
-        0 => parse_anf_node(src, c, n),
+        0 => parse_anf_enode(src, c, n),
         1 => parse_anf_child_h(src, c, n),
         2 => {
             // unary operation
@@ -94,7 +94,7 @@ fn parse_anf(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable {
         _ => panic!("invalid program found!\nsexp: {}", n.to_sexp()),
     }
 }
-fn parse_anf_node(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable {
+fn parse_anf_enode(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable<EVal> {
     let k = n.kind();
     match k {
         "identifier" => {
@@ -261,7 +261,7 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExprInferable {
 }
 
 fn parse_program(src: &[u8], c: &mut TreeCursor, n: &Node) -> ProgramInferable {
-    Program::Body(parse_expr(src, c, n))
+    Program::EBody(parse_expr(src, c, n))
 }
 pub fn parse_tree(src: &[u8], t: Tree) -> ProgramInferable {
     // https://docs.rs/tree-sitter/latest/tree_sitter/struct.TreeTreeCursor.html

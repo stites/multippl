@@ -237,7 +237,7 @@ fn test_grid_2x2_compiles() {
 
     println!("{:?}", grid);
     match &grid {
-        Program::Body(ELetIn(_, var, _, _)) => assert_eq!(var, &"00".to_string()),
+        Program::EBody(ELetIn(_, var, _, _)) => assert_eq!(var, &"00".to_string()),
         _ => assert!(false, "expected a let-in binding!"),
     }
     match &grid.query() {
@@ -271,7 +271,7 @@ fn test_grid_2x2_compiles() {
 #[test]
 fn test_grid2x2_inference() {
     let mk = |ret: EExprInferable| {
-        Program::Body(lets![
+        Program::EBody(lets![
             "00"  ;= flip!(1/2);
             "01"  ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
             "10"  ;= ite!( ( b!(@anf "00") ) ? ( flip!(1/6) ) : ( flip!(1/5) ) );
@@ -550,7 +550,7 @@ fn test_grid_3x3_compiles() {
 // #[traced_test]
 fn test_grid3x3_inference() {
     let mk = |ret: EExprInferable| {
-        Program::Body(lets![
+        Program::EBody(lets![
             "00"  ;= flip!(1/2);
             "01"  ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
             "02"  ;= ite!( ( b!(@anf "01")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -631,7 +631,7 @@ fn test_grid3x3_inference() {
 // #[traced_test]
 fn test_grid3x3_sampled_inference() {
     let mk = |ret: EExprInferable| {
-        Program::Body(lets![
+        Program::EBody(lets![
             "00"  ;= flip!(1/2);
             "01"  ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
             "10"  ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );

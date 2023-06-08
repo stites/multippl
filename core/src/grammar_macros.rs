@@ -346,7 +346,7 @@ macro_rules! ite {
 #[macro_export]
 macro_rules! program {
     ( $x:expr ) => {
-        $crate::grammar::Program::Body($x)
+        $crate::grammar::Program::EBody($x)
     };
 }
 // #[macro_export]

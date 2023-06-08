@@ -231,7 +231,7 @@ impl LabelEnv {
         }
     }
 
-    pub fn annotate_anf(&mut self, a: &AnfUnq) -> Result<AnfAnn, CompileError> {
+    pub fn annotate_anf<X:Clone>(&mut self, a: &AnfUnq<X>) -> Result<AnfAnn, CompileError> {
         use crate::grammar::Anf::*;
         match a {
             AVar(uid, s) => {
@@ -253,7 +253,7 @@ impl LabelEnv {
             Neg(bl) => Ok(Neg(Box::new(self.annotate_anf(bl)?))),
         }
     }
-    pub fn annotate_anfs(&mut self, anfs: &[AnfUnq]) -> Result<Vec<AnfAnn>, CompileError> {
+    pub fn annotate_anfs<X:Clone>(&mut self, anfs: &[AnfUnq<X>]) -> Result<Vec<AnfAnn>, CompileError> {
         anfs.iter().map(|a| self.annotate_anf(a)).collect()
     }
     pub fn annotate_expr(&mut self, e: &EExprUnq) -> Result<EExprAnn, CompileError> {
@@ -314,12 +314,12 @@ impl LabelEnv {
         CompileError,
     > {
         match p {
-            Program::Body(e) => {
+            Program::EBody(e) => {
                 let eann = self.annotate_expr(e)?;
                 let order = self.linear_var_order();
                 let inv = self.get_inv();
                 let mx = self.max_varlabel_val();
-                Ok((Program::Body(eann), order, self.subst_var.clone(), inv, mx))
+                Ok((Program::EBody(eann), order, self.subst_var.clone(), inv, mx))
             }
         }
     }

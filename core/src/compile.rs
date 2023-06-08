@@ -698,7 +698,7 @@ impl<'a> Env<'a> {
 }
 pub fn debug(env: &mut Env, p: &ProgramAnn) -> Result<(Compiled, EExprTr)> {
     match p {
-        Program::Body(e) => {
+        Program::EBody(e) => {
             debug!("========================================================");
             env.eval_expr(&Default::default(), e)
         }

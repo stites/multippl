@@ -126,7 +126,7 @@ impl InsertionEnv {
     }
     pub fn apply_cut(&mut self, p: &ProgramAnn) -> ProgramAnn {
         match p {
-            Program::Body(b) => Program::Body(self.sample_expr(b)),
+            Program::EBody(b) => Program::EBody(self.sample_expr(b)),
         }
     }
     pub fn apply_cuts(&mut self, p: &ProgramAnn) -> ProgramAnn {

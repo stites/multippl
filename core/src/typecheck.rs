@@ -1,4 +1,4 @@
-use crate::compile::CompileError;
+use crate::data::CompileError;
 use crate::grammar::*;
 
 pub mod grammar {
@@ -7,12 +7,15 @@ pub mod grammar {
     #[derive(Debug, PartialEq, Clone)]
     pub struct Typed;
     #[derive(Debug, PartialEq, Clone)]
-    pub struct LetInTypes {
-        pub bindee: ETy,
-        pub body: ETy,
+    pub struct LetInTypes<T> {
+        pub bindee: T,
+        pub body: T,
     }
-    impl ξ<Typed> for AVarExt {
+    impl ξ<Typed> for AVarExt<ETy> {
         type Ext = ETy;
+    }
+    impl ξ<Typed> for AVarExt<STy> {
+        type Ext = STy;
     }
     impl ξ<Typed> for AValExt {
         type Ext = ();
@@ -27,7 +30,7 @@ pub mod grammar {
         type Ext = ETy;
     }
     impl ξ<Typed> for ELetInExt {
-        type Ext = LetInTypes;
+        type Ext = LetInTypes<ETy>;
     }
     impl ξ<Typed> for EIteExt {
         type Ext = ETy;
@@ -48,7 +51,7 @@ pub mod grammar {
         type Ext = ();
     }
     impl ξ<Typed> for SLetInExt {
-        type Ext = ();
+        type Ext = LetInTypes<ETy>;
     }
     impl ξ<Typed> for SSeqExt {
         type Ext = ();
@@ -63,10 +66,11 @@ pub mod grammar {
         type Ext = ();
     }
 
-    pub type AnfTyped = Anf<Typed, EVal>;
+    pub type AnfTyped<X> = Anf<Typed, X>;
     pub type EExprTyped = EExpr<Typed>;
+    pub type SExprTyped = SExpr<Typed>;
     pub type ProgramTyped = Program<Typed>;
-    impl AnfTyped {
+    impl <X:grammar::IsTyped<T>> AnfTyped<X> {
         pub fn as_type(&self) -> ETy {
             use Anf::*;
             match self {
@@ -78,7 +82,7 @@ pub mod grammar {
         pub fn is_type(&self, ty: &ETy) -> bool {
             self.as_type() == *ty
         }
-        pub fn var(s: String) -> AnfTyped {
+        pub fn var(s: String) -> AnfTyped<X> {
             Anf::AVar(ETy::EBool, s)
         }
     }
@@ -102,7 +106,7 @@ pub fn as_type(e: &grammar::EExprTyped) -> ETy {
     }
 }
 
-pub fn typecheck_anf(a: &grammar::AnfTyped) -> Result<AnfUD, CompileError> {
+pub fn typecheck_anf<X:Clone>(a: &grammar::AnfTyped<X>) -> Result<AnfUD<X>, CompileError> {
     use crate::grammar::Anf::*;
     match a {
         AVar(ty, s) => {
@@ -125,7 +129,7 @@ pub fn typecheck_anf(a: &grammar::AnfTyped) -> Result<AnfUD, CompileError> {
         Neg(bl) => Ok(Neg(Box::new(typecheck_anf(bl)?))),
     }
 }
-pub fn typecheck_anfs(anfs: &[grammar::AnfTyped]) -> Result<Vec<AnfUD>, CompileError> {
+pub fn typecheck_anfs<X:Clone>(anfs: &[grammar::AnfTyped<X>]) -> Result<Vec<AnfUD<X>>, CompileError> {
     anfs.iter().map(typecheck_anf).collect()
 }
 
@@ -161,7 +165,7 @@ pub fn typecheck_expr(e: &grammar::EExprTyped) -> Result<EExprUD, CompileError> 
 
 pub fn typecheck(p: &grammar::ProgramTyped) -> Result<ProgramUD, CompileError> {
     match p {
-        Program::Body(e) => Ok(Program::Body(typecheck_expr(e)?)),
+        Program::EBody(e) => Ok(Program::EBody(typecheck_expr(e)?)),
     }
 }
 
