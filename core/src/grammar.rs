@@ -889,31 +889,30 @@ where
             SBody(e) => todo!(),
             EBody(e) => {
                 // FIXME: this shouldn't be necessary and I think I already fixed the bug that causes this.
-                todo!();
-                // let mut cur = e.strip_samples1();
-                // loop {
-                //     let nxt = cur.strip_samples1();
+                let mut cur = e.strip_samples1();
+                loop {
+                    let nxt = cur.strip_samples1();
 
-                //     if nxt == cur {
-                //         return EBody(nxt);
-                //     } else {
-                //         cur = nxt;
-                //     }
-                // }
+                    if nxt == cur {
+                        return EBody(nxt);
+                    } else {
+                        cur = nxt;
+                    }
+                }
             }
         }
     }
     pub fn query(&self) -> EExpr<X> {
         use Program::*;
         match self {
-            EBody(e) => todo!(), // e.query(),
+            EBody(e) => e.query(),
             SBody(e) => todo!(), // e.query(),
         }
     }
     pub fn insert_observe(&self, e: EExpr<X>) -> Program<X> {
         use Program::*;
         match self {
-            EBody(b) => todo!(), //  Body(b.insert_observe(e)),
+            EBody(b) => EBody(b.insert_observe(e)),
             SBody(b) => todo!(), //  Body(b.insert_observe(e)),
         }
     }
