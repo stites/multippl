@@ -1,4 +1,4 @@
-use crate::compile::CompileError;
+use crate::data::CompileError;
 use crate::grammar::*;
 use crate::uniquify::grammar::*;
 use grammar::*;
@@ -110,15 +110,19 @@ pub mod grammar {
     #[derive(Debug, PartialEq, Clone)]
     pub struct Annotated;
 
-    impl ξ<Annotated> for AVarExt {
-        // vars up/down
-        // Vars are "sample-able"
+    impl ξ<Annotated> for AVarExt<SVal> {
         type Ext = NamedVar;
     }
-    impl ξ<Annotated> for AValExt {
+    impl ξ<Annotated> for AValExt<SVal> {
         type Ext = ();
     }
-    pub type AnfAnn = Anf<Annotated, EVal>;
+    impl ξ<Annotated> for AVarExt<EVal> {
+        type Ext = NamedVar;
+    }
+    impl ξ<Annotated> for AValExt<EVal> {
+        type Ext = ();
+    }
+    pub type AnfAnn<Val> = Anf<Annotated, Val>;
 
     impl ξ<Annotated> for EAnfExt {
         type Ext = ();
@@ -231,7 +235,11 @@ impl LabelEnv {
         }
     }
 
-    pub fn annotate_anf<X:Clone>(&mut self, a: &AnfUnq<X>) -> Result<AnfAnn, CompileError> {
+    pub fn annotate_anf<Val: Clone>(&mut self, a: &AnfUnq<Val>) -> Result<AnfAnn<Val>, CompileError>
+    where
+        AVarExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = NamedVar>,
+        AValExt<Val>: ξ<Uniquify, Ext = ()> + ξ<Annotated, Ext = ()>,
+    {
         use crate::grammar::Anf::*;
         match a {
             AVar(uid, s) => {
@@ -253,7 +261,14 @@ impl LabelEnv {
             Neg(bl) => Ok(Neg(Box::new(self.annotate_anf(bl)?))),
         }
     }
-    pub fn annotate_anfs<X:Clone>(&mut self, anfs: &[AnfUnq<X>]) -> Result<Vec<AnfAnn>, CompileError> {
+    pub fn annotate_anfs<Val: Clone>(
+        &mut self,
+        anfs: &[AnfUnq<Val>],
+    ) -> Result<Vec<AnfAnn<Val>>, CompileError>
+    where
+        AVarExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = NamedVar>,
+        AValExt<Val>: ξ<Uniquify, Ext = ()> + ξ<Annotated, Ext = ()>,
+    {
         anfs.iter().map(|a| self.annotate_anf(a)).collect()
     }
     pub fn annotate_expr(&mut self, e: &EExprUnq) -> Result<EExprAnn, CompileError> {
@@ -314,6 +329,7 @@ impl LabelEnv {
         CompileError,
     > {
         match p {
+            Program::SBody(e) => todo!(),
             Program::EBody(e) => {
                 let eann = self.annotate_expr(e)?;
                 let order = self.linear_var_order();
@@ -340,16 +356,4 @@ pub fn pipeline(
     let p = crate::uniquify::pipeline(p)?.0;
     let mut lenv = LabelEnv::new();
     lenv.annotate(&p)
-}
-
-#[cfg(test)]
-mod tests {
-    use crate::compile::*;
-    use crate::grammar::*;
-    use crate::grammar_macros::*;
-    use crate::typecheck::grammar::{EExprTyped, ProgramTyped};
-    use crate::typecheck::typecheck;
-    use crate::*;
-    use tracing::*;
-    use tracing_test::traced_test;
 }

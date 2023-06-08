@@ -11,13 +11,16 @@ pub mod grammar {
         pub bindee: T,
         pub body: T,
     }
-    impl ξ<Typed> for AVarExt<ETy> {
+    impl ξ<Typed> for AVarExt<EVal> {
         type Ext = ETy;
     }
-    impl ξ<Typed> for AVarExt<STy> {
+    impl ξ<Typed> for AVarExt<SVal> {
         type Ext = STy;
     }
-    impl ξ<Typed> for AValExt {
+    impl ξ<Typed> for AValExt<EVal> {
+        type Ext = ();
+    }
+    impl ξ<Typed> for AValExt<SVal> {
         type Ext = ();
     }
     impl ξ<Typed> for EAnfExt {
@@ -66,12 +69,13 @@ pub mod grammar {
         type Ext = ();
     }
 
-    pub type AnfTyped<X> = Anf<Typed, X>;
+    pub type AnfTyped<Val> = Anf<Typed, Val>;
     pub type EExprTyped = EExpr<Typed>;
     pub type SExprTyped = SExpr<Typed>;
     pub type ProgramTyped = Program<Typed>;
-    impl <X:grammar::IsTyped<T>> AnfTyped<X> {
-        pub fn as_type(&self) -> ETy {
+
+    impl IsTyped<ETy> for AnfTyped<EVal> {
+        fn as_type(&self) -> ETy {
             use Anf::*;
             match self {
                 AVar(t, _) => t.clone(),
@@ -79,11 +83,18 @@ pub mod grammar {
                 _ => ETy::EBool,
             }
         }
-        pub fn is_type(&self, ty: &ETy) -> bool {
-            self.as_type() == *ty
+        fn is_prod(&self) -> bool {
+            false
         }
-        pub fn var(s: String) -> AnfTyped<X> {
+    }
+    impl AnfTyped<EVal> {
+        pub fn var(s: String) -> AnfTyped<EVal> {
             Anf::AVar(ETy::EBool, s)
+        }
+    }
+    impl AnfTyped<SVal> {
+        pub fn var(s: String) -> AnfTyped<SVal> {
+            Anf::AVar(STy::SBool, s)
         }
     }
 }
@@ -106,10 +117,15 @@ pub fn as_type(e: &grammar::EExprTyped) -> ETy {
     }
 }
 
-pub fn typecheck_anf<X:Clone>(a: &grammar::AnfTyped<X>) -> Result<AnfUD<X>, CompileError> {
+use grammar::*;
+pub fn typecheck_anf<X: Clone>(a: &grammar::AnfTyped<X>) -> Result<AnfUD<X>, CompileError>
+where
+    AVarExt<X>: ξ<Typed> + ξ<UD, Ext = ()>,
+    AValExt<X>: ξ<Typed> + ξ<UD, Ext = ()>,
+{
     use crate::grammar::Anf::*;
     match a {
-        AVar(ty, s) => {
+        AVar(_, s) => {
             // if !ctx.gamma.typechecks(s.clone(), ty) {
             //     Err(TypeError(format!(
             //         "Expected {s} : {ty:?}\nGot: {a:?}\n{ctx:?}",
@@ -129,7 +145,13 @@ pub fn typecheck_anf<X:Clone>(a: &grammar::AnfTyped<X>) -> Result<AnfUD<X>, Comp
         Neg(bl) => Ok(Neg(Box::new(typecheck_anf(bl)?))),
     }
 }
-pub fn typecheck_anfs<X:Clone>(anfs: &[grammar::AnfTyped<X>]) -> Result<Vec<AnfUD<X>>, CompileError> {
+pub fn typecheck_anfs<X: Clone>(
+    anfs: &[grammar::AnfTyped<X>],
+) -> Result<Vec<AnfUD<X>>, CompileError>
+where
+    AVarExt<X>: ξ<Typed> + ξ<UD, Ext = ()>,
+    AValExt<X>: ξ<Typed> + ξ<UD, Ext = ()>,
+{
     anfs.iter().map(typecheck_anf).collect()
 }
 
@@ -166,6 +188,7 @@ pub fn typecheck_expr(e: &grammar::EExprTyped) -> Result<EExprUD, CompileError> 
 pub fn typecheck(p: &grammar::ProgramTyped) -> Result<ProgramUD, CompileError> {
     match p {
         Program::EBody(e) => Ok(Program::EBody(typecheck_expr(e)?)),
+        Program::SBody(e) => todo!(),
     }
 }
 

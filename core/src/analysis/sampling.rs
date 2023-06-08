@@ -1,10 +1,11 @@
 use crate::annotate::grammar::*;
-use crate::compile::CompileError;
+use crate::annotate::LabelEnv;
+use crate::data::CompileError;
+use crate::data::CompileError::Generic;
 use crate::grammar::*;
 use crate::typeinf::grammar::*;
 use crate::uniquify::grammar::UniqueId;
 use crate::uniquify::grammar::*;
-use crate::CompileError::Generic;
 use crate::*;
 use core::fmt::{Debug, Formatter};
 use itertools::*;
@@ -126,6 +127,7 @@ impl InsertionEnv {
     }
     pub fn apply_cut(&mut self, p: &ProgramAnn) -> ProgramAnn {
         match p {
+            Program::SBody(b) => todo!(),
             Program::EBody(b) => Program::EBody(self.sample_expr(b)),
         }
     }
@@ -167,7 +169,7 @@ pub fn insert_sample_statements_h(pann: &ProgramAnn, mx_id: MaxUniqueId) -> Prog
 mod tests {
     use super::*;
     use crate::annotate::grammar::named;
-    use crate::compile::*;
+    use crate::data::*;
     use crate::grammar::*;
     use crate::grammar_macros::*;
     use crate::typecheck::grammar::{EExprTyped, ProgramTyped};

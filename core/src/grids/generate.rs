@@ -1,8 +1,8 @@
 use crate::grids::*;
 use crate::typeinf::grammar::ProgramInferable;
-use std::fmt::Debug;
 use itertools::*;
 use rsdd::sample::probability::Probability;
+use std::fmt::Debug;
 
 pub fn program(size: usize, sampled: bool, prg_seed: u64, determinism: f64) -> ProgramInferable {
     let mk_probability = |_ix, _p| Probability::new(0.5);
@@ -24,7 +24,13 @@ impl ToString for ObsId {
         self.0.iter().map(|x| x.to_string()).join(":")
     }
 }
-pub fn disjunction<X:Debug>(vars: Vec<AnfInferable<X>>) -> AnfInferable<X> {
+pub fn disjunction<X: Debug>(vars: Vec<AnfInferable<X>>) -> AnfInferable<X>
+where
+    AVarExt<X>: ξ<Inferable>,
+    AValExt<X>: ξ<Inferable>,
+    <AVarExt<X> as ξ<crate::typeinf::grammar::Inferable>>::Ext: Debug,
+    <AValExt<X> as ξ<crate::typeinf::grammar::Inferable>>::Ext: Debug,
+{
     println!("{:?}", vars);
     vars.into_iter()
         .fold(None, |fin, var| match fin {

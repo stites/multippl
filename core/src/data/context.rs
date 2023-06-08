@@ -1,5 +1,6 @@
 use crate::annotate::grammar::Var;
-use crate::compile::{Output, SubstMap, WeightMap};
+use crate::data::output::{Output, SubstMap};
+use crate::data::WeightMap;
 use rsdd::repr::bdd::BddPtr;
 use std::collections::HashMap;
 

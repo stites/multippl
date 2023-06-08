@@ -41,13 +41,19 @@ pub mod grammar {
     #[derive(Debug, PartialEq, Clone)]
     pub struct Trace;
 
-    impl ξ<Trace> for AVarExt {
+    impl ξ<Trace> for AVarExt<EVal> {
         type Ext = Box<Output>;
     }
-    impl ξ<Trace> for AValExt {
+    impl ξ<Trace> for AValExt<EVal> {
         type Ext = Box<Output>;
     }
-    pub type AnfTr = Anf<Trace, EVal>;
+    impl ξ<Trace> for AVarExt<SVal> {
+        type Ext = Box<Output>;
+    }
+    impl ξ<Trace> for AValExt<SVal> {
+        type Ext = Box<Output>;
+    }
+    pub type AnfTr<Val> = Anf<Trace, Val>;
 
     impl ξ<Trace> for EAnfExt {
         type Ext = Box<Compiled>;
@@ -140,10 +146,10 @@ impl<'a> Env<'a> {
     pub fn eval_anf_binop(
         &mut self,
         ctx: &Context,
-        bl: &AnfAnn,
-        br: &AnfAnn,
+        bl: &AnfAnn<EVal>,
+        br: &AnfAnn<EVal>,
         op: &dyn Fn(&mut Mgr, BddPtr, BddPtr) -> BddPtr,
-    ) -> Result<(AnfTr, AnfTr, Output)> {
+    ) -> Result<(AnfTr<EVal>, AnfTr<EVal>, Output)> {
         let (l, ltr) = self.eval_anf(ctx, bl)?;
         let (r, rtr) = self.eval_anf(ctx, br)?;
 
@@ -163,7 +169,7 @@ impl<'a> Env<'a> {
         }
     }
 
-    pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnn) -> Result<(Output, AnfTr)> {
+    pub fn eval_anf(&mut self, ctx: &Context, a: &AnfAnn<EVal>) -> Result<(Output, AnfTr<EVal>)> {
         use Anf::*;
         match a {
             AVar(d, s) => match ctx.substitutions.get(&d.id()) {
@@ -698,6 +704,7 @@ impl<'a> Env<'a> {
 }
 pub fn debug(env: &mut Env, p: &ProgramAnn) -> Result<(Compiled, EExprTr)> {
     match p {
+        Program::SBody(e) => todo!(),
         Program::EBody(e) => {
             debug!("========================================================");
             env.eval_expr(&Default::default(), e)

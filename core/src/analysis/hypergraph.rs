@@ -2,10 +2,10 @@ use crate::analysis::dependencies;
 use crate::analysis::dependencies::*;
 use crate::annotate;
 use crate::annotate::grammar::*;
-use crate::compile::CompileError;
+use crate::data::CompileError;
+use crate::data::CompileError::Generic;
 use crate::grammar::*;
 use crate::uniquify::grammar::UniqueId;
-use crate::CompileError::Generic;
 use core::fmt::{Debug, Formatter};
 use itertools::*;
 // use grammar::*;
@@ -69,7 +69,7 @@ pub fn pipeline(p: &crate::ProgramInferable) -> ClusterGraph<NamedVar> {
 mod tests {
     use super::*;
     use crate::annotate::grammar::named;
-    use crate::compile::*;
+    use crate::data::*;
     use crate::grammar::*;
     use crate::grammar_macros::*;
     use crate::typecheck::grammar::{EExprTyped, ProgramTyped};

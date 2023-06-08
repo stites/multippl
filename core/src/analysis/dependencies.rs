@@ -87,7 +87,11 @@ impl DependencyEnv {
             map: Default::default(),
         }
     }
-    fn scan_anf(&self, a: &AnfAnn) -> HashSet<NamedVar> {
+    fn scan_anf<Var>(&self, a: &AnfAnn<Var>) -> HashSet<NamedVar>
+    where
+        AValExt<Var>: ξ<crate::annotate::grammar::Annotated, Ext = ()>,
+        AVarExt<Var>: ξ<crate::annotate::grammar::Annotated, Ext = NamedVar>,
+    {
         use Anf::*;
         match a {
             AVar(nv, s) => HashSet::from([nv.clone()]),
@@ -143,6 +147,7 @@ impl DependencyEnv {
 
     pub fn scan(&mut self, p: &ProgramAnn) -> DependenceMap {
         match p {
+            Program::SBody(b) => todo!(),
             Program::EBody(b) => {
                 self.scan_expr(b);
                 self.map.clone()
@@ -157,7 +162,7 @@ impl DependencyEnv {
 mod tests {
     use super::*;
     use crate::annotate::grammar::named;
-    use crate::compile::*;
+    use crate::data::*;
     use crate::grammar::*;
     use crate::grammar_macros::*;
     use crate::typecheck::grammar::{EExprTyped, ProgramTyped};

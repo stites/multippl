@@ -1,4 +1,4 @@
-use crate::compile::CompileError;
+use crate::data::CompileError;
 use crate::grammar::*;
 use grammar::*;
 use std::collections::HashMap;
@@ -32,10 +32,16 @@ pub mod grammar {
     #[derive(Debug, PartialEq, Clone)]
     pub struct Uniquify;
 
-    impl ξ<Uniquify> for AVarExt {
+    impl ξ<Uniquify> for AVarExt<SVal> {
         type Ext = UniqueId;
     }
-    impl ξ<Uniquify> for AValExt {
+    impl ξ<Uniquify> for AValExt<SVal> {
+        type Ext = ();
+    }
+    impl ξ<Uniquify> for AVarExt<EVal> {
+        type Ext = UniqueId;
+    }
+    impl ξ<Uniquify> for AValExt<EVal> {
         type Ext = ();
     }
     pub type AnfUnq<X> = Anf<Uniquify, X>;
@@ -136,7 +142,11 @@ impl SymEnv {
             Some(sym) => Ok(sym),
         }
     }
-    pub fn uniquify_anf<X:Clone>(&mut self, a: &AnfUD<X>) -> Result<AnfUnq<X>, CompileError> {
+    pub fn uniquify_anf<X: Clone>(&mut self, a: &AnfUD<X>) -> Result<AnfUnq<X>, CompileError>
+    where
+        AVarExt<X>: ξ<Uniquify, Ext = UniqueId> + ξ<UD>,
+        AValExt<X>: ξ<Uniquify, Ext = ()> + ξ<UD>,
+    {
         use crate::grammar::Anf::*;
         match a {
             AVar(_, s) => {
@@ -155,7 +165,14 @@ impl SymEnv {
             Neg(bl) => Ok(Neg(Box::new(self.uniquify_anf(bl)?))),
         }
     }
-    pub fn uniquify_anfs<X:Clone>(&mut self, anfs: &[AnfUD<X>]) -> Result<Vec<AnfUnq<X>>, CompileError> {
+    pub fn uniquify_anfs<X: Clone>(
+        &mut self,
+        anfs: &[AnfUD<X>],
+    ) -> Result<Vec<AnfUnq<X>>, CompileError>
+    where
+        AVarExt<X>: ξ<Uniquify, Ext = UniqueId> + ξ<UD>,
+        AValExt<X>: ξ<Uniquify, Ext = ()> + ξ<UD>,
+    {
         anfs.iter().map(|a| self.uniquify_anf(a)).collect()
     }
 
@@ -195,6 +212,7 @@ impl SymEnv {
 
     pub fn uniquify(&mut self, p: &ProgramUD) -> Result<(ProgramUnq, MaxUniqueId), CompileError> {
         match p {
+            Program::SBody(e) => todo!(),
             Program::EBody(e) => {
                 let eann = self.uniquify_expr(e)?;
                 let mx = MaxUniqueId(self.gensym);
@@ -213,7 +231,7 @@ pub fn pipeline(p: &crate::ProgramInferable) -> Result<(ProgramUnq, MaxUniqueId)
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::compile::*;
+    use crate::data::*;
     use crate::grammar::*;
     use crate::grammar_macros::*;
     use crate::typecheck::pipeline;

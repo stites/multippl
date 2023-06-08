@@ -75,9 +75,12 @@ pub enum EVal {
     EProd(Vec<EVal>),
 }
 
-pub trait IsTyped<T> {
+pub trait IsTyped<T: PartialEq> {
     fn is_prod(&self) -> bool;
     fn as_type(&self) -> T;
+    fn is_type(&self, ty: &T) -> bool {
+        self.as_type() == *ty
+    }
 }
 impl IsTyped<ETy> for EVal {
     fn is_prod(&self) -> bool {
