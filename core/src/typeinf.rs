@@ -1,6 +1,6 @@
 use crate::data::errors::{CompileError, Result};
 use crate::grammar::*;
-use crate::typecheck::grammar::{AnfTyped, EExprTyped, LetInTypes, ProgramTyped};
+use crate::typecheck::grammar::{AnfTyped, EExprTyped, LetInTypes, ProgramTyped, SExprTyped};
 
 pub mod grammar {
     use super::*;
@@ -57,7 +57,7 @@ pub mod grammar {
         type Ext = ();
     }
     impl ξ<Inferable> for SIteExt {
-        type Ext = ();
+        type Ext = Option<STy>;
     }
     impl ξ<Inferable> for SFlipExt {
         type Ext = ();
@@ -68,6 +68,7 @@ pub mod grammar {
 
     pub type AnfInferable<X> = Anf<Inferable, X>;
     pub type EExprInferable = EExpr<Inferable>;
+    pub type SExprInferable = SExpr<Inferable>;
     pub type ProgramInferable = Program<Inferable>;
 }
 
@@ -113,7 +114,11 @@ fn ignored_type() -> ETy {
     ETy::EBool
 }
 
-pub fn typeinference_expr(e: &grammar::EExprInferable) -> Result<EExprTyped> {
+fn ignored_stype() -> STy {
+    STy::SBool
+}
+
+pub fn typeinference_eexpr(e: &grammar::EExprInferable) -> Result<EExprTyped> {
     use crate::grammar::EExpr::*;
     match e {
         EAnf(_, a) => Ok(EAnf((), Box::new(typeinference_anf(&ETy::EBool, a)?))),
@@ -135,26 +140,55 @@ pub fn typeinference_expr(e: &grammar::EExprInferable) -> Result<EExprTyped> {
                 body: ignored_type(),
             },
             s.clone(),
-            Box::new(typeinference_expr(ebound)?),
-            Box::new(typeinference_expr(ebody)?),
+            Box::new(typeinference_eexpr(ebound)?),
+            Box::new(typeinference_eexpr(ebody)?),
         )),
         EIte(_ty, cond, t, f) => Ok(EIte(
             ignored_type(),
             Box::new(typeinference_anf(&ETy::EBool, cond)?),
-            Box::new(typeinference_expr(t)?),
-            Box::new(typeinference_expr(f)?),
+            Box::new(typeinference_eexpr(t)?),
+            Box::new(typeinference_eexpr(f)?),
         )),
         EFlip(_, param) => Ok(EFlip((), *param)),
         EObserve(_, a) => Ok(EObserve((), Box::new(typeinference_anf(&ETy::EBool, a)?))),
-        ESample(_, e) => Ok(ESample((), Box::new(typeinference_expr(e)?))),
-        ESample2(_, e) => todo!(),
+        ESample(_, e) => Ok(ESample((), Box::new(typeinference_eexpr(e)?))),
+        ESample2(_, e) => Ok(ESample2((), Box::new(typeinference_sexpr(e)?))),
+    }
+}
+
+pub fn typeinference_sexpr(e: &grammar::SExprInferable) -> Result<SExprTyped> {
+    use crate::grammar::SExpr::*;
+    match e {
+        SAnf(_, a) => Ok(SAnf((), Box::new(typeinference_anf(&STy::SBool, a)?))),
+        SLetIn(_ty, s, ebound, ebody) => Ok(SLetIn(
+            LetInTypes {
+                bindee: ignored_stype(),
+                body: ignored_stype(),
+            },
+            s.clone(),
+            Box::new(typeinference_sexpr(ebound)?),
+            Box::new(typeinference_sexpr(ebody)?),
+        )),
+        SSeq((), e0, e1) => Ok(SSeq(
+            (),
+            Box::new(typeinference_sexpr(e0)?),
+            Box::new(typeinference_sexpr(e1)?),
+        )),
+        SIte(_ty, cond, t, f) => Ok(SIte(
+            ignored_stype(),
+            Box::new(typeinference_anf(&STy::SBool, cond)?),
+            Box::new(typeinference_sexpr(t)?),
+            Box::new(typeinference_sexpr(f)?),
+        )),
+        SFlip(_, param) => Ok(SFlip((), *param)),
+        SExact(_, e) => Ok(SExact((), Box::new(typeinference_eexpr(e)?))),
     }
 }
 
 pub fn typeinference(p: &grammar::ProgramInferable) -> Result<ProgramTyped> {
     match p {
-        Program::EBody(e) => Ok(Program::EBody(typeinference_expr(e)?)),
-        Program::SBody(e) => todo!(),
+        Program::EBody(e) => Ok(Program::EBody(typeinference_eexpr(e)?)),
+        Program::SBody(e) => Ok(Program::SBody(typeinference_sexpr(e)?)),
     }
 }
 

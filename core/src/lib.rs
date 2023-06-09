@@ -3,6 +3,7 @@
 #![allow(mixed_script_confusables)] // for Gamma : )
 // temporary as I convert to using types
 #![allow(unused_variables)]
+#![allow(unreachable_patterns)]
 #![allow(clippy::all)]
 
 // core types
@@ -20,17 +21,17 @@ mod annotate;
 mod typecheck;
 mod uniquify;
 
-// interface
-pub mod analysis;
-pub mod compile;
-pub mod inference;
-pub mod pipeline;
-pub use pipeline::*;
-pub use typeinf::grammar::ProgramInferable;
+// // interface
+// pub mod analysis;
+// pub mod compile;
+// pub mod inference;
+// pub mod pipeline;
+// pub use pipeline::*;
+// pub use typeinf::grammar::ProgramInferable;
 
-// extras
-pub mod grids;
-mod utils;
+// // extras
+// pub mod grids;
+// mod utils;
 
-#[cfg(test)]
-mod tests;
+// #[cfg(test)]
+// mod tests;

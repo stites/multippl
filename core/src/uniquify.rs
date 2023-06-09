@@ -1,5 +1,6 @@
 use crate::data::CompileError;
 use crate::grammar::*;
+use crate::typeinf::grammar::ProgramInferable;
 use grammar::*;
 use std::collections::HashMap;
 
@@ -50,7 +51,6 @@ pub mod grammar {
         type Ext = ();
     }
     impl ξ<Uniquify> for EPrjExt {
-        // sampleable
         type Ext = ();
     }
     impl ξ<Uniquify> for EProdExt {
@@ -87,13 +87,14 @@ pub mod grammar {
         type Ext = ();
     }
     impl ξ<Uniquify> for SFlipExt {
-        type Ext = ();
+        type Ext = UniqueId;
     }
     impl ξ<Uniquify> for SExactExt {
         type Ext = ();
     }
 
     pub type EExprUnq = EExpr<Uniquify>;
+    pub type SExprUnq = SExpr<Uniquify>;
     pub type ProgramUnq = Program<Uniquify>;
 }
 
@@ -176,7 +177,7 @@ impl SymEnv {
         anfs.iter().map(|a| self.uniquify_anf(a)).collect()
     }
 
-    pub fn uniquify_expr(&mut self, e: &EExprUD) -> Result<EExprUnq, CompileError> {
+    pub fn uniquify_eexpr(&mut self, e: &EExprUD) -> Result<EExprUnq, CompileError> {
         use crate::grammar::EExpr::*;
         match e {
             EAnf(_, a) => Ok(EAnf((), Box::new(self.uniquify_anf(a)?))),
@@ -190,39 +191,73 @@ impl SymEnv {
                 Ok(ELetIn(
                     v,
                     s.clone(),
-                    Box::new(self.uniquify_expr(ebound)?),
-                    Box::new(self.uniquify_expr(ebody)?),
+                    Box::new(self.uniquify_eexpr(ebound)?),
+                    Box::new(self.uniquify_eexpr(ebody)?),
                 ))
             }
             EIte(_ty, cond, t, f) => Ok(EIte(
                 (),
                 Box::new(self.uniquify_anf(cond)?),
-                Box::new(self.uniquify_expr(t)?),
-                Box::new(self.uniquify_expr(f)?),
+                Box::new(self.uniquify_eexpr(t)?),
+                Box::new(self.uniquify_eexpr(f)?),
             )),
             EFlip(_, param) => Ok(EFlip(self.fresh(), *param)),
             EObserve(_, a) => {
                 let anf = self.uniquify_anf(a)?;
                 Ok(EObserve((), Box::new(anf)))
             }
-            ESample(_, e) => Ok(ESample((), Box::new(self.uniquify_expr(e)?))),
-            ESample2(_, e) => todo!(),
+            ESample(_, e) => Ok(ESample((), Box::new(self.uniquify_eexpr(e)?))),
+            ESample2(_, e) => Ok(ESample2((), Box::new(self.uniquify_sexpr(e)?))),
+        }
+    }
+    pub fn uniquify_sexpr(&mut self, e: &SExprUD) -> Result<SExprUnq, CompileError> {
+        use crate::grammar::SExpr::*;
+        match e {
+            SAnf(_, a) => Ok(SAnf((), Box::new(self.uniquify_anf(a)?))),
+            SSeq(_ty, e0, e1) => Ok(SSeq(
+                (),
+                Box::new(self.uniquify_sexpr(e0)?),
+                Box::new(self.uniquify_sexpr(e1)?),
+            )),
+            SLetIn(_ty, s, ebound, ebody) => {
+                // too lazy to do something smarter
+                self.read_only = false;
+                let v = self.get_or_create(s.to_string())?;
+                self.read_only = true;
+                Ok(SLetIn(
+                    v,
+                    s.clone(),
+                    Box::new(self.uniquify_sexpr(ebound)?),
+                    Box::new(self.uniquify_sexpr(ebody)?),
+                ))
+            }
+            SIte(_ty, cond, t, f) => Ok(SIte(
+                (),
+                Box::new(self.uniquify_anf(cond)?),
+                Box::new(self.uniquify_sexpr(t)?),
+                Box::new(self.uniquify_sexpr(f)?),
+            )),
+            SFlip(_, param) => Ok(SFlip(self.fresh(), *param)),
+            SExact(_, e) => Ok(SExact((), Box::new(self.uniquify_eexpr(e)?))),
         }
     }
 
     pub fn uniquify(&mut self, p: &ProgramUD) -> Result<(ProgramUnq, MaxUniqueId), CompileError> {
+        let mx = MaxUniqueId(self.gensym);
         match p {
-            Program::SBody(e) => todo!(),
+            Program::SBody(e) => {
+                let eann = self.uniquify_sexpr(e)?;
+                Ok((Program::SBody(eann), mx))
+            }
             Program::EBody(e) => {
-                let eann = self.uniquify_expr(e)?;
-                let mx = MaxUniqueId(self.gensym);
+                let eann = self.uniquify_eexpr(e)?;
                 Ok((Program::EBody(eann), mx))
             }
         }
     }
 }
 
-pub fn pipeline(p: &crate::ProgramInferable) -> Result<(ProgramUnq, MaxUniqueId), CompileError> {
+pub fn pipeline(p: &ProgramInferable) -> Result<(ProgramUnq, MaxUniqueId), CompileError> {
     let p = crate::typecheck::pipeline(p)?;
     let mut senv = SymEnv::default();
     senv.uniquify(&p)

@@ -1,5 +1,6 @@
 use crate::data::CompileError;
 use crate::grammar::*;
+use crate::typeinf::grammar::ProgramInferable;
 use crate::uniquify::grammar::*;
 use grammar::*;
 use rsdd::repr::var_label::*;
@@ -161,7 +162,7 @@ pub mod grammar {
         type Ext = ();
     }
     impl ξ<Annotated> for SLetInExt {
-        type Ext = ();
+        type Ext = NamedVar;
     }
     impl ξ<Annotated> for SSeqExt {
         type Ext = ();
@@ -170,13 +171,14 @@ pub mod grammar {
         type Ext = ();
     }
     impl ξ<Annotated> for SFlipExt {
-        type Ext = ();
+        type Ext = BddVar;
     }
     impl ξ<Annotated> for SExactExt {
         type Ext = ();
     }
 
     pub type EExprAnn = EExpr<Annotated>;
+    pub type SExprAnn = SExpr<Annotated>;
     pub type ProgramAnn = Program<Annotated>;
 }
 
@@ -271,7 +273,7 @@ impl LabelEnv {
     {
         anfs.iter().map(|a| self.annotate_anf(a)).collect()
     }
-    pub fn annotate_expr(&mut self, e: &EExprUnq) -> Result<EExprAnn, CompileError> {
+    pub fn annotate_eexpr(&mut self, e: &EExprUnq) -> Result<EExprAnn, CompileError> {
         use crate::grammar::EExpr::*;
         match e {
             EAnf(_, a) => Ok(EAnf((), Box::new(self.annotate_anf(a)?))),
@@ -289,15 +291,15 @@ impl LabelEnv {
                 Ok(ELetIn(
                     nvar,
                     s.clone(),
-                    Box::new(self.annotate_expr(ebound)?),
-                    Box::new(self.annotate_expr(ebody)?),
+                    Box::new(self.annotate_eexpr(ebound)?),
+                    Box::new(self.annotate_eexpr(ebody)?),
                 ))
             }
             EIte(_ty, cond, t, f) => Ok(EIte(
                 (),
                 Box::new(self.annotate_anf(cond)?),
-                Box::new(self.annotate_expr(t)?),
-                Box::new(self.annotate_expr(f)?),
+                Box::new(self.annotate_eexpr(t)?),
+                Box::new(self.annotate_eexpr(f)?),
             )),
             EFlip(id, param) => {
                 let lbl = self.fresh();
@@ -309,11 +311,50 @@ impl LabelEnv {
                 let anf = self.annotate_anf(a)?;
                 Ok(EObserve((), Box::new(anf)))
             }
-            ESample(_, e) => Ok(ESample((), Box::new(self.annotate_expr(e)?))),
-            ESample2(_, e) => todo!(),
+            ESample(_, e) => Ok(ESample((), Box::new(self.annotate_eexpr(e)?))),
+            ESample2(_, e) => Ok(ESample2((), Box::new(self.annotate_sexpr(e)?))),
         }
     }
-
+    pub fn annotate_sexpr(&mut self, e: &SExprUnq) -> Result<SExprAnn, CompileError> {
+        use crate::grammar::SExpr::*;
+        match e {
+            SAnf(_, a) => Ok(SAnf((), Box::new(self.annotate_anf(a)?))),
+            SSeq(_, e0, e1) => Ok(SSeq(
+                (),
+                Box::new(self.annotate_sexpr(e0)?),
+                Box::new(self.annotate_sexpr(e1)?),
+            )),
+            SLetIn(id, s, ebound, ebody) => {
+                let nvar = NamedVar {
+                    id: *id,
+                    name: s.to_string(),
+                };
+                let var = Var::Named(nvar.clone());
+                self.letpos = Some(nvar.clone());
+                // self.weights.insert(var.clone(), Weight::constant());
+                self.subst_var.insert(*id, var.clone());
+                Ok(SLetIn(
+                    nvar,
+                    s.clone(),
+                    Box::new(self.annotate_sexpr(ebound)?),
+                    Box::new(self.annotate_sexpr(ebody)?),
+                ))
+            }
+            SIte(_ty, cond, t, f) => Ok(SIte(
+                (),
+                Box::new(self.annotate_anf(cond)?),
+                Box::new(self.annotate_sexpr(t)?),
+                Box::new(self.annotate_sexpr(f)?),
+            )),
+            SFlip(id, param) => {
+                let lbl = self.fresh();
+                let var = BddVar::new(*id, lbl, self.letpos.clone());
+                self.subst_var.insert(*id, Var::Bdd(var.clone()));
+                Ok(SFlip(var, *param))
+            }
+            SExact(_, e) => Ok(SExact((), Box::new(self.annotate_eexpr(e)?))),
+        }
+    }
     #[allow(clippy::type_complexity)]
     pub fn annotate(
         &mut self,
@@ -329,9 +370,15 @@ impl LabelEnv {
         CompileError,
     > {
         match p {
-            Program::SBody(e) => todo!(),
+            Program::SBody(e) => {
+                let eann = self.annotate_sexpr(e)?;
+                let order = self.linear_var_order();
+                let inv = self.get_inv();
+                let mx = self.max_varlabel_val();
+                Ok((Program::SBody(eann), order, self.subst_var.clone(), inv, mx))
+            }
             Program::EBody(e) => {
-                let eann = self.annotate_expr(e)?;
+                let eann = self.annotate_eexpr(e)?;
                 let order = self.linear_var_order();
                 let inv = self.get_inv();
                 let mx = self.max_varlabel_val();
@@ -342,7 +389,7 @@ impl LabelEnv {
 }
 
 pub fn pipeline(
-    p: &crate::ProgramInferable,
+    p: &ProgramInferable,
 ) -> Result<
     (
         ProgramAnn,

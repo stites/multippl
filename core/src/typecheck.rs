@@ -1,5 +1,6 @@
 use crate::data::CompileError;
 use crate::grammar::*;
+use grammar::*;
 
 pub mod grammar {
     use super::*;
@@ -54,13 +55,13 @@ pub mod grammar {
         type Ext = ();
     }
     impl ξ<Typed> for SLetInExt {
-        type Ext = LetInTypes<ETy>;
+        type Ext = LetInTypes<STy>;
     }
     impl ξ<Typed> for SSeqExt {
         type Ext = ();
     }
     impl ξ<Typed> for SIteExt {
-        type Ext = ();
+        type Ext = STy;
     }
     impl ξ<Typed> for SFlipExt {
         type Ext = ();
@@ -74,6 +75,19 @@ pub mod grammar {
     pub type SExprTyped = SExpr<Typed>;
     pub type ProgramTyped = Program<Typed>;
 
+    impl IsTyped<STy> for AnfTyped<SVal> {
+        fn as_type(&self) -> STy {
+            use Anf::*;
+            match self {
+                AVar(t, _) => t.clone(),
+                AVal(_, v) => v.as_type(),
+                _ => STy::SBool,
+            }
+        }
+        fn is_prod(&self) -> bool {
+            todo!()
+        }
+    }
     impl IsTyped<ETy> for AnfTyped<EVal> {
         fn as_type(&self) -> ETy {
             use Anf::*;
@@ -84,7 +98,7 @@ pub mod grammar {
             }
         }
         fn is_prod(&self) -> bool {
-            false
+            todo!()
         }
     }
     impl AnfTyped<EVal> {
@@ -97,27 +111,58 @@ pub mod grammar {
             Anf::AVar(STy::SBool, s)
         }
     }
-}
+    impl IsTyped<ETy> for EExprTyped {
+        fn is_prod(&self) -> bool {
+            todo!()
+        }
+        fn as_type(&self) -> ETy {
+            use EExpr::*;
+            match self {
+                EAnf(_, anf) => anf.as_type(),
+                EPrj(t, _, _) => t.clone(),
+                EProd(t, _) => t.clone(),
+                ELetIn(t, _, _, _) => t.body.clone(),
+                EIte(t, _, _, _) => t.clone(),
+                EFlip(_, _) => ETy::EBool,
+                EObserve(_, _) => ETy::EBool,
+                ESample(_, _) => ETy::EBool,
+                ESample2(_, e) => natural_embedding_s(e.as_type()),
+            }
+        }
+    }
 
-pub fn is_type(e: &grammar::EExprTyped, ty: &ETy) -> bool {
-    as_type(e) == *ty
-}
-pub fn as_type(e: &grammar::EExprTyped) -> ETy {
-    use EExpr::*;
-    match e {
-        EAnf(_, anf) => anf.as_type(),
-        EPrj(t, _, _) => t.clone(),
-        EProd(t, _) => t.clone(),
-        ELetIn(t, _, _, _) => t.body.clone(),
-        EIte(t, _, _, _) => t.clone(),
-        EFlip(_, _) => ETy::EBool,
-        EObserve(_, _) => ETy::EBool,
-        ESample(_, _) => ETy::EBool,
-        ESample2(_, e) => todo!(),
+    pub fn natural_embedding_e(ty: ETy) -> STy {
+        match ty {
+            ETy::EBool => STy::SBool,
+            _ => todo!("probably need to return a result"),
+        }
+    }
+
+    pub fn natural_embedding_s(ty: STy) -> ETy {
+        match ty {
+            STy::SBool => ETy::EBool,
+            _ => todo!("probably need to return a result"),
+        }
+    }
+
+    impl IsTyped<STy> for SExprTyped {
+        fn is_prod(&self) -> bool {
+            todo!()
+        }
+        fn as_type(&self) -> STy {
+            use SExpr::*;
+            match self {
+                SAnf(_, anf) => anf.as_type(),
+                SLetIn(t, _, _, _) => t.body.clone(),
+                SSeq(t, e0, e1) => STy::SBool,
+                SIte(t, _, _, _) => t.clone(),
+                SFlip(_, _) => STy::SBool,
+                SExact(_, e) => natural_embedding_e(e.as_type()),
+            }
+        }
     }
 }
 
-use grammar::*;
 pub fn typecheck_anf<X: Clone>(a: &grammar::AnfTyped<X>) -> Result<AnfUD<X>, CompileError>
 where
     AVarExt<X>: ξ<Typed> + ξ<UD, Ext = ()>,
@@ -125,14 +170,7 @@ where
 {
     use crate::grammar::Anf::*;
     match a {
-        AVar(_, s) => {
-            // if !ctx.gamma.typechecks(s.clone(), ty) {
-            //     Err(TypeError(format!(
-            //         "Expected {s} : {ty:?}\nGot: {a:?}\n{ctx:?}",
-            //     )))
-            // } else {
-            Ok(AVar((), s.clone()))
-        }
+        AVar(_, s) => Ok(AVar((), s.clone())),
         AVal(_, v) => Ok(AVal((), v.clone())),
         And(bl, br) => Ok(And(
             Box::new(typecheck_anf(bl)?),
@@ -145,6 +183,7 @@ where
         Neg(bl) => Ok(Neg(Box::new(typecheck_anf(bl)?))),
     }
 }
+
 pub fn typecheck_anfs<X: Clone>(
     anfs: &[grammar::AnfTyped<X>],
 ) -> Result<Vec<AnfUD<X>>, CompileError>
@@ -155,7 +194,7 @@ where
     anfs.iter().map(typecheck_anf).collect()
 }
 
-pub fn typecheck_expr(e: &grammar::EExprTyped) -> Result<EExprUD, CompileError> {
+pub fn typecheck_eexpr(e: &grammar::EExprTyped) -> Result<EExprUD, CompileError> {
     use crate::grammar::EExpr::*;
     match e {
         EAnf(_, a) => Ok(EAnf((), Box::new(typecheck_anf(a)?))),
@@ -169,26 +208,52 @@ pub fn typecheck_expr(e: &grammar::EExprTyped) -> Result<EExprUD, CompileError> 
         ELetIn(_ty, s, ebound, ebody) => Ok(ELetIn(
             (),
             s.clone(),
-            Box::new(typecheck_expr(ebound)?),
-            Box::new(typecheck_expr(ebody)?),
+            Box::new(typecheck_eexpr(ebound)?),
+            Box::new(typecheck_eexpr(ebody)?),
         )),
         EIte(_ty, cond, t, f) => Ok(EIte(
             (),
             Box::new(typecheck_anf(cond)?),
-            Box::new(typecheck_expr(t)?),
-            Box::new(typecheck_expr(f)?),
+            Box::new(typecheck_eexpr(t)?),
+            Box::new(typecheck_eexpr(f)?),
         )),
         EFlip(_, param) => Ok(EFlip((), *param)),
         EObserve(_, a) => Ok(EObserve((), Box::new(typecheck_anf(a)?))),
-        ESample(_, e) => Ok(ESample((), Box::new(typecheck_expr(e)?))),
-        ESample2(_, e) => todo!(),
+        ESample(_, e) => Ok(ESample((), Box::new(typecheck_eexpr(e)?))),
+        ESample2(_, e) => Ok(ESample2((), Box::new(typecheck_sexpr(e)?))),
+    }
+}
+
+pub fn typecheck_sexpr(e: &grammar::SExprTyped) -> Result<SExprUD, CompileError> {
+    use crate::grammar::SExpr::*;
+    match e {
+        SAnf(_, a) => Ok(SAnf((), Box::new(typecheck_anf(a)?))),
+        SLetIn(_ty, s, ebound, ebody) => Ok(SLetIn(
+            (),
+            s.clone(),
+            Box::new(typecheck_sexpr(ebound)?),
+            Box::new(typecheck_sexpr(ebody)?),
+        )),
+        SSeq((), e0, e1) => Ok(SSeq(
+            (),
+            Box::new(typecheck_sexpr(e0)?),
+            Box::new(typecheck_sexpr(e1)?),
+        )),
+        SIte(_ty, cond, t, f) => Ok(SIte(
+            (),
+            Box::new(typecheck_anf(cond)?),
+            Box::new(typecheck_sexpr(t)?),
+            Box::new(typecheck_sexpr(f)?),
+        )),
+        SFlip(_, param) => Ok(SFlip((), *param)),
+        SExact(_, e) => Ok(SExact((), Box::new(typecheck_eexpr(e)?))),
     }
 }
 
 pub fn typecheck(p: &grammar::ProgramTyped) -> Result<ProgramUD, CompileError> {
     match p {
-        Program::EBody(e) => Ok(Program::EBody(typecheck_expr(e)?)),
-        Program::SBody(e) => todo!(),
+        Program::EBody(e) => Ok(Program::EBody(typecheck_eexpr(e)?)),
+        Program::SBody(e) => Ok(Program::SBody(typecheck_sexpr(e)?)),
     }
 }
 
