@@ -11,11 +11,13 @@ pub mod data;
 pub mod grammar;
 pub mod grammar_macros;
 
+// Entry points
+pub mod parser;
+pub mod typeinf;
+
 // compiler
 mod annotate;
-pub mod parser; // <<< user entrypoint
 mod typecheck;
-pub mod typeinf; // <<< dev entrypoint
 mod uniquify;
 
 // interface
@@ -23,6 +25,8 @@ pub mod analysis;
 pub mod compile;
 pub mod inference;
 pub mod pipeline;
+pub use pipeline::*;
+pub use typeinf::grammar::ProgramInferable;
 
 // extras
 pub mod grids;
@@ -30,6 +34,3 @@ mod utils;
 
 #[cfg(test)]
 mod tests;
-
-pub use pipeline::*;
-pub use typeinf::grammar::ProgramInferable;
