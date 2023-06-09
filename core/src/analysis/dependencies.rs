@@ -109,7 +109,7 @@ impl DependencyEnv {
             Neg(bp) => self.scan_anf(bp),
         }
     }
-    fn scan_expr(&mut self, e: &EExprAnn) -> HashSet<Dep> {
+    fn scan_eexpr(&mut self, e: &EExprAnn) -> HashSet<Dep> {
         use crate::grammar::EExpr::*;
         match e {
             EAnf((), a) => Dep::as_vars(self.scan_anf(a)),
@@ -124,32 +124,68 @@ impl DependencyEnv {
             ),
             // FIXME ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
             ELetIn(nv, s, ebound, ebody) => {
-                let deps = self.scan_expr(ebound);
+                let deps = self.scan_eexpr(ebound);
                 self.map.insert(nv.clone(), deps);
-                self.scan_expr(ebody)
+                self.scan_eexpr(ebody)
             }
             EIte(v, cond, t, f) => {
                 let mut deps = Dep::as_vars(self.scan_anf(cond));
-                deps.extend(self.scan_expr(t));
-                deps.extend(self.scan_expr(f));
+                deps.extend(self.scan_eexpr(t));
+                deps.extend(self.scan_eexpr(f));
                 deps
             }
             ESample((), e) => self
-                .scan_expr(e)
+                .scan_eexpr(e)
                 .into_iter()
                 .map(&|x: Dep| x.map(&Dep::Sample))
                 .collect(),
-            ESample2(_, e) => todo!(),
+            ESample2((), e) => self
+                .scan_sexpr(e)
+                .into_iter()
+                .map(&|x: Dep| x.map(&Dep::Sample))
+                .collect(),
             EObserve((), a) => Dep::as_vars(self.scan_anf(a)),
             EFlip(_, p) => HashSet::new(),
+        }
+    }
+    fn scan_sexpr(&mut self, e: &SExprAnn) -> HashSet<Dep> {
+        use crate::grammar::SExpr::*;
+        match e {
+            SAnf((), a) => Dep::as_vars(self.scan_anf(a)),
+            SSeq((), e0, e1) => {
+                let mut ret = self.scan_sexpr(e0);
+                let ext = self.scan_sexpr(e1);
+                ret.extend(ext);
+                ret
+            }
+            SLetIn(nv, s, ebound, ebody) => {
+                let deps = self.scan_sexpr(ebound);
+                self.map.insert(nv.clone(), deps);
+                self.scan_sexpr(ebody)
+            }
+            SIte(v, cond, t, f) => {
+                let mut deps = Dep::as_vars(self.scan_anf(cond));
+                deps.extend(self.scan_sexpr(t));
+                deps.extend(self.scan_sexpr(f));
+                deps
+            }
+            SExact((), e) => self
+                .scan_eexpr(e)
+                .into_iter()
+                .map(&|x: Dep| x.map(&Dep::Sample))
+                .collect(),
+            SFlip(_, p) => HashSet::new(),
         }
     }
 
     pub fn scan(&mut self, p: &ProgramAnn) -> DependenceMap {
         match p {
-            Program::SBody(b) => todo!(),
+            Program::SBody(b) => {
+                self.scan_sexpr(b);
+                self.map.clone()
+            }
             Program::EBody(b) => {
-                self.scan_expr(b);
+                self.scan_eexpr(b);
                 self.map.clone()
             }
         }

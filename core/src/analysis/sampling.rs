@@ -3,6 +3,7 @@ use crate::annotate::LabelEnv;
 use crate::data::CompileError;
 use crate::data::CompileError::Generic;
 use crate::grammar::*;
+use crate::typeinf::grammar::ProgramInferable;
 use crate::typeinf::grammar::*;
 use crate::uniquify::grammar::UniqueId;
 use crate::uniquify::grammar::*;
@@ -141,13 +142,13 @@ impl InsertionEnv {
 }
 
 // technically, we can run this on a ProgramUniq and go backwards to get the /true/ annotated user program
-pub fn insert_sample_statements(p: &crate::ProgramInferable) -> ProgramAnn {
+pub fn insert_sample_statements(p: &ProgramInferable) -> ProgramAnn {
     let (p, mx_id) = prelude(p);
     insert_sample_statements_h(&p, mx_id)
 }
 
 // technically, we can run this on a ProgramUniq and go backwards to get the /true/ annotated user program
-pub fn prelude(p: &crate::ProgramInferable) -> (ProgramAnn, MaxUniqueId) {
+pub fn prelude(p: &ProgramInferable) -> (ProgramAnn, MaxUniqueId) {
     use crate::analysis::*;
     let (puniq, mx_id) = crate::uniquify::pipeline(p).unwrap();
     let mut lenv = LabelEnv::new();

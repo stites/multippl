@@ -5,6 +5,7 @@ use crate::annotate::grammar::*;
 use crate::data::CompileError;
 use crate::data::CompileError::Generic;
 use crate::grammar::*;
+use crate::typeinf::grammar::ProgramInferable;
 use crate::uniquify::grammar::UniqueId;
 use core::fmt::{Debug, Formatter};
 use itertools::*;
@@ -56,7 +57,7 @@ pub fn cutset(g: &ClusterGraph<NamedVar>) -> Vec<NamedVar> {
     hg2dt(g).cutset().into_iter().collect()
 }
 
-pub fn pipeline(p: &crate::ProgramInferable) -> ClusterGraph<NamedVar> {
+pub fn pipeline(p: &ProgramInferable) -> ClusterGraph<NamedVar> {
     let p = annotate::pipeline(&p).unwrap().0;
     let deps = DependencyEnv::new().scan(&p);
     build_graph(&deps)
