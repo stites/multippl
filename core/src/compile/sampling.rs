@@ -22,6 +22,7 @@ use std::collections::HashSet;
 use std::fmt;
 use std::string::String;
 use tracing::*;
+use either::{Either, Either::*};
 
 pub type Mgr = BddManager<AllTable<BddPtr>>;
 
@@ -766,7 +767,9 @@ impl<'a> Env<'a> {
 
                 Ok((c.clone(), ESample(Box::new(c), Box::new(etr))))
             }
-            ESample2(_, e) => todo!(),
+            ESample2(_, e) => {
+
+            },
         }
     }
     pub fn eval_sexpr(&mut self, ctx: &Context, e: &SExprAnn) -> Result<(Compiled, SExprTr)> {
@@ -1131,18 +1134,17 @@ impl<'a> Env<'a> {
         }
     }
 }
-pub fn debug(env: &mut Env, p: &ProgramAnn) -> Result<(Compiled, EExprTr)> {
+
+pub fn debug(env: &mut Env, p: &ProgramAnn) -> Result<(Compiled, Either<EExprTr, SExprTr>)> {
     debug!("========================================================");
     match p {
         Program::SBody(e) => {
             let (c, e) = env.eval_sexpr(&Default::default(), e)?;
-            // Ok((c,Program::SBody(e)))
-            todo!()
+            Ok((c, Right(e)))
         }
         Program::EBody(e) => {
             let (c, e) = env.eval_eexpr(&Default::default(), e)?;
-            // Ok((c,Program::EBody(e)))
-            Ok((c, e))
+            Ok((c, Left(e)))
         }
     }
 }

@@ -1,5 +1,6 @@
 use crate::annotate::{InvMap, LabelEnv};
-use crate::compile::{compile, CompileError, Compiled, Env, Mgr, Output, Result};
+use crate::compile::{compile, Env};
+use crate::data::*;
 use crate::typecheck::{
     grammar::{EExprTyped, ProgramTyped},
     typecheck,

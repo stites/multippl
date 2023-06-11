@@ -7,8 +7,8 @@
 #![allow(clippy::all)]
 
 // core types
-pub use rsdd::sample::probability::Probability;
 pub mod data;
+pub use data::*;
 pub mod grammar;
 pub mod grammar_macros;
 
@@ -16,7 +16,7 @@ pub mod grammar_macros;
 pub mod parser;
 pub mod typeinf;
 
-// compiler
+// intermediate stages
 mod annotate;
 mod typecheck;
 mod uniquify;
