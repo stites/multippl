@@ -20,7 +20,7 @@ pub fn eval_anf<Val: Clone>(
     mgr: &mut Mgr,
     ctx: &Context,
     a: &AnfAnn<Val>,
-    out: &dyn Fn(&Val) -> Result<(Output, AnfTr<Val>)>,
+    out: &dyn Fn(&mut Mgr, &Val) -> Result<(Output, AnfTr<Val>)>,
 ) -> Result<(Output, AnfTr<Val>)>
 where
     AValExt<Val>: ξ<Annotated, Ext = ()> + ξ<Trace, Ext = Box<Output>>,
@@ -28,7 +28,7 @@ where
 {
     use Anf::*;
     match a {
-        AVal(_, v) => out(v),
+        AVal(_, v) => out(mgr, v),
         AVar(d, s) => match ctx.substitutions.get(&d.id()) {
             None => Err(Generic(format!(
                 "variable {} does not reference known substitution",
@@ -61,7 +61,7 @@ pub fn eval_anf_binop<Val: Clone>(
     bl: &AnfAnn<Val>,
     br: &AnfAnn<Val>,
     op: &dyn Fn(&mut Mgr, BddPtr, BddPtr) -> BddPtr,
-    out: &dyn Fn(&Val) -> Result<(Output, AnfTr<Val>)>,
+    out: &dyn Fn(&mut Mgr, &Val) -> Result<(Output, AnfTr<Val>)>,
 ) -> Result<(AnfTr<Val>, AnfTr<Val>, Output)>
 where
     AValExt<Val>: ξ<Annotated, Ext = ()> + ξ<Trace, Ext = Box<Output>>,
