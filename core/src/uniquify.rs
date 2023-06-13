@@ -71,9 +71,6 @@ pub mod grammar {
     impl ξ<Uniquify> for ESampleExt {
         type Ext = ();
     }
-    impl ξ<Uniquify> for ESample2Ext {
-        type Ext = ();
-    }
     impl ξ<Uniquify> for SAnfExt {
         type Ext = ();
     }
@@ -206,8 +203,7 @@ impl SymEnv {
                 let anf = self.uniquify_anf(a)?;
                 Ok(EObserve((), Box::new(anf)))
             }
-            ESample(_, e) => Ok(ESample((), Box::new(self.uniquify_eexpr(e)?))),
-            ESample2(_, e) => Ok(ESample2((), Box::new(self.uniquify_sexpr(e)?))),
+            ESample(_, e) => Ok(ESample((), Box::new(self.uniquify_sexpr(e)?))),
         }
     }
     pub fn uniquify_sexpr(&mut self, e: &SExprUD) -> Result<SExprUnq, CompileError> {

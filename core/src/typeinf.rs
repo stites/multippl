@@ -44,9 +44,6 @@ pub mod grammar {
     impl ξ<Inferable> for ESampleExt {
         type Ext = ();
     }
-    impl ξ<Inferable> for ESample2Ext {
-        type Ext = ();
-    }
     impl ξ<Inferable> for SAnfExt {
         type Ext = ();
     }
@@ -151,8 +148,7 @@ pub fn typeinference_eexpr(e: &grammar::EExprInferable) -> Result<EExprTyped> {
         )),
         EFlip(_, param) => Ok(EFlip((), *param)),
         EObserve(_, a) => Ok(EObserve((), Box::new(typeinference_anf(&ETy::EBool, a)?))),
-        ESample(_, e) => Ok(ESample((), Box::new(typeinference_eexpr(e)?))),
-        ESample2(_, e) => Ok(ESample2((), Box::new(typeinference_sexpr(e)?))),
+        ESample(_, e) => Ok(ESample((), Box::new(typeinference_sexpr(e)?))),
     }
 }
 

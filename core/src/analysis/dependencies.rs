@@ -135,11 +135,6 @@ impl DependencyEnv {
                 deps
             }
             ESample((), e) => self
-                .scan_eexpr(e)
-                .into_iter()
-                .map(&|x: Dep| x.map(&Dep::Sample))
-                .collect(),
-            ESample2((), e) => self
                 .scan_sexpr(e)
                 .into_iter()
                 .map(&|x: Dep| x.map(&Dep::Sample))

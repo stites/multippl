@@ -59,7 +59,7 @@ impl InsertionEnv {
                 println!("> {:?} ?= {:?} == {}", cut, v, cut.id() == v.id());
                 println!("{:?}", e);
                 if cut.id() == v.id() {
-                    let smpl = ESample((), ebound.clone());
+                    let smpl = ESample((), Box::new(SExpr::SExact((), ebound.clone())));
                     let fin = ELetIn(v.clone(), s.to_string(), Box::new(smpl), ebody.clone());
                     println!(" ==> {:?}", fin);
                     fin
@@ -122,10 +122,15 @@ impl InsertionEnv {
                 let fs = self.sample_expr(f);
                 EIte(v.clone(), cond.clone(), Box::new(ts), Box::new(fs))
             }
-            ESample((), e) => ESample((), Box::new(self.sample_expr(e))),
+            ESample((), e) => ESample((), Box::new(self.sample_sexpr(&*e))),
             _ => e.clone(),
         }
     }
+    pub fn sample_sexpr(&mut self, e: &SExprAnn) -> SExprAnn {
+        use crate::grammar::SExpr::*;
+        todo!()
+    }
+
     pub fn apply_cut(&mut self, p: &ProgramAnn) -> ProgramAnn {
         match p {
             Program::SBody(b) => todo!(),

@@ -205,7 +205,15 @@ macro_rules! thd {
 #[macro_export]
 macro_rules! sample {
     ( $x:expr ) => {{
-        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::ESample((), Box::new($x))
+        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::ESample(
+            (),
+            Box::new(
+                $crate::grammar::SExpr::<$crate::typeinf::grammar::Inferable>::SExact(
+                    (),
+                    Box::new($x),
+                ),
+            ),
+        )
     }};
 }
 #[macro_export]

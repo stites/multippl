@@ -48,9 +48,6 @@ pub mod grammar {
     impl ξ<Typed> for ESampleExt {
         type Ext = ();
     }
-    impl ξ<Typed> for ESample2Ext {
-        type Ext = ();
-    }
     impl ξ<Typed> for SAnfExt {
         type Ext = ();
     }
@@ -125,8 +122,7 @@ pub mod grammar {
                 EIte(t, _, _, _) => t.clone(),
                 EFlip(_, _) => ETy::EBool,
                 EObserve(_, _) => ETy::EBool,
-                ESample(_, _) => ETy::EBool,
-                ESample2(_, e) => natural_embedding_s(e.as_type()),
+                ESample(_, e) => natural_embedding_s(e.as_type()),
             }
         }
     }
@@ -219,8 +215,7 @@ pub fn typecheck_eexpr(e: &grammar::EExprTyped) -> Result<EExprUD, CompileError>
         )),
         EFlip(_, param) => Ok(EFlip((), *param)),
         EObserve(_, a) => Ok(EObserve((), Box::new(typecheck_anf(a)?))),
-        ESample(_, e) => Ok(ESample((), Box::new(typecheck_eexpr(e)?))),
-        ESample2(_, e) => Ok(ESample2((), Box::new(typecheck_sexpr(e)?))),
+        ESample(_, e) => Ok(ESample((), Box::new(typecheck_sexpr(e)?))),
     }
 }
 

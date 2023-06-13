@@ -252,7 +252,7 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExprInferable {
             let mut cs = n.named_children(&mut _c);
             let subp = cs.next().unwrap();
             let e = parse_expr(src, c, &subp);
-            EExpr::ESample((), Box::new(e))
+            EExpr::ESample((), Box::new(SExpr::SExact((), Box::new(e))))
         }
         s => panic!(
             "unexpected tree-sitter node kind `{}` (#named_children: {})! Likely, you need to rebuild the tree-sitter parser\nsexp: {}", s, n.named_child_count(), n.to_sexp()

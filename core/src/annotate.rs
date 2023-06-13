@@ -154,9 +154,6 @@ pub mod grammar {
     impl ξ<Annotated> for ESampleExt {
         type Ext = ();
     }
-    impl ξ<Annotated> for ESample2Ext {
-        type Ext = ();
-    }
 
     impl ξ<Annotated> for SAnfExt {
         type Ext = ();
@@ -311,8 +308,7 @@ impl LabelEnv {
                 let anf = self.annotate_anf(a)?;
                 Ok(EObserve((), Box::new(anf)))
             }
-            ESample(_, e) => Ok(ESample((), Box::new(self.annotate_eexpr(e)?))),
-            ESample2(_, e) => Ok(ESample2((), Box::new(self.annotate_sexpr(e)?))),
+            ESample(_, e) => Ok(ESample((), Box::new(self.annotate_sexpr(e)?))),
         }
     }
     pub fn annotate_sexpr(&mut self, e: &SExprUnq) -> Result<SExprAnn, CompileError> {

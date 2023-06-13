@@ -497,7 +497,7 @@ pub mod make {
         ELetIn(
             None,
             DIAG.to_string(),
-            Box::new(ESample((), Box::new(prg))),
+            Box::new(ESample((), Box::new(SExpr::SExact((), Box::new(prg))))),
             Box::new(tril),
         )
     }

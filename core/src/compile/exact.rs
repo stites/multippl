@@ -569,11 +569,8 @@ impl<'a> State<'a> {
                 ))
             }
             ESample((), sexpr) => {
-                panic!("no longer acceptable!");
-            }
-            ESample2((), sexpr) => {
                 let (c, s) = self.eval_sexpr(ctx, sexpr)?;
-                Ok((c.clone(), ESample2(Box::new(c), Box::new(s))))
+                Ok((c.clone(), ESample(Box::new(c), Box::new(s))))
             }
         }
     }
@@ -728,9 +725,6 @@ impl<'a> State<'a> {
 
 // //                 Ok((c.clone(), ESample(Box::new(c), Box::new(etr))))
 // //             }
-// //             ESample2(_, e) => {
-
-// //             },
 // //         }
 // //     }
 // // }
