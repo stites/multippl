@@ -1,0 +1,10 @@
+pub mod debug;
+pub mod exact;
+pub mod importance_weighting;
+pub mod iters;
+pub mod wmc;
+pub use crate::inference::debug::*;
+pub use crate::inference::exact::*;
+pub use crate::inference::importance_weighting::*;
+pub use crate::inference::iters::*;
+pub use crate::inference::wmc::*;

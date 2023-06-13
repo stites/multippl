@@ -6,6 +6,19 @@ use rsdd::repr::bdd::*;
 use rsdd::repr::var_label::*;
 use rsdd::repr::var_order::*;
 
+#[inline]
+pub fn get_vec<T: Copy>(v: Vec<T>, i: usize) -> Option<T> {
+    if i < v.len() {
+        Some(v[i])
+    } else {
+        None
+    }
+}
+#[inline]
+pub fn get_or_else<T: Copy>(v: Vec<T>, i: usize, d: T) -> T {
+    get_vec(v, i).unwrap_or(d)
+}
+
 pub fn enable_traced_test() -> std::result::Result<(), ::tracing::subscriber::SetGlobalDefaultError>
 {
     ::tracing::subscriber::set_global_default(
