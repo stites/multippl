@@ -112,7 +112,6 @@ where
     Or(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
     Neg(Box<Anf<X, Val>>),
 }
-
 impl<X, Val> Debug for Anf<X, Val>
 where
     AVarExt<Val>: ξ<X>,
@@ -723,25 +722,7 @@ where
     pub fn is_sample(&self) -> bool {
         matches!(self, EExpr::ESample(_, _))
     }
-    pub fn strip_samples1(&self) -> EExpr<X> {
-        use EExpr::*;
-        match self {
-            ESample(_, e) => todo!("was: e.strip_samples1()"),
-            ELetIn(ex, s, x, y) => ELetIn(
-                ex.clone(),
-                s.clone(),
-                Box::new(x.strip_samples1()),
-                Box::new(y.strip_samples1()),
-            ),
-            EIte(ex, p, x, y) => EIte(
-                ex.clone(),
-                p.clone(),
-                Box::new(x.strip_samples1()),
-                Box::new(y.strip_samples1()),
-            ),
-            e => e.clone(),
-        }
-    }
+
     pub fn query(&self) -> EExpr<X> {
         use EExpr::*;
         match self {
@@ -992,25 +973,6 @@ where
     <SFlipExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <SExactExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
 {
-    pub fn strip_samples(&self) -> Program<X> {
-        use Program::*;
-        match self {
-            SBody(e) => todo!(),
-            EBody(e) => {
-                // FIXME: this shouldn't be necessary and I think I already fixed the bug that causes this.
-                let mut cur = e.strip_samples1();
-                loop {
-                    let nxt = cur.strip_samples1();
-
-                    if nxt == cur {
-                        return EBody(nxt);
-                    } else {
-                        cur = nxt;
-                    }
-                }
-            }
-        }
-    }
     pub fn query(&self) -> EExpr<X> {
         use Program::*;
         match self {
