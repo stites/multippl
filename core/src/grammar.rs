@@ -795,7 +795,6 @@ where
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
 pub enum Program<X>
 where
     EAnfExt: ξ<X>,
@@ -807,41 +806,181 @@ where
     EObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
     ESample2Ext: ξ<X>,
-    <EAnfExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <EPrjExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <EProdExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <ELetInExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <EIteExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <EFlipExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <EObserveExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <ESampleExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <ESample2Ext as ξ<X>>::Ext: Debug + Clone + PartialEq,
+
     AVarExt<EVal>: ξ<X>,
     AVarExt<SVal>: ξ<X>,
-    <AVarExt<EVal> as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <AVarExt<SVal> as ξ<X>>::Ext: Debug + Clone + PartialEq,
     AValExt<EVal>: ξ<X>,
     AValExt<SVal>: ξ<X>,
-    <AValExt<EVal> as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <AValExt<SVal> as ξ<X>>::Ext: Debug + Clone + PartialEq,
     SAnfExt: ξ<X>,
     SLetInExt: ξ<X>,
     SSeqExt: ξ<X>,
     SIteExt: ξ<X>,
     SFlipExt: ξ<X>,
     SExactExt: ξ<X>,
-    <SAnfExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <SLetInExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <SSeqExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <SIteExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <SFlipExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <SExactExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
 {
     EBody(EExpr<X>),
     SBody(SExpr<X>),
     // TODO
     // | define (f: Func) (rest: Program) : Program
 }
+
+impl<X> PartialEq for Program<X>
+where
+    EAnfExt: ξ<X>,
+    EPrjExt: ξ<X>,
+    EProdExt: ξ<X>,
+    ELetInExt: ξ<X>,
+    EIteExt: ξ<X>,
+    EFlipExt: ξ<X>,
+    EObserveExt: ξ<X>,
+    ESampleExt: ξ<X>,
+    ESample2Ext: ξ<X>,
+
+    <EAnfExt as ξ<X>>::Ext: PartialEq,
+    <EPrjExt as ξ<X>>::Ext: PartialEq,
+    <EProdExt as ξ<X>>::Ext: PartialEq,
+    <ELetInExt as ξ<X>>::Ext: PartialEq,
+    <EIteExt as ξ<X>>::Ext: PartialEq,
+    <EFlipExt as ξ<X>>::Ext: PartialEq,
+    <EObserveExt as ξ<X>>::Ext: PartialEq,
+    <ESampleExt as ξ<X>>::Ext: PartialEq,
+    <ESample2Ext as ξ<X>>::Ext: PartialEq,
+    AVarExt<EVal>: ξ<X>,
+    AVarExt<SVal>: ξ<X>,
+    <AVarExt<EVal> as ξ<X>>::Ext: PartialEq,
+    <AVarExt<SVal> as ξ<X>>::Ext: PartialEq,
+    AValExt<EVal>: ξ<X>,
+    AValExt<SVal>: ξ<X>,
+    <AValExt<EVal> as ξ<X>>::Ext: PartialEq,
+    <AValExt<SVal> as ξ<X>>::Ext: PartialEq,
+
+    SAnfExt: ξ<X>,
+    SLetInExt: ξ<X>,
+    SSeqExt: ξ<X>,
+    SIteExt: ξ<X>,
+    SFlipExt: ξ<X>,
+    SExactExt: ξ<X>,
+    <SAnfExt as ξ<X>>::Ext: PartialEq,
+    <SLetInExt as ξ<X>>::Ext: PartialEq,
+    <SSeqExt as ξ<X>>::Ext: PartialEq,
+    <SIteExt as ξ<X>>::Ext: PartialEq,
+    <SFlipExt as ξ<X>>::Ext: PartialEq,
+    <SExactExt as ξ<X>>::Ext: PartialEq,
+{
+    fn eq(&self, o: &Self) -> bool {
+        use Program::*;
+        match (self, o) {
+            (SBody(e0), SBody(e1)) => e0 == e1,
+            (EBody(e0), EBody(e1)) => e0 == e1,
+            (_, _) => false,
+        }
+    }
+}
+impl<X> Debug for Program<X>
+where
+    EAnfExt: ξ<X>,
+    EPrjExt: ξ<X>,
+    EProdExt: ξ<X>,
+    ELetInExt: ξ<X>,
+    EIteExt: ξ<X>,
+    EFlipExt: ξ<X>,
+    EObserveExt: ξ<X>,
+    ESampleExt: ξ<X>,
+    ESample2Ext: ξ<X>,
+    <EAnfExt as ξ<X>>::Ext: Debug,
+    <EPrjExt as ξ<X>>::Ext: Debug,
+    <EProdExt as ξ<X>>::Ext: Debug,
+    <ELetInExt as ξ<X>>::Ext: Debug,
+    <EIteExt as ξ<X>>::Ext: Debug,
+    <EFlipExt as ξ<X>>::Ext: Debug,
+    <EObserveExt as ξ<X>>::Ext: Debug,
+    <ESampleExt as ξ<X>>::Ext: Debug,
+    <ESample2Ext as ξ<X>>::Ext: Debug,
+
+    SAnfExt: ξ<X>,
+    SLetInExt: ξ<X>,
+    SSeqExt: ξ<X>,
+    SIteExt: ξ<X>,
+    SFlipExt: ξ<X>,
+    SExactExt: ξ<X>,
+    <SAnfExt as ξ<X>>::Ext: Debug,
+    <SLetInExt as ξ<X>>::Ext: Debug,
+    <SSeqExt as ξ<X>>::Ext: Debug,
+    <SIteExt as ξ<X>>::Ext: Debug,
+    <SFlipExt as ξ<X>>::Ext: Debug,
+    <SExactExt as ξ<X>>::Ext: Debug,
+
+    AVarExt<EVal>: ξ<X>,
+    AVarExt<SVal>: ξ<X>,
+    <AVarExt<EVal> as ξ<X>>::Ext: Debug,
+    <AVarExt<SVal> as ξ<X>>::Ext: Debug,
+    AValExt<EVal>: ξ<X>,
+    AValExt<SVal>: ξ<X>,
+    <AValExt<EVal> as ξ<X>>::Ext: Debug,
+    <AValExt<SVal> as ξ<X>>::Ext: Debug,
+{
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use Program::*;
+        match self {
+            SBody(e) => f.write_fmt(format_args!("SProgram({:?})", e)),
+            EBody(e) => f.write_fmt(format_args!("EProgram({:?})", e)),
+        }
+    }
+}
+
+impl<X> Clone for Program<X>
+where
+    EAnfExt: ξ<X>,
+    EPrjExt: ξ<X>,
+    EProdExt: ξ<X>,
+    ELetInExt: ξ<X>,
+    EIteExt: ξ<X>,
+    EFlipExt: ξ<X>,
+    EObserveExt: ξ<X>,
+    ESampleExt: ξ<X>,
+    ESample2Ext: ξ<X>,
+
+    AVarExt<EVal>: ξ<X>,
+    AVarExt<SVal>: ξ<X>,
+    <AVarExt<EVal> as ξ<X>>::Ext: Clone,
+    <AVarExt<SVal> as ξ<X>>::Ext: Clone,
+    AValExt<EVal>: ξ<X>,
+    AValExt<SVal>: ξ<X>,
+    <AValExt<EVal> as ξ<X>>::Ext: Clone,
+    <AValExt<SVal> as ξ<X>>::Ext: Clone,
+
+    <EAnfExt as ξ<X>>::Ext: Clone,
+    <EPrjExt as ξ<X>>::Ext: Clone,
+    <EProdExt as ξ<X>>::Ext: Clone,
+    <ELetInExt as ξ<X>>::Ext: Clone,
+    <EIteExt as ξ<X>>::Ext: Clone,
+    <EFlipExt as ξ<X>>::Ext: Clone,
+    <EObserveExt as ξ<X>>::Ext: Clone,
+    <ESampleExt as ξ<X>>::Ext: Clone,
+    <ESample2Ext as ξ<X>>::Ext: Clone,
+
+    SAnfExt: ξ<X>,
+    SLetInExt: ξ<X>,
+    SSeqExt: ξ<X>,
+    SIteExt: ξ<X>,
+    SFlipExt: ξ<X>,
+    SExactExt: ξ<X>,
+    <SAnfExt as ξ<X>>::Ext: Clone,
+    <SLetInExt as ξ<X>>::Ext: Clone,
+    <SSeqExt as ξ<X>>::Ext: Clone,
+    <SIteExt as ξ<X>>::Ext: Clone,
+    <SFlipExt as ξ<X>>::Ext: Clone,
+    <SExactExt as ξ<X>>::Ext: Clone,
+{
+    fn clone(&self) -> Self {
+        use Program::*;
+        match self {
+            SBody(e) => SBody(e.clone()),
+            EBody(e) => EBody(e.clone()),
+        }
+    }
+}
+
 impl<X> Program<X>
 where
     EAnfExt: ξ<X>,
