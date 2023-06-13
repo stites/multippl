@@ -161,7 +161,7 @@ pub fn eval_sflip<'a>(
     ctx: &'a Context,
     param: f64,
 ) -> Result<(Output, f64, &'a dyn Fn(Compiled, f64) -> SExprTr)> {
-    let o = Output::from_anf_dists(ctx, vec![]);
+    let o = todo!();
     // let o = Output {
     //     dists: vec![],
     //     accept: ctx.accept,
@@ -373,15 +373,36 @@ pub struct Opts {
 }
 
 pub struct State<'a> {
-    opts: Opts,
-    mgr: &'a mut Mgr,
-    rng: Option<&'a mut StdRng>, // None implies "debug mode"
+    pub opts: Opts,
+    pub mgr: &'a mut Mgr,
+    pub rng: Option<&'a mut StdRng>, // None implies "debug mode"
+    pub p: f64,
+    pub q: f64,
 }
 
 impl<'a> State<'a> {
+    pub fn new(
+        mgr: &'a mut Mgr,
+        rng: Option<&'a mut StdRng>, // None implies "debug mode"
+        sample_pruning: bool,
+    ) -> State<'a> {
+        let opts = Opts {
+            order: mgr.get_order().clone(),
+            max_label: mgr.get_order().num_vars() as u64,
+            sample_pruning,
+        };
+        State {
+            opts,
+            mgr,
+            rng,
+            p: 1.0,
+            q: 1.0,
+        }
+    }
+
     pub fn eval_program(
         &mut self,
-        prog: &'a Program<Annotated>,
+        prog: &Program<Annotated>,
     ) -> Result<(Compiled, Program<Trace>)> {
         match prog {
             Program::SBody(e) => {
@@ -395,7 +416,7 @@ impl<'a> State<'a> {
         }
     }
 
-    pub fn eval_eexpr(&mut self, ctx: Context, e: &'a EExprAnn) -> Result<(Compiled, EExprTr)> {
+    pub fn eval_eexpr(&mut self, ctx: Context, e: &EExprAnn) -> Result<(Compiled, EExprTr)> {
         use EExpr::*;
         match e {
             EAnf(_, a) => {
@@ -432,7 +453,8 @@ impl<'a> State<'a> {
             }
             EFlip(d, param) => {
                 // FIXME: is this... necessary? I think it's just for debugging
-                let flip = (param * 100.0).round() / 100.0;
+                //o let flip = (param * 100.0).round() / 100.0;
+                let flip = *param;
                 let span = tracing::span!(tracing::Level::DEBUG, "", flip);
                 let _enter = span.enter();
 
@@ -446,6 +468,10 @@ impl<'a> State<'a> {
                 let span = tracing::span!(tracing::Level::DEBUG, "observe");
                 let _enter = span.enter();
                 let (o, atr, mk) = eval_eobserve(self.mgr, &ctx, a, &self.opts)?;
+
+                let Importance::Weight(theta) = o.importance;
+                self.p *= theta;
+
                 debug_step!("observe", ctx, o);
                 let c = Compiled::Output(o);
                 Ok((c.clone(), mk(c, atr)))
@@ -510,8 +536,6 @@ impl<'a> State<'a> {
                 let let_in_span = tracing::span!(Level::DEBUG, "let", var = s);
                 let _enter = let_in_span.enter();
 
-                // let lbl = d.var.label;
-                // if we produce multiple worlds, we must account for them all
                 let (cbound, eboundtr) = self.eval_eexpr(ctx.clone(), ebound)?;
 
                 let mut outs: Vec<Output> = vec![];
@@ -544,17 +568,6 @@ impl<'a> State<'a> {
 
                     outs.extend(cbodies);
                     mbody = Some(bodiestr);
-                    // Ok((cbodies, bodiestr))
-                    // })
-                    // .collect::<Result<Vec<(Vec<Output>, EExprTr)>>>()?
-                    // .into_iter()
-                    // .fold(
-                    //     (vec![], None),
-                    //     |(mut outs, mbody), (compiled_outs, body)| {
-                    //         outs.extend(compiled_outs);
-                    //         (outs, Some(body))
-                    //     },
-                    // );
                 }
                 let ebodytr = mbody.unwrap();
                 let outs: Compiled = outs.into_iter().collect();
@@ -575,7 +588,7 @@ impl<'a> State<'a> {
         }
     }
 
-    pub fn eval_sexpr(&mut self, ctx: Context, e: &'a SExprAnn) -> Result<(Compiled, SExprTr)> {
+    pub fn eval_sexpr(&mut self, ctx: Context, e: &SExprAnn) -> Result<(Compiled, SExprTr)> {
         use SExpr::*;
         match e {
             SAnf(_, a) => {
@@ -593,7 +606,11 @@ impl<'a> State<'a> {
                     None => todo!(),
                 };
                 let weight = if sample { param } else { 1.0 - param };
-                todo!()
+                self.p *= weight;
+                self.q *= weight;
+                let o = Output::for_sample_lang(&ctx);
+                let c = Compiled::from_output(o);
+                Ok((c.clone(), SFlip(Box::new(c), param)))
             }
             SLetIn(_, name, bindee, body) => todo!(),
             SSeq(_, e0, e1) => todo!(),

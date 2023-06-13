@@ -1,5 +1,5 @@
 use crate::annotate::{InvMap, LabelEnv};
-use crate::compile::{compile, Env};
+use crate::compile::{compile, eval::State};
 use crate::data::*;
 use crate::typecheck::{
     grammar::{EExprTyped, ProgramTyped},
@@ -81,9 +81,9 @@ pub fn runner_with_stdrng(
 
     let mut rng = opt.rng();
     let orng = if opt.debug { None } else { Some(&mut rng) };
-    let mut env = Env::new(mgr, orng, opt.opt, inv.clone());
+    let mut env = State::new(mgr, orng, opt.opt);
 
-    env.varmap = Some(varmap);
+    // env.varmap = Some(varmap);
 
     let c = compile(&mut env, &p)?;
     tracing::debug!("hurray!");

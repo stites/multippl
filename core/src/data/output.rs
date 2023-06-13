@@ -31,7 +31,8 @@ pub struct Output {
 
 impl Output {
     pub fn from_anf_dists(ctx: &Context, dists: Vec<BddPtr>) -> Output {
-        let probabilities = vec![Probability::new(1.0); dists.len()];
+        let len = dists.len();
+        let probabilities = vec![Probability::new(1.0); len];
         Output {
             dists,
             accept: ctx.accept,
@@ -39,6 +40,39 @@ impl Output {
             substitutions: ctx.substitutions.clone(),
             weightmap: ctx.weightmap.clone(),
             probabilities,
+            importance: I::Weight(1.0),
+        }
+    }
+    // pub fn for_sample_lang_sample(ctx: &Context, sample: bool, dist: BddPtr) -> Output {
+    //     let newsample = if sample { dist } else { dist.not() };
+    //     Output {
+    //         dists: vec![],
+    //         accept: ctx.accept,
+    //         samples: ctx.samples,
+
+    //         // pass through
+    //         substitutions: ctx.substitutions.clone(),
+    //         weightmap: ctx.weightmap.clone(),
+
+    //         // unused
+    //         probabilities: vec![Probability::new(1.0)],
+    //         importance: I::Weight(1.0),
+    //     }
+    // }
+
+    pub fn for_sample_lang(ctx: &Context) -> Output {
+        // let accept = BddPtr::from_bool(sample.unwrap_or_else(|| false));
+        Output {
+            dists: vec![],
+            accept: ctx.accept,
+            samples: ctx.samples,
+
+            // pass through
+            substitutions: ctx.substitutions.clone(),
+            weightmap: ctx.weightmap.clone(),
+
+            // unused
+            probabilities: vec![Probability::new(1.0)],
             importance: I::Weight(1.0),
         }
     }
