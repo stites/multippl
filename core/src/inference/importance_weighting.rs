@@ -43,7 +43,7 @@ pub fn importance_weighting_h(
 
     for _step in 1..=steps {
         match crate::runner_with_stdrng(p, &mut mgr, opt) {
-            Ok((cs, inv, _)) => {
+            Ok((cs, inv, _, pq)) => {
                 is_debug = match cs {
                     Compiled::Output(_) => false,
                     Compiled::Debug(_) => {
@@ -58,6 +58,15 @@ pub fn importance_weighting_h(
                     (ps, stats) = wmc_prob(&mut mgr, &c);
 
                     let w = c.importance;
+                    if !is_debug {
+                        let (p, q) = pq;
+                        let wnew = p / q;
+                        let wold = w.weight();
+                        assert!(
+                            (wnew - wold).abs() < 0.00000000001,
+                            "!!!!!!!!!!! {p} / {q} = {wnew}; but {wold}"
+                        );
+                    }
                     debug!("{}", c.accept.print_bdd());
                     debug!("{}", renderbdds(&c.dists));
                     debug!(

@@ -45,7 +45,7 @@ impl Iterator for SamplingIter {
             return None;
         }
         match crate::runner_with_stdrng(&self.program, &mut self.manager, &self.opt) {
-            Ok((cs, inv, rng)) => {
+            Ok((cs, inv, rng, pq)) => {
                 let mut newopt = self.opt.clone();
                 newopt.seed = rng;
                 self.opt = newopt;

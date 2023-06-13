@@ -63,7 +63,7 @@ pub fn run(p: &ProgramInferable) -> Result<(Mgr, Output)> {
 
 pub fn runner(p: &ProgramInferable, opt: &Options) -> Result<(Mgr, Compiled)> {
     let mut mgr = make_mgr(p);
-    let (c, _, _) = runner_with_stdrng(p, &mut mgr, opt)?;
+    let (c, _, _, _) = runner_with_stdrng(p, &mut mgr, opt)?;
     Ok((mgr, c))
 }
 
@@ -71,7 +71,7 @@ pub fn runner_with_stdrng(
     p: &ProgramInferable,
     mgr: &mut Mgr,
     opt: &Options,
-) -> Result<(Compiled, InvMap, Option<StdRng>)> {
+) -> Result<(Compiled, InvMap, Option<StdRng>, (f64, f64))> {
     let p = typeinference(p)?;
     let p = typecheck(&p)?;
     let mut senv = SymEnv::default();
@@ -81,13 +81,13 @@ pub fn runner_with_stdrng(
 
     let mut rng = opt.rng();
     let orng = if opt.debug { None } else { Some(&mut rng) };
-    let mut env = State::new(mgr, orng, opt.opt);
+    let mut s = State::new(mgr, orng, opt.opt);
 
     // env.varmap = Some(varmap);
 
-    let c = compile(&mut env, &p)?;
+    let c = compile(&mut s, &p)?;
     tracing::debug!("hurray!");
-    Ok((c, inv, env.rng.cloned()))
+    Ok((c, inv, s.rng.cloned(), (s.p, s.q)))
 }
 
 pub fn make_mgr_h(p: &ProgramInferable) -> Result<Mgr> {
