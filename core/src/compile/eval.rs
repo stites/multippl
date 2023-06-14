@@ -89,21 +89,18 @@ pub fn eval_sanf<'a>(
 pub fn eval_eprj<'a>(
     mgr: &'a mut Mgr,
     ctx: &'a Context,
-    a: &'a AnfAnn<EVal>,
     i: usize,
+    a: &'a AnfAnn<EVal>,
 ) -> Result<(
     Output,
+    usize,
     AnfTr<EVal>,
-    &'a dyn Fn(Compiled, AnfTr<EVal>) -> EExprTr,
+    &'a dyn Fn(Compiled, usize, AnfTr<EVal>) -> EExprTr,
 )> {
-    let (o, atr) = eval_anf(mgr, ctx, a, &mut |mgr, v| {
-        let (mut o, atr, _) = eval_eanf(mgr, ctx, a)?;
-        let dists = o.dists;
-        o.dists = vec![dists[i]];
-        Ok((o, atr))
-    })?;
-    Ok((o, atr, &move |c, atr| {
-        EExpr::EAnf(Box::new(c), Box::new(atr))
+    let (mut o, atr, _) = eval_eanf(mgr, ctx, a)?;
+    o.dists = vec![o.dists[i]];
+    Ok((o, i, atr, &move |c, i, atr| {
+        EExpr::EPrj(Box::new(c), i, Box::new(atr))
     }))
 }
 
@@ -433,12 +430,12 @@ impl<'a> State<'a> {
                     let _enter = span.enter();
                     debug!("{:?}", a);
                 }
-                let (o, a, mk) = eval_eprj(self.mgr, &ctx, a, *i)?;
-                if i > &1 {
+                let (o, i, a, mk) = eval_eprj(self.mgr, &ctx, *i, a)?;
+                if i > 1 {
                     debug_step!(&format!("prj@{}", i), ctx, o);
                 }
                 let c = Compiled::Output(o);
-                Ok((c.clone(), mk(c, a)))
+                Ok((c.clone(), mk(c, i, a)))
             }
             EProd(_, anfs) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "prod");
@@ -700,9 +697,9 @@ impl<'a> State<'a> {
                                     samples = self.mgr.and(samples, dist_holds);
                                 }
                             }
+
                             debug!("final dists:   {}", renderbdds(&dists));
                             debug!("final samples: {}", samples.print_bdd());
-                            // println!("sample_pruning: {}", self.sample_pruning);
                             debug!("using optimizations: {}", self.opts.sample_pruning);
                             let c = Output {
                                 dists,

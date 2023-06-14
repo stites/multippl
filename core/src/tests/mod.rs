@@ -454,7 +454,15 @@ fn program04_approx() {
 }
 
 #[test]
+// #[traced_test]
 fn tuple0() {
+    let p = {
+        program!(lets![
+            "y"  ;= b!(false, true);
+            ...? fst!(b!(@anf "y"))
+        ])
+    };
+    check_exact("tuples0/F, ", vec![0.0], &p);
     let p = {
         program!(lets![
             "y"  ;= b!(true);
@@ -546,7 +554,7 @@ fn test_big_tuple() {
 // ===================================================================== //
 
 #[test]
-#[traced_test]
+// #[traced_test]
 fn free_variables_1() {
     let problem = {
         Program::EBody(lets![
@@ -1013,7 +1021,7 @@ fn ite_3_with_one_sample_hard1_simplified_more() {
 
 #[test]
 #[ignore = "not actually a test, just a hand-crafted exploration"]
-#[traced_test]
+// #[traced_test]
 fn manual_ite() {
     use rsdd::builder::bdd_builder::*;
     use rsdd::repr::wmc::*;
