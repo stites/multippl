@@ -47,6 +47,10 @@
           "named": true
         },
         {
+          "type": "discrete",
+          "named": true
+        },
+        {
           "type": "flip",
           "named": true
         },
@@ -98,6 +102,25 @@
     "type": "bool_biop",
     "named": true,
     "fields": {}
+  },
+  {
+    "type": "discrete",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "float",
+          "named": true
+        },
+        {
+          "type": "float_op",
+          "named": true
+        }
+      ]
+    }
   },
   {
     "type": "flip",
@@ -155,6 +178,10 @@
           "named": true
         },
         {
+          "type": "discrete",
+          "named": true
+        },
+        {
           "type": "flip",
           "named": true
         },
@@ -207,6 +234,10 @@
         },
         {
           "type": "ann",
+          "named": true
+        },
+        {
+          "type": "discrete",
           "named": true
         },
         {
@@ -322,6 +353,10 @@
           "named": true
         },
         {
+          "type": "discrete",
+          "named": true
+        },
+        {
           "type": "flip",
           "named": true
         },
@@ -389,6 +424,10 @@
         },
         {
           "type": "ann",
+          "named": true
+        },
+        {
+          "type": "discrete",
           "named": true
         },
         {
@@ -507,6 +546,10 @@
   {
     "type": "bool_unop",
     "named": true
+  },
+  {
+    "type": "discrete",
+    "named": false
   },
   {
     "type": "else",

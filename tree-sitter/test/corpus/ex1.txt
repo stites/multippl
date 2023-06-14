@@ -166,3 +166,37 @@ x
     (identifier)
     (observe (anf (anf (identifier)) (bool_biop) (anf (identifier))))
   (anf (identifier))))))
+
+======================
+discrete zero is invalid
+======================
+discrete()
+
+---
+(source_file
+  (discrete (MISSING float)))
+
+======================
+discrete 1 arg
+======================
+
+discrete(0)
+
+---
+
+(source_file
+  (discrete (float)))
+
+======================
+discrete 3 arg
+======================
+
+discrete(0, 0.2, 1.5)
+
+---
+
+(source_file
+  (discrete
+    (float)
+    (float)
+    (float)))

@@ -23,6 +23,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "discrete"
+        },
+        {
+          "type": "SYMBOL",
           "name": "observe"
         },
         {
@@ -426,6 +430,43 @@
         {
           "type": "SYMBOL",
           "name": "_float"
+        }
+      ]
+    },
+    "discrete": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "discrete"
+        },
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "REPEAT",
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "_float"
+              },
+              {
+                "type": "STRING",
+                "value": ","
+              }
+            ]
+          }
+        },
+        {
+          "type": "SYMBOL",
+          "name": "_float"
+        },
+        {
+          "type": "STRING",
+          "value": ")"
         }
       ]
     },

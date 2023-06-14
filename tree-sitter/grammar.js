@@ -10,6 +10,7 @@ module.exports = grammar({
       $.let_binding,
       $.ite_binding,
       $.flip,
+      $.discrete,
       $.observe,
       $.sample,
       // seq($._function_name, '(', $.anf ,')'),
@@ -52,6 +53,7 @@ module.exports = grammar({
     ite_binding: $ =>
       prec.left(2, seq('if', $.anf, 'then', $._expr, 'else', $._expr)),
     flip: $ => seq('flip', $._float),
+    discrete: $ => seq('discrete', '(', repeat(seq($._float, ",")), $._float,  ')'),
     observe: $ => choice(
       seq('observe', $.anf),
       seq('observe', '(', $.anf, ')'),
