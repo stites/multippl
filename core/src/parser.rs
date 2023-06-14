@@ -204,6 +204,17 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExprInferable {
             }
             EExpr::EProd(None, anfs)
         }
+        "discrete" => {
+            let mut params = vec![];
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+            for _ in 0..n.named_child_count() {
+                let n = cs.next().unwrap();
+                let f = parse_float(src, &mut c.clone(), n);
+                params.push(f);
+            }
+            crate::grammar_macros::discrete::params2bindings(&params)
+        }
         "let_binding" => {
             println!("{}", n.to_sexp());
             assert_children!(k, 3, n, c);
@@ -458,5 +469,27 @@ mod parser_tests {
                 "_" ;= observe!(b!("x" || "y"));
                 ...? b!("x")])
         );
+    }
+
+    /// ======================
+    /// discrete 3 arg
+    /// ======================
+    ///
+    /// discrete(0, 0.2, 1.5)
+    /// ---
+    ///
+    /// (source_file
+    ///   (discrete
+    ///     (float)
+    ///     (float)
+    ///     (float)))
+    ///
+    #[test]
+    fn discrete_3_arg() {
+        let code = r#"
+        discrete(0, 0.2, 1.5)
+        "#;
+        let expr = parse(code);
+        assert_eq!(expr.unwrap(), program!(discrete![0.0, 0.2, 1.5]));
     }
 }

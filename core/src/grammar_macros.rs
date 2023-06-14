@@ -173,16 +173,12 @@ pub mod discrete {
 
     #[macro_export]
     macro_rules! discrete {
-        ( $x:literal ) => {{
-            flip!($x)
-        }};
-        ( $( $param:literal),+ $last_param:literal ) => {{
+        ( $( $param:expr),+ ) => {{
             let mut params : Vec<f64> = vec![];
             $(
                 params.push($param);
             )+
-            params.push($last_param);
-            params2bindings(&params)
+            $crate::grammar_macros::discrete::params2bindings(&params)
         }};
     }
 
@@ -249,7 +245,7 @@ pub mod discrete {
 
     fn params2statements(params: &Vec<f64>) -> Vec<(String, EExprInferable)> {
         let discrete_id = hash_discrete(params);
-        let mut probs = params2probs(params);
+        let probs = params2probs(params);
 
         let mut flips: Vec<(String, usize, EExprInferable)> = probs
             .iter()
@@ -275,7 +271,7 @@ pub mod discrete {
         vars
     }
 
-    fn params2bindings(params: &Vec<f64>) -> EExprInferable {
+    pub fn params2bindings(params: &Vec<f64>) -> EExprInferable {
         let mut statements = params2statements(params);
         let mut binding = statements.last().unwrap().1.clone();
         statements.pop();
