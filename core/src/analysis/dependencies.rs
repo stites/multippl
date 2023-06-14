@@ -47,7 +47,7 @@ impl Dep {
         deps.iter().map(|x| x.var()).flatten().collect()
     }
 }
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub struct DependenceMap(pub HashMap<NamedVar, HashSet<Dep>>);
 impl DependenceMap {
     pub fn insert(&mut self, var: NamedVar, deps: HashSet<Dep>) {
@@ -78,6 +78,7 @@ impl DependenceMap {
             .into_iter()
     }
 }
+#[derive(Default, Clone, Debug)]
 pub struct DependencyEnv {
     map: DependenceMap,
 }

@@ -164,9 +164,11 @@ pub fn prelude(p: &ProgramInferable) -> (ProgramAnn, MaxUniqueId) {
 pub fn insert_sample_statements_h(pann: &ProgramAnn, mx_id: MaxUniqueId) -> ProgramAnn {
     use crate::analysis::*;
     let deps = dependencies::DependencyEnv::new().scan(&pann);
+    println!("deps: {:?}", deps);
     let g = hypergraph::build_graph(&deps);
+    println!("g:    {:?}", g);
     let cuts = crate::analysis::hypergraph::cutset(&g);
-    println!("{:?}", cuts);
+    println!("cuts: {:?}", cuts);
     let mut env = InsertionEnv::new(cuts, mx_id);
     env.apply_cuts(&pann)
 }
