@@ -263,6 +263,9 @@ mod tests {
             let qvar = named(5, "q");
             let wvar = named(7, "w");
 
+            let vec = cutset(&g);
+            let hs: HashSet<_> = vec.iter().collect();
+            assert_eq!(HashSet::from([&zvar]), hs);
             let vec = g.edgecuts_sorted();
             let ecs: HashMap<NamedVar, Rank> = vec.clone().into_iter().collect();
             println!("{:?}", ecs);
@@ -309,7 +312,12 @@ mod tests {
             let tvar = named(4, "t");
             let fvar = named(5, "f");
 
+            let vec = cutset(&g);
+            let hs: HashSet<_> = vec.iter().collect();
+            assert_eq!(HashSet::from([&tvar]), hs);
+
             let vec = g.edgecuts_sorted();
+            println!("{:?}", vec);
             let ecs: HashMap<NamedVar, Rank> = vec.clone().into_iter().collect();
             println!("{:?}", ecs);
             assert_eq!(ecs.get(&xvar).unwrap(), &Rank(1));
@@ -340,7 +348,12 @@ mod tests {
             let xvar = named(0, "x");
             let svar = named(2, "s");
 
+            let vec = cutset(&g);
+            let hs: HashSet<_> = vec.iter().collect();
+            assert_eq!(HashSet::from([]), hs);
+
             let vec = g.edgecuts_sorted();
+            println!("{:?}", vec);
             let ecs: HashMap<NamedVar, Rank> = vec.clone().into_iter().collect();
             println!("{:?}", ecs);
             assert_eq!(ecs.get(&xvar).unwrap(), &Rank(1));
@@ -384,7 +397,12 @@ mod tests {
             let zvar = named(4, "z");
             let ivar = named(6, "i");
 
+            let vec = cutset(&g);
+            let hs: HashSet<_> = vec.iter().collect();
+            assert_eq!(HashSet::from([]), hs); // interesting choice.
+
             let vec = g.edgecuts_sorted();
+            println!("{:?}", vec);
             let ecs: HashMap<NamedVar, Rank> = vec.clone().into_iter().collect();
             println!("{:?}", ecs);
             assert_eq!(ecs.get(&xvar).unwrap(), &Rank(2));
@@ -417,13 +435,13 @@ mod tests {
                 vars: &[&var00],
                 &[&var00, &var10],
                 &[&var00, &var01],
-                &[&var00, &var01, &var10, &var11]
+                &[&var01, &var10, &var11]
             );
             assert_edges!(g {
-                var00 => [vec![&var00], vec![&var00, &var10], vec![&var00, &var01], vec![&var00, &var01, &var11]],
-                var01 => [vec![&var00, &var01], vec![&var00, &var01, &var11]],
-                var10 => [vec![&var00, &var10], vec![&var00, &var01, &var11]],
-                var11 => [[&var00, &var01, &var10, &var11]]
+                var00 => [vec![&var00], vec![&var00, &var10], vec![&var00, &var01]],
+                var01 => [vec![&var00, &var01], vec![&var10, &var01, &var11]],
+                var10 => [vec![&var00, &var10], vec![&var10, &var01, &var11]],
+                var11 => [[&var01, &var10, &var11]]
             });
         },
         grid_2x2_cuts: |g: G| {
@@ -433,12 +451,7 @@ mod tests {
             let var11 = named(8, "11");
 
             let vec = cutset(&g);
-            println!("{:?}", vec);
-            // assert_eq!(ecs.get(&var00).unwrap(), &Rank(1000));
-            // assert_eq!(ecs.get(&var01).unwrap(), &Rank(1000));
-            // assert_eq!(ecs.get(&var10).unwrap(), &Rank(1000));
-            // assert_eq!(ecs.get(&var11).unwrap(), &Rank(1000));
-            todo!()
+            assert_eq!(HashSet::from([var01, var10]), vec.into_iter().collect());
         },
     }
 }
