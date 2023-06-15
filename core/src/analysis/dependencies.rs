@@ -1,9 +1,11 @@
 use crate::annotate::grammar::*;
 use crate::grammar::*;
 
+use indexmap::map::IndexMap;
+use indexmap::set::IndexSet;
 use itertools::*;
 use std::collections::hash_map;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::vec;
 use tracing::*;
 
@@ -12,6 +14,7 @@ pub enum Dep {
     Var(NamedVar),
     Sample(NamedVar),
 }
+
 impl Dep {
     pub fn named_var(&self) -> NamedVar {
         match self {
@@ -37,36 +40,39 @@ impl Dep {
             Self::Sample(x) => Some(x.clone()),
         }
     }
-    pub fn as_dep(names: HashSet<NamedVar>, constructor: &dyn Fn(NamedVar) -> Dep) -> HashSet<Dep> {
+    pub fn as_dep(
+        names: IndexSet<NamedVar>,
+        constructor: &dyn Fn(NamedVar) -> Dep,
+    ) -> IndexSet<Dep> {
         names.into_iter().map(constructor).collect()
     }
-    pub fn as_vars(names: HashSet<NamedVar>) -> HashSet<Dep> {
+    pub fn as_vars(names: IndexSet<NamedVar>) -> IndexSet<Dep> {
         Self::as_dep(names, &Dep::Var)
     }
-    pub fn vars(deps: &HashSet<Dep>) -> HashSet<NamedVar> {
+    pub fn vars(deps: &IndexSet<Dep>) -> IndexSet<NamedVar> {
         deps.iter().map(|x| x.var()).flatten().collect()
     }
 }
 #[derive(Default, Clone, Debug)]
-pub struct DependenceMap(pub HashMap<NamedVar, HashSet<Dep>>);
+pub struct DependenceMap(pub HashMap<NamedVar, IndexSet<Dep>>);
 impl DependenceMap {
-    pub fn insert(&mut self, var: NamedVar, deps: HashSet<Dep>) {
+    pub fn insert(&mut self, var: NamedVar, deps: IndexSet<Dep>) {
         self.0.insert(var, deps);
     }
-    pub fn get(&self, var: &NamedVar) -> Option<&HashSet<Dep>> {
+    pub fn get(&self, var: &NamedVar) -> Option<&IndexSet<Dep>> {
         self.0.get(var)
     }
-    pub fn unsafe_get(&self, var: &NamedVar) -> &HashSet<Dep> {
+    pub fn unsafe_get(&self, var: &NamedVar) -> &IndexSet<Dep> {
         self.get(var)
             .unwrap_or_else(|| panic!("{:?} not found in {:?}", var, self.0.keys()))
     }
     pub fn len(&self) -> usize {
         self.0.len()
     }
-    pub fn iter<'a>(&'a self) -> hash_map::Iter<'a, NamedVar, HashSet<Dep>> {
+    pub fn iter<'a>(&'a self) -> hash_map::Iter<'a, NamedVar, IndexSet<Dep>> {
         self.0.iter()
     }
-    pub fn family_iter<'a>(&'a self) -> vec::IntoIter<HashSet<Dep>> {
+    pub fn family_iter<'a>(&'a self) -> vec::IntoIter<IndexSet<Dep>> {
         self.0
             .iter()
             .map(|(v, ps)| {
@@ -88,15 +94,15 @@ impl DependencyEnv {
             map: Default::default(),
         }
     }
-    fn scan_anf<Var>(&self, a: &AnfAnn<Var>) -> HashSet<NamedVar>
+    fn scan_anf<Var>(&self, a: &AnfAnn<Var>) -> IndexSet<NamedVar>
     where
         AValExt<Var>: ξ<crate::annotate::grammar::Annotated, Ext = ()>,
         AVarExt<Var>: ξ<crate::annotate::grammar::Annotated, Ext = NamedVar>,
     {
         use Anf::*;
         match a {
-            AVar(nv, s) => HashSet::from([nv.clone()]),
-            AVal((), _) => HashSet::new(),
+            AVar(nv, s) => IndexSet::from([nv.clone()]),
+            AVal((), _) => IndexSet::new(),
             And(bl, br) => {
                 let mut vs = self.scan_anf(bl);
                 vs.extend(self.scan_anf(br));
@@ -110,7 +116,7 @@ impl DependencyEnv {
             Neg(bp) => self.scan_anf(bp),
         }
     }
-    fn scan_eexpr(&mut self, e: &EExprAnn) -> HashSet<Dep> {
+    fn scan_eexpr(&mut self, e: &EExprAnn) -> IndexSet<Dep> {
         use crate::grammar::EExpr::*;
         match e {
             EAnf((), a) => Dep::as_vars(self.scan_anf(a)),
@@ -141,10 +147,10 @@ impl DependencyEnv {
                 .map(&|x: Dep| x.map(&Dep::Sample))
                 .collect(),
             EObserve((), a) => Dep::as_vars(self.scan_anf(a)),
-            EFlip(_, p) => HashSet::new(),
+            EFlip(_, p) => IndexSet::new(),
         }
     }
-    fn scan_sexpr(&mut self, e: &SExprAnn) -> HashSet<Dep> {
+    fn scan_sexpr(&mut self, e: &SExprAnn) -> IndexSet<Dep> {
         use crate::grammar::SExpr::*;
         match e {
             SAnf((), a) => Dep::as_vars(self.scan_anf(a)),
@@ -170,7 +176,7 @@ impl DependencyEnv {
                 .into_iter()
                 .map(&|x: Dep| x.map(&Dep::Sample))
                 .collect(),
-            SFlip(_, p) => HashSet::new(),
+            SFlip(_, p) => IndexSet::new(),
         }
     }
 
@@ -206,18 +212,18 @@ mod tests {
     macro_rules! assert_root {
         ($deps:ident : $xvar:expr $(, $var:expr)* $(,)?) => {{
             let ds = $deps.unsafe_get(&$xvar);
-            assert_eq!(ds, &HashSet::new(), "{:?} deps should be empty", $xvar);
+            assert_eq!(ds, &IndexSet::new(), "{:?} deps should be empty", $xvar);
 
             $(
             let ds = $deps.unsafe_get(&$var);
-            assert_eq!(ds, &HashSet::new(), "{:?} deps should be empty", $var);
+            assert_eq!(ds, &IndexSet::new(), "{:?} deps should be empty", $var);
             )*
         }}
     }
     macro_rules! assert_family {
         ($deps:ident : $xvar:expr => $f0:expr $(; sample = $sample0:literal)? $(, $var:expr  $(; sample = $sample:literal)?)* $(,)?) => {{
             let ds = $deps.unsafe_get(&$xvar);
-            let mut fam = HashSet::new();
+            let mut fam = IndexSet::new();
             let mut sampled0 = false;
             $(
                 sampled0 = $sample0;
