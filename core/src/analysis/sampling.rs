@@ -190,12 +190,14 @@ mod tests {
     pub fn test_trivial_program() {
         let p = program!(lets![
             "x" ;= flip!(1/3);
-           ...? b!("x")
+            "y" ;= b!("x");
+           ...? b!("y")
         ]);
         let pann = insert_sample_statements(&p);
         let p1_expected = program!(lets![
             "x" ;= sample!(flip!(1/3));
-           ...? b!("x")
+            "y" ;= var!("x");
+           ...? b!("y")
         ]);
         let pann_expected = crate::annotate::pipeline(&p1_expected).unwrap().0;
         assert_eq!(&pann, &pann_expected);

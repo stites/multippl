@@ -844,9 +844,9 @@ dependencies = [
 
 [[package]]
 name = "indexmap"
-version = "1.9.2"
+version = "1.9.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1885e79c1fc4b10f0e172c475f458b7f7b93061064d98c3293e98c5ba0c8b399"
+checksum = "bd070e393353796e801d209ad339e89596eb4c8d430d18ede6a1cced8fafbd99"
 dependencies = [
  "autocfg",
  "hashbrown",
@@ -1500,7 +1500,6 @@ checksum = "456c603be3e8d448b072f410900c09faf164fbce2d480456f50eea6e25f9c848"
 [[package]]
 name = "rsdd"
 version = "0.1.0"
-source = "git+https://github.com/stites/rsdd?branch=yodel-additions#aa637ff6d02ac85e30e2bc9d087ae9224a969884"
 dependencies = [
  "bit-set",
  "bumpalo",
@@ -1509,6 +1508,7 @@ dependencies = [
  "dimacs",
  "dot",
  "fnv",
+ "indexmap",
  "itertools",
  "libc",
  "maplit",
@@ -2181,6 +2181,7 @@ dependencies = [
  "csv",
  "either",
  "formula",
+ "indexmap",
  "itertools",
  "num-traits",
  "plotters",

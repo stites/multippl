@@ -30,9 +30,9 @@ pub fn build_graph(deps: &DependenceMap) -> ClusterGraph<NamedVar> {
     let mut g: ClusterGraph<NamedVar> = ClusterGraph::default();
     let mut edges: HashMap<NamedVar, HashSet<Cluster<NamedVar>>> = HashMap::new();
     for family in deps.family_iter() {
-        debug!("family: {:?}", family);
+        // debug!("family: {:?}", family);
         let cluster = Cluster(Dep::vars(&family));
-        debug!("-> cluster: {:?}", cluster);
+        // debug!("-> cluster: {:?}", cluster);
         g.insert_vertex(cluster.clone());
         for var in &cluster.0 {
             match edges.get_mut(&var) {
@@ -46,7 +46,7 @@ pub fn build_graph(deps: &DependenceMap) -> ClusterGraph<NamedVar> {
         }
     }
     for edge in edges.values() {
-        debug!("edge: {:?}", edge);
+        // debug!("edge: {:?}", edge);
         g.insert_edge(Edge(edge.clone()));
     }
     g.rebuild_intersections();
@@ -54,7 +54,9 @@ pub fn build_graph(deps: &DependenceMap) -> ClusterGraph<NamedVar> {
 }
 
 pub fn cutset(g: &ClusterGraph<NamedVar>) -> Vec<NamedVar> {
-    hg2dt(g).cutset().into_iter().collect()
+    let dt = hg2dt(g);
+    // println!("DT: {:?}", dt);
+    dt.cutset().into_iter().collect()
 }
 
 pub fn pipeline(p: &ProgramInferable) -> ClusterGraph<NamedVar> {
@@ -399,7 +401,19 @@ mod tests {
 
             let vec = cutset(&g);
             let hs: HashSet<_> = vec.iter().collect();
-            assert_eq!(HashSet::from([]), hs); // interesting choice.
+            println!("{:?}", hs);
+            let vec = cutset(&g);
+            let hs: HashSet<_> = vec.iter().collect();
+            println!("{:?}", hs);
+            let vec = cutset(&g);
+            let hs: HashSet<_> = vec.iter().collect();
+            println!("{:?}", hs);
+            let vec = cutset(&g);
+            let hs: HashSet<_> = vec.iter().collect();
+            println!("{:?}", hs);
+            todo!();
+            // check this. it's nondeterministic
+            assert_eq!(HashSet::from([&xvar]), hs); // interesting choice.
 
             let vec = g.edgecuts_sorted();
             println!("{:?}", vec);
