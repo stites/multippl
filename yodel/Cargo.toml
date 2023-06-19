@@ -13,6 +13,11 @@ name = "plot-grids"
 path = "plots/grids/mod.rs"
 required-features = ["plots"]
 
+[[bin]]
+name = "plot-bns"
+path = "plots/bns/mod.rs"
+required-features = ["plots"]
+
 [dependencies]
 rsdd = { workspace = true }
 rsgm = { workspace = true }
