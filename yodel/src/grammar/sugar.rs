@@ -13,10 +13,12 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::string::String;
 
-#[allow(clippy::enum_variant_names)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum ESugar {
     // SampleSugar(Box<SSugar<X>>),  // (avoid the extra wrapping for now)
     Prim(EExpr<Inferable>),
+    LetIn(String, Box<ESugar>, Box<ESugar>),
+    Ite(Box<Anf<Inferable, EVal>>, Box<ESugar>, Box<ESugar>),
     Discrete(Vec<f64>), // the only extension so far
     Sample(Box<SSugar>),
 }
@@ -25,13 +27,19 @@ impl ESugar {
     pub fn desugar(self) -> EExpr<Inferable> {
         match self {
             ESugar::Prim(e) => e,
+            ESugar::LetIn(v, bind, body) => {
+                EExpr::ELetIn(None, v, Box::new(bind.desugar()), Box::new(body.desugar()))
+            }
+            ESugar::Ite(p, t, f) => {
+                EExpr::EIte(None, p, Box::new(t.desugar()), Box::new(f.desugar()))
+            }
             ESugar::Discrete(params) => discrete::from_params(&params),
             ESugar::Sample(s) => EExpr::ESample((), Box::new(s.desugar())),
         }
     }
 }
 
-#[allow(clippy::enum_variant_names)]
+#[derive(PartialEq, Debug, Clone)]
 pub enum SSugar {
     Prim(SExpr<Inferable>),
     Exact(Box<ESugar>),
@@ -46,6 +54,7 @@ impl SSugar {
     }
 }
 
+#[derive(PartialEq, Debug, Clone)]
 pub enum ProgramSugar {
     Exact(ESugar),
     Sample(SSugar),

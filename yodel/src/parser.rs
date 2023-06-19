@@ -158,27 +158,29 @@ fn parse_float(src: &[u8], c: &mut TreeCursor, n: Node) -> f64 {
         _ => panic!("unexpected"),
     }
 }
-fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExprInferable {
+fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ESugar {
+    use EExpr::*;
+    use SExpr::SExact;
     let k = n.kind();
     match k {
         "anf" => {
             println!("{}", n.to_sexp());
             let anf = parse_anf(src, c, *n);
-            return EExpr::EAnf((), Box::new(anf));
+            ESugar::Prim(EAnf((), Box::new(anf)))
         }
         "fst" => {
             let mut c_ = c.clone();
             let mut cs = n.named_children(&mut c_);
             let anf = cs.next().unwrap();
             let anf = parse_anf(src, c, anf);
-            EExpr::EPrj(None, 0, Box::new(anf))
+            ESugar::Prim(EPrj(None, 0, Box::new(anf)))
         }
         "snd" => {
             let mut c_ = c.clone();
             let mut cs = n.named_children(&mut c_);
             let anf = cs.next().unwrap();
             let anf = parse_anf(src, c, anf);
-            EExpr::EPrj(None, 1, Box::new(anf))
+            ESugar::Prim(EPrj(None, 1, Box::new(anf)))
         }
         "prj" => {
             let mut c_ = c.clone();
@@ -191,7 +193,7 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExprInferable {
 
             let anf = cs.next().unwrap();
             let anf = parse_anf(src, c, anf);
-            EExpr::EPrj(None, ix, Box::new(anf))
+            ESugar::Prim(EPrj(None, ix, Box::new(anf)))
         }
         "prod" => {
             let mut anfs = vec![];
@@ -202,7 +204,7 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExprInferable {
                 let a = parse_anf(src, c, a);
                 anfs.push(a);
             }
-            EExpr::EProd(None, anfs)
+            ESugar::Prim(EProd(None, anfs))
         }
         "discrete" => {
             let mut params = vec![];
@@ -213,8 +215,7 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExprInferable {
                 let f = parse_float(src, &mut c.clone(), n);
                 params.push(f);
             }
-            todo!()
-            // crate::grammar::discrete::params2bindings(&params)
+            ESugar::Discrete(params)
         }
         "let_binding" => {
             println!("{}", n.to_sexp());
@@ -231,7 +232,7 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExprInferable {
 
             let body = cs.next().unwrap();
             let body = parse_expr(src, c, &body);
-            EExpr::ELetIn(None, ident, Box::new(bindee), Box::new(body))
+            ESugar::LetIn(ident, Box::new(bindee), Box::new(body))
         }
         "ite_binding" => {
             println!("{}", n.to_sexp());
@@ -247,16 +248,16 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExprInferable {
 
             let fbranch = cs.next().unwrap();
             let fbranch = parse_expr(src, c, &fbranch);
-            EExpr::EIte(None, Box::new(pred), Box::new(tbranch), Box::new(fbranch))
+            ESugar::Ite(Box::new(pred), Box::new(tbranch), Box::new(fbranch))
         }
         "flip" => {
             println!("{}", n.to_sexp());
             let f = parse_float(src, c, *n);
-            EExpr::EFlip((), f)
+            ESugar::Prim(EFlip((), f))
         }
         "observe" => {
             let anf = parse_anf(src, c, *n);
-            EExpr::EObserve((), Box::new(anf))
+            ESugar::Prim(EObserve((), Box::new(anf)))
         }
         "sample" => {
             println!("{}", n.to_sexp());
@@ -264,7 +265,7 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExprInferable {
             let mut cs = n.named_children(&mut _c);
             let subp = cs.next().unwrap();
             let e = parse_expr(src, c, &subp);
-            EExpr::ESample((), Box::new(SExpr::SExact((), Box::new(e))))
+            ESugar::Sample(Box::new(SSugar::Exact(Box::new(e))))
         }
         s => panic!(
             "unexpected tree-sitter node kind `{}` (#named_children: {})! Likely, you need to rebuild the tree-sitter parser\nsexp: {}", s, n.named_child_count(), n.to_sexp()
@@ -272,10 +273,10 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExprInferable {
     }
 }
 
-fn parse_program(src: &[u8], c: &mut TreeCursor, n: &Node) -> ProgramInferable {
-    Program::EBody(parse_expr(src, c, n))
+fn parse_program(src: &[u8], c: &mut TreeCursor, n: &Node) -> ProgramSugar {
+    ProgramSugar::Exact(parse_expr(src, c, n))
 }
-pub fn parse_tree(src: &[u8], t: Tree) -> ProgramInferable {
+pub fn parse_tree(src: &[u8], t: Tree) -> ProgramSugar {
     // https://docs.rs/tree-sitter/latest/tree_sitter/struct.TreeTreeCursor.html
     let mut c = t.walk();
     let source = c.node();
@@ -292,7 +293,7 @@ pub fn parse_tree(src: &[u8], t: Tree) -> ProgramInferable {
     parse_program(src, &mut c, &root)
 }
 
-pub fn parse(code: &str) -> Option<ProgramInferable> {
+pub fn parse(code: &str) -> Option<ProgramSugar> {
     let tree = tree_parser(code.to_string())?;
     let expr = parse_tree(code.as_bytes(), tree);
     Some(expr)
@@ -306,31 +307,40 @@ mod parser_tests {
 
     #[test]
     fn parse_anf() {
-        assert_eq!(parse(r#"true"#).unwrap(), program!(b!(true)));
-        assert_eq!(parse(r#"false"#).unwrap(), program!(b!(false)));
-        assert_eq!(parse(r#"x"#).unwrap(), program!(b!("x")));
-        assert_eq!(parse(r#"!a"#).unwrap(), program!(anf!(not!("a"))));
-        assert_eq!(parse(r#"a && b"#).unwrap(), program!(b!("a" && "b")));
-        assert_eq!(parse(r#"a || b"#).unwrap(), program!(b!("a" || "b")));
+        assert_eq!(parse(r#"true"#).unwrap().desugar(), program!(b!(true)));
+        assert_eq!(parse(r#"false"#).unwrap().desugar(), program!(b!(false)));
+        assert_eq!(parse(r#"x"#).unwrap().desugar(), program!(b!("x")));
+        assert_eq!(parse(r#"!a"#).unwrap().desugar(), program!(anf!(not!("a"))));
         assert_eq!(
-            parse(r#"a && b && c"#).unwrap(),
+            parse(r#"a && b"#).unwrap().desugar(),
+            program!(b!("a" && "b"))
+        );
+        assert_eq!(
+            parse(r#"a || b"#).unwrap().desugar(),
+            program!(b!("a" || "b"))
+        );
+        assert_eq!(
+            parse(r#"a && b && c"#).unwrap().desugar(),
             program!(b!("a" && "b" && "c"))
         );
     }
 
     #[test]
     fn prods() {
-        assert_eq!(parse(r#"(a, b, c)"#).unwrap(), program!(b!("a", "b", "c")));
         assert_eq!(
-            parse(r#"let x = (a, b) in fst x"#).unwrap(),
+            parse(r#"(a, b, c)"#).unwrap().desugar(),
+            program!(b!("a", "b", "c"))
+        );
+        assert_eq!(
+            parse(r#"let x = (a, b) in fst x"#).unwrap().desugar(),
             program!(lets!["x" ;= b!("a", "b"); ...? fst!("x")])
         );
         assert_eq!(
-            parse(r#"let x = (a, b) in snd x"#).unwrap(),
+            parse(r#"let x = (a, b) in snd x"#).unwrap().desugar(),
             program!(lets!["x" ;= b!("a", "b"); ...? snd!("x")])
         );
         assert_eq!(
-            parse(r#"let x = (a, b) in (prj 0 x)"#).unwrap(),
+            parse(r#"let x = (a, b) in (prj 0 x)"#).unwrap().desugar(),
             program!(lets!["x" ;= b!("a", "b"); ...? prj!(0, "x")])
         );
     }
@@ -338,7 +348,7 @@ mod parser_tests {
     #[test]
     fn one_ite() {
         assert_eq!(
-            parse(r#"if true then x else y"#).unwrap(),
+            parse(r#"if true then x else y"#).unwrap().desugar(),
             program!(ite!( if ( b!(true) ) then { b!("x")  } else { b!("y") } ))
         );
     }
@@ -362,7 +372,7 @@ mod parser_tests {
         let code = r#"let x = true in x"#;
         let expr = parse(code);
         assert_eq!(
-            expr.unwrap(),
+            expr.unwrap().desugar(),
             program!(lets!["x" ;= b!("true"); in var!("x")])
         );
     }
@@ -382,11 +392,11 @@ mod parser_tests {
     #[test]
     fn one_untyped_flip() {
         assert_eq!(
-            parse(r#"let x = flip 0.5 in x"#).unwrap(),
+            parse(r#"let x = flip 0.5 in x"#).unwrap().desugar(),
             program!(lets!["x" ;= flip!(0.5); in var!("x")])
         );
         assert_eq!(
-            parse(r#"let x = flip (1/3) in x"#).unwrap(),
+            parse(r#"let x = flip (1/3) in x"#).unwrap().desugar(),
             program!(lets!["x" ;= flip!(1.0/3.0); in var!("x")])
         );
     }
@@ -423,7 +433,7 @@ mod parser_tests {
         x"#;
         let expr = parse(code);
         assert_eq!(
-            expr.unwrap(),
+            expr.unwrap().desugar(),
             program!(lets![
                 "x" ;= flip!(0.3333);
                 "y" ;= flip!(1.0/4.0);
@@ -463,7 +473,7 @@ mod parser_tests {
         x"#;
         let expr = parse(code);
         assert_eq!(
-            expr.unwrap(),
+            expr.unwrap().desugar(),
             program!(lets![
                 "x" ;= sample!(flip!(1.0/3.0));
                 "y" ;= flip!(1.0/4.0);
@@ -491,6 +501,6 @@ mod parser_tests {
         discrete(0, 0.2, 1.5)
         "#;
         let expr = parse(code);
-        assert_eq!(expr.unwrap(), program!(discrete![0.0, 0.2, 1.5]));
+        assert_eq!(expr.unwrap().desugar(), program!(discrete![0.0, 0.2, 1.5]));
     }
 }
