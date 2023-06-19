@@ -264,7 +264,6 @@ mod tests {
     use super::*;
     use crate::data::*;
     use crate::grammar::*;
-    use crate::grammar_macros::*;
     use crate::typecheck::pipeline;
     use crate::typeinf::grammar::{EExprInferable, ProgramInferable};
     use crate::*;

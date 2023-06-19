@@ -9,8 +9,9 @@
 // core types
 pub mod data;
 pub use data::*;
+
 pub mod grammar;
-pub mod grammar_macros;
+pub use grammar::*;
 
 // Entry points
 pub mod parser;

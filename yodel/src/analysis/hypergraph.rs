@@ -7,7 +7,7 @@ use crate::data::CompileError::Generic;
 use crate::grammar::*;
 use crate::typeinf::grammar::ProgramInferable;
 use crate::uniquify::grammar::UniqueId;
-use core::fmt::{Debug, Formatter};
+use ::core::fmt::{Debug, Formatter};
 use itertools::*;
 // use grammar::*;
 use rsdd::builder::bdd_plan::*;
@@ -76,7 +76,6 @@ mod tests {
     use crate::annotate::grammar::named;
     use crate::data::*;
     use crate::grammar::*;
-    use crate::grammar_macros::*;
     use crate::typecheck::grammar::{EExprTyped, ProgramTyped};
     use crate::typecheck::typecheck;
     use crate::*;

@@ -213,7 +213,8 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExprInferable {
                 let f = parse_float(src, &mut c.clone(), n);
                 params.push(f);
             }
-            crate::grammar_macros::discrete::params2bindings(&params)
+            todo!()
+            // crate::grammar::discrete::params2bindings(&params)
         }
         "let_binding" => {
             println!("{}", n.to_sexp());

@@ -202,7 +202,6 @@ mod tests {
     use crate::annotate::grammar::named;
     use crate::data::*;
     use crate::grammar::*;
-    use crate::grammar_macros::*;
     use crate::typecheck::grammar::{EExprTyped, ProgramTyped};
     use crate::typecheck::typecheck;
     use crate::*;
