@@ -1,7 +1,7 @@
 [workspace]
 members = [
+  "yodel",
   "tree-sitter",
-  "core",
   "tree-sitter-formula",
   "formula",
   "lean", # this is just for prototyping and shouldn't be considered a member of this project.
