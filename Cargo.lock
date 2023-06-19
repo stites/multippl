@@ -1521,13 +1521,23 @@ dependencies = [
  "rand 0.8.5",
  "rand_chacha",
  "rayon",
- "rsgm",
+ "rsgm 0.1.0 (git+https://github.com/pmall-neu/rsgm)",
  "rustc-hash",
  "segment-tree",
  "serde",
  "serde_json",
  "time-test",
  "tinyvec",
+]
+
+[[package]]
+name = "rsgm"
+version = "0.1.0"
+source = "git+https://github.com/neuppl/rsgm#9edf93ef996a1e57d65c3b3701df1a2ba5a34af0"
+dependencies = [
+ "clap 3.2.23",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -2180,7 +2190,6 @@ dependencies = [
  "clap 4.1.8",
  "criterion 0.4.0",
  "csv",
- "either",
  "formula",
  "indexmap",
  "itertools",
@@ -2191,6 +2200,7 @@ dependencies = [
  "rand 0.8.5",
  "rayon",
  "rsdd",
+ "rsgm 0.1.0 (git+https://github.com/neuppl/rsgm)",
  "serde",
  "spinoff",
  "tracing",

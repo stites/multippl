@@ -3,7 +3,6 @@ use crate::grammar::*;
 use crate::uniquify::grammar::UniqueId;
 use crate::utils::render::*;
 use crate::*;
-use either::{Either, Either::*};
 use itertools::*;
 use num_traits::*;
 use rand::distributions::{Bernoulli, Distribution};

@@ -30,6 +30,7 @@ lto = true              # +++ whole-program optimization: true for a "fat" LTO p
 [workspace.dependencies]
 # rsdd = { path = "../rsdd" , features =["hypergraph"]}
 rsdd = { git = "https://github.com/stites/rsdd", branch = "yodel-additions", features =["hypergraph"]}
+rsgm = { git = "https://github.com/neuppl/rsgm" }
 rand = "0.8.5"
 itertools = "0.10.3"
 tracing = "0.1.37"
