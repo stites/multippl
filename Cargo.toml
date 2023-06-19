@@ -1,9 +1,9 @@
 [workspace]
 members = [
   "yodel",
-  "tree-sitter",
-  "tree-sitter-formula",
   "formula",
+  "tree-sitter-yodel",
+  "tree-sitter-formula",
   "lean", # this is just for prototyping and shouldn't be considered a member of this project.
 ]
 [workspace.package]

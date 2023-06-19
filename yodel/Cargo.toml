@@ -21,7 +21,7 @@ tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 tracing-test = { workspace = true }
 tree-sitter = { workspace = true }
-tree-sitter-yodel = { path = "../tree-sitter" }
+tree-sitter-yodel = { path = "../tree-sitter-yodel" }
 
 # depends on rustc-serialize v0.3.24 which will be deprecated
 num-traits = "0.2"
