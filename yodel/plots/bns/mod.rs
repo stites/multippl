@@ -46,6 +46,87 @@ macro_rules! print_network {
     }};
 }
 
+pub fn _pprint_anf(anf: &Anf<Inferable, EVal>) {
+    match &anf {
+        Anf::AVal(_, val) => {
+            print!("{:?}", val);
+        }
+        Anf::AVar(_, var) => {
+            print!("{}", var);
+        }
+        Anf::Neg(p) => {
+            print!("!");
+            _pprint_anf(p);
+        }
+        Anf::Or(l, r) => {
+            _pprint_anf(l);
+            print!(" && ");
+            _pprint_anf(r);
+        }
+        Anf::And(l, r) => {
+            _pprint_anf(l);
+            print!(" && ");
+            _pprint_anf(r);
+        }
+    }
+}
+
+pub fn is_let(expr: &EExprInferable) -> bool {
+    match &expr {
+        EExpr::ELetIn(_, var, bindee, body) => true,
+        _ => false,
+    }
+}
+pub fn _pprint(expr: &EExprInferable, depth: usize) {
+    match &expr {
+        EExpr::EFlip(_, p) => {
+            print!("flip {}", p);
+        }
+        EExpr::EAnf(_, anf) => {
+            _pprint_anf(anf);
+        }
+        EExpr::EPrj(_, ix, anf) => {
+            print!("prj_{}(", ix);
+            _pprint_anf(anf);
+            print!(")");
+        }
+        EExpr::EProd(_, anfs) => {
+            for anf in anfs {
+                _pprint_anf(anf);
+                print!(", ");
+            }
+        }
+        EExpr::ELetIn(_, var, bindee, body) => {
+            let indent = " ".repeat(depth * 2);
+            print!("{}let {} := ", indent, var);
+            _pprint(bindee, depth);
+            println!(" in");
+            print!("{}", indent);
+            _pprint(body, depth);
+            println!("");
+        }
+        EExpr::EIte(_, p, t, f) => {
+            let indent = " ".repeat((depth + 2) * 2);
+            print!("\n{}if ", indent);
+            _pprint_anf(p);
+            println!(" ");
+            println!("{}then", indent);
+            _pprint(t, depth + 2);
+            println!("{}else", indent);
+            _pprint(f, depth + 2);
+        }
+        x => {
+            let indent = " ".repeat(depth * 2);
+            println!("{}{:?}", indent, x)
+        }
+        _ => println!(""),
+    }
+}
+
+pub fn pprint(x: &EExprInferable) {
+    _pprint(x, 0)
+}
+
 fn is_high(p: &String) -> bool {
     let highs: HashSet<String> =
         HashSet::from_iter(["high", "True", "positive"].into_iter().map(String::from));
@@ -56,11 +137,17 @@ fn get_probs(
     bn: &BayesianNetwork,
     v: &String,
     parents: &HashMap<String, String>,
+    suffix: Option<String>,
 ) -> (Vec<f64>, Vec<String>) {
     bn.get_all_assignments(v)
         .into_iter()
         .cloned()
-        .map(|vassign| (bn.get_conditional_prob(v, &vassign, parents), vassign))
+        .map(|vassign| {
+            (
+                bn.get_conditional_prob(v, &vassign, parents),
+                format!("{}{}", vassign, suffix.clone().unwrap_or_default()),
+            )
+        })
         .unzip()
 }
 
@@ -68,8 +155,9 @@ fn _to_statements(
     bn: &BayesianNetwork,
     v: &String,
     parents: &HashMap<String, String>,
+    suffix: Option<String>,
 ) -> (Vec<(String, EExprInferable)>, Vec<String>) {
-    let (mut ps, mut vars) = get_probs(bn, v, parents);
+    let (mut ps, mut vars) = get_probs(bn, v, parents, suffix);
     if ps.len() == 2 && !is_high(vars.first().unwrap()) {
         ps.rotate_right(1);
         vars.rotate_right(1);
@@ -77,20 +165,17 @@ fn _to_statements(
     (discrete::params2named_statements(&v, &vars, &ps), vars)
 }
 
-fn to_statements(
-    bn: &BayesianNetwork,
-    v: &String,
-    parents: &HashMap<String, String>,
-) -> Vec<(String, EExprInferable)> {
-    _to_statements(bn, v, parents).0
+fn independent_node(bn: &BayesianNetwork, v: &String) -> Vec<(String, EExprInferable)> {
+    _to_statements(bn, v, &Default::default(), None).0
 }
 
 fn to_statements_returning(
     bn: &BayesianNetwork,
     v: &String,
     parents: &HashMap<String, String>,
+    suffix: Option<String>,
 ) -> (Vec<(String, EExprInferable)>, EExprInferable) {
-    let (lbl_binds, vars) = _to_statements(bn, v, parents);
+    let (lbl_binds, vars) = _to_statements(bn, v, parents, suffix);
     let body = vars2prod(v, &vars);
     (lbl_binds, body)
 }
@@ -105,11 +190,11 @@ fn vars2prod(v: &String, params: &Vec<String>) -> EExprInferable {
 }
 
 fn ite_star(ifs: &Vec<Anf<Inferable, EVal>>, branches: &Vec<EExprInferable>) -> EExprInferable {
-    assert_eq!(
-        ifs.len() + 1,
-        branches.len(),
-        "must have (#ifs + 1else) = #branches"
-    );
+    let mut ifs = ifs.clone();
+    if ifs.len() == branches.len() {
+        ifs.pop();
+    }
+
     let mut branches = branches.clone();
     let mut ite = branches.pop().unwrap();
     for (p, doit) in ifs.iter().zip(branches.iter()).rev() {
@@ -162,80 +247,64 @@ fn conjoin_vars(vars: &Vec<String>) -> Anf<Inferable, EVal> {
     }
     *fin
 }
+
+fn compile_network(bn: &BayesianNetwork, final_query: &EExprInferable) -> EExprInferable {
+    let mut program = final_query.clone();
+    for (node_ix, v) in bn.topological_sort().into_iter().enumerate().rev() {
+        let assigns = bn.get_all_assignments(&v);
+        let parents = bn.get_parents(&v);
+        if parents.len() == 0 {
+            for (label, stmnt) in independent_node(&bn, &v).into_iter().rev() {
+                program = EExpr::ELetIn(None, label, Box::new(stmnt), Box::new(program));
+            }
+        }
+        if parents.len() > 0 {
+            let all_passigns = bn.parent_assignments(&v);
+            let last_branch_ix = all_passigns.len() - 1;
+            let mut consistent_return = None;
+            let mut guards = vec![];
+            let mut branches = vec![];
+            for (pix, passigns) in all_passigns.into_iter().enumerate() {
+                if consistent_return.is_none() {
+                    let vars = _to_statements(&bn, &v, &passigns, None).1;
+                    let query = vars2prod(&v, &vars);
+                    consistent_return = Some(query.clone());
+                }
+                let pvar = parent_vars(&passigns);
+
+                guards.push(conjoin_vars(&pvar));
+                let (l_s, vars) = _to_statements(&bn, &v, &passigns, Some(format!("_{}", pix)));
+                let query = vars2prod(&v, &vars);
+
+                let mut branch = query;
+                for (label, stmnt) in l_s.into_iter().rev() {
+                    branch = EExpr::ELetIn(None, label, Box::new(stmnt), Box::new(branch));
+                }
+                branches.push(branch);
+            }
+            let prod = ite_star(&guards, &branches);
+
+            for (l, prj) in prod2vars(&format!("node_{}", node_ix), &consistent_return.unwrap()) {
+                program = EExpr::ELetIn(None, l, Box::new(prj), Box::new(program));
+            }
+            program = EExpr::ELetIn(
+                None,
+                format!("node_{}", node_ix),
+                Box::new(prod),
+                Box::new(program),
+            );
+        }
+    }
+    program
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let bn = BayesianNetwork::from_string(std::fs::read_to_string(&args.file).unwrap().as_str());
     print_network!(bn);
     println!("----------------------------");
-
-    for v in bn.topological_sort() {
-        let assigns = bn.get_all_assignments(&v);
-        let parents = bn.get_parents(&v);
-        if v == String::from("Dyspnoea") {
-            continue;
-        }
-        if parents.len() == 0 {
-            for (label, stmnt) in to_statements(&bn, &v, &Default::default()) {
-                println!("let {} \t= {:?}", label, stmnt);
-            }
-        }
-        if parents.len() == 1 {
-            let all_passigns = bn.parent_assignments(&v);
-            let last_branch_ix = all_passigns.len() - 1;
-            let mut consistent_return = None;
-
-            println!("let prod = ");
-            for (ix, passigns) in all_passigns.into_iter().enumerate() {
-                let pvar = parent_vars(&passigns);
-                if ix != last_branch_ix {
-                    println!("    if {:?}", conjoin_vars(&pvar));
-                } else {
-                    println!("    else");
-                }
-                let (l_s, vars) = _to_statements(&bn, &v, &passigns);
-                let query = vars2prod(&v, &vars);
-                consistent_return = Some(query.clone());
-
-                for (label, stmnt) in l_s {
-                    println!("        let {} \t= {:?}", label, stmnt);
-                }
-                println!("        in {:?}", query);
-            }
-            for (l, prj) in prod2vars(&String::from("prod"), &consistent_return.unwrap()) {
-                println!("let {} in {:?}", l, prj);
-            }
-        }
-        if parents.len() == 2 {
-            let all_passigns = bn.parent_assignments(&v);
-            let last_branch_ix = all_passigns.len() - 1;
-            let mut consistent_return = None;
-
-            println!("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
-            println!("let prod = ");
-            for (ix, passigns) in all_passigns.into_iter().enumerate() {
-                let pvar = parent_vars(&passigns);
-                if ix != last_branch_ix {
-                    println!("    if {:?}", conjoin_vars(&pvar));
-                } else {
-                    println!("    else");
-                }
-                let (l_s, vars) = _to_statements(&bn, &v, &passigns);
-                let query = vars2prod(&v, &vars);
-                consistent_return = Some(query.clone());
-
-                for (label, stmnt) in l_s {
-                    println!("        let {} \t= {:?}", label, stmnt);
-                }
-                println!("        in {:?}", query);
-                println!("");
-            }
-            for (l, prj) in prod2vars(&String::from("prod"), &consistent_return.unwrap()) {
-                println!("let {} in {:?}", l, prj);
-            }
-
-            println!(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
-        }
-        println!("");
-    }
+    let final_query = EExpr::EAnf((), Box::new(Anf::AVar(None, String::from("final_query"))));
+    let program = compile_network(&bn, &final_query);
+    pprint(&program);
     Ok(())
 }
