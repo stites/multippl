@@ -31,6 +31,7 @@ pub use pipeline::*;
 pub use typeinf::grammar::ProgramInferable;
 
 // extras
+pub mod bayesian_network;
 pub mod grids;
 mod utils;
 

@@ -723,6 +723,10 @@ where
         matches!(self, EExpr::ESample(_, _))
     }
 
+    pub fn is_let(&self) -> bool {
+        matches!(self, EExpr::ELetIn(_, _, _, _))
+    }
+
     pub fn query(&self) -> EExpr<X> {
         use EExpr::*;
         match self {
