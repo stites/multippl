@@ -133,6 +133,10 @@ fn is_high(p: &String) -> bool {
     highs.contains(p)
 }
 
+fn var_label(var: &String, instantiation: &String) -> String {
+    format!("{}_{}", var, instantiation)
+}
+
 fn get_probs(
     bn: &BayesianNetwork,
     v: &String,
@@ -183,7 +187,7 @@ fn to_statements_returning(
 fn vars2prod(v: &String, params: &Vec<String>) -> EExprInferable {
     let vec = params
         .iter()
-        .map(|p| Anf::AVar(None, format!("{}_{}", v, p)))
+        .map(|p| Anf::AVar(None, var_label(v, p)))
         .collect_vec();
     let ty = ETy::EProd(params.iter().map(|_| ETy::EBool).collect_vec());
     EExpr::EProd(Some(ty), vec)
@@ -232,7 +236,7 @@ fn prod2vars(name: &String, p: &EExprInferable) -> Vec<(String, EExprInferable)>
 fn parent_vars(passigns: &HashMap<String, String>) -> Vec<String> {
     passigns
         .iter()
-        .map(|(parent, passign)| format!("{}_{}", parent, passign))
+        .map(|(parent, passign)| var_label(parent, passign))
         .collect()
 }
 
@@ -297,14 +301,28 @@ fn compile_network(bn: &BayesianNetwork, final_query: &EExprInferable) -> EExprI
     }
     program
 }
+fn allmarg_query(bn: &BayesianNetwork) -> EExprInferable {
+    let vars = bn.get_variables();
+    let mut query = vec![];
+    let mut qtype = vec![];
+    for var in vars {
+        for var_instance in bn.get_all_assignments(var) {
+            let qvar = var_label(var, var_instance);
+            query.push(Anf::AVar(Some(ETy::EBool), qvar));
+            qtype.push(ETy::EBool);
+        }
+    }
+    let t = Some(ETy::EProd(qtype));
+    EExpr::EProd(t, query)
+}
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
     let bn = BayesianNetwork::from_string(std::fs::read_to_string(&args.file).unwrap().as_str());
     print_network!(bn);
     println!("----------------------------");
-    let final_query = EExpr::EAnf((), Box::new(Anf::AVar(None, String::from("final_query"))));
-    let program = compile_network(&bn, &final_query);
+    let query = allmarg_query(&bn);
+    let program = compile_network(&bn, &query);
     pprint(&program);
     Ok(())
 }
