@@ -69,7 +69,7 @@ impl ProgramSugar {
     }
 }
 
-pub(crate) mod discrete {
+pub mod discrete {
     use crate::grammar::{Anf, EExpr, ETy, EVal};
     use crate::typeinf::grammar::{EExprInferable, Inferable};
     use itertools::*;
@@ -137,46 +137,87 @@ pub(crate) mod discrete {
         }
     }
 
-    fn params2statements(params: &Vec<f64>) -> Vec<(String, EExprInferable)> {
+    pub fn params2statements(params: &Vec<f64>) -> Vec<(String, EExprInferable)> {
         let discrete_id = hash_discrete(params);
-        let probs = params2probs(params);
-
-        let mut flips: Vec<(String, usize, EExprInferable)> = probs
+        let names = params
             .iter()
             .enumerate()
-            .map(|(ix, p)| (format!("f{}_{}", discrete_id, ix), ix, EExpr::EFlip((), *p)))
+            .map(|(ix, _)| format!("{}", ix))
+            .collect_vec();
+        params2named_statements(&discrete_id, &names, params)
+    }
+
+    pub fn params2named_statements(
+        namespace: &String,
+        names: &Vec<String>,
+        params: &Vec<f64>,
+    ) -> Vec<(String, EExprInferable)> {
+        let n = params.len();
+        assert_eq!(names.len(), n);
+        let probs = params2probs(params);
+
+        let mut flips: Vec<(String, EExprInferable)> = names
+            .iter()
+            .zip(probs.iter())
+            .map(|(n, p)| (format!("{}_{}_flip", namespace, n), EExpr::EFlip((), *p)))
             .collect_vec();
         flips.pop();
 
         let mut vars: Vec<(String, EExprInferable)> = vec![];
         let mut seen: Vec<String> = vec![];
 
-        for (flip_lbl, ix, flip) in flips.into_iter() {
-            let var_lbl = format!("v{}_{}", discrete_id, ix);
+        for (name, (flip_lbl, flip)) in names.iter().zip(flips.into_iter()) {
+            let var_lbl = format!("{}_{}", namespace, name);
             let var_exp = mkdiscrete_var(flip_lbl.clone(), seen.clone());
             vars.push((flip_lbl.clone(), flip));
             vars.push((var_lbl.clone(), EExpr::EAnf((), Box::new(var_exp))));
             seen.push(var_lbl);
         }
         vars.push((
-            format!("v{}_{}", discrete_id, "last"),
+            format!("{}_{}", namespace, names.last().unwrap()),
             EExpr::EAnf((), Box::new(mkguard(seen))),
         ));
         vars
     }
 
     pub fn from_params(params: &Vec<f64>) -> EExprInferable {
-        let mut statements = params2statements(params);
-        let mut binding = statements.last().unwrap().1.clone();
-        statements.pop();
-        let thetype = Some(crate::typecheck::grammar::LetInTypes {
-            bindee: ETy::EBool,
-            body: ETy::EProd(vec![ETy::EBool; params.len()]),
-        });
-        for (label, bindee) in statements.into_iter().rev() {
-            binding = EExpr::ELetIn(thetype.clone(), label, Box::new(bindee), Box::new(binding));
+        let discrete_id = hash_discrete(params);
+        let names = params
+            .iter()
+            .enumerate()
+            .map(|(ix, _)| format!("{}", ix))
+            .collect_vec();
+        from_named_params(&discrete_id, &names, params)
+    }
+    pub fn from_named_params(
+        namespace: &String,
+        names: &Vec<String>,
+        params: &Vec<f64>,
+    ) -> EExprInferable {
+        assert!(
+            params.len() > 1,
+            "parameters must be normalized with cardinality of >1"
+        );
+        if params.len() == 2 {
+            assert!(
+                (params.iter().sum::<f64>() - 1.0).abs() < 1e-30,
+                "Bernoulli must be normalized"
+            );
+            EExpr::EFlip((), params[0])
+        } else {
+            let mut statements = params2named_statements(namespace, names, params);
+            let mut binding = statements.last().unwrap().1.clone();
+            statements.pop();
+            let thetype = Some(crate::typecheck::grammar::LetInTypes {
+                bindee: ETy::EBool,
+                body: ETy::EProd(vec![ETy::EBool; params.len()]),
+            });
+            for (label, bindee) in statements.into_iter().rev() {
+                binding =
+                    EExpr::ELetIn(thetype.clone(), label, Box::new(bindee), Box::new(binding));
+            }
+            binding
         }
-        binding
     }
 
     #[cfg(test)]
