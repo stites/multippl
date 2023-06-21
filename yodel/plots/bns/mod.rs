@@ -3,7 +3,9 @@ extern crate yodel;
 
 use clap::Parser;
 use rsgm::bayesian_network::BayesianNetwork;
+use rsgm_networks::{ParseError, Specification};
 use std::error::Error;
+use std::str::FromStr;
 use yodel::bayesian_network::*;
 
 #[derive(Parser, Debug)]
@@ -11,15 +13,25 @@ use yodel::bayesian_network::*;
 struct Args {
     /// An input Bayesian network file in JSON format
     #[clap(short, long, value_parser)]
-    file: String,
+    network: String,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
-    let bn = BayesianNetwork::from_string(std::fs::read_to_string(&args.file).unwrap().as_str());
-    print_network!(bn);
+    let spec = Specification::_from_str(&args.network)?;
+
+    println!("{:?}", spec);
+
+    // let bn = BayesianNetwork::from_string(std::fs::read_to_string(&args.file).unwrap().as_str());
+    // print_network!(bn);
     println!("----------------------------");
-    let program = compile_allmarg(&bn);
-    pprint(&program);
+    // let program = compile_allmarg(&bn);
+    // pprint(&program);
+
+    for spec in Specification::iterator() {
+        let n = spec.network();
+        let vars = n.get_variables();
+    }
+
     Ok(())
 }

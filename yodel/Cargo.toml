@@ -21,6 +21,7 @@ required-features = ["plots"]
 [dependencies]
 rsdd = { workspace = true }
 rsgm = { workspace = true }
+rsgm_networks = { path = "../rsgm_networks" }
 rand = { workspace = true }
 itertools = { workspace = true }
 tracing = { workspace = true }
