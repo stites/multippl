@@ -672,7 +672,23 @@ impl<'a> State<'a> {
                 let c = Compiled::from_output(o);
                 Ok((c.clone(), SBeta(Box::new(c), *a, *b)))
             }
-            SLetIn(_, name, bindee, body) => todo!(),
+            SLetIn(d, name, bindee, body) => todo!(),
+            // SLetIn(d, name, bindee, body) => {
+            //     let (cbindee, bindee) = self.eval_sexpr(ctx, bindee)?;
+            //     let ctx = Context::from_compiled(&cbindee.as_output().unwrap());
+            //     todo!("need a new context which is _not_ bdds...");
+            //     // ctx.substitutions.insert(d.id(), (bound.dists.clone(), Var::Named(d.clone())));
+            //     let (cbody, body) = self.eval_sexpr(ctx, body)?;
+            //     Ok((
+            //         cbody.clone(),
+            //         SLetIn(
+            //             Box::new(cbody),
+            //             name.clone(),
+            //             Box::new(bindee),
+            //             Box::new(body),
+            //         ),
+            //     ))
+            // }
             SSeq(_, e0, e1) => {
                 let (c0, e0) = self.eval_sexpr(ctx, e0)?;
                 let ctx = Context::from_compiled(&c0.as_output().unwrap());
