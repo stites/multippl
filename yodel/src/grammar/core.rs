@@ -39,6 +39,9 @@ impl ETy {
 #[derive(Debug, Clone, PartialEq)]
 pub enum STy {
     SBool,
+    SFloat,
+    SInt,
+    SFloatVec,
 }
 
 pub trait ξ<X> {
@@ -65,7 +68,12 @@ pub struct SLetInExt;
 pub struct SSeqExt;
 pub struct SIteExt;
 pub struct SReturnExt;
-pub struct SFlipExt;
+pub struct SBernExt;
+pub struct SDiscreteExt;
+pub struct SUniformExt;
+pub struct SNormalExt;
+pub struct SBetaExt;
+pub struct SDirichletExt;
 pub struct SExactExt;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -189,7 +197,14 @@ where
     SLetInExt: ξ<X>,
     SSeqExt: ξ<X>,
     SIteExt: ξ<X>,
-    SFlipExt: ξ<X>,
+
+    SBernExt: ξ<X>,
+    SDiscreteExt: ξ<X>,
+    SUniformExt: ξ<X>,
+    SNormalExt: ξ<X>,
+    SBetaExt: ξ<X>,
+    SDirichletExt: ξ<X>,
+
     SExactExt: ξ<X>,
     AValExt<SVal>: ξ<X>,
     AVarExt<SVal>: ξ<X>,
@@ -221,6 +236,9 @@ where
 #[derive(Debug, Clone, PartialEq)]
 pub enum SVal {
     SBool(bool),
+    SFloat(f64),
+    SFloatVec(Vec<f64>),
+    SInt(u32),
 }
 impl IsTyped<STy> for SVal {
     fn is_prod(&self) -> bool {
@@ -230,6 +248,9 @@ impl IsTyped<STy> for SVal {
         use SVal::*;
         match self {
             SBool(_) => STy::SBool,
+            SInt(_) => STy::SInt,
+            SFloat(_) => STy::SFloat,
+            SFloatVec(_) => STy::SFloatVec,
         }
     }
 }
@@ -241,7 +262,14 @@ where
     SLetInExt: ξ<X>,
     SSeqExt: ξ<X>,
     SIteExt: ξ<X>,
-    SFlipExt: ξ<X>,
+
+    SBernExt: ξ<X>,
+    SDiscreteExt: ξ<X>,
+    SUniformExt: ξ<X>,
+    SNormalExt: ξ<X>,
+    SBetaExt: ξ<X>,
+    SDirichletExt: ξ<X>,
+
     SExactExt: ξ<X>,
     AVarExt<SVal>: ξ<X>,
     AValExt<SVal>: ξ<X>,
@@ -271,7 +299,13 @@ where
         Box<SExpr<X>>,
         Box<SExpr<X>>,
     ),
-    SFlip(<SFlipExt as ξ<X>>::Ext, f64),
+    SBern(<SBernExt as ξ<X>>::Ext, f64),
+    SDiscrete(<SDiscreteExt as ξ<X>>::Ext, Vec<f64>),
+    SUniform(<SUniformExt as ξ<X>>::Ext, f64, f64),
+    SNormal(<SNormalExt as ξ<X>>::Ext, f64, f64),
+    SBeta(<SBetaExt as ξ<X>>::Ext, f64, f64),
+    SDirichlet(<SDirichletExt as ξ<X>>::Ext, Vec<f64>),
+
     SExact(<SExactExt as ξ<X>>::Ext, Box<EExpr<X>>),
 }
 
@@ -306,13 +340,26 @@ where
     SLetInExt: ξ<X>,
     SSeqExt: ξ<X>,
     SIteExt: ξ<X>,
-    SFlipExt: ξ<X>,
+
+    SBernExt: ξ<X>,
+    SDiscreteExt: ξ<X>,
+    SUniformExt: ξ<X>,
+    SNormalExt: ξ<X>,
+    SBetaExt: ξ<X>,
+    SDirichletExt: ξ<X>,
+
+    <SBernExt as ξ<X>>::Ext: Debug,
+    <SDiscreteExt as ξ<X>>::Ext: Debug,
+    <SUniformExt as ξ<X>>::Ext: Debug,
+    <SNormalExt as ξ<X>>::Ext: Debug,
+    <SBetaExt as ξ<X>>::Ext: Debug,
+    <SDirichletExt as ξ<X>>::Ext: Debug,
+
     SExactExt: ξ<X>,
     <SAnfExt as ξ<X>>::Ext: Debug,
     <SLetInExt as ξ<X>>::Ext: Debug,
     <SSeqExt as ξ<X>>::Ext: Debug,
     <SIteExt as ξ<X>>::Ext: Debug,
-    <SFlipExt as ξ<X>>::Ext: Debug,
     <SExactExt as ξ<X>>::Ext: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -365,14 +412,26 @@ where
     SLetInExt: ξ<X>,
     SSeqExt: ξ<X>,
     SIteExt: ξ<X>,
-    SFlipExt: ξ<X>,
     SExactExt: ξ<X>,
     <SAnfExt as ξ<X>>::Ext: Debug,
     <SLetInExt as ξ<X>>::Ext: Debug,
     <SSeqExt as ξ<X>>::Ext: Debug,
     <SIteExt as ξ<X>>::Ext: Debug,
-    <SFlipExt as ξ<X>>::Ext: Debug,
     <SExactExt as ξ<X>>::Ext: Debug,
+
+    SBernExt: ξ<X>,
+    SDiscreteExt: ξ<X>,
+    SUniformExt: ξ<X>,
+    SNormalExt: ξ<X>,
+    SBetaExt: ξ<X>,
+    SDirichletExt: ξ<X>,
+
+    <SBernExt as ξ<X>>::Ext: Debug,
+    <SDiscreteExt as ξ<X>>::Ext: Debug,
+    <SUniformExt as ξ<X>>::Ext: Debug,
+    <SNormalExt as ξ<X>>::Ext: Debug,
+    <SBetaExt as ξ<X>>::Ext: Debug,
+    <SDirichletExt as ξ<X>>::Ext: Debug,
 
     AVarExt<EVal>: ξ<X>,
     AVarExt<SVal>: ξ<X>,
@@ -407,7 +466,17 @@ where
                 .field("truthy", tru)
                 .field("falsey", fls)
                 .finish(),
-            SFlip(ext, p) => f.write_fmt(format_args!("Flip({:?}, {:?})", ext, p)),
+            SBern(ext, p) => f.write_fmt(format_args!("Bern({:?}, {})", ext, p)),
+            SDiscrete(ext, ps) => f.write_fmt(format_args!("Discrete({:?}, {:?})", ext, ps)),
+            SUniform(ext, lo, hi) => {
+                f.write_fmt(format_args!("Uniform({:?}, {}, {})", ext, lo, hi))
+            }
+            SNormal(ext, mean, var) => {
+                f.write_fmt(format_args!("Normal({:?}, {}, {})", ext, mean, var))
+            }
+            SBeta(ext, a, b) => f.write_fmt(format_args!("Beta({:?}, {}, {})", ext, a, b)),
+            SDirichlet(ext, ps) => f.write_fmt(format_args!("Dirichlet({:?}, {:?})", ext, ps)),
+
             SExact(ext, e) => f.debug_tuple("Exact").field(&ext).field(e).finish(),
         }
     }
@@ -446,13 +515,26 @@ where
     SLetInExt: ξ<X>,
     SSeqExt: ξ<X>,
     SIteExt: ξ<X>,
-    SFlipExt: ξ<X>,
+
+    SBernExt: ξ<X>,
+    SDiscreteExt: ξ<X>,
+    SUniformExt: ξ<X>,
+    SNormalExt: ξ<X>,
+    SBetaExt: ξ<X>,
+    SDirichletExt: ξ<X>,
+
+    <SBernExt as ξ<X>>::Ext: Clone,
+    <SDiscreteExt as ξ<X>>::Ext: Clone,
+    <SUniformExt as ξ<X>>::Ext: Clone,
+    <SNormalExt as ξ<X>>::Ext: Clone,
+    <SBetaExt as ξ<X>>::Ext: Clone,
+    <SDirichletExt as ξ<X>>::Ext: Clone,
+
     SExactExt: ξ<X>,
     <SAnfExt as ξ<X>>::Ext: Clone,
     <SLetInExt as ξ<X>>::Ext: Clone,
     <SSeqExt as ξ<X>>::Ext: Clone,
     <SIteExt as ξ<X>>::Ext: Clone,
-    <SFlipExt as ξ<X>>::Ext: Clone,
     <SExactExt as ξ<X>>::Ext: Clone,
 {
     fn clone(&self) -> Self {
@@ -505,14 +587,26 @@ where
     SLetInExt: ξ<X>,
     SSeqExt: ξ<X>,
     SIteExt: ξ<X>,
-    SFlipExt: ξ<X>,
     SExactExt: ξ<X>,
     <SAnfExt as ξ<X>>::Ext: Clone,
     <SLetInExt as ξ<X>>::Ext: Clone,
     <SSeqExt as ξ<X>>::Ext: Clone,
     <SIteExt as ξ<X>>::Ext: Clone,
-    <SFlipExt as ξ<X>>::Ext: Clone,
     <SExactExt as ξ<X>>::Ext: Clone,
+
+    SBernExt: ξ<X>,
+    SDiscreteExt: ξ<X>,
+    SUniformExt: ξ<X>,
+    SNormalExt: ξ<X>,
+    SBetaExt: ξ<X>,
+    SDirichletExt: ξ<X>,
+
+    <SBernExt as ξ<X>>::Ext: Clone,
+    <SDiscreteExt as ξ<X>>::Ext: Clone,
+    <SUniformExt as ξ<X>>::Ext: Clone,
+    <SNormalExt as ξ<X>>::Ext: Clone,
+    <SBetaExt as ξ<X>>::Ext: Clone,
+    <SDirichletExt as ξ<X>>::Ext: Clone,
 {
     fn clone(&self) -> Self {
         use SExpr::*;
@@ -523,7 +617,12 @@ where
             }
             SSeq(ext, e1, e2) => SSeq(ext.clone(), e1.clone(), e2.clone()),
             SIte(ext, p, tru, fls) => SIte(ext.clone(), p.clone(), tru.clone(), fls.clone()),
-            SFlip(ext, p) => SFlip(ext.clone(), *p),
+            SBern(ext, p) => SBern(ext.clone(), *p),
+            SDiscrete(ext, ps) => SDiscrete(ext.clone(), ps.clone()),
+            SUniform(ext, lo, hi) => SUniform(ext.clone(), *lo, *hi),
+            SNormal(ext, mean, var) => SNormal(ext.clone(), *mean, *var),
+            SBeta(ext, a, b) => SBeta(ext.clone(), *a, *b),
+            SDirichlet(ext, ps) => SDirichlet(ext.clone(), ps.clone()),
             SExact(ext, e) => SExact(ext.clone(), e.clone()),
         }
     }
@@ -560,14 +659,26 @@ where
     SLetInExt: ξ<X>,
     SSeqExt: ξ<X>,
     SIteExt: ξ<X>,
-    SFlipExt: ξ<X>,
     SExactExt: ξ<X>,
     <SAnfExt as ξ<X>>::Ext: PartialEq,
     <SLetInExt as ξ<X>>::Ext: PartialEq,
     <SSeqExt as ξ<X>>::Ext: PartialEq,
     <SIteExt as ξ<X>>::Ext: PartialEq,
-    <SFlipExt as ξ<X>>::Ext: PartialEq,
     <SExactExt as ξ<X>>::Ext: PartialEq,
+
+    SBernExt: ξ<X>,
+    SDiscreteExt: ξ<X>,
+    SUniformExt: ξ<X>,
+    SNormalExt: ξ<X>,
+    SBetaExt: ξ<X>,
+    SDirichletExt: ξ<X>,
+
+    <SBernExt as ξ<X>>::Ext: PartialEq,
+    <SDiscreteExt as ξ<X>>::Ext: PartialEq,
+    <SUniformExt as ξ<X>>::Ext: PartialEq,
+    <SNormalExt as ξ<X>>::Ext: PartialEq,
+    <SBetaExt as ξ<X>>::Ext: PartialEq,
+    <SDirichletExt as ξ<X>>::Ext: PartialEq,
 {
     fn eq(&self, o: &Self) -> bool {
         use EExpr::*;
@@ -621,14 +732,26 @@ where
     SLetInExt: ξ<X>,
     SSeqExt: ξ<X>,
     SIteExt: ξ<X>,
-    SFlipExt: ξ<X>,
     SExactExt: ξ<X>,
     <SAnfExt as ξ<X>>::Ext: PartialEq,
     <SLetInExt as ξ<X>>::Ext: PartialEq,
     <SSeqExt as ξ<X>>::Ext: PartialEq,
     <SIteExt as ξ<X>>::Ext: PartialEq,
-    <SFlipExt as ξ<X>>::Ext: PartialEq,
     <SExactExt as ξ<X>>::Ext: PartialEq,
+
+    SBernExt: ξ<X>,
+    SDiscreteExt: ξ<X>,
+    SUniformExt: ξ<X>,
+    SNormalExt: ξ<X>,
+    SBetaExt: ξ<X>,
+    SDirichletExt: ξ<X>,
+
+    <SBernExt as ξ<X>>::Ext: PartialEq,
+    <SDiscreteExt as ξ<X>>::Ext: PartialEq,
+    <SUniformExt as ξ<X>>::Ext: PartialEq,
+    <SNormalExt as ξ<X>>::Ext: PartialEq,
+    <SBetaExt as ξ<X>>::Ext: PartialEq,
+    <SDirichletExt as ξ<X>>::Ext: PartialEq,
 {
     fn eq(&self, o: &Self) -> bool {
         use SExpr::*;
@@ -643,8 +766,16 @@ where
             (SIte(ext0, p0, tru0, fls0), SIte(ext1, p1, tru1, fls1)) => {
                 ext0 == ext1 && p0 == p1 && tru0 == tru1 && fls0 == fls1
             }
-            (SFlip(ext0, p0), SFlip(ext1, p1)) => ext0 == ext1 && p0 == p1,
+            (SBern(ext0, a0), SBern(ext1, a1)) => ext0 == ext1 && a0 == a1,
+            (SDiscrete(ext0, a0), SDiscrete(ext1, a1)) => ext0 == ext1 && a0 == a1,
+            (SDirichlet(ext0, a0), SDirichlet(ext1, a1)) => ext0 == ext1 && a0 == a1,
+            (SUniform(ext0, a0, b0), SUniform(ext1, a1, b1)) => {
+                ext0 == ext1 && a0 == a1 && b0 == b1
+            }
+            (SNormal(ext0, a0, b0), SNormal(ext1, a1, b1)) => ext0 == ext1 && a0 == a1 && b0 == b1,
+            (SBeta(ext0, a0, b0), SBeta(ext1, a1, b1)) => ext0 == ext1 && a0 == a1 && b0 == b1,
             (SExact(ext0, e0), SExact(ext1, e1)) => ext0 == ext1 && e0 == e1,
+
             (_, _) => false,
         }
     }
@@ -710,14 +841,26 @@ where
     SLetInExt: ξ<X>,
     SSeqExt: ξ<X>,
     SIteExt: ξ<X>,
-    SFlipExt: ξ<X>,
     SExactExt: ξ<X>,
     <SAnfExt as ξ<X>>::Ext: Debug + Clone,
     <SLetInExt as ξ<X>>::Ext: Debug + Clone,
     <SSeqExt as ξ<X>>::Ext: Debug + Clone,
     <SIteExt as ξ<X>>::Ext: Debug + Clone,
-    <SFlipExt as ξ<X>>::Ext: Debug + Clone,
     <SExactExt as ξ<X>>::Ext: Debug + Clone,
+
+    SBernExt: ξ<X>,
+    SDiscreteExt: ξ<X>,
+    SUniformExt: ξ<X>,
+    SNormalExt: ξ<X>,
+    SBetaExt: ξ<X>,
+    SDirichletExt: ξ<X>,
+
+    <SBernExt as ξ<X>>::Ext: Debug + Clone,
+    <SDiscreteExt as ξ<X>>::Ext: Debug + Clone,
+    <SUniformExt as ξ<X>>::Ext: Debug + Clone,
+    <SNormalExt as ξ<X>>::Ext: Debug + Clone,
+    <SBetaExt as ξ<X>>::Ext: Debug + Clone,
+    <SDirichletExt as ξ<X>>::Ext: Debug + Clone,
 {
     pub fn is_sample(&self) -> bool {
         matches!(self, EExpr::ESample(_, _))
@@ -778,8 +921,14 @@ where
     SLetInExt: ξ<X>,
     SSeqExt: ξ<X>,
     SIteExt: ξ<X>,
-    SFlipExt: ξ<X>,
     SExactExt: ξ<X>,
+
+    SBernExt: ξ<X>,
+    SDiscreteExt: ξ<X>,
+    SUniformExt: ξ<X>,
+    SNormalExt: ξ<X>,
+    SBetaExt: ξ<X>,
+    SDirichletExt: ξ<X>,
 {
     EBody(EExpr<X>),
     SBody(SExpr<X>),
@@ -819,14 +968,26 @@ where
     SLetInExt: ξ<X>,
     SSeqExt: ξ<X>,
     SIteExt: ξ<X>,
-    SFlipExt: ξ<X>,
     SExactExt: ξ<X>,
     <SAnfExt as ξ<X>>::Ext: PartialEq,
     <SLetInExt as ξ<X>>::Ext: PartialEq,
     <SSeqExt as ξ<X>>::Ext: PartialEq,
     <SIteExt as ξ<X>>::Ext: PartialEq,
-    <SFlipExt as ξ<X>>::Ext: PartialEq,
     <SExactExt as ξ<X>>::Ext: PartialEq,
+
+    SBernExt: ξ<X>,
+    SDiscreteExt: ξ<X>,
+    SUniformExt: ξ<X>,
+    SNormalExt: ξ<X>,
+    SBetaExt: ξ<X>,
+    SDirichletExt: ξ<X>,
+
+    <SBernExt as ξ<X>>::Ext: PartialEq,
+    <SDiscreteExt as ξ<X>>::Ext: PartialEq,
+    <SUniformExt as ξ<X>>::Ext: PartialEq,
+    <SNormalExt as ξ<X>>::Ext: PartialEq,
+    <SBetaExt as ξ<X>>::Ext: PartialEq,
+    <SDirichletExt as ξ<X>>::Ext: PartialEq,
 {
     fn eq(&self, o: &Self) -> bool {
         use Program::*;
@@ -860,13 +1021,11 @@ where
     SLetInExt: ξ<X>,
     SSeqExt: ξ<X>,
     SIteExt: ξ<X>,
-    SFlipExt: ξ<X>,
     SExactExt: ξ<X>,
     <SAnfExt as ξ<X>>::Ext: Debug,
     <SLetInExt as ξ<X>>::Ext: Debug,
     <SSeqExt as ξ<X>>::Ext: Debug,
     <SIteExt as ξ<X>>::Ext: Debug,
-    <SFlipExt as ξ<X>>::Ext: Debug,
     <SExactExt as ξ<X>>::Ext: Debug,
 
     AVarExt<EVal>: ξ<X>,
@@ -877,6 +1036,20 @@ where
     AValExt<SVal>: ξ<X>,
     <AValExt<EVal> as ξ<X>>::Ext: Debug,
     <AValExt<SVal> as ξ<X>>::Ext: Debug,
+
+    SBernExt: ξ<X>,
+    SDiscreteExt: ξ<X>,
+    SUniformExt: ξ<X>,
+    SNormalExt: ξ<X>,
+    SBetaExt: ξ<X>,
+    SDirichletExt: ξ<X>,
+
+    <SBernExt as ξ<X>>::Ext: Debug,
+    <SDiscreteExt as ξ<X>>::Ext: Debug,
+    <SUniformExt as ξ<X>>::Ext: Debug,
+    <SNormalExt as ξ<X>>::Ext: Debug,
+    <SBetaExt as ξ<X>>::Ext: Debug,
+    <SDirichletExt as ξ<X>>::Ext: Debug,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use Program::*;
@@ -920,14 +1093,26 @@ where
     SLetInExt: ξ<X>,
     SSeqExt: ξ<X>,
     SIteExt: ξ<X>,
-    SFlipExt: ξ<X>,
     SExactExt: ξ<X>,
     <SAnfExt as ξ<X>>::Ext: Clone,
     <SLetInExt as ξ<X>>::Ext: Clone,
     <SSeqExt as ξ<X>>::Ext: Clone,
     <SIteExt as ξ<X>>::Ext: Clone,
-    <SFlipExt as ξ<X>>::Ext: Clone,
     <SExactExt as ξ<X>>::Ext: Clone,
+
+    SBernExt: ξ<X>,
+    SDiscreteExt: ξ<X>,
+    SUniformExt: ξ<X>,
+    SNormalExt: ξ<X>,
+    SBetaExt: ξ<X>,
+    SDirichletExt: ξ<X>,
+
+    <SBernExt as ξ<X>>::Ext: Clone,
+    <SDiscreteExt as ξ<X>>::Ext: Clone,
+    <SUniformExt as ξ<X>>::Ext: Clone,
+    <SNormalExt as ξ<X>>::Ext: Clone,
+    <SBetaExt as ξ<X>>::Ext: Clone,
+    <SDirichletExt as ξ<X>>::Ext: Clone,
 {
     fn clone(&self) -> Self {
         use Program::*;
@@ -968,14 +1153,26 @@ where
     SLetInExt: ξ<X>,
     SSeqExt: ξ<X>,
     SIteExt: ξ<X>,
-    SFlipExt: ξ<X>,
     SExactExt: ξ<X>,
     <SAnfExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <SLetInExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <SSeqExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <SIteExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
-    <SFlipExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <SExactExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+
+    SBernExt: ξ<X>,
+    SDiscreteExt: ξ<X>,
+    SUniformExt: ξ<X>,
+    SNormalExt: ξ<X>,
+    SBetaExt: ξ<X>,
+    SDirichletExt: ξ<X>,
+
+    <SBernExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <SDiscreteExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <SUniformExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <SNormalExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <SBetaExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <SDirichletExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
 {
     pub fn query(&self) -> EExpr<X> {
         use Program::*;
@@ -1043,9 +1240,25 @@ impl ξ<UD> for SSeqExt {
 impl ξ<UD> for SIteExt {
     type Ext = ();
 }
-impl ξ<UD> for SFlipExt {
+impl ξ<UD> for SBernExt {
     type Ext = ();
 }
+impl ξ<UD> for SDiscreteExt {
+    type Ext = ();
+}
+impl ξ<UD> for SUniformExt {
+    type Ext = ();
+}
+impl ξ<UD> for SNormalExt {
+    type Ext = ();
+}
+impl ξ<UD> for SBetaExt {
+    type Ext = ();
+}
+impl ξ<UD> for SDirichletExt {
+    type Ext = ();
+}
+
 impl ξ<UD> for SExactExt {
     type Ext = ();
 }

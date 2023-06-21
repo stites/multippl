@@ -167,9 +167,27 @@ pub mod grammar {
     impl ξ<Annotated> for SIteExt {
         type Ext = ();
     }
-    impl ξ<Annotated> for SFlipExt {
-        type Ext = BddVar;
+    // >>>>>>>>>>>>> do nothing special for sampled distributions
+    impl ξ<Annotated> for SBernExt {
+        type Ext = ();
     }
+    impl ξ<Annotated> for SDiscreteExt {
+        type Ext = ();
+    }
+    impl ξ<Annotated> for SUniformExt {
+        type Ext = ();
+    }
+    impl ξ<Annotated> for SNormalExt {
+        type Ext = ();
+    }
+    impl ξ<Annotated> for SBetaExt {
+        type Ext = ();
+    }
+    impl ξ<Annotated> for SDirichletExt {
+        type Ext = ();
+    }
+    // <<<<<<<<<<<<< do nothing special for sampled distributions
+
     impl ξ<Annotated> for SExactExt {
         type Ext = ();
     }
@@ -342,12 +360,14 @@ impl LabelEnv {
                 Box::new(self.annotate_sexpr(t)?),
                 Box::new(self.annotate_sexpr(f)?),
             )),
-            SFlip(id, param) => {
-                let lbl = self.fresh();
-                let var = BddVar::new(*id, lbl, self.letpos.clone());
-                self.subst_var.insert(*id, Var::Bdd(var.clone()));
-                Ok(SFlip(var, *param))
-            }
+
+            SBern(_, param) => Ok(SBern((), *param)),
+            SDiscrete(_, ps) => Ok(SDiscrete((), ps.clone())),
+            SUniform(_, lo, hi) => Ok(SUniform((), *lo, *hi)),
+            SNormal(_, mean, var) => Ok(SNormal((), *mean, *var)),
+            SBeta(_, a, b) => Ok(SBeta((), *a, *b)),
+            SDirichlet(_, ps) => Ok(SDirichlet((), ps.clone())),
+
             SExact(_, e) => Ok(SExact((), Box::new(self.annotate_eexpr(e)?))),
         }
     }

@@ -1,4 +1,7 @@
-use crate::data::errors::{CompileError, Result};
+use crate::data::errors::{
+    CompileError::{self, SemanticsError},
+    Result,
+};
 use crate::grammar::*;
 use crate::typecheck::grammar::{AnfTyped, EExprTyped, LetInTypes, ProgramTyped, SExprTyped};
 
@@ -56,9 +59,27 @@ pub mod grammar {
     impl ξ<Inferable> for SIteExt {
         type Ext = Option<STy>;
     }
-    impl ξ<Inferable> for SFlipExt {
+
+    // types are precise and do not need to be inferred
+    impl ξ<Inferable> for SBernExt {
         type Ext = ();
     }
+    impl ξ<Inferable> for SDiscreteExt {
+        type Ext = ();
+    }
+    impl ξ<Inferable> for SUniformExt {
+        type Ext = ();
+    }
+    impl ξ<Inferable> for SNormalExt {
+        type Ext = ();
+    }
+    impl ξ<Inferable> for SBetaExt {
+        type Ext = ();
+    }
+    impl ξ<Inferable> for SDirichletExt {
+        type Ext = ();
+    }
+
     impl ξ<Inferable> for SExactExt {
         type Ext = ();
     }
@@ -69,31 +90,32 @@ pub mod grammar {
     pub type ProgramInferable = Program<Inferable>;
 
     impl AnfInferable<SVal> {
-        pub fn strip_anf(&self) -> AnfInferable<EVal> {
+        pub fn strip_anf(&self) -> Result<AnfInferable<EVal>> {
             use Anf::*;
             match self {
-                AVar(ext, s) => AVar(None, s.clone()),
-                AVal(ext, SVal::SBool(b)) => AVal((), EVal::EBool(*b)),
-                And(l, r) => And(Box::new(l.strip_anf()), Box::new(r.strip_anf())),
-                Or(l, r) => Or(Box::new(l.strip_anf()), Box::new(r.strip_anf())),
-                Neg(n) => Neg(Box::new(n.strip_anf())),
+                AVar(ext, s) => Ok(AVar(None, s.clone())),
+                AVal(ext, SVal::SBool(b)) => Ok(AVal((), EVal::EBool(*b))),
+                AVal(_, _) => Err(SemanticsError("not in the natural embedding".to_string())),
+                And(l, r) => Ok(And(Box::new(l.strip_anf()?), Box::new(r.strip_anf()?))),
+                Or(l, r) => Ok(Or(Box::new(l.strip_anf()?), Box::new(r.strip_anf()?))),
+                Neg(n) => Ok(Neg(Box::new(n.strip_anf()?))),
             }
         }
     }
 
     impl ProgramInferable {
-        pub fn strip_samples(&self) -> ProgramInferable {
+        pub fn strip_samples(&self) -> Result<ProgramInferable> {
             use Program::*;
             match self {
-                SBody(e) => EBody(e.strip_samples1()),
+                SBody(e) => Ok(EBody(e.strip_samples1()?)),
                 EBody(e) => {
                     // FIXME: this shouldn't be necessary and I think I already fixed the bug that causes this.
-                    let mut cur = e.strip_samples1();
+                    let mut cur = e.strip_samples1()?;
                     loop {
-                        let nxt = cur.strip_samples1();
+                        let nxt = cur.strip_samples1()?;
 
                         if nxt == cur {
-                            return EBody(nxt);
+                            return Ok(EBody(nxt));
                         } else {
                             cur = nxt;
                         }
@@ -103,52 +125,57 @@ pub mod grammar {
         }
     }
     impl SExprInferable {
-        pub fn strip_samples1(&self) -> EExprInferable {
+        pub fn strip_samples1(&self) -> Result<EExprInferable> {
             use EExpr::*;
             use SExpr::*;
             match self {
-                SAnf(x, a) => EAnf(x.clone(), Box::new(a.strip_anf())),
-                SFlip((), p) => EFlip((), *p),
-                SExact(_, e) => e.strip_samples1(),
-                SLetIn(ex, s, x, y) => ELetIn(
+                SAnf(x, a) => Ok(EAnf(x.clone(), Box::new(a.strip_anf()?))),
+                SBern(_, param) => Ok(EFlip((), *param)),
+                SDiscrete(_, ps) => todo!("can't convert discrete, need to produce ESugar"),
+                SUniform(_, lo, hi) => Err(SemanticsError("can't convert uniform".to_string())),
+                SNormal(_, mean, var) => Err(SemanticsError("can't convert normal".to_string())),
+                SBeta(_, a, b) => Err(SemanticsError("can't convert beta".to_string())),
+                SDirichlet(_, ps) => Err(SemanticsError("can't convert Dirichlet".to_string())),
+                SExact(_, e) => Ok(e.strip_samples1()?),
+                SLetIn(ex, s, x, y) => Ok(ELetIn(
                     None,
                     s.clone(),
-                    Box::new(x.strip_samples1()),
-                    Box::new(y.strip_samples1()),
-                ),
-                SIte(ex, p, x, y) => EIte(
+                    Box::new(x.strip_samples1()?),
+                    Box::new(y.strip_samples1()?),
+                )),
+                SIte(ex, p, x, y) => Ok(EIte(
                     None,
-                    Box::new(p.strip_anf()),
-                    Box::new(x.strip_samples1()),
-                    Box::new(y.strip_samples1()),
-                ),
-                SSeq(ex, x, y) => ELetIn(
+                    Box::new(p.strip_anf()?),
+                    Box::new(x.strip_samples1()?),
+                    Box::new(y.strip_samples1()?),
+                )),
+                SSeq(ex, x, y) => Ok(ELetIn(
                     None,
                     String::from("_"),
-                    Box::new(x.strip_samples1()),
-                    Box::new(y.strip_samples1()),
-                ),
+                    Box::new(x.strip_samples1()?),
+                    Box::new(y.strip_samples1()?),
+                )),
             }
         }
     }
     impl EExprInferable {
-        pub fn strip_samples1(&self) -> EExprInferable {
+        pub fn strip_samples1(&self) -> Result<EExprInferable> {
             use EExpr::*;
             match self {
-                ESample(_, e) => e.strip_samples1(),
-                ELetIn(ex, s, x, y) => ELetIn(
+                ESample(_, e) => Ok(e.strip_samples1()?),
+                ELetIn(ex, s, x, y) => Ok(ELetIn(
                     ex.clone(),
                     s.clone(),
-                    Box::new(x.strip_samples1()),
-                    Box::new(y.strip_samples1()),
-                ),
-                EIte(ex, p, x, y) => EIte(
+                    Box::new(x.strip_samples1()?),
+                    Box::new(y.strip_samples1()?),
+                )),
+                EIte(ex, p, x, y) => Ok(EIte(
                     ex.clone(),
                     p.clone(),
-                    Box::new(x.strip_samples1()),
-                    Box::new(y.strip_samples1()),
-                ),
-                e => e.clone(),
+                    Box::new(x.strip_samples1()?),
+                    Box::new(y.strip_samples1()?),
+                )),
+                e => Ok(e.clone()),
             }
         }
     }
@@ -261,7 +288,14 @@ pub fn typeinference_sexpr(e: &grammar::SExprInferable) -> Result<SExprTyped> {
             Box::new(typeinference_sexpr(t)?),
             Box::new(typeinference_sexpr(f)?),
         )),
-        SFlip(_, param) => Ok(SFlip((), *param)),
+
+        SBern(_, param) => Ok(SBern((), *param)),
+        SDiscrete(_, ps) => Ok(SDiscrete((), ps.clone())),
+        SUniform(_, lo, hi) => Ok(SUniform((), *lo, *hi)),
+        SNormal(_, mean, var) => Ok(SNormal((), *mean, *var)),
+        SBeta(_, a, b) => Ok(SBeta((), *a, *b)),
+        SDirichlet(_, ps) => Ok(SDirichlet((), ps.clone())),
+
         SExact(_, e) => Ok(SExact((), Box::new(typeinference_eexpr(e)?))),
     }
 }

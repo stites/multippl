@@ -83,9 +83,25 @@ pub mod grammar {
     impl ξ<Uniquify> for SIteExt {
         type Ext = ();
     }
-    impl ξ<Uniquify> for SFlipExt {
+    impl ξ<Uniquify> for SBernExt {
         type Ext = UniqueId;
     }
+    impl ξ<Uniquify> for SDiscreteExt {
+        type Ext = UniqueId;
+    }
+    impl ξ<Uniquify> for SUniformExt {
+        type Ext = UniqueId;
+    }
+    impl ξ<Uniquify> for SNormalExt {
+        type Ext = UniqueId;
+    }
+    impl ξ<Uniquify> for SBetaExt {
+        type Ext = UniqueId;
+    }
+    impl ξ<Uniquify> for SDirichletExt {
+        type Ext = UniqueId;
+    }
+
     impl ξ<Uniquify> for SExactExt {
         type Ext = ();
     }
@@ -233,7 +249,13 @@ impl SymEnv {
                 Box::new(self.uniquify_sexpr(t)?),
                 Box::new(self.uniquify_sexpr(f)?),
             )),
-            SFlip(_, param) => Ok(SFlip(self.fresh(), *param)),
+            SBern(_, param) => Ok(SBern(self.fresh(), *param)),
+            SDiscrete(_, ps) => Ok(SDiscrete(self.fresh(), ps.clone())),
+            SUniform(_, lo, hi) => Ok(SUniform(self.fresh(), *lo, *hi)),
+            SNormal(_, mean, var) => Ok(SNormal(self.fresh(), *mean, *var)),
+            SBeta(_, a, b) => Ok(SBeta(self.fresh(), *a, *b)),
+            SDirichlet(_, ps) => Ok(SDirichlet(self.fresh(), ps.clone())),
+
             SExact(_, e) => Ok(SExact((), Box::new(self.uniquify_eexpr(e)?))),
         }
     }

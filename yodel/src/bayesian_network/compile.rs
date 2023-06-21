@@ -129,7 +129,7 @@ fn conjoin_vars(vars: &Vec<String>) -> Anf<Inferable, EVal> {
     *fin
 }
 
-pub fn compile(bn: &BayesianNetwork, final_query: &EExprInferable) -> EExprInferable {
+pub fn compile(bn: &BayesianNetwork, final_query: &EExprInferable) -> Program<Inferable> {
     let mut program = final_query.clone();
     for (node_ix, v) in bn.topological_sort().into_iter().enumerate().rev() {
         let assigns = bn.get_all_assignments(&v);
@@ -176,7 +176,7 @@ pub fn compile(bn: &BayesianNetwork, final_query: &EExprInferable) -> EExprInfer
             );
         }
     }
-    program
+    Program::EBody(program)
 }
 
 pub fn allmarg_query(bn: &BayesianNetwork) -> EExprInferable {
@@ -194,7 +194,7 @@ pub fn allmarg_query(bn: &BayesianNetwork) -> EExprInferable {
     EExpr::EProd(t, query)
 }
 
-pub fn compile_allmarg(bn: &BayesianNetwork) -> EExprInferable {
+pub fn compile_allmarg(bn: &BayesianNetwork) -> Program<Inferable> {
     let query = allmarg_query(&bn);
     compile(&bn, &query)
 }

@@ -2,7 +2,7 @@ pub use crate::inference::wmc::*;
 pub use crate::*;
 
 pub fn exact_with(p: &ProgramInferable) -> (Vec<f64>, WmcStats) {
-    let p = p.strip_samples();
+    let p = p.strip_samples().unwrap();
     match crate::run(&p) {
         Ok((mut mgr, c)) => wmc_prob(&mut mgr, &c),
         Err(e) => panic!(

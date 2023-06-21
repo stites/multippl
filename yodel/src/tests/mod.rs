@@ -21,7 +21,7 @@ const USE_DEBUG: bool = false;
 pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &ProgramInferable) {
     let precision = precision.unwrap_or_else(|| 0.01);
     let n = n.unwrap_or_else(|| 10000);
-    let exact = inference::exact(&p.strip_samples());
+    let exact = inference::exact(&p.strip_samples().unwrap());
     let (approx, _) = importance_weighting_h(
         n,
         p,
@@ -219,7 +219,7 @@ pub fn check_inference_h(
 }
 
 pub fn check_exact(s: &str, f: Vec<f64>, p: &ProgramInferable) {
-    let p = p.strip_samples();
+    let p = p.strip_samples().unwrap();
     debug!("program: {:#?}", &p);
     check_inference("exact", &inference::exact_with, 0.000001, s, f, &p);
 }

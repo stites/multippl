@@ -176,7 +176,12 @@ impl DependencyEnv {
                 .into_iter()
                 .map(&|x: Dep| x.map(&Dep::Sample))
                 .collect(),
-            SFlip(_, p) => IndexSet::new(),
+            SBern(_, _) => IndexSet::new(),
+            SDiscrete(_, _) => IndexSet::new(),
+            SUniform(_, _, _) => IndexSet::new(),
+            SNormal(_, _, _) => IndexSet::new(),
+            SBeta(_, _, _) => IndexSet::new(),
+            SDirichlet(_, _) => IndexSet::new(),
         }
     }
 

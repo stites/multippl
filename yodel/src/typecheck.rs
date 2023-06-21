@@ -60,9 +60,26 @@ pub mod grammar {
     impl ξ<Typed> for SIteExt {
         type Ext = STy;
     }
-    impl ξ<Typed> for SFlipExt {
+    // types are precise and do not need to be inferred
+    impl ξ<Typed> for SBernExt {
         type Ext = ();
     }
+    impl ξ<Typed> for SDiscreteExt {
+        type Ext = ();
+    }
+    impl ξ<Typed> for SUniformExt {
+        type Ext = ();
+    }
+    impl ξ<Typed> for SNormalExt {
+        type Ext = ();
+    }
+    impl ξ<Typed> for SBetaExt {
+        type Ext = ();
+    }
+    impl ξ<Typed> for SDirichletExt {
+        type Ext = ();
+    }
+
     impl ξ<Typed> for SExactExt {
         type Ext = ();
     }
@@ -137,6 +154,7 @@ pub mod grammar {
     pub fn natural_embedding_s(ty: STy) -> ETy {
         match ty {
             STy::SBool => ETy::EBool,
+            // TODO: can also convert vec<bool> to discrete
             _ => todo!("probably need to return a result"),
         }
     }
@@ -150,9 +168,14 @@ pub mod grammar {
             match self {
                 SAnf(_, anf) => anf.as_type(),
                 SLetIn(t, _, _, _) => t.body.clone(),
-                SSeq(t, e0, e1) => STy::SBool,
+                SSeq(t, e0, e1) => e1.as_type(),
                 SIte(t, _, _, _) => t.clone(),
-                SFlip(_, _) => STy::SBool,
+                SBern(_, param) => STy::SBool,
+                SDiscrete(_, ps) => STy::SInt,
+                SUniform(_, lo, hi) => STy::SFloat,
+                SNormal(_, mean, var) => STy::SFloat,
+                SBeta(_, a, b) => STy::SFloat,
+                SDirichlet(_, ps) => STy::SFloatVec,
                 SExact(_, e) => natural_embedding_e(e.as_type()),
             }
         }
@@ -240,7 +263,13 @@ pub fn typecheck_sexpr(e: &grammar::SExprTyped) -> Result<SExprUD, CompileError>
             Box::new(typecheck_sexpr(t)?),
             Box::new(typecheck_sexpr(f)?),
         )),
-        SFlip(_, param) => Ok(SFlip((), *param)),
+        SBern(_, param) => Ok(SBern((), *param)),
+        SDiscrete(_, ps) => Ok(SDiscrete((), ps.clone())),
+        SUniform(_, lo, hi) => Ok(SUniform((), *lo, *hi)),
+        SNormal(_, mean, var) => Ok(SNormal((), *mean, *var)),
+        SBeta(_, a, b) => Ok(SBeta((), *a, *b)),
+        SDirichlet(_, ps) => Ok(SDirichlet((), ps.clone())),
+
         SExact(_, e) => Ok(SExact((), Box::new(typecheck_eexpr(e)?))),
     }
 }

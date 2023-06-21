@@ -9,11 +9,15 @@ use rsdd::builder::bdd_builder::DDNNFPtr;
 pub fn mk_sval(v: &SVal) -> SVal {
     match v {
         SVal::SBool(b) => SVal::SBool(*b),
+        SVal::SFloat(b) => SVal::SFloat(*b),
+        SVal::SFloatVec(b) => SVal::SFloatVec(b.clone()),
+        SVal::SInt(b) => SVal::SInt(*b),
     }
 }
 pub fn mk_sout(ctx: &Context, v: &SVal) -> Output {
     match v {
         SVal::SBool(b) => Output::from_anf_dists(ctx, vec![BddPtr::from_bool(*b)]),
+        _ => Output::from_anf_dists(ctx, vec![]),
     }
 }
 pub fn eval_anf<Val: Clone>(

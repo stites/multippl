@@ -86,9 +86,25 @@ impl ξ<Trace> for SSeqExt {
 impl ξ<Trace> for SIteExt {
     type Ext = Box<Compiled>;
 }
-impl ξ<Trace> for SFlipExt {
+impl ξ<Trace> for SBernExt {
     type Ext = Box<Compiled>;
 }
+impl ξ<Trace> for SDiscreteExt {
+    type Ext = Box<Compiled>;
+}
+impl ξ<Trace> for SUniformExt {
+    type Ext = Box<Compiled>;
+}
+impl ξ<Trace> for SNormalExt {
+    type Ext = Box<Compiled>;
+}
+impl ξ<Trace> for SBetaExt {
+    type Ext = Box<Compiled>;
+}
+impl ξ<Trace> for SDirichletExt {
+    type Ext = Box<Compiled>;
+}
+
 impl ξ<Trace> for SExactExt {
     type Ext = Box<Compiled>;
 }
