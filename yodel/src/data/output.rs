@@ -2,6 +2,7 @@ use crate::annotate::grammar::Var;
 use crate::data::context::Context;
 use crate::data::importance::{Importance, I};
 use crate::data::{Weight, WeightMap};
+use crate::grammar::SVal;
 use crate::uniquify::grammar::UniqueId;
 use itertools::izip;
 use num_traits::identities::Zero;
@@ -25,6 +26,8 @@ pub struct Output {
     pub weightmap: WeightMap,
     /// substitution environment
     pub substitutions: SubstMap,
+    /// sampling substitutions
+    pub ssubstitutions: HashMap<UniqueId, SVal>,
     /// compiled importance weight
     pub importance: Importance,
 }
@@ -41,6 +44,7 @@ impl Output {
             weightmap: ctx.weightmap.clone(),
             probabilities,
             importance: I::Weight(1.0),
+            ssubstitutions: ctx.ssubstitutions.clone(),
         }
     }
     // pub fn for_sample_lang_sample(ctx: &Context, sample: bool, dist: BddPtr) -> Output {
@@ -74,6 +78,7 @@ impl Output {
             // unused
             probabilities: vec![Probability::new(1.0)],
             importance: I::Weight(1.0),
+            ssubstitutions: ctx.ssubstitutions.clone(),
         }
     }
 }

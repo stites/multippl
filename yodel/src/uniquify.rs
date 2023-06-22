@@ -101,7 +101,6 @@ pub mod grammar {
     impl ξ<Uniquify> for SDirichletExt {
         type Ext = UniqueId;
     }
-
     impl ξ<Uniquify> for SExactExt {
         type Ext = ();
     }

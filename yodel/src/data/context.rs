@@ -1,6 +1,8 @@
 use crate::annotate::grammar::Var;
 use crate::data::output::{Output, SubstMap};
 use crate::data::WeightMap;
+use crate::grammar::SVal;
+use crate::uniquify::grammar::UniqueId;
 use rsdd::repr::bdd::BddPtr;
 use std::collections::HashMap;
 
@@ -10,6 +12,7 @@ pub struct Context {
     pub samples: BddPtr,
     pub substitutions: SubstMap,
     pub weightmap: WeightMap,
+    pub ssubstitutions: HashMap<UniqueId, SVal>,
 }
 impl Context {
     pub fn from_compiled(c: &Output) -> Self {
@@ -18,6 +21,7 @@ impl Context {
             samples: c.samples,
             substitutions: c.substitutions.clone(),
             weightmap: c.weightmap.clone(),
+            ssubstitutions: c.ssubstitutions.clone(),
         }
     }
 }
@@ -28,6 +32,7 @@ impl Default for Context {
             samples: BddPtr::PtrTrue,
             substitutions: Default::default(),
             weightmap: Default::default(),
+            ssubstitutions: Default::default(),
         }
     }
 }

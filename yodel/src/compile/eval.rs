@@ -127,6 +127,7 @@ pub fn eval_eprod<'a>(
         weightmap: ctx.weightmap.clone(),
         substitutions: ctx.substitutions.clone(),
         probabilities: vec![Probability::new(1.0); flen],
+        ssubstitutions: ctx.ssubstitutions.clone(),
         importance: I::Weight(1.0),
     };
     Ok((o, atrs, &move |c, atrs| EExpr::EProd(Box::new(c), atrs)))
@@ -148,6 +149,7 @@ pub fn eval_eflip<'a>(
         substitutions: ctx.substitutions.clone(),
         probabilities: vec![Probability::new(1.0)],
         importance: I::Weight(1.0),
+        ssubstitutions: ctx.ssubstitutions.clone(),
     };
     Ok((o, param, &move |c, f| EExpr::EFlip(Box::new(c), f)))
 }
@@ -225,6 +227,7 @@ pub fn eval_eobserve<'a>(
         substitutions: ctx.substitutions.clone(),
         probabilities: vec![Probability::new(1.0)],
         importance,
+        ssubstitutions: ctx.ssubstitutions.clone(),
     };
     Ok((o, atr, &move |c, atr| {
         EExpr::EObserve(Box::new(c), Box::new(atr))
@@ -329,6 +332,7 @@ pub fn eval_eite_output<'a>(
         substitutions,
         probabilities,
         importance,
+        ssubstitutions: ctx.ssubstitutions.clone(),
     };
     Ok(o)
 }
@@ -358,6 +362,7 @@ pub fn eval_elet_output<'a>(
         weightmap: body.weightmap,
         probabilities,
         importance,
+        ssubstitutions: ctx.ssubstitutions.clone(),
     };
     Ok(c)
 }
@@ -797,6 +802,7 @@ impl<'a> State<'a> {
                                 substitutions: comp.substitutions.clone(),
                                 probabilities: qs,
                                 importance: I::Weight(1.0),
+                                ssubstitutions: ctx.ssubstitutions.clone(),
                             };
                             debug_step!("sample", ctx, c);
                             fin.push(c);
