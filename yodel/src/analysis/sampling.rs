@@ -145,6 +145,93 @@ impl InsertionEnv {
         })
     }
 }
+mod upcast {
+    use super::*;
+
+    pub fn upcast_anf<X: Clone, Y>(a: &AnfAnn<X>) -> AnfInferable<X>
+    where
+        AVarExt<X>: ξ<Annotated, Ext = NamedVar> + ξ<Inferable, Ext = Option<Y>>,
+        AValExt<X>: ξ<Annotated, Ext = ()> + ξ<Inferable, Ext = ()>,
+    {
+        use crate::grammar::Anf::*;
+        match a {
+            AVar(i, s) => AVar(None, s.to_string()),
+            AVal(_, b) => AVal((), b.clone()),
+            And(bl, br) => And(Box::new(upcast_anf(bl)), Box::new(upcast_anf(br))),
+            Or(bl, br) => Or(Box::new(upcast_anf(bl)), Box::new(upcast_anf(br))),
+            Neg(bl) => Neg(Box::new(upcast_anf(bl))),
+        }
+    }
+    pub fn upcast_anfs<Val: Clone, Ty>(anfs: &[AnfAnn<Val>]) -> Vec<AnfInferable<Val>>
+    where
+        AVarExt<Val>: ξ<Annotated, Ext = NamedVar> + ξ<Inferable, Ext = Option<Ty>>,
+        AValExt<Val>: ξ<Annotated, Ext = ()> + ξ<Inferable, Ext = ()>,
+    {
+        anfs.iter().map(|a| upcast_anf(a)).collect()
+    }
+
+    pub fn upcast_eexpr(e: &EExprAnn) -> EExprInferable {
+        use EExpr::*;
+        match e {
+            EAnf(_, a) => EAnf((), Box::new(upcast_anf(a))),
+            EPrj(_ty, i, a) => EPrj(None, *i, Box::new(upcast_anf(a))),
+            EProd(_ty, anfs) => EProd(None, upcast_anfs(anfs)),
+            ELetIn(_ty, s, ebound, ebody) => ELetIn(
+                None,
+                s.clone(),
+                Box::new(upcast_eexpr(ebound)),
+                Box::new(upcast_eexpr(ebody)),
+            ),
+            EIte(_ty, cond, t, f) => EIte(
+                None,
+                Box::new(upcast_anf(cond)),
+                Box::new(upcast_eexpr(t)),
+                Box::new(upcast_eexpr(f)),
+            ),
+            EFlip(_, param) => EFlip((), *param),
+            EObserve(_, a) => {
+                let anf = upcast_anf(a);
+                EObserve((), Box::new(anf))
+            }
+            ESample(_, e) => ESample((), Box::new(upcast_sexpr(e))),
+        }
+    }
+
+    pub fn upcast_sexpr(e: &SExprAnn) -> SExprInferable {
+        use crate::grammar::SExpr::*;
+        match e {
+            SAnf(_, a) => SAnf((), Box::new(upcast_anf(a))),
+            SSeq(_, e0, e1) => SSeq((), Box::new(upcast_sexpr(e0)), Box::new(upcast_sexpr(e1))),
+            SLetIn(nvar, s, ebound, ebody) => SLetIn(
+                None,
+                s.clone(),
+                Box::new(upcast_sexpr(ebound)),
+                Box::new(upcast_sexpr(ebody)),
+            ),
+            SIte(_ty, cond, t, f) => SIte(
+                None,
+                Box::new(upcast_anf(cond)),
+                Box::new(upcast_sexpr(t)),
+                Box::new(upcast_sexpr(f)),
+            ),
+            SBern(dv, param) => SBern((), *param),
+            SDiscrete(dv, ps) => SDiscrete((), ps.clone()),
+            SUniform(dv, lo, hi) => SUniform((), *lo, *hi),
+            SNormal(dv, mean, var) => SNormal((), *mean, *var),
+            SBeta(dv, a, b) => SBeta((), *a, *b),
+            SDirichlet(dv, ps) => SDirichlet((), ps.clone()),
+
+            SExact(_, e) => SExact((), Box::new(upcast_eexpr(e))),
+        }
+    }
+
+    pub fn upcast(p: &ProgramAnn) -> ProgramInferable {
+        match p {
+            Program::EBody(e) => Program::EBody(upcast_eexpr(e)),
+            Program::SBody(e) => Program::SBody(upcast_sexpr(e)),
+        }
+    }
+}
 
 // technically, we can run this on a ProgramUniq and go backwards to get the /true/ annotated user program
 pub fn insert_sample_statements(p: &ProgramInferable) -> ProgramAnn {
