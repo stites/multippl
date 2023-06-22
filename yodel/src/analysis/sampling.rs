@@ -237,10 +237,17 @@ mod upcast {
 pub fn insert_sample_statements(p: &ProgramInferable) -> ProgramInferable {
     upcast::upcast(&insert_sample_statements_ann(&p))
 }
+
+pub fn insert_sample_statements_stats(p: &ProgramInferable) -> (ProgramInferable, Vec<NamedVar>) {
+    let (p, mx_id) = prelude(p);
+    let (pann, cuts) = insert_sample_statements_h(&p, mx_id);
+    (upcast::upcast(&pann), cuts)
+}
+
 // technically, we can run this on a ProgramUniq and go backwards to get the /true/ annotated user program
 pub fn insert_sample_statements_ann(p: &ProgramInferable) -> ProgramAnn {
     let (p, mx_id) = prelude(p);
-    insert_sample_statements_h(&p, mx_id)
+    insert_sample_statements_h(&p, mx_id).0
 }
 
 // technically, we can run this on a ProgramUniq and go backwards to get the /true/ annotated user program
@@ -252,7 +259,10 @@ pub fn prelude(p: &ProgramInferable) -> (ProgramAnn, MaxUniqueId) {
     (pann, mx_id)
 }
 
-pub fn insert_sample_statements_h(pann: &ProgramAnn, mx_id: MaxUniqueId) -> ProgramAnn {
+pub fn insert_sample_statements_h(
+    pann: &ProgramAnn,
+    mx_id: MaxUniqueId,
+) -> (ProgramAnn, Vec<NamedVar>) {
     use crate::analysis::*;
     let deps = dependencies::DependencyEnv::new().scan(&pann);
     println!("deps: {:?}", deps);
@@ -260,8 +270,8 @@ pub fn insert_sample_statements_h(pann: &ProgramAnn, mx_id: MaxUniqueId) -> Prog
     println!("g:    {:?}", g);
     let cuts = crate::analysis::hypergraph::cutset(&g);
     println!("cuts: {:?}", cuts);
-    let mut env = InsertionEnv::new(cuts, mx_id);
-    env.apply_cuts(&pann)
+    let mut env = InsertionEnv::new(cuts.clone(), mx_id);
+    (env.apply_cuts(&pann), cuts)
 }
 
 #[cfg(test)]
@@ -420,8 +430,8 @@ mod tests {
             ...? b!("11")
         ]);
         let (pann, mx) = prelude(&grid2x2);
-        let pann = insert_sample_statements_h(&pann, mx);
-        let pann = insert_sample_statements_h(&pann, mx);
+        let pann = insert_sample_statements_h(&pann, mx).0;
+        let pann = insert_sample_statements_h(&pann, mx).0;
         let p_expected = program!(lets![
             "00" ;= flip!(1/2);
             "01" ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );

@@ -2,11 +2,11 @@
 extern crate yodel;
 
 use clap::Parser;
-use rsgm::bayesian_network::BayesianNetwork;
-use rsgm_networks::{discrete::Specification, ParseError};
+use rsgm_networks::discrete::Specification;
 use std::error::Error;
 use std::str::FromStr;
 use yodel::bayesian_network::*;
+use yodel::utils::l1_distance;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -38,22 +38,21 @@ fn main() -> Result<(), Box<dyn Error>> {
     let program = compile_allmarg(&bn);
     // pprint(&program);
     println!("----------------------------");
-    let (rez, stats) = yodel::inference::exact_with(&program);
-    println!("answer: {:?}", rez);
+    let (expected, stats) = yodel::inference::exact_with(&program);
+    println!("answer: {:?}", expected);
     println!("stats : {:?}", stats);
 
-    // insert_sample_statements(p: &ProgramInferable) -> ProgramAnn {
-
-    // Exact => panic!("exact compile type not supported for 'variance' task"),
-    // OptApx => panic!("optimized approx on hold"),
-    // Approx => {
-    //     for res in SamplingIter::new(runs, &prg, &opts) {
-    //         let (query, _weight) = (res.expectations.query(), res.weight.clone());
-    //         let l1 = l1_distance(&exp, &query);
-    //         if (res.step > runs - 10) || (res.step < 10) {
-    //             println!("{}: {:.8}", res.step, l1);
-    //         }
-    //     }
-    // }
+    let runs = 1000;
+    let (prg, cuts) = yodel::insert_sample_statements_stats(&program);
+    for cut in cuts {
+        println!("cut : {:?}", cut);
+    }
+    for res in yodel::inference::SamplingIter::new(runs, &prg, &opts) {
+        let (query, _weight) = (res.expectations.query(), res.weight.clone());
+        let l1 = l1_distance(&expected, &query);
+        if (res.step > runs - 10) || (res.step < 10) {
+            println!("{}: {:.8}", res.step, l1);
+        }
+    }
     Ok(())
 }

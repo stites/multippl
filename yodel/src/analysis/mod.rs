@@ -1,3 +1,3 @@
 mod dependencies;
 mod hypergraph;
-mod sampling;
+pub mod sampling;

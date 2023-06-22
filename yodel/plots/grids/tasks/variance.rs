@@ -1,5 +1,6 @@
 use crate::*;
 use csv::{ReaderBuilder, WriterBuilder};
+use itertools::*;
 use std::time::Instant;
 use yodel::grids::generate;
 use yodel::inference::*;

@@ -27,13 +27,14 @@ pub mod analysis;
 pub mod compile;
 pub mod inference;
 pub mod pipeline;
+pub use crate::analysis::sampling::*;
+pub use crate::typeinf::grammar::ProgramInferable;
 pub use pipeline::*;
-pub use typeinf::grammar::ProgramInferable;
 
 // extras
 pub mod bayesian_network;
 pub mod grids;
-mod utils;
+pub mod utils;
 
 #[cfg(test)]
 mod tests;

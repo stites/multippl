@@ -1,10 +1,16 @@
 pub mod render;
 
+use itertools::izip;
 use rsdd::builder::bdd_builder::*;
 use rsdd::builder::cache::all_app::*;
 use rsdd::repr::bdd::*;
 use rsdd::repr::var_label::*;
 use rsdd::repr::var_order::*;
+
+#[inline]
+pub fn l1_distance(x0: &[f64], x1: &[f64]) -> f64 {
+    izip!(x0, x1).fold(0.0, |dist, (l, r)| dist + (l - r).abs())
+}
 
 #[inline]
 pub fn get_vec<T: Copy>(v: Vec<T>, i: usize) -> Option<T> {
