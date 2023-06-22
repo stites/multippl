@@ -234,7 +234,11 @@ mod upcast {
 }
 
 // technically, we can run this on a ProgramUniq and go backwards to get the /true/ annotated user program
-pub fn insert_sample_statements(p: &ProgramInferable) -> ProgramAnn {
+pub fn insert_sample_statements(p: &ProgramInferable) -> ProgramInferable {
+    upcast::upcast(&insert_sample_statements_ann(&p))
+}
+// technically, we can run this on a ProgramUniq and go backwards to get the /true/ annotated user program
+pub fn insert_sample_statements_ann(p: &ProgramInferable) -> ProgramAnn {
     let (p, mx_id) = prelude(p);
     insert_sample_statements_h(&p, mx_id)
 }
@@ -279,7 +283,7 @@ mod tests {
             "y" ;= b!("x");
            ...? b!("y")
         ]);
-        let pann = insert_sample_statements(&p);
+        let pann = insert_sample_statements_ann(&p);
         let p1_expected = program!(lets![
             "x" ;= sample!(flip!(1/3));
             "y" ;= var!("x");
@@ -287,7 +291,7 @@ mod tests {
         ]);
         let pann_expected = crate::annotate::pipeline(&p1_expected).unwrap().0;
         assert_eq!(&pann, &pann_expected);
-        let pann10 = insert_sample_statements(&p);
+        let pann10 = insert_sample_statements_ann(&p);
         assert_eq!(&pann, &pann10);
     }
 
@@ -299,7 +303,7 @@ mod tests {
             "z" ;= b!("y");
            ...? b!("z")
         ]);
-        let pann = insert_sample_statements(&p);
+        let pann = insert_sample_statements_ann(&p);
         let p_expected = program!(lets![
             "x" ;= flip!(1/3);
             "y" ;= sample!(b!("x"));
@@ -320,7 +324,7 @@ mod tests {
             "w" ;= b!("q" && "z");
            ...? b!("z")
         ]);
-        let pann = insert_sample_statements(&p);
+        let pann = insert_sample_statements_ann(&p);
         let p_expected = program!(lets![
             "x" ;= flip!(1/3);
             "y" ;= flip!(1/3);
@@ -342,7 +346,7 @@ mod tests {
             "f" ;= fst!("t");
            ...? b!("t")
         ]);
-        let pann = insert_sample_statements(&p);
+        let pann = insert_sample_statements_ann(&p);
         let p_expected = program!(lets![
             "x" ;= flip!(1/3);
             "y" ;= flip!(1/3);
@@ -362,7 +366,7 @@ mod tests {
             "10" ;= ite!( ( not!("00") ) ? ( flip!(1/5) ) : ( flip!(1/6) ) );
             ...? b!("01", "10")
         ]);
-        let pann = insert_sample_statements(&grid2x2_triu);
+        let pann = insert_sample_statements_ann(&grid2x2_triu);
         let p_expected = program!(lets![
             "00" ;= sample!(flip!(1/2));
             "01" ;= ite!( ( b!(@anf "00")  ) ? ( flip!(1/3) ) : ( flip!(1/4) ) );
@@ -386,7 +390,7 @@ mod tests {
                                                           flip!(3/11) ))))));
             ...? b!("11")
         ]);
-        let pann = insert_sample_statements(&grid2x2_tril);
+        let pann = insert_sample_statements_ann(&grid2x2_tril);
         let p_expected = program!(lets![
             "01" ;= flip!(1/3);
             "10" ;= flip!(1/4);
