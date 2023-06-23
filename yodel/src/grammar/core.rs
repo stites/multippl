@@ -238,7 +238,7 @@ pub enum SVal {
     SBool(bool),
     SFloat(f64),
     SFloatVec(Vec<f64>),
-    SInt(u32),
+    SInt(u64),
 }
 impl IsTyped<STy> for SVal {
     fn is_prod(&self) -> bool {

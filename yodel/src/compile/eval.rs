@@ -129,6 +129,7 @@ pub fn eval_eprod<'a>(
         probabilities: vec![Probability::new(1.0); flen],
         ssubstitutions: ctx.ssubstitutions.clone(),
         importance: I::Weight(1.0),
+        sout: None,
     };
     Ok((o, atrs, &move |c, atrs| EExpr::EProd(Box::new(c), atrs)))
 }
@@ -150,27 +151,10 @@ pub fn eval_eflip<'a>(
         probabilities: vec![Probability::new(1.0)],
         importance: I::Weight(1.0),
         ssubstitutions: ctx.ssubstitutions.clone(),
+        sout: None,
     };
     Ok((o, param, &move |c, f| EExpr::EFlip(Box::new(c), f)))
 }
-
-// pub fn eval_sflip<'a>(
-//     mgr: &'a mut Mgr,
-//     ctx: &'a Context,
-//     param: f64,
-// ) -> Result<(Output, f64, &'a dyn Fn(Compiled, f64) -> SExprTr)> {
-//     let o = todo!();
-//     // let o = Output {
-//     //     dists: vec![],
-//     //     accept: ctx.accept,
-//     //     samples: ctx.samples,
-//     //     weightmap,
-//     //     substitutions: ctx.substitutions.clone(),
-//     //     probabilities: vec![Probability::new(1.0)],
-//     //     importance: I::Weight(1.0),
-//     // };
-//     Ok((o, param, &move |c, f| SExpr::SBern(Box::new(c), f)))
-// }
 
 pub fn eval_eobserve<'a>(
     mgr: &'a mut Mgr,
@@ -228,6 +212,7 @@ pub fn eval_eobserve<'a>(
         probabilities: vec![Probability::new(1.0)],
         importance,
         ssubstitutions: ctx.ssubstitutions.clone(),
+        sout: None,
     };
     Ok((o, atr, &move |c, atr| {
         EExpr::EObserve(Box::new(c), Box::new(atr))
@@ -333,6 +318,7 @@ pub fn eval_eite_output<'a>(
         probabilities,
         importance,
         ssubstitutions: ctx.ssubstitutions.clone(),
+        sout: None,
     };
     Ok(o)
 }
@@ -363,6 +349,7 @@ pub fn eval_elet_output<'a>(
         probabilities,
         importance,
         ssubstitutions: ctx.ssubstitutions.clone(),
+        sout: None,
     };
     Ok(c)
 }
@@ -603,10 +590,12 @@ impl<'a> State<'a> {
                     Some(rng) => dist.sample(rng),
                     None => dist.sample(&mut rand::thread_rng()),
                 };
+                let x = x != 0.0;
                 let weight = statrs::distribution::Discrete::pmf(&dist, x as u64);
                 self.p *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
                 self.q *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
-                let o = Output::for_sample_lang(&ctx);
+                let mut o = Output::for_sample_lang(&ctx);
+                o.sout = Some(SVal::SBool(x));
                 let c = Compiled::from_output(o);
                 Ok((c.clone(), SBern(Box::new(c), *param)))
             }
@@ -616,10 +605,12 @@ impl<'a> State<'a> {
                     Some(rng) => dist.sample(rng),
                     None => dist.sample(&mut rand::thread_rng()),
                 };
-                let weight = statrs::distribution::Discrete::pmf(&dist, x as u64); // internally, this sample was cast as f64, so this is okay
+                let x = x as u64;
+                let weight = statrs::distribution::Discrete::pmf(&dist, x); // internally, this sample was cast as f64, so this is okay
                 self.p *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
                 self.q *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
-                let o = Output::for_sample_lang(&ctx);
+                let mut o = Output::for_sample_lang(&ctx);
+                o.sout = Some(SVal::SInt(x));
                 let c = Compiled::from_output(o);
                 Ok((c.clone(), SDiscrete(Box::new(c), ps.clone())))
             }
@@ -632,7 +623,9 @@ impl<'a> State<'a> {
                 let weight = statrs::distribution::Continuous::pdf(&dist, &x);
                 self.p *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
                 self.q *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
-                let o = Output::for_sample_lang(&ctx);
+                let mut o = Output::for_sample_lang(&ctx);
+                let x = x.data.as_vec().to_vec();
+                o.sout = Some(SVal::SFloatVec(x));
                 let c = Compiled::from_output(o);
                 Ok((c.clone(), SDiscrete(Box::new(c), ps.clone())))
             }
@@ -645,7 +638,8 @@ impl<'a> State<'a> {
                 let weight = statrs::distribution::Continuous::pdf(&dist, x);
                 self.p *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
                 self.q *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
-                let o = Output::for_sample_lang(&ctx);
+                let mut o = Output::for_sample_lang(&ctx);
+                o.sout = Some(SVal::SFloat(x));
                 let c = Compiled::from_output(o);
                 Ok((c.clone(), SUniform(Box::new(c), *lo, *hi)))
             }
@@ -659,7 +653,8 @@ impl<'a> State<'a> {
                 let weight = statrs::distribution::Continuous::pdf(&dist, x);
                 self.p *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
                 self.q *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
-                let o = Output::for_sample_lang(&ctx);
+                let mut o = Output::for_sample_lang(&ctx);
+                o.sout = Some(SVal::SFloat(x));
                 let c = Compiled::from_output(o);
                 Ok((c.clone(), SNormal(Box::new(c), *mn, *sd)))
             }
@@ -669,38 +664,43 @@ impl<'a> State<'a> {
                     Some(rng) => dist.sample(rng),
                     None => dist.sample(&mut rand::thread_rng()),
                 };
-
                 let weight = statrs::distribution::Continuous::pdf(&dist, x);
                 self.p *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
                 self.q *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
-                let o = Output::for_sample_lang(&ctx);
+                let mut o = Output::for_sample_lang(&ctx);
+                o.sout = Some(SVal::SFloat(x));
                 let c = Compiled::from_output(o);
                 Ok((c.clone(), SBeta(Box::new(c), *a, *b)))
             }
-            SLetIn(d, name, bindee, body) => todo!(),
-            // SLetIn(d, name, bindee, body) => {
-            //     let (cbindee, bindee) = self.eval_sexpr(ctx, bindee)?;
-            //     let ctx = Context::from_compiled(&cbindee.as_output().unwrap());
-            //     todo!("need a new context which is _not_ bdds...");
-            //     // ctx.substitutions.insert(d.id(), (bound.dists.clone(), Var::Named(d.clone())));
-            //     let (cbody, body) = self.eval_sexpr(ctx, body)?;
-            //     Ok((
-            //         cbody.clone(),
-            //         SLetIn(
-            //             Box::new(cbody),
-            //             name.clone(),
-            //             Box::new(bindee),
-            //             Box::new(body),
-            //         ),
-            //     ))
-            // }
+            SLetIn(d, name, bindee, body) => {
+                let (cbindee, ebindee) = self.eval_sexpr(ctx, bindee)?;
+                let mut ctx = Context::from_compiled(&cbindee.as_output().unwrap());
+                ctx.ssubstitutions.insert(
+                    d.id(),
+                    cbindee
+                        .as_output()
+                        .unwrap()
+                        .sout
+                        .expect("bindee returns values"),
+                );
+                let (cbody, ebody) = self.eval_sexpr(ctx, body)?;
+                Ok((
+                    cbody.clone(),
+                    SSeq(Box::new(cbody), Box::new(ebindee), Box::new(ebody)),
+                ))
+            }
             SSeq(_, e0, e1) => {
                 let (c0, e0) = self.eval_sexpr(ctx, e0)?;
                 let ctx = Context::from_compiled(&c0.as_output().unwrap());
                 let (c1, e1) = self.eval_sexpr(ctx, e1)?;
                 Ok((c1.clone(), SSeq(Box::new(c1), Box::new(e0), Box::new(e1))))
             }
-            SIte(_, guard, struthy, sfalsey) => todo!(),
+            SIte(_, guard, truthy, falsey) => {
+                let (cguard, eguard) = crate::compile::anf::eval_sanf(&ctx, guard)?;
+                let (ctruthy, etruthy) = self.eval_sexpr(ctx.clone(), truthy)?;
+                let (cfalsey, efalsey) = self.eval_sexpr(ctx, falsey)?;
+                todo!()
+            }
             SExact(_, eexpr) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "sample");
                 let _enter = span.enter();
@@ -803,6 +803,7 @@ impl<'a> State<'a> {
                                 probabilities: qs,
                                 importance: I::Weight(1.0),
                                 ssubstitutions: ctx.ssubstitutions.clone(),
+                                sout: None,
                             };
                             debug_step!("sample", ctx, c);
                             fin.push(c);

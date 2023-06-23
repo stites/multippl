@@ -28,6 +28,8 @@ pub struct Output {
     pub substitutions: SubstMap,
     /// sampling substitutions
     pub ssubstitutions: HashMap<UniqueId, SVal>,
+    /// sampling value
+    pub sout: Option<SVal>,
     /// compiled importance weight
     pub importance: Importance,
 }
@@ -45,6 +47,7 @@ impl Output {
             probabilities,
             importance: I::Weight(1.0),
             ssubstitutions: ctx.ssubstitutions.clone(),
+            sout: None,
         }
     }
     // pub fn for_sample_lang_sample(ctx: &Context, sample: bool, dist: BddPtr) -> Output {
@@ -79,6 +82,7 @@ impl Output {
             probabilities: vec![Probability::new(1.0)],
             importance: I::Weight(1.0),
             ssubstitutions: ctx.ssubstitutions.clone(),
+            sout: None,
         }
     }
 }
