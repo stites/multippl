@@ -34,12 +34,18 @@ macro_rules! anf {
     ( $x:expr ) => {{
         $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EAnf((), Box::new($x))
     }};
+    (~ $x:expr ) => {{
+        $crate::grammar::SExpr::<$crate::typeinf::grammar::Inferable>::SAnf((), Box::new($x))
+    }};
 }
 
 #[macro_export]
 macro_rules! val {
     ( $x:ident ) => {
         anf!($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVal((), $crate::grammar::EVal::EBool($x)))
+    };
+    (~ $x:ident ) => {
+        anf!(~ $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, SVal>::AVal((), $crate::grammar::SVal::SBool($x)))
     };
     ( $y:literal, $( $x:literal ),+ ) => {{
         let mut fin = Box::new($crate::grammar::EVal::EBool($y));
@@ -57,6 +63,12 @@ macro_rules! var {
     };
     ( $x:expr ) => {
         anf!(var!(@ $x))
+    };
+    (~ $x:expr ) => {
+        anf!(~ var!(~@ $x))
+    };
+    (~@ $x:expr ) => {
+        $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, SVal>::AVar(None, $x.to_string())
     };
     ( $y:literal, $( $x:literal ),+ ) => {{
         let mut fin = anf!($crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVar(None, $y.to_string()));
@@ -82,11 +94,23 @@ macro_rules! b {
             $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVar($ty, $x.to_string())
         }
     };
+
     (@anf $x:literal) => {
         b!(@anf $x ; None)
     };
+
+    (~@anf $x:literal) => {
+        if $x.to_string() == "true" || $x.to_string() == "false" {
+            $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, SVal>::AVal((), $crate::grammar::SVal::SBool($x.to_string() == "true"))
+        } else {
+            $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, SVal>::AVar(None, $x.to_string())
+        }
+    };
+
     ( true ) => { anf!(b!(@anf "true")) };
+
     ( false ) => { anf!(b!(@anf "false")) };
+
     ( $x:literal ) => {
         anf!(b!(@anf $x))
     };
@@ -226,6 +250,15 @@ macro_rules! sample {
             ),
         )
     }};
+    (~ $x:expr ) => {{
+        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::ESample((), Box::new($x))
+    }};
+}
+#[macro_export]
+macro_rules! exact {
+    ( $x:expr ) => {{
+        $crate::grammar::SExpr::<$crate::typeinf::grammar::Inferable>::SExact((), Box::new($x))
+    }};
 }
 #[macro_export]
 macro_rules! observe {
@@ -252,6 +285,48 @@ macro_rules! flip {
         $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EFlip((), $p)
     }};
 }
+#[macro_export]
+macro_rules! bern {
+    ( $num:literal / $denom:literal) => {{
+        $crate::grammar::SExpr::<$crate::typeinf::grammar::Inferable>::SBern(
+            (),
+            $num as f64 / $denom as f64,
+        )
+    }};
+    ( $p:expr  ) => {{
+        $crate::grammar::SExpr::<$crate::typeinf::grammar::Inferable>::SBern((), $p)
+    }};
+}
+#[macro_export]
+macro_rules! categorical {
+    ( $vecs:expr ) => {{
+        $crate::grammar::SExpr::<$crate::typeinf::grammar::Inferable>::SDiscrete((), $vecs)
+    }};
+}
+#[macro_export]
+macro_rules! uniform {
+    ( $l:expr , $h:expr ) => {{
+        $crate::grammar::SExpr::<$crate::typeinf::grammar::Inferable>::SUniform((), $l, $h)
+    }};
+}
+#[macro_export]
+macro_rules! normal {
+    ( $l:expr , $h:expr ) => {{
+        $crate::grammar::SExpr::<$crate::typeinf::grammar::Inferable>::SNormal((), $l, $h)
+    }};
+}
+#[macro_export]
+macro_rules! beta {
+    ( $l:expr , $h:expr ) => {{
+        $crate::grammar::SExpr::<$crate::typeinf::grammar::Inferable>::SBeta((), $l, $h)
+    }};
+}
+#[macro_export]
+macro_rules! dirichlet {
+    ( $vecs:expr ) => {{
+        $crate::grammar::SExpr::<$crate::typeinf::grammar::Inferable>::SDirichlet((), $vecs)
+    }};
+}
 
 #[macro_export]
 macro_rules! lets {
@@ -262,7 +337,7 @@ macro_rules! lets {
             Box::new($body.clone()),
         )
     }};
-    ( $( $var:literal ;= $bound:expr);+ ;...? $body:expr ) => {
+    ( $( $var:literal ;= $bound:expr );+ ;...? $body:expr ) => {
             {
                 let mut fin = Box::new($body.clone());
                 let mut bindees = vec![];
@@ -277,6 +352,22 @@ macro_rules! lets {
                 *fin
             }
         };
+
+    ( $(~ $var:literal <- $bound:expr ; )+ ~~ $body:expr   ) => {{
+        tracing::debug!("do");
+        let mut fin = Box::new($body.clone());
+        let mut bindees = vec![];
+        $(
+            tracing::debug!("{} <- {:?}", $var.clone(), $bound.clone());
+            bindees.push(($var, $bound));
+        )+
+        tracing::debug!("{:?}", $body);
+        for (v, e) in bindees.iter().rev() {
+            fin = Box::new(SExpr::<$crate::typeinf::grammar::Inferable>::SLetIn(None, v.to_string(), Box::new(e.clone()), fin));
+        }
+        *fin
+    }};
+
 
     ( $( $var:literal := $bound:expr);+ ;...? $body:expr ; $finty:ty ) => {
             {
@@ -353,12 +444,14 @@ macro_rules! ite {
             Box::new($true),
             Box::new($false),
         )
-
-        // if let EExpr::<$crate::typeinf::grammar::Inferable>::EAnf(a) = $pred {
-        //     EExpr::<$crate::typeinf::grammar::Inferable>::EIte($pred, Box::new($true), Box::new($false), Box::new(None))
-        // } else {
-        //     panic!("passed in a non-anf expression as predicate!");
-        // }
+    };
+    (~ ( $pred:expr ) ? ( $true:expr ) : ( $false:expr ) ) => {
+        $crate::grammar::SExpr::<$crate::typeinf::grammar::Inferable>::SIte(
+            None,
+            Box::new($pred),
+            Box::new($true),
+            Box::new($false),
+        )
     };
 }
 
@@ -366,6 +459,9 @@ macro_rules! ite {
 macro_rules! program {
     ( $x:expr ) => {
         $crate::grammar::Program::EBody($x)
+    };
+    (~ $x:expr ) => {
+        $crate::grammar::Program::SBody($x)
     };
 }
 // #[macro_export]

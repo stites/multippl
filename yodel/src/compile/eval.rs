@@ -681,7 +681,7 @@ impl<'a> State<'a> {
                         .as_output()
                         .unwrap()
                         .sout
-                        .expect("bindee returns values"),
+                        .expect(&format!("bindee {name} doesn't return a value")),
                 );
                 let (cbody, ebody) = self.eval_sexpr(ctx, body)?;
                 Ok((

@@ -44,6 +44,7 @@ inputs.devenv.lib.mkShell {
         fontconfig
 
         hunspellDicts.en_US-large
+        cmdstan
       ];
     }
     rec {
