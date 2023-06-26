@@ -79,7 +79,7 @@ pub fn eval_eprod<'a>(
         probabilities: vec![Probability::new(1.0); flen],
         ssubstitutions: ctx.ssubstitutions.clone(),
         //     importance: I::Weight(1.0),
-        sout: None,
+        sout: vec![],
     };
     Ok((o, atrs, &move |c, atrs| EExpr::EProd(Box::new(c), atrs)))
 }
@@ -101,7 +101,7 @@ pub fn eval_eflip<'a>(
         probabilities: vec![Probability::new(1.0)],
         // importance: I::Weight(1.0),
         ssubstitutions: ctx.ssubstitutions.clone(),
-        sout: None,
+        sout: vec![],
     };
     Ok((o, param, &move |c, f| EExpr::EFlip(Box::new(c), f)))
 }
@@ -163,7 +163,7 @@ pub fn eval_eobserve<'a>(
         probabilities: vec![Probability::new(1.0)],
         // importance,
         ssubstitutions: ctx.ssubstitutions.clone(),
-        sout: None,
+        sout: vec![],
     };
     Ok((o, atr, wmc, &move |c, atr| {
         EExpr::EObserve(Box::new(c), Box::new(atr))
@@ -269,7 +269,7 @@ pub fn eval_eite_output<'a>(
         probabilities,
         // importance,
         ssubstitutions: ctx.ssubstitutions.clone(),
-        sout: None,
+        sout: vec![],
     };
     Ok(o)
 }
@@ -300,7 +300,7 @@ pub fn eval_elet_output<'a>(
         probabilities,
         // importance,
         ssubstitutions: ctx.ssubstitutions.clone(),
-        sout: None,
+        sout: vec![],
     };
     Ok(c)
 }
@@ -525,7 +525,7 @@ impl<'a> State<'a> {
                 self.pq.q *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
                 debug!(q = self.pq.q, test = "", p = self.pq.p);
 
-                o.sout = Some(SVal::SBool(x));
+                o.sout = vec![SVal::SBool(x)];
                 let c = Compiled::from_output(o);
                 Ok((c.clone(), SBern(Box::new(c), *param)))
             }
@@ -543,7 +543,7 @@ impl<'a> State<'a> {
                 let mut o = Output::for_sample_lang(&ctx);
                 self.pq.p *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
                 self.pq.q *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
-                o.sout = Some(SVal::SInt(x));
+                o.sout = vec![SVal::SInt(x)];
                 let c = Compiled::from_output(o);
                 Ok((c.clone(), SDiscrete(Box::new(c), ps.clone())))
             }
@@ -561,7 +561,7 @@ impl<'a> State<'a> {
                 self.pq.p *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
                 self.pq.q *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
                 let x = x.data.as_vec().to_vec();
-                o.sout = Some(SVal::SFloatVec(x));
+                o.sout = x.into_iter().map(SVal::SFloat).collect();
                 let c = Compiled::from_output(o);
                 Ok((c.clone(), SDiscrete(Box::new(c), ps.clone())))
             }
@@ -578,7 +578,7 @@ impl<'a> State<'a> {
                 let mut o = Output::for_sample_lang(&ctx);
                 self.pq.p *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
                 self.pq.q *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
-                o.sout = Some(SVal::SFloat(x));
+                o.sout = vec![SVal::SFloat(x)];
                 let c = Compiled::from_output(o);
                 Ok((c.clone(), SUniform(Box::new(c), *lo, *hi)))
             }
@@ -596,7 +596,7 @@ impl<'a> State<'a> {
                 let mut o = Output::for_sample_lang(&ctx);
                 self.pq.p *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
                 self.pq.q *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
-                o.sout = Some(SVal::SFloat(x));
+                o.sout = vec![SVal::SFloat(x)];
                 let c = Compiled::from_output(o);
                 Ok((c.clone(), SNormal(Box::new(c), *mn, *sd)))
             }
@@ -612,7 +612,7 @@ impl<'a> State<'a> {
                 let mut o = Output::for_sample_lang(&ctx);
                 self.pq.p *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
                 self.pq.q *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
-                o.sout = Some(SVal::SFloat(x));
+                o.sout = vec![SVal::SFloat(x)];
                 let c = Compiled::from_output(o);
                 Ok((c.clone(), SBeta(Box::new(c), *a, *b)))
             }
@@ -622,10 +622,7 @@ impl<'a> State<'a> {
                 let (cbindee, ebindee) = self.eval_sexpr(ctx, bindee)?;
                 // debug!("{:?}", cbindee);
                 debug!("BINDEE:: {:?}", ebindee);
-                let vbindee = cbindee
-                    .unsafe_output()
-                    .sout
-                    .expect(&format!("bindee {name} doesn't return a value"));
+                let vbindee = cbindee.unsafe_output().sval();
                 debug!("VALUE:: {:?}", vbindee);
 
                 let mut ctx = Context::from_compiled(&cbindee.unsafe_output());
@@ -649,7 +646,7 @@ impl<'a> State<'a> {
                 let span = tracing::span!(tracing::Level::DEBUG, "sample-ite");
                 let _enter = span.enter();
                 let (cguard, eguard, _) = crate::compile::anf::eval_sanf(&ctx, guard)?;
-                if cguard.sval().as_bool() {
+                if SVal::vec_as_bool(&cguard.sval()) {
                     self.eval_sexpr(ctx.clone(), truthy)
                 } else {
                     self.eval_sexpr(ctx, falsey)
@@ -675,6 +672,7 @@ impl<'a> State<'a> {
 
                 let mut samples = comp.samples;
                 let (mut qs, mut dists) = (vec![], vec![]);
+                let mut bool_samples = vec![];
                 for dist in comp.dists.iter() {
                     let theta_q;
                     // FIXME: should be aggregating the stats somewhere
@@ -714,14 +712,14 @@ impl<'a> State<'a> {
                     }));
                     self.pq.q *= if sample { theta_q } else { 1.0 - theta_q };
                     self.pq.p *= if sample { theta_q } else { 1.0 - theta_q };
-                    let sampled_value = BddPtr::from_bool(sample);
-                    dists.push(sampled_value);
+                    bool_samples.push(sample);
+                    dists.push(BddPtr::from_bool(sample));
 
                     if !self.opts.sample_pruning {
                         // sample in sequence. A smarter sample would compile
                         // all samples of a multi-rooted BDD, but I need to futz
                         // with rsdd's fold
-                        let dist_holds = self.mgr.iff(*dist, sampled_value);
+                        let dist_holds = self.mgr.iff(*dist, BddPtr::from_bool(sample));
                         samples = self.mgr.and(samples, dist_holds);
                     }
                 }
@@ -741,7 +739,7 @@ impl<'a> State<'a> {
                     probabilities: qs,
                     // importance: I::Weight(1.0),
                     ssubstitutions: ctx.ssubstitutions.clone(),
-                    sout: None,
+                    sout: SVal::from_bools(&bool_samples),
                 };
                 debug_step!("sample", ctx, c);
                 let c = Compiled::from_output(c);

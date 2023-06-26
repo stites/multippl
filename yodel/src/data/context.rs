@@ -12,7 +12,7 @@ pub struct Context {
     pub samples: BddPtr,
     pub substitutions: SubstMap,
     pub weightmap: WeightMap,
-    pub ssubstitutions: HashMap<UniqueId, SVal>,
+    pub ssubstitutions: HashMap<UniqueId, Vec<SVal>>,
 }
 impl Context {
     pub fn from_compiled(c: &Output) -> Self {

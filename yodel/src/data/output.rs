@@ -27,9 +27,9 @@ pub struct Output {
     /// substitution environment
     pub substitutions: SubstMap,
     /// sampling substitutions
-    pub ssubstitutions: HashMap<UniqueId, SVal>,
+    pub ssubstitutions: HashMap<UniqueId, Vec<SVal>>,
     /// sampling value
-    pub sout: Option<SVal>,
+    pub sout: Vec<SVal>,
     // /// compiled importance weight
     // pub importance: Importance,
 }
@@ -47,7 +47,7 @@ impl Output {
             probabilities,
             // importance: I::Weight(1.0),
             ssubstitutions: ctx.ssubstitutions.clone(),
-            sout: None,
+            sout: vec![],
         }
     }
     // pub fn for_sample_lang_sample(ctx: &Context, sample: bool, dist: BddPtr) -> Output {
@@ -82,14 +82,14 @@ impl Output {
             probabilities: vec![Probability::new(1.0)],
             // importance: I::Weight(1.0),
             ssubstitutions: ctx.ssubstitutions.clone(),
-            sout: None,
+            sout: vec![],
         }
     }
-    pub fn sval(&self) -> SVal {
-        self.sout
-            .as_ref()
-            .expect("sampling language always steps to a value")
-            .clone()
+    pub fn sval(&self) -> Vec<SVal> {
+        self.sout.clone()
+    }
+    pub fn sbool(&self) -> bool {
+        SVal::vec_as_bool(&self.sout)
     }
 }
 
@@ -114,7 +114,7 @@ impl Compiled {
     pub fn unsafe_output(&self) -> Output {
         self.as_output().expect("debug mode should be disabled")
     }
-    pub fn sval(&self) -> SVal {
+    pub fn sval(&self) -> Vec<SVal> {
         match self {
             Compiled::Output(o) => o.sval(),
             //   Compiled::Debug(_) => panic!("typechecking says this is impossible!"),

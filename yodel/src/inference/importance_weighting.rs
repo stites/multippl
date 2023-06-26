@@ -38,11 +38,9 @@ pub fn importance_weighting_h(
                 debug!("accepting     : {}", c.accept.print_bdd());
                 debug!("computed probs: {:?}", ps);
                 debug!("weight        : {} = {}", pq.render(), pq.weight());
-                let query = match p {
+                let query: Vec<f64> = match p {
                     Program::EBody(_) => ps.clone(),
-                    Program::SBody(_) => {
-                        c.sout.expect("sample program must return value").as_query()
-                    }
+                    Program::SBody(_) => c.sout.iter().map(SVal::as_query).collect_vec(),
                 };
 
                 let exp_cur = Expectations::new(pq, query);

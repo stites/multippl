@@ -175,7 +175,7 @@ pub mod grammar {
                 SUniform(_, lo, hi) => STy::SFloat,
                 SNormal(_, mean, var) => STy::SFloat,
                 SBeta(_, a, b) => STy::SFloat,
-                SDirichlet(_, ps) => STy::SFloatVec,
+                SDirichlet(_, ps) => STy::SVec(ps.iter().map(|_| STy::SFloat).collect()),
                 SExact(_, e) => natural_embedding_e(e.as_type()),
             }
         }

@@ -41,7 +41,7 @@ pub enum STy {
     SBool,
     SFloat,
     SInt,
-    SFloatVec,
+    SVec(Vec<STy>),
 }
 
 pub trait ξ<X> {
@@ -237,7 +237,7 @@ where
 pub enum SVal {
     SBool(bool),
     SFloat(f64),
-    SFloatVec(Vec<f64>),
+    // SFloatVec(Vec<f64>),
     SInt(u64),
 }
 impl IsTyped<STy> for SVal {
@@ -250,19 +250,28 @@ impl IsTyped<STy> for SVal {
             SBool(_) => STy::SBool,
             SInt(_) => STy::SInt,
             SFloat(_) => STy::SFloat,
-            SFloatVec(_) => STy::SFloatVec,
+            // SFloatVec(_) => STy::SFloatVec,
         }
     }
 }
 impl SVal {
-    pub fn as_query(&self) -> Vec<f64> {
+    pub fn as_query(&self) -> f64 {
         use SVal::*;
         match self {
-            SBool(x) => vec![if *x { 1.0 } else { 0.0 }],
-            SInt(x) => vec![*x as f64],
-            SFloat(x) => vec![*x],
-            SFloatVec(vs) => vs.clone(),
+            SBool(x) => {
+                if *x {
+                    1.0
+                } else {
+                    0.0
+                }
+            }
+            SInt(x) => *x as f64,
+            SFloat(x) => *x,
+            // SFloatVec(vs) => vs.clone(),
         }
+    }
+    pub fn from_bools(bs: &Vec<bool>) -> Vec<Self> {
+        bs.iter().cloned().map(SVal::SBool).collect()
     }
     pub fn as_bool(&self) -> bool {
         use SVal::*;
@@ -270,6 +279,14 @@ impl SVal {
             SBool(b) => *b,
             _ => panic!("type-checking says this is impossible!"),
         }
+    }
+    pub fn vec_as_bool(v: &Vec<SVal>) -> bool {
+        use SVal::*;
+        assert!(Self::vec_is_bool(v));
+        v[0].as_bool()
+    }
+    pub fn vec_is_bool(v: &Vec<SVal>) -> bool {
+        v.len() == 1 && v[0].as_type() == STy::SBool
     }
 }
 

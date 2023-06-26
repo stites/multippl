@@ -10,14 +10,14 @@ pub fn mk_sval(v: &SVal) -> SVal {
     match v {
         SVal::SBool(b) => SVal::SBool(*b),
         SVal::SFloat(b) => SVal::SFloat(*b),
-        SVal::SFloatVec(b) => SVal::SFloatVec(b.clone()),
+        // SVal::SFloatVec(b) => SVal::SFloatVec(b.clone()),
         SVal::SInt(b) => SVal::SInt(*b),
     }
 }
 
-pub fn mk_sout(ctx: &Context, v: &SVal) -> Output {
+pub fn mk_sout(ctx: &Context, v: &Vec<SVal>) -> Output {
     let mut out = Output::from_anf_dists(ctx, vec![BddPtr::PtrTrue]);
-    out.sout = Some(v.clone());
+    out.sout = v.clone();
     out
 }
 
@@ -32,7 +32,7 @@ pub fn eval_sanf<'a>(
     use Anf::*;
     let (o, anf) = match a {
         AVal(_, v) => {
-            let out = mk_sout(ctx, v);
+            let out = mk_sout(ctx, &vec![v.clone()]);
             Ok((out.clone(), AVal(Box::new(out), v.clone())))
         }
         AVar(d, s) => match ctx.ssubstitutions.get(&d.id()) {
@@ -48,8 +48,8 @@ pub fn eval_sanf<'a>(
         And(bl, br) => {
             let (ol, bl, _) = eval_sanf(ctx, &bl)?;
             let (or, br, _) = eval_sanf(ctx, &br)?;
-            assert_eq!(ol.sout.unwrap().as_type(), STy::SBool);
-            assert_eq!(or.sout.unwrap().as_type(), STy::SBool);
+            assert!(SVal::vec_is_bool(&ol.sout));
+            assert!(SVal::vec_is_bool(&or.sout));
             todo!()
         }
         Or(bl, br) => {
