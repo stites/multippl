@@ -50,6 +50,7 @@ inputs.devenv.lib.mkShell {
     rec {
       # rust dev block
       languages.rust.enable = true;
+      languages.nix.enable = true;
 
       # add a rust-repl
       scripts.repl.exec = "${pkgs.evcxr}/bin/evcxr";
@@ -76,6 +77,13 @@ inputs.devenv.lib.mkShell {
 
             # tree-sitter-specific
             tree-sitter
+
+            # polish tools: from https://ectobit.com/blog/speed-up-github-actions-rust-pipelines/
+            cargo-deny # lint dependencies
+            cargo-outdated # find out outdated dependencies
+            cargo-udeps # find out unused dependencies
+            cargo-audit # search for security vulnerabilities
+            # cargo-pants # search for security vulnerabilities (by sonatype )
           ]
           ++ lib.optionals stdenv.isDarwin []
           ++ lib.optionals stdenv.isLinux [
