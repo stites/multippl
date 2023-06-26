@@ -1,5 +1,5 @@
 use crate::utils::render::*;
-use crate::Importance;
+use crate::PQ;
 use itertools::*;
 use std::iter::Sum;
 
@@ -21,11 +21,11 @@ impl Expectations {
             cached_variance: None,
         }
     }
-    pub fn new(weight: Importance, prs: Vec<f64>) -> Self {
+    pub fn new(pq: PQ, prs: Vec<f64>) -> Self {
         let (exp, expw, expw2) = prs.into_iter().fold(
             (vec![], vec![], vec![]),
             |(mut exp, mut expw, mut expw2), pr| {
-                let w = weight.weight();
+                let w = pq.weight();
                 exp.push(w * pr);
                 expw.push(w);
                 expw2.push(w * w);

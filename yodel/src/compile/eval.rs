@@ -25,7 +25,7 @@ use tracing::*;
 
 pub use crate::data::context::Context;
 pub use crate::data::errors::{CompileError, Result};
-pub use crate::data::importance::{Importance, I};
+// pub use crate::data::importance::{Importance, I};
 pub use crate::data::output::{Compiled, Output, SubstMap};
 pub use crate::data::{Weight, WeightMap};
 use CompileError::*;
@@ -91,7 +91,7 @@ pub fn eval_eprod<'a>(
         substitutions: ctx.substitutions.clone(),
         probabilities: vec![Probability::new(1.0); flen],
         ssubstitutions: ctx.ssubstitutions.clone(),
-        importance: I::Weight(1.0),
+        //     importance: I::Weight(1.0),
         sout: None,
     };
     Ok((o, atrs, &move |c, atrs| EExpr::EProd(Box::new(c), atrs)))
@@ -112,7 +112,7 @@ pub fn eval_eflip<'a>(
         weightmap,
         substitutions: ctx.substitutions.clone(),
         probabilities: vec![Probability::new(1.0)],
-        importance: I::Weight(1.0),
+        // importance: I::Weight(1.0),
         ssubstitutions: ctx.ssubstitutions.clone(),
         sout: None,
     };
@@ -127,6 +127,7 @@ pub fn eval_eobserve<'a>(
 ) -> Result<(
     Output,
     AnfTr<EVal>,
+    f64,
     &'a dyn Fn(Compiled, AnfTr<EVal>) -> EExprTr,
 )> {
     let (comp, atr, _) = eval_eanf(mgr, ctx, a)?;
@@ -163,8 +164,8 @@ pub fn eval_eobserve<'a>(
         },
     );
 
-    let importance = I::Weight(wmc);
-    debug!("IWeight    {}", importance.weight());
+    // let importance = I::Weight(wmc);
+    // debug!("IWeight    {}", importance.weight());
 
     let o = Output {
         dists: vec![BddPtr::PtrTrue],
@@ -173,11 +174,11 @@ pub fn eval_eobserve<'a>(
         weightmap: ctx.weightmap.clone(),
         substitutions: ctx.substitutions.clone(),
         probabilities: vec![Probability::new(1.0)],
-        importance,
+        // importance,
         ssubstitutions: ctx.ssubstitutions.clone(),
         sout: None,
     };
-    Ok((o, atr, &move |c, atr| {
+    Ok((o, atr, wmc, &move |c, atr| {
         EExpr::EObserve(Box::new(c), Box::new(atr))
     }))
 }
@@ -261,16 +262,16 @@ pub fn eval_eite_output<'a>(
         .map(|(t, f)| (*t * wmc_true + *f * wmc_false))
         .collect_vec();
 
-    debug!("=============================");
-    let importance_true = truthy.importance.pr_mul(wmc_true);
-    let importance_false = falsey.importance.pr_mul(wmc_false);
-    debug!(
-        "importance_true {:?}, importance_false {:?}",
-        importance_true, importance_false
-    );
-    let importance = importance_true + importance_false;
-    debug!("importance {:?}", importance);
-    debug!("=============================");
+    // debug!("=============================");
+    // let importance_true = truthy.importance.pr_mul(wmc_true);
+    // let importance_false = falsey.importance.pr_mul(wmc_false);
+    // debug!(
+    //     "importance_true {:?}, importance_false {:?}",
+    //     importance_true, importance_false
+    // );
+    // let importance = importance_true + importance_false;
+    // debug!("importance {:?}", importance);
+    // debug!("=============================");
 
     let o = Output {
         dists,
@@ -279,7 +280,7 @@ pub fn eval_eite_output<'a>(
         weightmap,
         substitutions,
         probabilities,
-        importance,
+        // importance,
         ssubstitutions: ctx.ssubstitutions.clone(),
         sout: None,
     };
@@ -301,7 +302,7 @@ pub fn eval_elet_output<'a>(
     let probabilities = izip!(bound.probabilities.clone(), body.probabilities)
         .map(|(p1, p2)| p1 * p2)
         .collect_vec();
-    let importance = I::Weight(bound.importance.weight() * body.importance.weight());
+    // let importance = I::Weight(bound.importance.weight() * body.importance.weight());
 
     let c = Output {
         dists: body.dists,
@@ -310,7 +311,7 @@ pub fn eval_elet_output<'a>(
         substitutions: body.substitutions.clone(),
         weightmap: body.weightmap,
         probabilities,
-        importance,
+        // importance,
         ssubstitutions: ctx.ssubstitutions.clone(),
         sout: None,
     };
@@ -422,10 +423,10 @@ impl<'a> State<'a> {
             EObserve(_, a) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "observe");
                 let _enter = span.enter();
-                let (o, atr, mk) = eval_eobserve(self.mgr, &ctx, a, &self.opts)?;
+                let (o, atr, wmc, mk) = eval_eobserve(self.mgr, &ctx, a, &self.opts)?;
 
-                let Importance::Weight(theta) = o.importance;
-                self.pq.p *= theta; // <<<<<<<<<<<<<<<<<<<<
+                // let Importance::Weight(theta) = o.importance;
+                self.pq.p *= wmc; // <<<<<<<<<<<<<<<<<<<<
 
                 debug_step!("observe", ctx, o);
                 let c = Compiled::Output(o);
@@ -800,7 +801,7 @@ impl<'a> State<'a> {
                                 // weight
                                 substitutions: comp.substitutions.clone(),
                                 probabilities: qs,
-                                importance: I::Weight(1.0),
+                                // importance: I::Weight(1.0),
                                 ssubstitutions: ctx.ssubstitutions.clone(),
                                 sout: None,
                             };

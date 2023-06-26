@@ -57,27 +57,28 @@ pub fn importance_weighting_h(
                     let stats;
                     (ps, stats) = wmc_prob(&mut mgr, &c);
 
-                    let w = c.importance;
-                    if !is_debug {
-                        let wnew = pq.weight();
-                        let wold = w.weight();
-                        assert!(
-                            (wnew - wold).abs() < 0.00000000001,
-                            "!!!!!!!!!!! {} = {wnew}; but {wold}",
-                            pq.render()
-                        );
-                    }
+                    // let w = c.importance;
+                    // if !is_debug {
+                    //     let wnew = pq.weight();
+                    //     let wold = w.weight();
+                    //     assert!(
+                    //         (wnew - wold).abs() < 0.00000000001,
+                    //         "!!!!!!!!!!! {} = {wnew}; but {wold}",
+                    //         pq.render()
+                    //     );
+                    // }
+                    let w = pq.weight();
                     debug!("{}", c.accept.print_bdd());
                     debug!("{}", renderbdds(&c.dists));
                     debug!(
                         "{}, {}, {}",
-                        w.weight(),
+                        pq.weight(),
                         renderfloats(&ps, false),
                         prs.len()
                     );
-                    let exp_cur = Expectations::new(w.clone(), ps.clone());
+                    let exp_cur = Expectations::new(pq, ps.clone());
                     e = Expectations::add(e.clone(), exp_cur);
-                    ws.push(w.weight());
+                    ws.push(pq.weight());
                     // qss.push(_qs);
                     prs.push(ps);
                     // sss.push(env.samples.clone());
@@ -146,7 +147,8 @@ pub fn importance_weighting_h(
                     (azs, _) = wmc_prob(&mut mgr, &c);
 
                     izip!(agg, c.probabilities.clone(), azs)
-                        .map(|(fin, q, wmc)| fin + q.as_f64() * c.importance.weight() * wmc)
+                        // .map(|(fin, q, wmc)| fin + q.as_f64() * pq.weight() * wmc)
+                        .map(|(fin, q, wmc)| fin + q.as_f64() * wmc) // FIXME: this is intentionally borked
                         .collect_vec()
                 });
         (x, stats_max.expect("at least one sample"))

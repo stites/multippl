@@ -95,19 +95,19 @@ macro_rules! debug_compiled {
     ($comp:expr) => {{
         let dists = renderbdds(&$comp.dists);
         let accepts = format!("{}", $comp.accept.print_bdd());
-        let weights = $comp
-            .importance
-            .clone()
-            .into_iter()
-            .map(fmt_f64(false))
-            .join(", ");
+        // let weights = $comp
+        //     .importance
+        //     .clone()
+        //     .into_iter()
+        //     .map(fmt_f64(false))
+        //     .join(", ");
 
         debug!("      \\||/  {}", dists);
         debug!("      \\||/  {}", accepts);
         debug!("      \\||/  [{}]", renderw(&$comp.weightmap));
         debug!("      \\||/  [{}]", renderp(&$comp.substitutions));
         debug!("      \\||/  {}", render_probs(&$comp.probabilities, false));
-        debug!("      \\||/  {}", weights);
+        // debug!("      \\||/  {}", weights);
         debug!("----------------------------------------");
     }};
 }

@@ -34,7 +34,7 @@ pub struct SamplingResult {
     pub stats: WmcStats,
     pub expectations: Expectations,
     pub duration: Duration,
-    pub weight: Importance,
+    pub weight: PQ,
 }
 
 impl Iterator for SamplingIter {
@@ -55,7 +55,7 @@ impl Iterator for SamplingIter {
                 self.current_step += 1;
                 let (query_result, stats) = wmc_prob(&mut self.manager, &c);
                 self.max_stats = self.max_stats.largest_of(&stats);
-                let expectations = Expectations::new(c.importance.clone(), query_result.clone());
+                let expectations = Expectations::new(pq, query_result.clone());
                 self.current_exp.mut_add(&expectations);
 
                 let stop = Instant::now();
@@ -65,7 +65,7 @@ impl Iterator for SamplingIter {
                     stats: self.max_stats.clone(),
                     expectations: self.current_exp.clone(),
                     duration,
-                    weight: c.importance,
+                    weight: pq,
                 })
             }
             Err(e) => None,

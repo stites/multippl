@@ -1,6 +1,6 @@
 use crate::annotate::grammar::Var;
 use crate::data::context::Context;
-use crate::data::importance::{Importance, I};
+// use crate::data::importance::{Importance, I};
 use crate::data::{Weight, WeightMap};
 use crate::grammar::SVal;
 use crate::uniquify::grammar::UniqueId;
@@ -30,8 +30,8 @@ pub struct Output {
     pub ssubstitutions: HashMap<UniqueId, SVal>,
     /// sampling value
     pub sout: Option<SVal>,
-    /// compiled importance weight
-    pub importance: Importance,
+    // /// compiled importance weight
+    // pub importance: Importance,
 }
 
 impl Output {
@@ -45,7 +45,7 @@ impl Output {
             substitutions: ctx.substitutions.clone(),
             weightmap: ctx.weightmap.clone(),
             probabilities,
-            importance: I::Weight(1.0),
+            // importance: I::Weight(1.0),
             ssubstitutions: ctx.ssubstitutions.clone(),
             sout: None,
         }
@@ -80,7 +80,7 @@ impl Output {
 
             // unused
             probabilities: vec![Probability::new(1.0)],
-            importance: I::Weight(1.0),
+            // importance: I::Weight(1.0),
             ssubstitutions: ctx.ssubstitutions.clone(),
             sout: None,
         }

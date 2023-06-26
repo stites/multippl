@@ -26,7 +26,7 @@ use crate::*;
 
 pub use crate::data::context::Context;
 pub use crate::data::errors::{CompileError, Result};
-pub use crate::data::importance::{Importance, I};
+// pub use crate::data::importance::{Importance, I};
 pub use crate::data::output::{Compiled, Output, SubstMap};
 pub use crate::data::{Weight, WeightMap};
 use CompileError::*;
