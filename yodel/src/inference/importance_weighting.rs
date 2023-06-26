@@ -59,12 +59,12 @@ pub fn importance_weighting_h(
 
                     let w = c.importance;
                     if !is_debug {
-                        let (p, q) = pq;
-                        let wnew = p / q;
+                        let wnew = pq.weight();
                         let wold = w.weight();
                         assert!(
                             (wnew - wold).abs() < 0.00000000001,
-                            "!!!!!!!!!!! {p} / {q} = {wnew}; but {wold}"
+                            "!!!!!!!!!!! {} = {wnew}; but {wold}",
+                            pq.render()
                         );
                     }
                     debug!("{}", c.accept.print_bdd());

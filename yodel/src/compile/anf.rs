@@ -21,9 +21,16 @@ pub fn mk_sout(ctx: &Context, v: &SVal) -> Output {
     out
 }
 
-pub fn eval_sanf(ctx: &Context, a: &AnfAnn<SVal>) -> Result<(Output, AnfTr<SVal>)> {
+pub fn eval_sanf<'a>(
+    ctx: &'a Context,
+    a: &'a AnfAnn<SVal>,
+) -> Result<(
+    Output,
+    AnfTr<SVal>,
+    &'a dyn Fn(Compiled, AnfTr<SVal>) -> SExprTr,
+)> {
     use Anf::*;
-    match a {
+    let (o, anf) = match a {
         AVal(_, v) => {
             let out = mk_sout(ctx, v);
             Ok((out.clone(), AVal(Box::new(out), v.clone())))
@@ -39,8 +46,8 @@ pub fn eval_sanf(ctx: &Context, a: &AnfAnn<SVal>) -> Result<(Output, AnfTr<SVal>
             }
         },
         And(bl, br) => {
-            let (ol, bl) = eval_sanf(ctx, &bl)?;
-            let (or, br) = eval_sanf(ctx, &br)?;
+            let (ol, bl, _) = eval_sanf(ctx, &bl)?;
+            let (or, br, _) = eval_sanf(ctx, &br)?;
             assert_eq!(ol.sout.unwrap().as_type(), STy::SBool);
             assert_eq!(or.sout.unwrap().as_type(), STy::SBool);
             todo!()
@@ -51,9 +58,11 @@ pub fn eval_sanf(ctx: &Context, a: &AnfAnn<SVal>) -> Result<(Output, AnfTr<SVal>
         Neg(bp) => {
             todo!()
         }
-    }
+    }?;
+    Ok((o, anf, &move |c, a| SExpr::SAnf(Box::new(c), Box::new(a))))
 }
 
+/// actually just eval_eanf, but not about to change this until later
 pub fn eval_anf<Val: Clone>(
     mgr: &mut Mgr,
     ctx: &Context,
@@ -122,4 +131,23 @@ where
         let dists_len = dists.len();
         Ok((ltr, rtr, Output::from_anf_dists(ctx, dists)))
     }
+}
+
+pub fn eval_eanf<'a>(
+    mgr: &'a mut Mgr,
+    ctx: &'a Context,
+    a: &'a AnfAnn<EVal>,
+) -> Result<(
+    Output,
+    Anf<Trace, EVal>,
+    &'a dyn Fn(Compiled, AnfTr<EVal>) -> EExprTr,
+)> {
+    let (o, anf) = eval_anf(mgr, ctx, a, &mut |_, v| match v {
+        EVal::EBool(b) => {
+            let c = Output::from_anf_dists(ctx, vec![BddPtr::from_bool(*b)]);
+            Ok((c.clone(), Anf::AVal(Box::new(c), EVal::EBool(*b))))
+        }
+        EVal::EProd(b) => Err(CompileError::Todo()),
+    })?;
+    Ok((o, anf, &move |c, a| EExpr::EAnf(Box::new(c), Box::new(a))))
 }

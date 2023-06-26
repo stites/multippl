@@ -71,7 +71,7 @@ pub fn runner_with_stdrng(
     p: &ProgramInferable,
     mgr: &mut Mgr,
     opt: &Options,
-) -> Result<(Compiled, InvMap, Option<StdRng>, (f64, f64))> {
+) -> Result<(Compiled, InvMap, Option<StdRng>, PQ)> {
     let p = typeinference(p)?;
     let p = typecheck(&p)?;
     let mut senv = SymEnv::default();
@@ -87,7 +87,7 @@ pub fn runner_with_stdrng(
 
     let c = compile(&mut s, &p)?;
     tracing::debug!("hurray!");
-    Ok((c, inv, s.rng.cloned(), (s.p, s.q)))
+    Ok((c, inv, s.rng.cloned(), s.pq))
 }
 
 pub fn make_mgr_h(p: &ProgramInferable) -> Result<Mgr> {

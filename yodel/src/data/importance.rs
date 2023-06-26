@@ -1,6 +1,25 @@
 use itertools::*;
 use rsdd::sample::probability::Probability;
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct PQ {
+    pub p: f64,
+    pub q: f64,
+}
+impl PQ {
+    pub fn weight(&self) -> f64 {
+        self.p / self.q
+    }
+    pub fn render(&self) -> String {
+        format!("{} / {}", self.p, self.q)
+    }
+}
+impl Default for PQ {
+    fn default() -> Self {
+        PQ { p: 1.0, q: 1.0 }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Importance {
     Weight(f64),
