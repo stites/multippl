@@ -96,7 +96,7 @@ impl Output {
 #[derive(Debug, Clone)]
 pub enum Compiled {
     Output(Output),
-    Debug(Vec<Output>),
+    // Debug(Vec<Output>),
 }
 impl Compiled {
     pub fn is_single_run(&self) -> bool {
@@ -108,39 +108,43 @@ impl Compiled {
     pub fn as_output(&self) -> Option<Output> {
         match self {
             Compiled::Output(o) => Some(o.clone()),
-            Compiled::Debug(_) => None,
+            //     Compiled::Debug(_) => None,
         }
+    }
+    pub fn unsafe_output(&self) -> Output {
+        self.as_output().expect("debug mode should be disabled")
     }
     pub fn sval(&self) -> SVal {
         match self {
             Compiled::Output(o) => o.sval(),
-            Compiled::Debug(_) => panic!("typechecking says this is impossible!"),
+            //   Compiled::Debug(_) => panic!("typechecking says this is impossible!"),
         }
     }
 }
-impl IntoIterator for Compiled {
-    type Item = Output;
-    type IntoIter = std::vec::IntoIter<Output>;
+// impl IntoIterator for Compiled {
+//     type Item = Output;
+//     type IntoIter = std::vec::IntoIter<Output>;
 
-    fn into_iter(self) -> Self::IntoIter {
-        match self {
-            Compiled::Output(o) => vec![o].into_iter(),
-            Compiled::Debug(os) => os.into_iter(),
-        }
-    }
-}
+//     fn into_iter(self) -> Self::IntoIter {
+//         match self {
+//             Compiled::Output(o) => vec![o].into_iter(),
+//             // Compiled::Debug(os) => os.into_iter(),
+//         }
+//     }
+// }
 
-impl FromIterator<Output> for Compiled {
-    fn from_iter<T>(iter: T) -> Self
-    where
-        T: IntoIterator<Item = Output>,
-    {
-        let os = iter.into_iter().collect::<Vec<Output>>();
-        let os_len = os.len();
-        match os_len {
-            0 => panic!("empty iterator, cannot produce compiled output"),
-            1 => Compiled::from_output(os[0].clone()),
-            _ => Compiled::Debug(os),
-        }
-    }
-}
+// impl FromIterator<Output> for Compiled {
+//     fn from_iter<T>(iter: T) -> Self
+//     where
+//         T: IntoIterator<Item = Output>,
+//     {
+//         let os = iter.into_iter().collect::<Vec<Output>>();
+//         let os_len = os.len();
+//         match os_len {
+//             0 => panic!("empty iterator, cannot produce compiled output"),
+//             1 => Compiled::from_output(os[0].clone()),
+//             // _ => Compiled::Debug(os),
+//             _ => todo!("debug mode"),
+//         }
+//     }
+// }

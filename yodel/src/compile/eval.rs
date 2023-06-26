@@ -35,19 +35,6 @@ use super::grammar::*;
 
 pub const SQRT_2PI: f64 = 2.5066282746310005024157652848110452530069867406099;
 
-macro_rules! ixspan {
-    ($name:literal) => {
-        tracing::span!(tracing::Level::DEBUG, $name)
-    };
-    ($name:literal, $ix:expr) => {
-        if $ix == 0 {
-            tracing::span!(tracing::Level::DEBUG, $name)
-        } else {
-            tracing::span!(tracing::Level::DEBUG, $name, i = $ix)
-        }
-    };
-}
-
 pub fn eval_eprj<'a>(
     mgr: &'a mut Mgr,
     ctx: &'a Context,
@@ -442,42 +429,29 @@ impl<'a> State<'a> {
                 debug!("wmc_true {}, wmc_false {}", wmc_true, wmc_false);
                 debug!("=============================");
 
-                let span = ixspan!("truthy");
                 let _enter = span.enter();
                 let (ct, ttr) = self.eval_eexpr(ctx.clone(), t)?;
                 drop(_enter);
 
-                let mut os: Vec<Output> = vec![];
-                let mut mftr: Option<EExprTr> = None;
-                for (ix, truthy) in ct.into_iter().enumerate() {
-                    let span = ixspan!("truthy", ix);
-                    let _enter = span.enter();
+                let truthy = ct.unsafe_output();
+                let (cf, ftr) = self.eval_eexpr(ctx.clone(), f)?;
 
-                    let (cf, ftr_) = self.eval_eexpr(ctx.clone(), f)?;
-                    mftr = Some(ftr_);
-
-                    let mut fcs: Vec<Output> = vec![];
-                    for (ix, falsey) in cf.into_iter().enumerate() {
-                        let span = ixspan!("falsey", ix);
-                        let _enter = span.enter();
-                        if truthy.dists.len() != falsey.dists.len() {
-                            return Err(TypeError(format!("Expected both branches of ITE to return same len tuple\nGot (left): {:?}\nGot (right):{:?}", truthy.dists.len(), falsey.dists.len(),)));
-                        }
-                        let c: Output = eval_eite_output(
-                            self.mgr,
-                            &ctx,
-                            (pred_dist, pred_anf.clone()),
-                            (wmc_true, truthy.clone()),
-                            (wmc_false, falsey),
-                            &self.opts,
-                        )?;
-                        debug_step!("ite", ctx, c);
-                        fcs.push(c);
-                    }
-                    os.extend(fcs);
+                let falsey = cf.unsafe_output();
+                let _enter = span.enter();
+                if truthy.dists.len() != falsey.dists.len() {
+                    return Err(TypeError(format!("Expected both branches of ITE to return same len tuple\nGot (left): {:?}\nGot (right):{:?}", truthy.dists.len(), falsey.dists.len(),)));
                 }
-                let ftr = mftr.unwrap();
-                let outs: Compiled = os.into_iter().collect();
+                let c: Output = eval_eite_output(
+                    self.mgr,
+                    &ctx,
+                    (pred_dist, pred_anf.clone()),
+                    (wmc_true, truthy.clone()),
+                    (wmc_false, falsey),
+                    &self.opts,
+                )?;
+                debug_step!("ite", ctx, c);
+
+                let outs = Compiled::from_output(c);
                 Ok((
                     outs.clone(),
                     EIte(
@@ -494,46 +468,25 @@ impl<'a> State<'a> {
 
                 let (cbound, eboundtr) = self.eval_eexpr(ctx.clone(), ebound)?;
 
-                let mut outs: Vec<Output> = vec![];
-                let mut mbody: Option<EExprTr> = None;
+                let bound: Output = cbound.unsafe_output();
+                let mut newctx = Context::from_compiled(&bound);
+                newctx
+                    .substitutions
+                    .insert(d.id(), (bound.dists.clone(), Var::Named(d.clone())));
+                let (bodies, bodiestr) = self.eval_eexpr(newctx, ebody)?;
 
-                for (ix, bound) in cbound.into_iter().enumerate() {
-                    let ix_span = tracing::span!(Level::DEBUG, "", ix);
-                    let _enter = ix_span.enter();
+                let body: Output = bodies.unsafe_output();
+                let c = eval_elet_output(self.mgr, &ctx, bound.clone(), body, &self.opts)?;
+                debug_step!(format!("let-in {}", s), ctx, c);
 
-                    let mut newctx = Context::from_compiled(&bound);
-                    newctx
-                        .substitutions
-                        .insert(d.id(), (bound.dists.clone(), Var::Named(d.clone())));
-                    let (bodies, bodiestr) = self.eval_eexpr(newctx, ebody)?;
-
-                    let cbodies = bodies
-                        .into_iter()
-                        .enumerate()
-                        .map(|(ix, body)| {
-                            let span = ixspan!("", ix);
-                            let _enter = span.enter();
-
-                            let c =
-                                eval_elet_output(self.mgr, &ctx, bound.clone(), body, &self.opts)?;
-
-                            debug_step!(format!("let-in {}", s), ctx, c);
-                            Ok(c)
-                        })
-                        .collect::<Result<Vec<Output>>>()?;
-
-                    outs.extend(cbodies);
-                    mbody = Some(bodiestr);
-                }
-                let ebodytr = mbody.unwrap();
-                let outs: Compiled = outs.into_iter().collect();
+                let outs: Compiled = Compiled::from_output(c);
                 Ok((
                     outs.clone(),
                     ELetIn(
                         Box::new(outs),
                         s.clone(),
                         Box::new(eboundtr),
-                        Box::new(ebodytr),
+                        Box::new(bodiestr),
                     ),
                 ))
             }
@@ -670,13 +623,12 @@ impl<'a> State<'a> {
                 // debug!("{:?}", cbindee);
                 debug!("BINDEE:: {:?}", ebindee);
                 let vbindee = cbindee
-                    .as_output()
-                    .unwrap()
+                    .unsafe_output()
                     .sout
                     .expect(&format!("bindee {name} doesn't return a value"));
                 debug!("VALUE:: {:?}", vbindee);
 
-                let mut ctx = Context::from_compiled(&cbindee.as_output().unwrap());
+                let mut ctx = Context::from_compiled(&cbindee.unsafe_output());
                 ctx.ssubstitutions.insert(d.id(), vbindee);
                 let (cbody, ebody) = self.eval_sexpr(ctx, body)?;
                 debug!("SOMETHING");
@@ -689,7 +641,7 @@ impl<'a> State<'a> {
                 let span = tracing::span!(tracing::Level::DEBUG, "sample-seq");
                 let _enter = span.enter();
                 let (c0, e0) = self.eval_sexpr(ctx, e0)?;
-                let ctx = Context::from_compiled(&c0.as_output().unwrap());
+                let ctx = Context::from_compiled(&c0.unsafe_output());
                 let (c1, e1) = self.eval_sexpr(ctx, e1)?;
                 Ok((c1.clone(), SSeq(Box::new(c1), Box::new(e0), Box::new(e1))))
             }
@@ -708,120 +660,212 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
 
                 let (comp, etr) = self.eval_eexpr(ctx.clone(), eexpr)?;
-                let c: Compiled = comp
-                    .into_iter()
-                    .enumerate()
-                    .map(|(ix, comp)| {
-                        let span = ixspan!("", ix);
-                        let _enter = span.enter();
+                let comp: Output = comp.unsafe_output();
 
-                        let wmc_params = comp.weightmap.as_params(self.opts.max_label);
-                        let var_order = self.opts.order.clone();
-                        debug!("Incm accept {}", &ctx.accept.print_bdd());
-                        debug!("Comp accept {}", comp.accept.print_bdd());
-                        debug!("Comp distrb {}", renderbdds(&comp.dists));
+                let wmc_params = comp.weightmap.as_params(self.opts.max_label);
+                let var_order = self.opts.order.clone();
+                debug!("Incm accept {}", &ctx.accept.print_bdd());
+                debug!("Comp accept {}", comp.accept.print_bdd());
+                debug!("Comp distrb {}", renderbdds(&comp.dists));
 
-                        debug!("weight_map {:?}", &comp.weightmap);
-                        debug!("WMCParams  {:?}", wmc_params);
-                        debug!("VarOrder   {:?}", var_order);
-                        let accept = comp.accept;
+                debug!("weight_map {:?}", &comp.weightmap);
+                debug!("WMCParams  {:?}", wmc_params);
+                debug!("VarOrder   {:?}", var_order);
+                let accept = comp.accept;
 
-                        let mut fin = vec![];
+                let mut samples = comp.samples;
+                let (mut qs, mut dists) = (vec![], vec![]);
+                for dist in comp.dists.iter() {
+                    let theta_q;
+                    // FIXME: should be aggregating the stats somewhere
+                    debug!("using optimizations: {}", self.opts.sample_pruning);
+                    if self.opts.sample_pruning {
+                        (theta_q, _) = crate::inference::calculate_wmc_prob(
+                            self.mgr,
+                            &wmc_params,
+                            &var_order,
+                            *dist, // TODO switch from *dist
+                            accept,
+                            BddPtr::PtrTrue, // TODO &samples
+                        );
+                    } else {
+                        let sample_dist = self.mgr.and(samples, *dist);
+                        (theta_q, _) = crate::inference::calculate_wmc_prob(
+                            self.mgr,
+                            &wmc_params,
+                            &var_order,
+                            sample_dist, // TODO switch from *dist
+                            accept,
+                            samples, // TODO &samples
+                        );
+                    }
 
-                        for sample_det in [true, false] {
-                            let span = if sample_det {
-                                tracing::span!(tracing::Level::DEBUG, "")
-                            } else {
-                                let s = false;
-                                tracing::span!(tracing::Level::DEBUG, "", s)
-                            };
-                            let _enter = span.enter();
-                            let mut samples = comp.samples;
-                            let (mut qs, mut dists) = (vec![], vec![]);
-                            for dist in comp.dists.iter() {
-                                let theta_q;
-                                // FIXME: should be aggregating the stats somewhere
-                                debug!("using optimizations: {}", self.opts.sample_pruning);
-                                if self.opts.sample_pruning {
-                                    (theta_q, _) = crate::inference::calculate_wmc_prob(
-                                        self.mgr,
-                                        &wmc_params,
-                                        &var_order,
-                                        *dist, // TODO switch from *dist
-                                        accept,
-                                        BddPtr::PtrTrue, // TODO &samples
-                                    );
-                                } else {
-                                    let sample_dist = self.mgr.and(samples, *dist);
-                                    (theta_q, _) = crate::inference::calculate_wmc_prob(
-                                        self.mgr,
-                                        &wmc_params,
-                                        &var_order,
-                                        sample_dist, // TODO switch from *dist
-                                        accept,
-                                        samples, // TODO &samples
-                                    );
-                                }
-
-                                let sample = match self.rng.as_mut() {
-                                    Some(rng) => {
-                                        let bern = Bernoulli::new(theta_q).unwrap();
-                                        bern.sample(rng)
-                                    }
-                                    None => sample_det,
-                                };
-                                qs.push(Probability::new(if sample {
-                                    theta_q
-                                } else {
-                                    1.0 - theta_q
-                                }));
-                                self.pq.q *= if sample { theta_q } else { 1.0 - theta_q };
-                                self.pq.p *= if sample { theta_q } else { 1.0 - theta_q };
-                                let sampled_value = BddPtr::from_bool(sample);
-                                dists.push(sampled_value);
-
-                                if !self.opts.sample_pruning {
-                                    // sample in sequence. A smarter sample would compile
-                                    // all samples of a multi-rooted BDD, but I need to futz
-                                    // with rsdd's fold
-                                    let dist_holds = self.mgr.iff(*dist, sampled_value);
-                                    samples = self.mgr.and(samples, dist_holds);
-                                }
-                            }
-
-                            debug!("final dists:   {}", renderbdds(&dists));
-                            debug!("final samples: {}", samples.print_bdd());
-                            debug!("using optimizations: {}", self.opts.sample_pruning);
-                            let c = Output {
-                                dists,
-                                accept,
-                                samples,
-                                weightmap: comp.weightmap.clone(),
-                                // any dangling references will be treated as
-                                // constant and, thus, ignored -- information
-                                // about this will live only in the propagated
-                                // weight
-                                substitutions: comp.substitutions.clone(),
-                                probabilities: qs,
-                                // importance: I::Weight(1.0),
-                                ssubstitutions: ctx.ssubstitutions.clone(),
-                                sout: None,
-                            };
-                            debug_step!("sample", ctx, c);
-                            fin.push(c);
-                            if self.rng.is_some() {
-                                break;
-                            }
+                    let sample = match self.rng.as_mut() {
+                        Some(rng) => {
+                            let bern = Bernoulli::new(theta_q).unwrap();
+                            bern.sample(rng)
                         }
-                        Ok(fin)
-                    })
-                    .collect::<Result<Vec<Vec<Output>>>>()?
-                    .into_iter()
-                    .flatten()
-                    .collect();
+                        None => panic!("full enumeration for debugging is not currently supported"),
+                    };
+                    qs.push(Probability::new(if sample {
+                        theta_q
+                    } else {
+                        1.0 - theta_q
+                    }));
+                    self.pq.q *= if sample { theta_q } else { 1.0 - theta_q };
+                    self.pq.p *= if sample { theta_q } else { 1.0 - theta_q };
+                    let sampled_value = BddPtr::from_bool(sample);
+                    dists.push(sampled_value);
 
+                    if !self.opts.sample_pruning {
+                        // sample in sequence. A smarter sample would compile
+                        // all samples of a multi-rooted BDD, but I need to futz
+                        // with rsdd's fold
+                        let dist_holds = self.mgr.iff(*dist, sampled_value);
+                        samples = self.mgr.and(samples, dist_holds);
+                    }
+                }
+                debug!("final dists:   {}", renderbdds(&dists));
+                debug!("final samples: {}", samples.print_bdd());
+                debug!("using optimizations: {}", self.opts.sample_pruning);
+                let c = Output {
+                    dists,
+                    accept,
+                    samples,
+                    weightmap: comp.weightmap.clone(),
+                    // any dangling references will be treated as
+                    // constant and, thus, ignored -- information
+                    // about this will live only in the propagated
+                    // weight
+                    substitutions: comp.substitutions.clone(),
+                    probabilities: qs,
+                    // importance: I::Weight(1.0),
+                    ssubstitutions: ctx.ssubstitutions.clone(),
+                    sout: None,
+                };
+                debug_step!("sample", ctx, c);
+                let c = Compiled::from_output(c);
                 Ok((c.clone(), SExact(Box::new(c), Box::new(etr))))
-            }
+            } // sexact supporting debug mode (full enumeration over all samples from an exact program)
+              // SExact(_, eexpr) => {
+              //     let span = tracing::span!(tracing::Level::DEBUG, "exact");
+              //     let _enter = span.enter();
+
+              //     let (comp, etr) = self.eval_eexpr(ctx.clone(), eexpr)?;
+              //     let c: Compiled = comp
+              //         .into_iter()
+              //         .enumerate()
+              //         .map(|(ix, comp)| {
+              //             let span = ixspan!("", ix);
+              //             let _enter = span.enter();
+
+              //             let wmc_params = comp.weightmap.as_params(self.opts.max_label);
+              //             let var_order = self.opts.order.clone();
+              //             debug!("Incm accept {}", &ctx.accept.print_bdd());
+              //             debug!("Comp accept {}", comp.accept.print_bdd());
+              //             debug!("Comp distrb {}", renderbdds(&comp.dists));
+
+              //             debug!("weight_map {:?}", &comp.weightmap);
+              //             debug!("WMCParams  {:?}", wmc_params);
+              //             debug!("VarOrder   {:?}", var_order);
+              //             let accept = comp.accept;
+
+              //             let mut fin = vec![];
+
+              //             for sample_det in [true, false] {
+              //                 let span = if sample_det {
+              //                     tracing::span!(tracing::Level::DEBUG, "")
+              //                 } else {
+              //                     let s = false;
+              //                     tracing::span!(tracing::Level::DEBUG, "", s)
+              //                 };
+              //                 let _enter = span.enter();
+              //                 let mut samples = comp.samples;
+              //                 let (mut qs, mut dists) = (vec![], vec![]);
+              //                 for dist in comp.dists.iter() {
+              //                     let theta_q;
+              //                     // FIXME: should be aggregating the stats somewhere
+              //                     debug!("using optimizations: {}", self.opts.sample_pruning);
+              //                     if self.opts.sample_pruning {
+              //                         (theta_q, _) = crate::inference::calculate_wmc_prob(
+              //                             self.mgr,
+              //                             &wmc_params,
+              //                             &var_order,
+              //                             *dist, // TODO switch from *dist
+              //                             accept,
+              //                             BddPtr::PtrTrue, // TODO &samples
+              //                         );
+              //                     } else {
+              //                         let sample_dist = self.mgr.and(samples, *dist);
+              //                         (theta_q, _) = crate::inference::calculate_wmc_prob(
+              //                             self.mgr,
+              //                             &wmc_params,
+              //                             &var_order,
+              //                             sample_dist, // TODO switch from *dist
+              //                             accept,
+              //                             samples, // TODO &samples
+              //                         );
+              //                     }
+
+              //                     let sample = match self.rng.as_mut() {
+              //                         Some(rng) => {
+              //                             let bern = Bernoulli::new(theta_q).unwrap();
+              //                             bern.sample(rng)
+              //                         }
+              //                         None => sample_det,
+              //                     };
+              //                     qs.push(Probability::new(if sample {
+              //                         theta_q
+              //                     } else {
+              //                         1.0 - theta_q
+              //                     }));
+              //                     self.pq.q *= if sample { theta_q } else { 1.0 - theta_q };
+              //                     self.pq.p *= if sample { theta_q } else { 1.0 - theta_q };
+              //                     let sampled_value = BddPtr::from_bool(sample);
+              //                     dists.push(sampled_value);
+
+              //                     if !self.opts.sample_pruning {
+              //                         // sample in sequence. A smarter sample would compile
+              //                         // all samples of a multi-rooted BDD, but I need to futz
+              //                         // with rsdd's fold
+              //                         let dist_holds = self.mgr.iff(*dist, sampled_value);
+              //                         samples = self.mgr.and(samples, dist_holds);
+              //                     }
+              //                 }
+
+              //                 debug!("final dists:   {}", renderbdds(&dists));
+              //                 debug!("final samples: {}", samples.print_bdd());
+              //                 debug!("using optimizations: {}", self.opts.sample_pruning);
+              //                 let c = Output {
+              //                     dists,
+              //                     accept,
+              //                     samples,
+              //                     weightmap: comp.weightmap.clone(),
+              //                     // any dangling references will be treated as
+              //                     // constant and, thus, ignored -- information
+              //                     // about this will live only in the propagated
+              //                     // weight
+              //                     substitutions: comp.substitutions.clone(),
+              //                     probabilities: qs,
+              //                     // importance: I::Weight(1.0),
+              //                     ssubstitutions: ctx.ssubstitutions.clone(),
+              //                     sout: None,
+              //                 };
+              //                 debug_step!("sample", ctx, c);
+              //                 fin.push(c);
+              //                 if self.rng.is_some() {
+              //                     break;
+              //                 }
+              //             }
+              //             Ok(fin)
+              //         })
+              //         .collect::<Result<Vec<Vec<Output>>>>()?
+              //         .into_iter()
+              //         .flatten()
+              //         .collect();
+
+              //     Ok((c.clone(), SExact(Box::new(c), Box::new(etr))))
+              // }
         }
     }
 }
