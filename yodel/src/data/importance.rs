@@ -11,7 +11,7 @@ impl PQ {
         self.p / self.q
     }
     pub fn render(&self) -> String {
-        format!("{} / {}", self.p, self.q)
+        format!("{:.6} / {:.6}", self.p, self.q)
     }
 }
 impl Default for PQ {

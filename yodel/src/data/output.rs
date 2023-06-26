@@ -70,7 +70,7 @@ impl Output {
     pub fn for_sample_lang(ctx: &Context) -> Output {
         // let accept = BddPtr::from_bool(sample.unwrap_or_else(|| false));
         Output {
-            dists: vec![],
+            dists: vec![BddPtr::PtrTrue],
             accept: ctx.accept,
             samples: ctx.samples,
 
@@ -84,6 +84,12 @@ impl Output {
             ssubstitutions: ctx.ssubstitutions.clone(),
             sout: None,
         }
+    }
+    pub fn sval(&self) -> SVal {
+        self.sout
+            .as_ref()
+            .expect("sampling language always steps to a value")
+            .clone()
     }
 }
 
@@ -103,6 +109,12 @@ impl Compiled {
         match self {
             Compiled::Output(o) => Some(o.clone()),
             Compiled::Debug(_) => None,
+        }
+    }
+    pub fn sval(&self) -> SVal {
+        match self {
+            Compiled::Output(o) => o.sval(),
+            Compiled::Debug(_) => panic!("typechecking says this is impossible!"),
         }
     }
 }

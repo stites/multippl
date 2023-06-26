@@ -16,7 +16,7 @@ pub fn mk_sval(v: &SVal) -> SVal {
 }
 
 pub fn mk_sout(ctx: &Context, v: &SVal) -> Output {
-    let mut out = Output::from_anf_dists(ctx, vec![]);
+    let mut out = Output::from_anf_dists(ctx, vec![BddPtr::PtrTrue]);
     out.sout = Some(v.clone());
     out
 }

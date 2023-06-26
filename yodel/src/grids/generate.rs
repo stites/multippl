@@ -46,7 +46,7 @@ pub fn sliding_observes(
 ) -> Vec<(ObsId, ProgramInferable)> {
     use EExpr::*;
     match p0.query() {
-        EProd(_, qs) => qs
+        Query::EQuery(EProd(_, qs)) => qs
             .iter()
             .enumerate()
             .combinations(clause_size)

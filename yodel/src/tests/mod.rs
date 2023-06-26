@@ -175,7 +175,7 @@ fn free_variables_0() {
 
 pub fn check_inference(
     infname: &str,
-    inf: &dyn Fn(&ProgramInferable) -> (Vec<f64>, WmcStats),
+    inf: &dyn Fn(&ProgramInferable) -> (Vec<f64>, Option<WmcStats>),
     precision: f64,
     s: &str,
     fs: Vec<f64>,
@@ -186,7 +186,7 @@ pub fn check_inference(
 
 pub fn check_inference_h(
     infname: &str,
-    inf: &dyn Fn(&ProgramInferable) -> (Vec<f64>, WmcStats),
+    inf: &dyn Fn(&ProgramInferable) -> (Vec<f64>, Option<WmcStats>),
     precision: f64,
     s: &str,
     fs: Vec<f64>,
@@ -221,7 +221,7 @@ pub fn check_inference_h(
 pub fn check_exact(s: &str, f: Vec<f64>, p: &ProgramInferable) {
     let p = p.strip_samples().unwrap();
     debug!("program: {:#?}", &p);
-    check_inference("exact", &inference::exact_with, 0.000001, s, f, &p);
+    check_inference("exact", &inference::exact_with_h, 0.000001, s, f, &p);
 }
 pub fn check_exact1(s: &str, f: f64, p: &ProgramInferable) {
     check_exact(s, vec![f], p)

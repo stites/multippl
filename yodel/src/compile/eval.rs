@@ -697,9 +697,11 @@ impl<'a> State<'a> {
                 let span = tracing::span!(tracing::Level::DEBUG, "sample-ite");
                 let _enter = span.enter();
                 let (cguard, eguard, _) = crate::compile::anf::eval_sanf(&ctx, guard)?;
-                let (ctruthy, etruthy) = self.eval_sexpr(ctx.clone(), truthy)?;
-                let (cfalsey, efalsey) = self.eval_sexpr(ctx, falsey)?;
-                todo!()
+                if cguard.sval().as_bool() {
+                    self.eval_sexpr(ctx.clone(), truthy)
+                } else {
+                    self.eval_sexpr(ctx, falsey)
+                }
             }
             SExact(_, eexpr) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "exact");

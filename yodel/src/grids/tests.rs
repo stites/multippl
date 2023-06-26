@@ -241,7 +241,7 @@ fn test_grid_2x2_compiles() {
         _ => assert!(false, "expected a let-in binding!"),
     }
     match &grid.query() {
-        EAnf(_, a) => assert_eq!(*a, Box::new(b!(@anf "11"))),
+        Query::EQuery(EAnf(_, a)) => assert_eq!(*a, Box::new(b!(@anf "11"))),
         _ => assert!(false, "expected an anf statement!"),
     }
     assert_eq!(grid, expected);

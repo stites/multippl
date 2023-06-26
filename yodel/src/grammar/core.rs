@@ -254,6 +254,24 @@ impl IsTyped<STy> for SVal {
         }
     }
 }
+impl SVal {
+    pub fn as_query(&self) -> Vec<f64> {
+        use SVal::*;
+        match self {
+            SBool(x) => vec![if *x { 1.0 } else { 0.0 }],
+            SInt(x) => vec![*x as f64],
+            SFloat(x) => vec![*x],
+            SFloatVec(vs) => vs.clone(),
+        }
+    }
+    pub fn as_bool(&self) -> bool {
+        use SVal::*;
+        match self {
+            SBool(b) => *b,
+            _ => panic!("type-checking says this is impossible!"),
+        }
+    }
+}
 
 #[allow(clippy::enum_variant_names)]
 pub enum SExpr<X>
@@ -902,6 +920,71 @@ where
     }
 }
 
+impl<X> SExpr<X>
+where
+    EAnfExt: ξ<X>,
+    EPrjExt: ξ<X>,
+    EProdExt: ξ<X>,
+    ELetInExt: ξ<X>,
+    EIteExt: ξ<X>,
+    EFlipExt: ξ<X>,
+    EObserveExt: ξ<X>,
+    ESampleExt: ξ<X>,
+    <EAnfExt as ξ<X>>::Ext: Debug + Clone,
+    <EPrjExt as ξ<X>>::Ext: Debug + Clone,
+    <EProdExt as ξ<X>>::Ext: Debug + Clone,
+    <ELetInExt as ξ<X>>::Ext: Debug + Clone,
+    <EIteExt as ξ<X>>::Ext: Debug + Clone,
+    <EFlipExt as ξ<X>>::Ext: Debug + Clone,
+    <EObserveExt as ξ<X>>::Ext: Debug + Clone,
+    <ESampleExt as ξ<X>>::Ext: Debug + Clone,
+    AVarExt<EVal>: ξ<X>,
+    AVarExt<SVal>: ξ<X>,
+    <AVarExt<EVal> as ξ<X>>::Ext: Debug + Clone,
+    <AVarExt<SVal> as ξ<X>>::Ext: Debug + Clone,
+    AValExt<EVal>: ξ<X>,
+    AValExt<SVal>: ξ<X>,
+    <AValExt<EVal> as ξ<X>>::Ext: Debug + Clone,
+    <AValExt<SVal> as ξ<X>>::Ext: Debug + Clone,
+
+    SAnfExt: ξ<X>,
+    SLetInExt: ξ<X>,
+    SSeqExt: ξ<X>,
+    SIteExt: ξ<X>,
+    SExactExt: ξ<X>,
+    <SAnfExt as ξ<X>>::Ext: Debug + Clone,
+    <SLetInExt as ξ<X>>::Ext: Debug + Clone,
+    <SSeqExt as ξ<X>>::Ext: Debug + Clone,
+    <SIteExt as ξ<X>>::Ext: Debug + Clone,
+    <SExactExt as ξ<X>>::Ext: Debug + Clone,
+
+    SBernExt: ξ<X>,
+    SDiscreteExt: ξ<X>,
+    SUniformExt: ξ<X>,
+    SNormalExt: ξ<X>,
+    SBetaExt: ξ<X>,
+    SDirichletExt: ξ<X>,
+
+    <SBernExt as ξ<X>>::Ext: Debug + Clone,
+    <SDiscreteExt as ξ<X>>::Ext: Debug + Clone,
+    <SUniformExt as ξ<X>>::Ext: Debug + Clone,
+    <SNormalExt as ξ<X>>::Ext: Debug + Clone,
+    <SBetaExt as ξ<X>>::Ext: Debug + Clone,
+    <SDirichletExt as ξ<X>>::Ext: Debug + Clone,
+{
+    pub fn is_let(&self) -> bool {
+        matches!(self, SExpr::SLetIn(_, _, _, _))
+    }
+
+    pub fn query(&self) -> SExpr<X> {
+        use SExpr::*;
+        match self {
+            SLetIn(ex, s, x, y) => y.query(),
+            _ => self.clone(),
+        }
+    }
+}
+
 pub enum Program<X>
 where
     EAnfExt: ξ<X>,
@@ -934,6 +1017,64 @@ where
     SBody(SExpr<X>),
     // TODO
     // | define (f: Func) (rest: Program) : Program
+}
+
+#[derive(Debug)]
+pub enum Query<X>
+where
+    EAnfExt: ξ<X>,
+    EPrjExt: ξ<X>,
+    EProdExt: ξ<X>,
+    ELetInExt: ξ<X>,
+    EIteExt: ξ<X>,
+    EFlipExt: ξ<X>,
+    EObserveExt: ξ<X>,
+    ESampleExt: ξ<X>,
+
+    <EAnfExt as ξ<X>>::Ext: Debug,
+    <EPrjExt as ξ<X>>::Ext: Debug,
+    <EProdExt as ξ<X>>::Ext: Debug,
+    <ELetInExt as ξ<X>>::Ext: Debug,
+    <EIteExt as ξ<X>>::Ext: Debug,
+    <EFlipExt as ξ<X>>::Ext: Debug,
+    <EObserveExt as ξ<X>>::Ext: Debug,
+    <ESampleExt as ξ<X>>::Ext: Debug,
+    AVarExt<EVal>: ξ<X>,
+    AVarExt<SVal>: ξ<X>,
+    <AVarExt<EVal> as ξ<X>>::Ext: Debug,
+    <AVarExt<SVal> as ξ<X>>::Ext: Debug,
+    AValExt<EVal>: ξ<X>,
+    AValExt<SVal>: ξ<X>,
+    <AValExt<EVal> as ξ<X>>::Ext: Debug,
+    <AValExt<SVal> as ξ<X>>::Ext: Debug,
+
+    SAnfExt: ξ<X>,
+    SLetInExt: ξ<X>,
+    SSeqExt: ξ<X>,
+    SIteExt: ξ<X>,
+    SExactExt: ξ<X>,
+    <SAnfExt as ξ<X>>::Ext: Debug,
+    <SLetInExt as ξ<X>>::Ext: Debug,
+    <SSeqExt as ξ<X>>::Ext: Debug,
+    <SIteExt as ξ<X>>::Ext: Debug,
+    <SExactExt as ξ<X>>::Ext: Debug,
+
+    SBernExt: ξ<X>,
+    SDiscreteExt: ξ<X>,
+    SUniformExt: ξ<X>,
+    SNormalExt: ξ<X>,
+    SBetaExt: ξ<X>,
+    SDirichletExt: ξ<X>,
+
+    <SBernExt as ξ<X>>::Ext: Debug,
+    <SDiscreteExt as ξ<X>>::Ext: Debug,
+    <SUniformExt as ξ<X>>::Ext: Debug,
+    <SNormalExt as ξ<X>>::Ext: Debug,
+    <SBetaExt as ξ<X>>::Ext: Debug,
+    <SDirichletExt as ξ<X>>::Ext: Debug,
+{
+    EQuery(EExpr<X>),
+    SQuery(SExpr<X>),
 }
 
 impl<X> PartialEq for Program<X>
@@ -1122,7 +1263,6 @@ where
         }
     }
 }
-
 impl<X> Program<X>
 where
     EAnfExt: ξ<X>,
@@ -1174,11 +1314,11 @@ where
     <SBetaExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <SDirichletExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
 {
-    pub fn query(&self) -> EExpr<X> {
+    pub fn query(&self) -> Query<X> {
         use Program::*;
         match self {
-            EBody(e) => e.query(),
-            SBody(e) => todo!(), // e.query(),
+            EBody(e) => Query::EQuery(e.query()),
+            SBody(e) => Query::SQuery(e.query()),
         }
     }
     pub fn insert_observe(&self, e: EExpr<X>) -> Program<X> {

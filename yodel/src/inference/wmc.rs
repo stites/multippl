@@ -68,7 +68,7 @@ pub fn calculate_wmc_prob(
     calculate_wmc_prob_hf64(mgr, params, var_order, dist, accept)
 }
 
-pub fn wmc_prob(mgr: &mut Mgr, c: &Output) -> (Vec<f64>, WmcStats) {
+pub fn wmc_prob(mgr: &mut Mgr, c: &Output) -> (Vec<f64>, Option<WmcStats>) {
     let span = tracing::span!(tracing::Level::DEBUG, "wmc_prob");
     let _enter = span.enter();
     let mut last_stats = None;
@@ -88,5 +88,5 @@ pub fn wmc_prob(mgr: &mut Mgr, c: &Output) -> (Vec<f64>, WmcStats) {
             p
         })
         .collect_vec();
-    (probs, last_stats.expect("output dists should be non-empty"))
+    (probs, last_stats)
 }

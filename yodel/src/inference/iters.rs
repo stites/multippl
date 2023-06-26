@@ -54,7 +54,9 @@ impl Iterator for SamplingIter {
 
                 self.current_step += 1;
                 let (query_result, stats) = wmc_prob(&mut self.manager, &c);
-                self.max_stats = self.max_stats.largest_of(&stats);
+                self.max_stats = self
+                    .max_stats
+                    .largest_of(&stats.expect("output dists should be non-empty"));
                 let expectations = Expectations::new(pq, query_result.clone());
                 self.current_exp.mut_add(&expectations);
 
