@@ -5,7 +5,7 @@ use crate::utils::render::*;
 use crate::*;
 use itertools::*;
 use num_traits::*;
-use rand::distributions::{Bernoulli, Distribution};
+use rand::distributions::Distribution;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
 use rsdd::builder::bdd_builder::BddManager;
@@ -17,6 +17,7 @@ use rsdd::repr::var_label::*;
 use rsdd::repr::var_order::VarOrder;
 use rsdd::repr::wmc::*;
 use rsdd::sample::probability::Probability;
+use statrs::distribution::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::fmt;
@@ -305,6 +306,58 @@ pub fn eval_elet_output<'a>(
     Ok(c)
 }
 
+fn sbern(ctx: &Context, param: &AnfAnn<SVal>) -> Result<(Bernoulli, AnfTr<SVal>)> {
+    let (cparam, param, _) = crate::compile::anf::eval_sanf(ctx, param)?;
+
+    let dist = statrs::distribution::Bernoulli::new(cparam.sfloat()).unwrap();
+    Ok((dist, param))
+}
+fn sdiscrete(ctx: &Context, ps: &Vec<AnfAnn<SVal>>) -> Result<(Categorical, Vec<AnfTr<SVal>>)> {
+    let (cps, ps) = crate::compile::anf::eval_sanfs(ctx, ps)?;
+
+    let dist = statrs::distribution::Categorical::new(&cps.sfloats()).unwrap();
+    Ok((dist, ps))
+}
+fn sdirichlet(ctx: &Context, ps: &Vec<AnfAnn<SVal>>) -> Result<(Dirichlet, Vec<AnfTr<SVal>>)> {
+    let (cps, ps) = crate::compile::anf::eval_sanfs(ctx, ps)?;
+
+    let dist = statrs::distribution::Dirichlet::new(cps.sfloats()).unwrap();
+    Ok((dist, ps))
+}
+fn suniform(
+    ctx: &Context,
+    lo: &AnfAnn<SVal>,
+    hi: &AnfAnn<SVal>,
+) -> Result<(Uniform, AnfTr<SVal>, AnfTr<SVal>)> {
+    let (clo, lo, _) = crate::compile::anf::eval_sanf(ctx, lo)?;
+    let (chi, hi, _) = crate::compile::anf::eval_sanf(ctx, hi)?;
+
+    let dist = statrs::distribution::Uniform::new(clo.sfloat(), chi.sfloat()).unwrap();
+    Ok((dist, lo, hi))
+}
+fn snormal(
+    ctx: &Context,
+    mn: &AnfAnn<SVal>,
+    sd: &AnfAnn<SVal>,
+) -> Result<(Normal, AnfTr<SVal>, AnfTr<SVal>)> {
+    let (cmn, mn, _) = crate::compile::anf::eval_sanf(ctx, mn)?;
+    let (csd, sd, _) = crate::compile::anf::eval_sanf(ctx, sd)?;
+
+    let dist = statrs::distribution::Normal::new(cmn.sfloat(), csd.sfloat()).unwrap();
+    Ok((dist, mn, sd))
+}
+fn sbeta(
+    ctx: &Context,
+    a: &AnfAnn<SVal>,
+    b: &AnfAnn<SVal>,
+) -> Result<(Beta, AnfTr<SVal>, AnfTr<SVal>)> {
+    let (ca, a, _) = crate::compile::anf::eval_sanf(ctx, a)?;
+    let (cb, b, _) = crate::compile::anf::eval_sanf(ctx, b)?;
+    let dist = statrs::distribution::Beta::new(ca.sfloat(), cb.sfloat()).unwrap();
+    Ok((dist, a, b))
+}
+
+#[derive(Clone, Debug)]
 pub struct Opts {
     pub sample_pruning: bool,
     pub max_label: u64,
@@ -336,6 +389,16 @@ impl<'a> State<'a> {
             pq: Default::default(),
         }
     }
+    pub fn new_from<'b>(&self) -> State<'b> {
+        todo!()
+        // State {
+        //     opts: self.opts.clone(),
+        //     mgr,
+        //     rng,
+        //     pq: Default::default(),
+        // }
+    }
+
     pub fn p(&self) -> f64 {
         self.pq.p
     }
@@ -514,9 +577,7 @@ impl<'a> State<'a> {
                 let span = tracing::span!(tracing::Level::DEBUG, "bernoulli");
                 let _enter = span.enter();
 
-                let (cparam, param, _) = crate::compile::anf::eval_sanf(&ctx, param)?;
-
-                let dist = statrs::distribution::Bernoulli::new(cparam.sfloat()).unwrap();
+                let (dist, param) = sbern(&ctx, param)?;
                 let x = match self.rng.as_mut() {
                     Some(rng) => dist.sample(rng),
                     None => dist.sample(&mut rand::thread_rng()),
@@ -536,9 +597,7 @@ impl<'a> State<'a> {
                 let span = tracing::span!(tracing::Level::DEBUG, "discrete");
                 let _enter = span.enter();
 
-                let (cps, ps) = crate::compile::anf::eval_sanfs(&ctx, ps)?;
-
-                let dist = statrs::distribution::Categorical::new(&cps.sfloats()).unwrap();
+                let (dist, ps) = sdiscrete(&ctx, ps)?;
                 let x = match self.rng.as_mut() {
                     Some(rng) => dist.sample(rng),
                     None => dist.sample(&mut rand::thread_rng()),
@@ -556,9 +615,7 @@ impl<'a> State<'a> {
                 let span = tracing::span!(tracing::Level::DEBUG, "dirichlet");
                 let _enter = span.enter();
 
-                let (cps, ps) = crate::compile::anf::eval_sanfs(&ctx, ps)?;
-
-                let dist = statrs::distribution::Dirichlet::new(cps.sfloats()).unwrap();
+                let (dist, ps) = sdirichlet(&ctx, ps)?;
                 let x = match self.rng.as_mut() {
                     Some(rng) => dist.sample(rng),
                     None => dist.sample(&mut rand::thread_rng()),
@@ -570,16 +627,13 @@ impl<'a> State<'a> {
                 let x = x.data.as_vec().to_vec();
                 o.sout = x.into_iter().map(SVal::SFloat).collect();
                 let c = Compiled::from_output(o);
-                Ok((c.clone(), SDiscrete(Box::new(c), ps.clone())))
+                Ok((c.clone(), SDirichlet(Box::new(c), ps.clone())))
             }
             SUniform(_, lo, hi) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "uniform");
                 let _enter = span.enter();
 
-                let (clo, lo, _) = crate::compile::anf::eval_sanf(&ctx, lo)?;
-                let (chi, hi, _) = crate::compile::anf::eval_sanf(&ctx, hi)?;
-
-                let dist = statrs::distribution::Uniform::new(clo.sfloat(), chi.sfloat()).unwrap();
+                let (dist, lo, hi) = suniform(&ctx, lo, hi)?;
                 let x = match self.rng.as_mut() {
                     Some(rng) => dist.sample(rng),
                     None => dist.sample(&mut rand::thread_rng()),
@@ -595,10 +649,9 @@ impl<'a> State<'a> {
             SNormal(_, mn, sd) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "normal");
                 let _enter = span.enter();
-                let (cmn, mn, _) = crate::compile::anf::eval_sanf(&ctx, mn)?;
-                let (csd, sd, _) = crate::compile::anf::eval_sanf(&ctx, sd)?;
 
-                let dist = statrs::distribution::Normal::new(cmn.sfloat(), csd.sfloat()).unwrap();
+                let (dist, mn, sd) = snormal(&ctx, mn, sd)?;
+
                 let x = match self.rng.as_mut() {
                     Some(rng) => dist.sample(rng),
                     None => dist.sample(&mut rand::thread_rng()),
@@ -615,9 +668,9 @@ impl<'a> State<'a> {
             SBeta(_, a, b) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "beta");
                 let _enter = span.enter();
-                let (ca, a, _) = crate::compile::anf::eval_sanf(&ctx, a)?;
-                let (cb, b, _) = crate::compile::anf::eval_sanf(&ctx, b)?;
-                let dist = statrs::distribution::Beta::new(ca.sfloat(), cb.sfloat()).unwrap();
+
+                let (dist, a, b) = sbeta(&ctx, a, b)?;
+
                 let x = match self.rng.as_mut() {
                     Some(rng) => dist.sample(rng),
                     None => dist.sample(&mut rand::thread_rng()),
@@ -666,6 +719,87 @@ impl<'a> State<'a> {
                     self.eval_sexpr(ctx, falsey)
                 }
             }
+            SObserve(_, a, e) => {
+                let span = tracing::span!(tracing::Level::DEBUG, "sample-observe");
+                let _enter = span.enter();
+
+                let (ca, a, _) = crate::compile::anf::eval_sanf(&ctx, a)?;
+                let (q, ce, e) = match *e.clone() {
+                    SBern(_, param) => {
+                        let (dist, param) = sbern(&ctx, &param)?;
+
+                        let q = statrs::distribution::Discrete::pmf(&dist, ca.sbool() as u64);
+
+                        let mut o = Output::for_sample_lang(&ctx);
+                        o.sout = vec![SVal::SBool(ca.sbool())];
+                        let c = Compiled::from_output(o);
+                        (q, c.clone(), SBern(Box::new(c), Box::new(param)))
+                    }
+                    SDiscrete(_, ps) => {
+                        let (dist, ps) = sdiscrete(&ctx, &ps)?;
+                        let q = statrs::distribution::Discrete::pmf(&dist, ca.sint() as u64);
+
+                        let mut o = Output::for_sample_lang(&ctx);
+                        o.sout = vec![SVal::SInt(ca.sint())];
+                        let c = Compiled::from_output(o);
+                        (q, c.clone(), SDiscrete(Box::new(c), ps.clone()))
+                    }
+                    SDirichlet(_, ps) => {
+                        let (dist, ps) = sdirichlet(&ctx, &ps)?;
+                        let q = statrs::distribution::Continuous::pdf(
+                            &dist,
+                            &<nalgebra::base::DVector<f64> as From<Vec<f64>>>::from(ca.sfloats()),
+                        );
+
+                        let mut o = Output::for_sample_lang(&ctx);
+                        o.sout = ca.sfloats().into_iter().map(SVal::SFloat).collect();
+                        let c = Compiled::from_output(o);
+                        (q, c.clone(), SDirichlet(Box::new(c), ps.clone()))
+                    }
+                    SUniform(_, lo, hi) => {
+                        let (dist, lo, hi) = suniform(&ctx, &lo, &hi)?;
+                        let q = statrs::distribution::Continuous::pdf(&dist, ca.sfloat());
+
+                        let mut o = Output::for_sample_lang(&ctx);
+                        o.sout = vec![SVal::SFloat(ca.sfloat())];
+                        let c = Compiled::from_output(o);
+                        (
+                            q,
+                            c.clone(),
+                            SUniform(Box::new(c), Box::new(lo), Box::new(hi)),
+                        )
+                    }
+
+                    SNormal(_, mn, sd) => {
+                        let (dist, mn, sd) = snormal(&ctx, &mn, &sd)?;
+                        let q = statrs::distribution::Continuous::pdf(&dist, ca.sfloat());
+
+                        let mut o = Output::for_sample_lang(&ctx);
+                        o.sout = vec![SVal::SFloat(ca.sfloat())];
+                        let c = Compiled::from_output(o);
+                        (
+                            q,
+                            c.clone(),
+                            SNormal(Box::new(c), Box::new(mn), Box::new(sd)),
+                        )
+                    }
+                    SBeta(_, a, b) => {
+                        let (dist, a, b) = sbeta(&ctx, &a, &b)?;
+                        let q = statrs::distribution::Continuous::pdf(&dist, ca.sfloat());
+
+                        let mut o = Output::for_sample_lang(&ctx);
+                        o.sout = vec![SVal::SFloat(ca.sfloat())];
+                        let c = Compiled::from_output(o);
+                        (q, c.clone(), SBeta(Box::new(c), Box::new(a), Box::new(b)))
+                    }
+                    _ => panic!("semantic error, see note on SObserve in SExpr enum"),
+                };
+
+                self.pq.q *= q;
+                let c = Compiled::from_output(ca);
+                Ok((c.clone(), SObserve(Box::new(c), Box::new(a), Box::new(e))))
+            }
+
             SExact(_, eexpr) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "exact");
                 let _enter = span.enter();
@@ -714,7 +848,7 @@ impl<'a> State<'a> {
 
                     let sample = match self.rng.as_mut() {
                         Some(rng) => {
-                            let bern = Bernoulli::new(theta_q).unwrap();
+                            let bern = rand::distributions::Bernoulli::new(theta_q).unwrap();
                             bern.sample(rng)
                         }
                         None => panic!("full enumeration for debugging is not currently supported"),

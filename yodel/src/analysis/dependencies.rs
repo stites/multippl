@@ -183,6 +183,11 @@ impl DependencyEnv {
             SNormal(_, _, _) => IndexSet::new(),
             SBeta(_, _, _) => IndexSet::new(),
             SDirichlet(_, _) => IndexSet::new(),
+            SObserve(_, a, e) => {
+                let mut deps = Dep::as_vars(self.scan_anf(a));
+                deps.extend(self.scan_sexpr(e));
+                deps
+            }
         }
     }
 

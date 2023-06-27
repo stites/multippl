@@ -225,7 +225,7 @@ mod upcast {
             }
             SBeta(dv, a, b) => SBeta((), Box::new(upcast_anf(a)), Box::new(upcast_anf(b))),
             SDirichlet(dv, ps) => SDirichlet((), upcast_anfs(ps)),
-
+            SObserve(_, a, e) => SObserve((), Box::new(upcast_anf(a)), Box::new(upcast_sexpr(e))),
             SExact(_, e) => SExact((), Box::new(upcast_eexpr(e))),
         }
     }

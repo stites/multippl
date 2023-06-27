@@ -620,6 +620,9 @@ where
             }
             SBeta(ext, a, b) => f.write_fmt(format_args!("Beta({:?}, {:?}, {:?})", ext, a, b)),
             SDirichlet(ext, ps) => f.write_fmt(format_args!("Dirichlet({:?}, {:?})", ext, ps)),
+            SObserve(ext, a, e) => {
+                f.write_fmt(format_args!("Observe({:?}) {:?} from {:?})", ext, a, e))
+            }
 
             SExact(ext, e) => f.debug_tuple("Exact").field(&ext).field(e).finish(),
         }
@@ -771,6 +774,7 @@ where
             SNormal(ext, mean, var) => SNormal(ext.clone(), mean.clone(), var.clone()),
             SBeta(ext, a, b) => SBeta(ext.clone(), a.clone(), b.clone()),
             SDirichlet(ext, ps) => SDirichlet(ext.clone(), ps.clone()),
+            SObserve(ext, a, b) => SObserve(ext.clone(), a.clone(), b.clone()),
             SExact(ext, e) => SExact(ext.clone(), e.clone()),
         }
     }
@@ -926,6 +930,9 @@ where
             }
             (SNormal(ext0, a0, b0), SNormal(ext1, a1, b1)) => ext0 == ext1 && a0 == a1 && b0 == b1,
             (SBeta(ext0, a0, b0), SBeta(ext1, a1, b1)) => ext0 == ext1 && a0 == a1 && b0 == b1,
+            (SObserve(ext0, a0, b0), SObserve(ext1, a1, b1)) => {
+                ext0 == ext1 && a0 == a1 && b0 == b1
+            }
             (SExact(ext0, e0), SExact(ext1, e1)) => ext0 == ext1 && e0 == e1,
 
             (_, _) => false,

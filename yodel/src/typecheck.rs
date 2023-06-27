@@ -179,6 +179,7 @@ pub mod grammar {
                 SNormal(_, mean, var) => STy::SFloat,
                 SBeta(_, a, b) => STy::SFloat,
                 SDirichlet(_, ps) => STy::SVec(ps.iter().map(|_| STy::SFloat).collect()),
+                SObserve(_, _, _) => STy::SBool, // returns Top, 2 is the next best thing
                 SExact(_, e) => natural_embedding_e(e.as_type()),
             }
         }
@@ -295,6 +296,11 @@ pub fn typecheck_sexpr(e: &grammar::SExprTyped) -> Result<SExprUD, CompileError>
             let ps = typecheck_anfs(ps)?;
             Ok(SDirichlet((), ps))
         }
+        SObserve(_, a, e) => Ok(SObserve(
+            (),
+            Box::new(typecheck_anf(a)?),
+            Box::new(typecheck_sexpr(e)?),
+        )),
 
         SExact(_, e) => Ok(SExact((), Box::new(typecheck_eexpr(e)?))),
     }

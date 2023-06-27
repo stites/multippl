@@ -159,6 +159,9 @@ pub mod grammar {
                     Box::new(x.strip_samples1()?),
                     Box::new(y.strip_samples1()?),
                 )),
+                SObserve(_, a, e) => Err(SemanticsError(
+                    "can't convert observes from sampling language".to_string(),
+                )),
                 SSeq(ex, x, y) => Ok(ELetIn(
                     None,
                     String::from("_"),
@@ -327,6 +330,11 @@ pub fn typeinference_sexpr(e: &grammar::SExprInferable) -> Result<SExprTyped> {
             let ps = typeinference_anfs(&ignored_stype(), ps)?;
             Ok(SDirichlet((), ps))
         }
+        SObserve(_, a, e) => Ok(SObserve(
+            (),
+            Box::new(typeinference_anf(&ignored_stype(), a)?),
+            Box::new(typeinference_sexpr(e)?),
+        )),
 
         SExact(_, e) => Ok(SExact((), Box::new(typeinference_eexpr(e)?))),
     }

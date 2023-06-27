@@ -393,6 +393,11 @@ impl LabelEnv {
                 let ps = self.annotate_anfs(ps)?;
                 Ok(SDirichlet((), ps))
             }
+            SObserve(_, a, e) => Ok(SObserve(
+                (),
+                Box::new(self.annotate_anf(a)?),
+                Box::new(self.annotate_sexpr(e)?),
+            )),
 
             SExact(_, e) => Ok(SExact((), Box::new(self.annotate_eexpr(e)?))),
         }

@@ -2442,6 +2442,7 @@ dependencies = [
  "formula",
  "indexmap",
  "itertools",
+ "nalgebra",
  "num-traits",
  "plotters",
  "quickcheck",

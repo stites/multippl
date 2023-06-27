@@ -279,6 +279,11 @@ impl SymEnv {
                 let ps = self.uniquify_anfs(ps)?;
                 Ok(SDirichlet(self.fresh(), ps))
             }
+            SObserve(_, a, e) => Ok(SObserve(
+                (),
+                Box::new(self.uniquify_anf(a)?),
+                Box::new(self.uniquify_sexpr(e)?),
+            )),
 
             SExact(_, e) => Ok(SExact((), Box::new(self.uniquify_eexpr(e)?))),
         }
