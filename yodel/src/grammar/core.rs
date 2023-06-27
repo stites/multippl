@@ -390,13 +390,40 @@ where
         Box<SExpr<X>>,
         Box<SExpr<X>>,
     ),
-    SBern(<SBernExt as ξ<X>>::Ext, f64),
-    SDiscrete(<SDiscreteExt as ξ<X>>::Ext, Vec<f64>),
-    SUniform(<SUniformExt as ξ<X>>::Ext, f64, f64),
-    SNormal(<SNormalExt as ξ<X>>::Ext, f64, f64),
-    SBeta(<SBetaExt as ξ<X>>::Ext, f64, f64),
-    SDirichlet(<SDirichletExt as ξ<X>>::Ext, Vec<f64>),
+    SSeq(<SSeqExt as ξ<X>>::Ext, Box<SExpr<X>>, Box<SExpr<X>>),
+    // distributions
+    SBern(<SBernExt as ξ<X>>::Ext, Box<Anf<X, SVal>>),
+    SDiscrete(<SDiscreteExt as ξ<X>>::Ext, Vec<Anf<X, SVal>>),
+    SUniform(
+        <SUniformExt as ξ<X>>::Ext,
+        Box<Anf<X, SVal>>,
+        Box<Anf<X, SVal>>,
+    ),
+    SNormal(
+        <SNormalExt as ξ<X>>::Ext,
+        Box<Anf<X, SVal>>,
+        Box<Anf<X, SVal>>,
+    ),
+    SBeta(
+        <SBetaExt as ξ<X>>::Ext,
+        Box<Anf<X, SVal>>,
+        Box<Anf<X, SVal>>,
+    ),
+    SDirichlet(<SDirichletExt as ξ<X>>::Ext, Vec<Anf<X, SVal>>),
 
+    // Morally, this is an "observe extension" of every distribution. For
+    // example:
+    // - ObserveBern(<value>, <float>)
+    // - ObserveDiscrete(<value>, Vec<float>)
+    // - ObserveUniform(<value>, <float>, <float>)
+    // etc.
+    //
+    // We do this because it lets us keep values simple, and bars us from
+    // reasoning about sampler subprograms. We do get a constrained form of
+    // these through SExact(ESample) statements.
+    SObserve(Box<Anf<X, SVal>>, Box<SExpr<X>>),
+
+    // Multi-language boundary
     SExact(<SExactExt as ξ<X>>::Ext, Box<EExpr<X>>),
 }
 
