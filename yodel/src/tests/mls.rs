@@ -27,3 +27,100 @@ fn mls_0() {
     check_approx1("let binding", 1.0 / 3.0, &p, 15000);
     println!("program3 pass");
 }
+
+// /// https://github.com/uiuc-arc/AQUA/blob/master/benchmarks/stan_bench/tug/tug.stan
+// #[test]
+// // #[traced_test]
+// fn tug() {
+//     let p = program!(~lets![
+//         ~ "alice0" <- normal!(1.0, 1.0);
+//         ~ "alice1" <- normal!(0.5, 0.5);
+//         ~ "bob0" <- normal!(1.0, 1.0);
+//         ~ "bob1" <- normal!(0.5, 0.5);
+
+//         // unfortunately, this is only in sampling land. We could, perhaps, compile the following:
+//         ~ "asplit" <- bern!(0.33);
+//         ~ "bsplit" <- bern!(0.33);
+
+//         ~ "alice" <- ite!(~ (var!(~ "asplit")) ? var!(~ "alice0") : var!(~ "alice1"));
+//         ~ "bob"   <- ite!(~ (var!(~ "bsplit")) ? var!(~ "bob0") : var!(~ "bob1"));
+//         // ... but we would have to deal with free variables (which is not really MLS friendly)
+//         // the rest of the program requires observing in sampling language
+//         // for x in xs {
+//         //   observe: var!(~ "alice") > var!(~ "bob") == x
+//         // }
+//     ]);
+// }
+
+// /// modified program H from https://dl.acm.org/doi/pdf/10.1145/3490421 but just stubbing out some syntax
+// #[test]
+// // #[traced_test]
+// fn gorinova_4_33_modified() {
+//     let p = program!(~lets![
+//         // ~ "phi0" <- myvec![0.3, 0.4, 0.5]
+//         // ~ "phi1" <- myvec![0.4, 0.5, 0.3]
+//         // ~ "phi2" <- myvec![0.5, 0.3, 0.4]
+//         // ~ "mu"   <- myvec![0.3, 0.6, 0.9]
+//            ~ "z1" <- categorical!(0.3, 0.4, 0.5); // phi0
+//         // ~ "z23" <- ite!(~
+//         //        (gt!(var!(~ "z1"), sval!(2))) ?
+//         //             (lets![
+//         //             ~ "z2_t" <- categorical!(prj!(~ "phi", var!("z1")));
+//         //             ~ "z3_t" <- categorical!(prj!(~ "phi", var!("z2")));
+//         //             ~~ var!(~ "z2_t", "z2_t")
+//         //             ]) :
+//         //            (lets![
+//         //             ~ "z2_t" <- categorical!(prj!(~ "phi", var!("z1")));
+//         //             ~ "z3_t" <- categorical!(prj!(~ "phi", var!("z1")));
+//         //             ~~ var!(~ "z2_t", "z2_t")
+//         //            ])
+//         // );
+//         // observe: var!(~ "y1"), normal!(prj!(~ "mu", var!(~ "z1")));
+//         // observe: var!(~ "y2"), normal!(prj!(~ "mu", var!(~ "z2")));
+//         // observe: var!(~ "y3"), normal!(prj!(~ "mu", var!(~ "z3")));
+//     ]);
+// }
+
+// TODO: inspiration from https://dl.acm.org/doi/pdf/10.1145/3490421 a causal query could be nice
+
+// #[rustfmt::skip]
+// pub mod networks {
+//     /// https://www.bnlearn.com/bnrepository/clgaussian-small.html#healthcare
+//     pub fn healthcare() -> ProgramInferable {
+//        program!(~lets![
+//          ~ "Age"             <- categorical!(0.35, 0.45, 0.20); // A: young, adult, old
+//          ~ "PreExistingCond" <-                           // none, mild, severe
+//              ite!(~ (eq!(var!(~ "Age"), 0)) ? ( categorical!(0.88, 0.10, 0.20) ) : (
+//                     (eq!(var!(~ "Age"), 1)) ? ( categorical!(0.75, 0.20, 0.05) )
+//                                             : ( categorical!(0.42, 0.53, 0.05) )   ))
+//          ~ "OutpatientExpenditure" <-
+//              ite!(~ (eq!(var!(~ "Age"), 0)) ? ( normal!( 60.0,  100.0) ) : (
+//                     (eq!(var!(~ "Age"), 1)) ? ( normal!(180.0,  400.0) )
+//                                             : ( normal!(360.0, 1600.0) )   ))
+//          ~ "AnyHospitalStay" <-                    // any   (vs none)
+//              ite!(~ (eq!(var!(~ "Age"), 0)) ? ( bern!(0.1 ) ) : (
+//                     (eq!(var!(~ "Age"), 1)) ? ( bern!(0.25) )
+//                                             : ( bern!(0.40) )   ))
+//          ~ "DaysHospitalStay" <-
+//              ite!(~ (not!(~ "AnyHospitalStay")) ? ( 0.0 ) : (
+//                        ite!(~ (eq!(var!(~ "Age"), 0)) ? ( normal!( 1.0, 0.25) ) : (
+//                               (eq!(var!(~ "Age"), 1)) ? ( normal!( 4.0, 1.00) )
+//                                                       : ( normal!( 7.0, 2.25) )   ))
+//                  ))
+//          ~ "InpatientExpenditure" <-
+//                        ite!(~ (eq!(var!(~ "PreExistingCond"), 0)) ? ( normal!( plus!(100, mult!(300, var!(~ "DaysHospitalStay"))),  30^2) ) : (
+//                               (eq!(var!(~ "PreExistingCond"), 1)) ? ( normal!( plus!(100, mult!(550, var!(~ "DaysHospitalStay"))),  50^2) )
+//                                                                   : ( normal!( plus!(100, mult!(800, var!(~ "DaysHospitalStay"))), 100^2) )   ))
+//          ~ "Taxes" <- normal!(
+//              plus!(120,
+//                    mult!(1.02, var!(~ "InpatientExpenditure")),
+//                    mult!(1.05, var!(~ "OutpatientExpenditure"))
+//              ),  10^2)
+//          ~~ var!(~ "Taxes")
+//        ])
+//     }
+// }
+
+#[test]
+// #[traced_test]
+fn healthcare() {}

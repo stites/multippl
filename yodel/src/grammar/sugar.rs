@@ -103,7 +103,7 @@ pub mod integers {
                         .map(|v| v.as_bool().expect("value should be one-hot encoding") as usize)
                         .sum::<usize>(),
                     1,
-                    "attempting to convert prod which is not one-hot encoded"
+                    "attempting to convert prod which is not one-hot encoded, should be a type-checking error"
                 );
                 vs.iter().enumerate().find(|(ix, x)| x.is_true()).unwrap().0
             }
