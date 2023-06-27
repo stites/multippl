@@ -57,6 +57,7 @@ pub fn _pprint_anf(anf: &Anf<Inferable, EVal>) {
             print!(" && ");
             _pprint_anf(r);
         }
+        _ => todo!(),
     }
 }
 

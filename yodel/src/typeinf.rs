@@ -99,6 +99,7 @@ pub mod grammar {
                 And(l, r) => Ok(And(Box::new(l.strip_anf()?), Box::new(r.strip_anf()?))),
                 Or(l, r) => Ok(Or(Box::new(l.strip_anf()?), Box::new(r.strip_anf()?))),
                 Neg(n) => Ok(Neg(Box::new(n.strip_anf()?))),
+                _ => todo!(),
             }
         }
     }
@@ -205,6 +206,7 @@ where
             Box::new(typeinference_anf(ty, br)?),
         )),
         Neg(bl) => Ok(Neg(Box::new(typeinference_anf(ty, bl)?))),
+        _ => todo!(),
     }
 }
 

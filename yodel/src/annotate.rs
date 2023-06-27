@@ -276,6 +276,7 @@ impl LabelEnv {
                 Box::new(self.annotate_anf(br)?),
             )),
             Neg(bl) => Ok(Neg(Box::new(self.annotate_anf(bl)?))),
+            _ => todo!(),
         }
     }
     pub fn annotate_anfs<Val: Clone>(

@@ -114,6 +114,7 @@ impl DependencyEnv {
                 vs
             }
             Neg(bp) => self.scan_anf(bp),
+            _ => todo!(),
         }
     }
     fn scan_eexpr(&mut self, e: &EExprAnn) -> IndexSet<Dep> {

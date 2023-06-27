@@ -176,6 +176,7 @@ impl SymEnv {
                 Box::new(self.uniquify_anf(br)?),
             )),
             Neg(bl) => Ok(Neg(Box::new(self.uniquify_anf(bl)?))),
+            _ => todo!(),
         }
     }
     pub fn uniquify_anfs<X: Clone>(

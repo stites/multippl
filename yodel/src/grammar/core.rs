@@ -114,11 +114,23 @@ where
     AVar(<AVarExt<Val> as ξ<X>>::Ext, String),
     AVal(<AValExt<Val> as ξ<X>>::Ext, Val),
 
-    // TODO: not sure this is where I should add booleans, but it makes
-    // the observe statements stay closer to the semantics: ~observe anf~
+    // Boolean ops
     And(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
     Or(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
     Neg(Box<Anf<X, Val>>),
+
+    // numerics
+    Plus(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    Minus(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    Mult(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    Div(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+
+    // Ord
+    GT(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    LT(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    GTE(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    LTE(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    EQ(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
 }
 impl<X, Val> Debug for Anf<X, Val>
 where
@@ -136,6 +148,15 @@ where
             And(l, r) => f.write_fmt(format_args!("And({:?} && {:?})", l, r)),
             Or(l, r) => f.write_fmt(format_args!("Or({:?} || {:?})", l, r)),
             Neg(n) => f.write_fmt(format_args!("!({:?})", n)),
+            Plus(l, r) => f.write_fmt(format_args!("{:?} + {:?}", l, r)),
+            Minus(l, r) => f.write_fmt(format_args!("{:?} - {:?}", l, r)),
+            Mult(l, r) => f.write_fmt(format_args!("{:?} * {:?}", l, r)),
+            Div(l, r) => f.write_fmt(format_args!("{:?} / {:?}", l, r)),
+            GT(l, r) => f.write_fmt(format_args!("{:?} > {:?}", l, r)),
+            LT(l, r) => f.write_fmt(format_args!("{:?} < {:?}", l, r)),
+            GTE(l, r) => f.write_fmt(format_args!("{:?} >= {:?}", l, r)),
+            LTE(l, r) => f.write_fmt(format_args!("{:?} <= {:?}", l, r)),
+            EQ(l, r) => f.write_fmt(format_args!("{:?} == {:?}", l, r)),
         }
     }
 }
@@ -155,6 +176,15 @@ where
             And(l, r) => And(l.clone(), r.clone()),
             Or(l, r) => Or(l.clone(), r.clone()),
             Neg(x) => Neg(x.clone()),
+            Plus(l, r) => Plus(l.clone(), r.clone()),
+            Minus(l, r) => Minus(l.clone(), r.clone()),
+            Mult(l, r) => Mult(l.clone(), r.clone()),
+            Div(l, r) => Div(l.clone(), r.clone()),
+            GT(l, r) => GT(l.clone(), r.clone()),
+            LT(l, r) => LT(l.clone(), r.clone()),
+            GTE(l, r) => GTE(l.clone(), r.clone()),
+            LTE(l, r) => LTE(l.clone(), r.clone()),
+            EQ(l, r) => EQ(l.clone(), r.clone()),
         }
     }
 }
@@ -171,9 +201,18 @@ where
         match (self, o) {
             (AVar(ext0, a0), AVar(ext1, a1)) => ext0 == ext1 && a0 == a1,
             (AVal(ext0, a0), AVal(ext1, a1)) => ext0 == ext1 && a0 == a1,
-            (And(ext0, a0), And(ext1, a1)) => ext0 == ext1 && a0 == a1,
-            (Or(ext0, a0), Or(ext1, a1)) => ext0 == ext1 && a0 == a1,
+            (And(l0, r0), And(l1, r1)) => l0 == l1 && r0 == r1,
+            (Or(l0, r0), Or(l1, r1)) => l0 == l1 && r0 == r1,
             (Neg(a0), Neg(a1)) => a0 == a1,
+            (Plus(l0, r0), Plus(l1, r1)) => l0 == l1 && r0 == r1,
+            (Minus(l0, r0), Minus(l1, r1)) => l0 == l1 && r0 == r1,
+            (Mult(l0, r0), Mult(l1, r1)) => l0 == l1 && r0 == r1,
+            (Div(l0, r0), Div(l1, r1)) => l0 == l1 && r0 == r1,
+            (GT(l0, r0), GT(l1, r1)) => l0 == l1 && r0 == r1,
+            (LT(l0, r0), LT(l1, r1)) => l0 == l1 && r0 == r1,
+            (GTE(l0, r0), GTE(l1, r1)) => l0 == l1 && r0 == r1,
+            (LTE(l0, r0), LTE(l1, r1)) => l0 == l1 && r0 == r1,
+            (EQ(l0, r0), EQ(l1, r1)) => l0 == l1 && r0 == r1,
             (_, _) => false,
         }
     }

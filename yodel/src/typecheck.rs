@@ -200,6 +200,7 @@ where
             Box::new(typecheck_anf(br)?),
         )),
         Neg(bl) => Ok(Neg(Box::new(typecheck_anf(bl)?))),
+        _ => todo!(),
     }
 }
 

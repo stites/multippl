@@ -160,6 +160,7 @@ mod upcast {
             And(bl, br) => And(Box::new(upcast_anf(bl)), Box::new(upcast_anf(br))),
             Or(bl, br) => Or(Box::new(upcast_anf(bl)), Box::new(upcast_anf(br))),
             Neg(bl) => Neg(Box::new(upcast_anf(bl))),
+            _ => todo!(),
         }
     }
     pub fn upcast_anfs<Val: Clone, Ty>(anfs: &[AnfAnn<Val>]) -> Vec<AnfInferable<Val>>

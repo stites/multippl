@@ -52,12 +52,7 @@ pub fn eval_sanf<'a>(
             assert!(SVal::vec_is_bool(&or.sout));
             todo!()
         }
-        Or(bl, br) => {
-            todo!()
-        }
-        Neg(bp) => {
-            todo!()
-        }
+        _ => todo!(),
     }?;
     Ok((o, anf, &move |c, a| SExpr::SAnf(Box::new(c), Box::new(a))))
 }
@@ -99,6 +94,7 @@ where
             p.dists = p.dists.iter().map(BddPtr::neg).collect_vec();
             Ok((p, Neg(Box::new(ptr))))
         }
+        _ => todo!(),
     }
 }
 
