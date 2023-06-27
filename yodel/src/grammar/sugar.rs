@@ -13,18 +13,29 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::string::String;
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum EAnfSugar {
+    EAnfPrim(Box<Anf<Inferable, EVal>>),
+    EInteger(usize),
+}
+
 #[derive(PartialEq, Debug, Clone)]
 pub enum ESugar {
     // SampleSugar(Box<SSugar<X>>),  // (avoid the extra wrapping for now)
     Prim(EExpr<Inferable>),
     LetIn(String, Box<ESugar>, Box<ESugar>),
     Ite(Box<Anf<Inferable, EVal>>, Box<ESugar>, Box<ESugar>),
-    Discrete(Vec<f64>), // the only extension so far
     Sample(Box<SSugar>),
+
+    // integer support
+    Discrete(Vec<f64>), // => if-then-else chain returning a one-hot encoding
+    IntAnf(Box<EAnfSugar>), // => integer desugaring
+                        // IntPrj(Box<EAnfSugar>, Box<Anf<Inferable, EVal>>), // => TODO: EPrj using a variable for the index
 }
 
 impl ESugar {
     pub fn desugar(self) -> EExpr<Inferable> {
+        use EAnfSugar::*;
         match self {
             ESugar::Prim(e) => e,
             ESugar::LetIn(v, bind, body) => {
@@ -35,6 +46,14 @@ impl ESugar {
             }
             ESugar::Discrete(params) => discrete::from_params(&params),
             ESugar::Sample(s) => EExpr::ESample((), Box::new(s.desugar())),
+            ESugar::IntAnf(a) => match *a {
+                EAnfPrim(anf) => EExpr::EAnf((), anf.clone()),
+                EInteger(i) => EExpr::EAnf((), Box::new(integers::as_prod(i))),
+            },
+            // ESugar::IntPrj(ix_anf, prod_anf) => match *ix_anf {
+            //     EInteger(i) => EExpr::EPrj(None, i, prod_anf.clone()),
+            //     EAnfPrim(anf) => todo!("not yet useful"),
+            // },
         }
     }
 }
@@ -67,6 +86,31 @@ impl ProgramSugar {
             ProgramSugar::Sample(body) => Program::SBody(body.desugar()),
         }
     }
+}
+pub mod integers {
+    use super::*;
+    pub fn as_prod(i: usize) -> Anf<Inferable, EVal> {
+        let ty = vec![ETy::EBool; i];
+        let mut val = vec![EVal::EBool(false); i - 1];
+        val.push(EVal::EBool(true));
+        Anf::AVal((), EVal::EProd(val))
+    }
+    pub fn from_prod(e: &Anf<Inferable, EVal>) -> usize {
+        match e {
+            Anf::AVal((), EVal::EProd(vs)) => {
+                assert_eq!(
+                    vs.iter()
+                        .map(|v| v.as_bool().expect("value should be one-hot encoding") as usize)
+                        .sum::<usize>(),
+                    1,
+                    "attempting to convert prod which is not one-hot encoded"
+                );
+                vs.iter().enumerate().find(|(ix, x)| x.is_true()).unwrap().0
+            }
+            _ => panic!("api misuse"),
+        }
+    }
+    pub fn integer_op(e: &Anf<Inferable, EVal>) {}
 }
 
 pub mod discrete {

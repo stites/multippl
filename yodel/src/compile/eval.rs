@@ -492,6 +492,7 @@ impl<'a> State<'a> {
             }
             ESample((), sexpr) => {
                 let (c, s) = self.eval_sexpr(ctx, sexpr)?;
+                // FIXME: finish the natural embedding and return
                 Ok((c.clone(), ESample(Box::new(c), Box::new(s))))
             }
         }

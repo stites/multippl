@@ -81,6 +81,22 @@ pub enum EVal {
     EBool(bool),
     EProd(Vec<EVal>),
 }
+impl EVal {
+    pub fn as_bool(&self) -> Option<bool> {
+        use EVal::*;
+        match self {
+            EBool(b) => Some(*b),
+            EProd(_) => None,
+        }
+    }
+    pub fn is_true(&self) -> bool {
+        use EVal::*;
+        match self {
+            EBool(true) => true,
+            _ => false,
+        }
+    }
+}
 
 pub trait IsTyped<T: PartialEq> {
     fn is_prod(&self) -> bool;
@@ -119,7 +135,8 @@ where
     Or(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
     Neg(Box<Anf<X, Val>>),
 
-    // numerics
+    // numerics:
+    // NOTE: exact compares differently-sized one-hot encodings, searching for the first non-empty element
     Plus(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
     Minus(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
     Mult(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
