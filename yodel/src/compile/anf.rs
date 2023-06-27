@@ -48,13 +48,27 @@ pub fn eval_sanf<'a>(
         And(bl, br) => {
             let (ol, bl, _) = eval_sanf(ctx, &bl)?;
             let (or, br, _) = eval_sanf(ctx, &br)?;
-            assert!(SVal::vec_is_bool(&ol.sout));
-            assert!(SVal::vec_is_bool(&or.sout));
+            // assert!(SVal::vec_is_bool(&ol.sout));
+            // assert!(SVal::vec_is_bool(&or.sout));
             todo!()
         }
         _ => todo!(),
     }?;
     Ok((o, anf, &move |c, a| SExpr::SAnf(Box::new(c), Box::new(a))))
+}
+pub fn eval_sanfs<'a>(
+    ctx: &'a Context,
+    anfs: &'a Vec<AnfAnn<SVal>>,
+) -> Result<(Output, Vec<AnfTr<SVal>>)> {
+    let (svals, atrs) = anfs.iter().fold(Ok((vec![], vec![])), |res, a| {
+        let (svalsfin, mut atrs_fin) = res?;
+        let (o, atr, _) = eval_sanf(ctx, a)?;
+        let svals = svalsfin.iter().chain(&o.sval()).cloned().collect_vec();
+        atrs_fin.push(atr);
+        Ok((svals, atrs_fin))
+    })?;
+    let o = mk_sout(&ctx, &svals);
+    Ok((o, atrs))
 }
 
 /// actually just eval_eanf, but not about to change this until later

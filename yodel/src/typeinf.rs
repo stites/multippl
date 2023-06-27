@@ -44,6 +44,9 @@ pub mod grammar {
     impl ξ<Inferable> for EObserveExt {
         type Ext = ();
     }
+    impl ξ<Inferable> for SObserveExt {
+        type Ext = ();
+    }
     impl ξ<Inferable> for ESampleExt {
         type Ext = ();
     }
@@ -131,7 +134,13 @@ pub mod grammar {
             use SExpr::*;
             match self {
                 SAnf(x, a) => Ok(EAnf(x.clone(), Box::new(a.strip_anf()?))),
-                SBern(_, param) => Ok(EFlip((), *param)),
+                SBern(_, param) => match *param.clone() {
+                    Anf::AVal(_, SVal::SFloat(f)) => Ok(EFlip((), f)),
+                    a => Err(SemanticsError(format!(
+                        "cannot strip Bern({:?}) to EFlip",
+                        a
+                    ))),
+                },
                 SDiscrete(_, ps) => todo!("can't convert discrete, need to produce ESugar"),
                 SUniform(_, lo, hi) => Err(SemanticsError("can't convert uniform".to_string())),
                 SNormal(_, mean, var) => Err(SemanticsError("can't convert normal".to_string())),
@@ -243,7 +252,7 @@ pub fn typeinference_eexpr(e: &grammar::EExprInferable) -> Result<EExprTyped> {
         }
         EProd(_ty, anfs) => Ok(EProd(
             ignored_type(),
-            typeinference_anfs(&ETy::EBool, anfs)?,
+            typeinference_anfs(&ignored_type(), anfs)?,
         )),
         ELetIn(_ty, s, ebound, ebody) => Ok(ELetIn(
             LetInTypes {
@@ -286,17 +295,38 @@ pub fn typeinference_sexpr(e: &grammar::SExprInferable) -> Result<SExprTyped> {
         )),
         SIte(_ty, cond, t, f) => Ok(SIte(
             ignored_stype(),
-            Box::new(typeinference_anf(&STy::SBool, cond)?),
+            Box::new(typeinference_anf(&ignored_stype(), cond)?),
             Box::new(typeinference_sexpr(t)?),
             Box::new(typeinference_sexpr(f)?),
         )),
 
-        SBern(_, param) => Ok(SBern((), *param)),
-        SDiscrete(_, ps) => Ok(SDiscrete((), ps.clone())),
-        SUniform(_, lo, hi) => Ok(SUniform((), *lo, *hi)),
-        SNormal(_, mean, var) => Ok(SNormal((), *mean, *var)),
-        SBeta(_, a, b) => Ok(SBeta((), *a, *b)),
-        SDirichlet(_, ps) => Ok(SDirichlet((), ps.clone())),
+        SBern(_, param) => {
+            let param = typeinference_anf(&ignored_stype(), param)?;
+            Ok(SBern((), Box::new(param)))
+        }
+        SUniform(_, lo, hi) => {
+            let lo = typeinference_anf(&ignored_stype(), lo)?;
+            let hi = typeinference_anf(&ignored_stype(), hi)?;
+            Ok(SUniform((), Box::new(lo), Box::new(hi)))
+        }
+        SNormal(_, mean, var) => {
+            let mean = typeinference_anf(&ignored_stype(), mean)?;
+            let var = typeinference_anf(&ignored_stype(), var)?;
+            Ok(SNormal((), Box::new(mean), Box::new(var)))
+        }
+        SBeta(_, a, b) => {
+            let a = typeinference_anf(&ignored_stype(), a)?;
+            let b = typeinference_anf(&ignored_stype(), b)?;
+            Ok(SBeta((), Box::new(a), Box::new(b)))
+        }
+        SDiscrete(_, ps) => {
+            let ps = typeinference_anfs(&ignored_stype(), ps)?;
+            Ok(SDiscrete((), ps))
+        }
+        SDirichlet(_, ps) => {
+            let ps = typeinference_anfs(&ignored_stype(), ps)?;
+            Ok(SDirichlet((), ps))
+        }
 
         SExact(_, e) => Ok(SExact((), Box::new(typeinference_eexpr(e)?))),
     }

@@ -74,6 +74,7 @@ pub struct SUniformExt;
 pub struct SNormalExt;
 pub struct SBetaExt;
 pub struct SDirichletExt;
+pub struct SObserveExt;
 pub struct SExactExt;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -262,6 +263,7 @@ where
     SDirichletExt: ξ<X>,
 
     SExactExt: ξ<X>,
+    SObserveExt: ξ<X>,
     AValExt<SVal>: ξ<X>,
     AVarExt<SVal>: ξ<X>,
 {
@@ -336,13 +338,32 @@ impl SVal {
             _ => panic!("type-checking says this is impossible!"),
         }
     }
-    pub fn vec_as_bool(v: &Vec<SVal>) -> bool {
+    pub fn as_float(&self) -> f64 {
         use SVal::*;
-        assert!(Self::vec_is_bool(v));
-        v[0].as_bool()
+        match self {
+            SFloat(b) => *b,
+            _ => panic!("type-checking says this is impossible!"),
+        }
     }
-    pub fn vec_is_bool(v: &Vec<SVal>) -> bool {
-        v.len() == 1 && v[0].as_type() == STy::SBool
+    pub fn as_int(&self) -> u64 {
+        use SVal::*;
+        match self {
+            SInt(b) => *b,
+            _ => panic!("type-checking says this is impossible!"),
+        }
+    }
+    pub fn vec_as<X>(v: &Vec<SVal>, f: &dyn Fn(&SVal) -> X) -> X {
+        assert!(Self::vec_is_single_val(v));
+        // assert!(Self::vec_is(v, f));
+        f(&v[0])
+    }
+    // make this safe if you have more time.
+    // pub fn vec_is<X>(v: &Vec<SVal>, f:Fn(SVal)->X) -> bool {
+    //     f(v[0]); // this is an unsafe method, so if this doesn't panic we're good
+    //     true
+    // }
+    fn vec_is_single_val(v: &Vec<SVal>) -> bool {
+        v.len() == 1 && matches!(v[0].as_type(), STy::SVec(_))
     }
 }
 
@@ -361,6 +382,7 @@ where
     SBetaExt: ξ<X>,
     SDirichletExt: ξ<X>,
 
+    SObserveExt: ξ<X>,
     SExactExt: ξ<X>,
     AVarExt<SVal>: ξ<X>,
     AValExt<SVal>: ξ<X>,
@@ -390,7 +412,7 @@ where
         Box<SExpr<X>>,
         Box<SExpr<X>>,
     ),
-    SSeq(<SSeqExt as ξ<X>>::Ext, Box<SExpr<X>>, Box<SExpr<X>>),
+
     // distributions
     SBern(<SBernExt as ξ<X>>::Ext, Box<Anf<X, SVal>>),
     SDiscrete(<SDiscreteExt as ξ<X>>::Ext, Vec<Anf<X, SVal>>),
@@ -421,7 +443,7 @@ where
     // We do this because it lets us keep values simple, and bars us from
     // reasoning about sampler subprograms. We do get a constrained form of
     // these through SExact(ESample) statements.
-    SObserve(Box<Anf<X, SVal>>, Box<SExpr<X>>),
+    SObserve(<SObserveExt as ξ<X>>::Ext, Box<Anf<X, SVal>>, Box<SExpr<X>>),
 
     // Multi-language boundary
     SExact(<SExactExt as ξ<X>>::Ext, Box<EExpr<X>>),
@@ -473,7 +495,9 @@ where
     <SBetaExt as ξ<X>>::Ext: Debug,
     <SDirichletExt as ξ<X>>::Ext: Debug,
 
+    SObserveExt: ξ<X>,
     SExactExt: ξ<X>,
+    <SObserveExt as ξ<X>>::Ext: Debug,
     <SAnfExt as ξ<X>>::Ext: Debug,
     <SLetInExt as ξ<X>>::Ext: Debug,
     <SSeqExt as ξ<X>>::Ext: Debug,
@@ -516,6 +540,7 @@ where
     EIteExt: ξ<X>,
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
+    SObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
     <EAnfExt as ξ<X>>::Ext: Debug,
     <EPrjExt as ξ<X>>::Ext: Debug,
@@ -524,6 +549,7 @@ where
     <EIteExt as ξ<X>>::Ext: Debug,
     <EFlipExt as ξ<X>>::Ext: Debug,
     <EObserveExt as ξ<X>>::Ext: Debug,
+    <SObserveExt as ξ<X>>::Ext: Debug,
     <ESampleExt as ξ<X>>::Ext: Debug,
 
     SAnfExt: ξ<X>,
@@ -584,15 +610,15 @@ where
                 .field("truthy", tru)
                 .field("falsey", fls)
                 .finish(),
-            SBern(ext, p) => f.write_fmt(format_args!("Bern({:?}, {})", ext, p)),
+            SBern(ext, p) => f.write_fmt(format_args!("Bern({:?}, {:?})", ext, p)),
             SDiscrete(ext, ps) => f.write_fmt(format_args!("Discrete({:?}, {:?})", ext, ps)),
             SUniform(ext, lo, hi) => {
-                f.write_fmt(format_args!("Uniform({:?}, {}, {})", ext, lo, hi))
+                f.write_fmt(format_args!("Uniform({:?}, {:?}, {:?})", ext, lo, hi))
             }
             SNormal(ext, mean, var) => {
-                f.write_fmt(format_args!("Normal({:?}, {}, {})", ext, mean, var))
+                f.write_fmt(format_args!("Normal({:?}, {:?}, {:?})", ext, mean, var))
             }
-            SBeta(ext, a, b) => f.write_fmt(format_args!("Beta({:?}, {}, {})", ext, a, b)),
+            SBeta(ext, a, b) => f.write_fmt(format_args!("Beta({:?}, {:?}, {:?})", ext, a, b)),
             SDirichlet(ext, ps) => f.write_fmt(format_args!("Dirichlet({:?}, {:?})", ext, ps)),
 
             SExact(ext, e) => f.debug_tuple("Exact").field(&ext).field(e).finish(),
@@ -609,6 +635,7 @@ where
     EIteExt: ξ<X>,
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
+    SObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
 
     AVarExt<EVal>: ξ<X>,
@@ -627,6 +654,7 @@ where
     <EIteExt as ξ<X>>::Ext: Clone,
     <EFlipExt as ξ<X>>::Ext: Clone,
     <EObserveExt as ξ<X>>::Ext: Clone,
+    <SObserveExt as ξ<X>>::Ext: Clone,
     <ESampleExt as ξ<X>>::Ext: Clone,
 
     SAnfExt: ξ<X>,
@@ -681,6 +709,7 @@ where
     EIteExt: ξ<X>,
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
+    SObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
     AVarExt<EVal>: ξ<X>,
     AVarExt<SVal>: ξ<X>,
@@ -699,6 +728,7 @@ where
     <EIteExt as ξ<X>>::Ext: Clone,
     <EFlipExt as ξ<X>>::Ext: Clone,
     <EObserveExt as ξ<X>>::Ext: Clone,
+    <SObserveExt as ξ<X>>::Ext: Clone,
     <ESampleExt as ξ<X>>::Ext: Clone,
 
     SAnfExt: ξ<X>,
@@ -735,11 +765,11 @@ where
             }
             SSeq(ext, e1, e2) => SSeq(ext.clone(), e1.clone(), e2.clone()),
             SIte(ext, p, tru, fls) => SIte(ext.clone(), p.clone(), tru.clone(), fls.clone()),
-            SBern(ext, p) => SBern(ext.clone(), *p),
+            SBern(ext, p) => SBern(ext.clone(), p.clone()),
             SDiscrete(ext, ps) => SDiscrete(ext.clone(), ps.clone()),
-            SUniform(ext, lo, hi) => SUniform(ext.clone(), *lo, *hi),
-            SNormal(ext, mean, var) => SNormal(ext.clone(), *mean, *var),
-            SBeta(ext, a, b) => SBeta(ext.clone(), *a, *b),
+            SUniform(ext, lo, hi) => SUniform(ext.clone(), lo.clone(), hi.clone()),
+            SNormal(ext, mean, var) => SNormal(ext.clone(), mean.clone(), var.clone()),
+            SBeta(ext, a, b) => SBeta(ext.clone(), a.clone(), b.clone()),
             SDirichlet(ext, ps) => SDirichlet(ext.clone(), ps.clone()),
             SExact(ext, e) => SExact(ext.clone(), e.clone()),
         }
@@ -754,6 +784,7 @@ where
     EIteExt: ξ<X>,
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
+    SObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
 
     <EAnfExt as ξ<X>>::Ext: PartialEq,
@@ -763,6 +794,7 @@ where
     <EIteExt as ξ<X>>::Ext: PartialEq,
     <EFlipExt as ξ<X>>::Ext: PartialEq,
     <EObserveExt as ξ<X>>::Ext: PartialEq,
+    <SObserveExt as ξ<X>>::Ext: PartialEq,
     <ESampleExt as ξ<X>>::Ext: PartialEq,
     AVarExt<SVal>: ξ<X>,
     AVarExt<EVal>: ξ<X>,
@@ -827,6 +859,7 @@ where
     EIteExt: ξ<X>,
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
+    SObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
 
     <EAnfExt as ξ<X>>::Ext: PartialEq,
@@ -836,6 +869,7 @@ where
     <EIteExt as ξ<X>>::Ext: PartialEq,
     <EFlipExt as ξ<X>>::Ext: PartialEq,
     <EObserveExt as ξ<X>>::Ext: PartialEq,
+    <SObserveExt as ξ<X>>::Ext: PartialEq,
     <ESampleExt as ξ<X>>::Ext: PartialEq,
     AVarExt<EVal>: ξ<X>,
     AVarExt<SVal>: ξ<X>,
@@ -937,6 +971,7 @@ where
     EIteExt: ξ<X>,
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
+    SObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
     <EAnfExt as ξ<X>>::Ext: Debug + Clone,
     <EPrjExt as ξ<X>>::Ext: Debug + Clone,
@@ -945,6 +980,7 @@ where
     <EIteExt as ξ<X>>::Ext: Debug + Clone,
     <EFlipExt as ξ<X>>::Ext: Debug + Clone,
     <EObserveExt as ξ<X>>::Ext: Debug + Clone,
+    <SObserveExt as ξ<X>>::Ext: Debug + Clone,
     <ESampleExt as ξ<X>>::Ext: Debug + Clone,
     AVarExt<EVal>: ξ<X>,
     AVarExt<SVal>: ξ<X>,
@@ -1029,6 +1065,7 @@ where
     EIteExt: ξ<X>,
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
+    SObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
     <EAnfExt as ξ<X>>::Ext: Debug + Clone,
     <EPrjExt as ξ<X>>::Ext: Debug + Clone,
@@ -1037,6 +1074,7 @@ where
     <EIteExt as ξ<X>>::Ext: Debug + Clone,
     <EFlipExt as ξ<X>>::Ext: Debug + Clone,
     <EObserveExt as ξ<X>>::Ext: Debug + Clone,
+    <SObserveExt as ξ<X>>::Ext: Debug + Clone,
     <ESampleExt as ξ<X>>::Ext: Debug + Clone,
     AVarExt<EVal>: ξ<X>,
     AVarExt<SVal>: ξ<X>,
@@ -1094,6 +1132,7 @@ where
     EIteExt: ξ<X>,
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
+    SObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
 
     AVarExt<EVal>: ξ<X>,
@@ -1129,6 +1168,7 @@ where
     EIteExt: ξ<X>,
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
+    SObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
 
     <EAnfExt as ξ<X>>::Ext: Debug,
@@ -1138,6 +1178,7 @@ where
     <EIteExt as ξ<X>>::Ext: Debug,
     <EFlipExt as ξ<X>>::Ext: Debug,
     <EObserveExt as ξ<X>>::Ext: Debug,
+    <SObserveExt as ξ<X>>::Ext: Debug,
     <ESampleExt as ξ<X>>::Ext: Debug,
     AVarExt<EVal>: ξ<X>,
     AVarExt<SVal>: ξ<X>,
@@ -1186,6 +1227,7 @@ where
     EIteExt: ξ<X>,
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
+    SObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
 
     <EAnfExt as ξ<X>>::Ext: PartialEq,
@@ -1195,6 +1237,7 @@ where
     <EIteExt as ξ<X>>::Ext: PartialEq,
     <EFlipExt as ξ<X>>::Ext: PartialEq,
     <EObserveExt as ξ<X>>::Ext: PartialEq,
+    <SObserveExt as ξ<X>>::Ext: PartialEq,
     <ESampleExt as ξ<X>>::Ext: PartialEq,
     AVarExt<EVal>: ξ<X>,
     AVarExt<SVal>: ξ<X>,
@@ -1248,6 +1291,7 @@ where
     EIteExt: ξ<X>,
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
+    SObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
     <EAnfExt as ξ<X>>::Ext: Debug,
     <EPrjExt as ξ<X>>::Ext: Debug,
@@ -1256,6 +1300,7 @@ where
     <EIteExt as ξ<X>>::Ext: Debug,
     <EFlipExt as ξ<X>>::Ext: Debug,
     <EObserveExt as ξ<X>>::Ext: Debug,
+    <SObserveExt as ξ<X>>::Ext: Debug,
     <ESampleExt as ξ<X>>::Ext: Debug,
 
     SAnfExt: ξ<X>,
@@ -1310,6 +1355,7 @@ where
     EIteExt: ξ<X>,
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
+    SObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
 
     AVarExt<EVal>: ξ<X>,
@@ -1328,6 +1374,7 @@ where
     <EIteExt as ξ<X>>::Ext: Clone,
     <EFlipExt as ξ<X>>::Ext: Clone,
     <EObserveExt as ξ<X>>::Ext: Clone,
+    <SObserveExt as ξ<X>>::Ext: Clone,
     <ESampleExt as ξ<X>>::Ext: Clone,
 
     SAnfExt: ξ<X>,
@@ -1372,6 +1419,7 @@ where
     EIteExt: ξ<X>,
     EFlipExt: ξ<X>,
     EObserveExt: ξ<X>,
+    SObserveExt: ξ<X>,
     ESampleExt: ξ<X>,
     <EAnfExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <EPrjExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
@@ -1380,6 +1428,7 @@ where
     <EIteExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <EFlipExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <EObserveExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
+    <SObserveExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     <ESampleExt as ξ<X>>::Ext: Debug + Clone + PartialEq,
     AVarExt<EVal>: ξ<X>,
     AVarExt<SVal>: ξ<X>,
@@ -1463,6 +1512,9 @@ impl ξ<UD> for EFlipExt {
     type Ext = ();
 }
 impl ξ<UD> for EObserveExt {
+    type Ext = ();
+}
+impl ξ<UD> for SObserveExt {
     type Ext = ();
 }
 impl ξ<UD> for ESampleExt {

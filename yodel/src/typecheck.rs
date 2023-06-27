@@ -45,6 +45,9 @@ pub mod grammar {
     impl ξ<Typed> for EObserveExt {
         type Ext = ();
     }
+    impl ξ<Typed> for SObserveExt {
+        type Ext = ();
+    }
     impl ξ<Typed> for ESampleExt {
         type Ext = ();
     }
@@ -264,12 +267,34 @@ pub fn typecheck_sexpr(e: &grammar::SExprTyped) -> Result<SExprUD, CompileError>
             Box::new(typecheck_sexpr(t)?),
             Box::new(typecheck_sexpr(f)?),
         )),
-        SBern(_, param) => Ok(SBern((), *param)),
-        SDiscrete(_, ps) => Ok(SDiscrete((), ps.clone())),
-        SUniform(_, lo, hi) => Ok(SUniform((), *lo, *hi)),
-        SNormal(_, mean, var) => Ok(SNormal((), *mean, *var)),
-        SBeta(_, a, b) => Ok(SBeta((), *a, *b)),
-        SDirichlet(_, ps) => Ok(SDirichlet((), ps.clone())),
+
+        SBern(_, param) => {
+            let param = typecheck_anf(param)?;
+            Ok(SBern((), Box::new(param)))
+        }
+        SUniform(_, lo, hi) => {
+            let lo = typecheck_anf(lo)?;
+            let hi = typecheck_anf(hi)?;
+            Ok(SUniform((), Box::new(lo), Box::new(hi)))
+        }
+        SNormal(_, mean, var) => {
+            let mean = typecheck_anf(mean)?;
+            let var = typecheck_anf(var)?;
+            Ok(SNormal((), Box::new(mean), Box::new(var)))
+        }
+        SBeta(_, a, b) => {
+            let a = typecheck_anf(a)?;
+            let b = typecheck_anf(b)?;
+            Ok(SBeta((), Box::new(a), Box::new(b)))
+        }
+        SDiscrete(_, ps) => {
+            let ps = typecheck_anfs(ps)?;
+            Ok(SDiscrete((), ps))
+        }
+        SDirichlet(_, ps) => {
+            let ps = typecheck_anfs(ps)?;
+            Ok(SDirichlet((), ps))
+        }
 
         SExact(_, e) => Ok(SExact((), Box::new(typecheck_eexpr(e)?))),
     }

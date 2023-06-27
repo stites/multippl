@@ -88,8 +88,17 @@ impl Output {
     pub fn sval(&self) -> Vec<SVal> {
         self.sout.clone()
     }
+    pub fn sint(&self) -> u64 {
+        SVal::vec_as(&self.sout, &SVal::as_int)
+    }
     pub fn sbool(&self) -> bool {
-        SVal::vec_as_bool(&self.sout)
+        SVal::vec_as(&self.sout, &SVal::as_bool)
+    }
+    pub fn sfloat(&self) -> f64 {
+        SVal::vec_as(&self.sout, &SVal::as_float)
+    }
+    pub fn sfloats(&self) -> Vec<f64> {
+        self.sval().iter().map(|v| v.as_float()).collect()
     }
 }
 

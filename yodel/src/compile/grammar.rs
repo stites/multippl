@@ -71,6 +71,9 @@ impl ξ<Trace> for EFlipExt {
 impl ξ<Trace> for EObserveExt {
     type Ext = Box<Compiled>;
 }
+impl ξ<Trace> for SObserveExt {
+    type Ext = Box<Compiled>;
+}
 impl ξ<Trace> for ESampleExt {
     type Ext = Box<Compiled>;
 }

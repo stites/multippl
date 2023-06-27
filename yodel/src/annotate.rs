@@ -151,6 +151,10 @@ pub mod grammar {
     impl ξ<Annotated> for EObserveExt {
         type Ext = ();
     }
+    impl ξ<Annotated> for SObserveExt {
+        type Ext = ();
+    }
+
     impl ξ<Annotated> for ESampleExt {
         type Ext = ();
     }
@@ -362,12 +366,33 @@ impl LabelEnv {
                 Box::new(self.annotate_sexpr(f)?),
             )),
 
-            SBern(_, param) => Ok(SBern((), *param)),
-            SDiscrete(_, ps) => Ok(SDiscrete((), ps.clone())),
-            SUniform(_, lo, hi) => Ok(SUniform((), *lo, *hi)),
-            SNormal(_, mean, var) => Ok(SNormal((), *mean, *var)),
-            SBeta(_, a, b) => Ok(SBeta((), *a, *b)),
-            SDirichlet(_, ps) => Ok(SDirichlet((), ps.clone())),
+            SBern(_, param) => {
+                let param = self.annotate_anf(param)?;
+                Ok(SBern((), Box::new(param)))
+            }
+            SUniform(_, lo, hi) => {
+                let lo = self.annotate_anf(lo)?;
+                let hi = self.annotate_anf(hi)?;
+                Ok(SUniform((), Box::new(lo), Box::new(hi)))
+            }
+            SNormal(_, mean, var) => {
+                let mean = self.annotate_anf(mean)?;
+                let var = self.annotate_anf(var)?;
+                Ok(SNormal((), Box::new(mean), Box::new(var)))
+            }
+            SBeta(_, a, b) => {
+                let a = self.annotate_anf(a)?;
+                let b = self.annotate_anf(b)?;
+                Ok(SBeta((), Box::new(a), Box::new(b)))
+            }
+            SDiscrete(_, ps) => {
+                let ps = self.annotate_anfs(ps)?;
+                Ok(SDiscrete((), ps))
+            }
+            SDirichlet(_, ps) => {
+                let ps = self.annotate_anfs(ps)?;
+                Ok(SDirichlet((), ps))
+            }
 
             SExact(_, e) => Ok(SExact((), Box::new(self.annotate_eexpr(e)?))),
         }

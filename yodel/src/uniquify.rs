@@ -68,6 +68,9 @@ pub mod grammar {
     impl ξ<Uniquify> for EObserveExt {
         type Ext = ();
     }
+    impl ξ<Uniquify> for SObserveExt {
+        type Ext = ();
+    }
     impl ξ<Uniquify> for ESampleExt {
         type Ext = ();
     }
@@ -249,12 +252,33 @@ impl SymEnv {
                 Box::new(self.uniquify_sexpr(t)?),
                 Box::new(self.uniquify_sexpr(f)?),
             )),
-            SBern(_, param) => Ok(SBern(self.fresh(), *param)),
-            SDiscrete(_, ps) => Ok(SDiscrete(self.fresh(), ps.clone())),
-            SUniform(_, lo, hi) => Ok(SUniform(self.fresh(), *lo, *hi)),
-            SNormal(_, mean, var) => Ok(SNormal(self.fresh(), *mean, *var)),
-            SBeta(_, a, b) => Ok(SBeta(self.fresh(), *a, *b)),
-            SDirichlet(_, ps) => Ok(SDirichlet(self.fresh(), ps.clone())),
+            SBern(_, param) => {
+                let param = self.uniquify_anf(param)?;
+                Ok(SBern(self.fresh(), Box::new(param)))
+            }
+            SUniform(_, lo, hi) => {
+                let lo = self.uniquify_anf(lo)?;
+                let hi = self.uniquify_anf(hi)?;
+                Ok(SUniform(self.fresh(), Box::new(lo), Box::new(hi)))
+            }
+            SNormal(_, mean, var) => {
+                let mean = self.uniquify_anf(mean)?;
+                let var = self.uniquify_anf(var)?;
+                Ok(SNormal(self.fresh(), Box::new(mean), Box::new(var)))
+            }
+            SBeta(_, a, b) => {
+                let a = self.uniquify_anf(a)?;
+                let b = self.uniquify_anf(b)?;
+                Ok(SBeta(self.fresh(), Box::new(a), Box::new(b)))
+            }
+            SDiscrete(_, ps) => {
+                let ps = self.uniquify_anfs(ps)?;
+                Ok(SDiscrete(self.fresh(), ps))
+            }
+            SDirichlet(_, ps) => {
+                let ps = self.uniquify_anfs(ps)?;
+                Ok(SDirichlet(self.fresh(), ps))
+            }
 
             SExact(_, e) => Ok(SExact((), Box::new(self.uniquify_eexpr(e)?))),
         }

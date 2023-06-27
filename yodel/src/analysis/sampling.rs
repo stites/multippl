@@ -215,12 +215,16 @@ mod upcast {
                 Box::new(upcast_sexpr(t)),
                 Box::new(upcast_sexpr(f)),
             ),
-            SBern(dv, param) => SBern((), *param),
-            SDiscrete(dv, ps) => SDiscrete((), ps.clone()),
-            SUniform(dv, lo, hi) => SUniform((), *lo, *hi),
-            SNormal(dv, mean, var) => SNormal((), *mean, *var),
-            SBeta(dv, a, b) => SBeta((), *a, *b),
-            SDirichlet(dv, ps) => SDirichlet((), ps.clone()),
+            SBern(dv, param) => SBern((), Box::new(upcast_anf(param))),
+            SDiscrete(dv, ps) => SDiscrete((), upcast_anfs(ps)),
+            SUniform(dv, lo, hi) => {
+                SUniform((), Box::new(upcast_anf(lo)), Box::new(upcast_anf(hi)))
+            }
+            SNormal(dv, mean, var) => {
+                SNormal((), Box::new(upcast_anf(mean)), Box::new(upcast_anf(var)))
+            }
+            SBeta(dv, a, b) => SBeta((), Box::new(upcast_anf(a)), Box::new(upcast_anf(b))),
+            SDirichlet(dv, ps) => SDirichlet((), upcast_anfs(ps)),
 
             SExact(_, e) => SExact((), Box::new(upcast_eexpr(e))),
         }

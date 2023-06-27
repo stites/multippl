@@ -511,10 +511,12 @@ impl<'a> State<'a> {
                 Ok((c.clone(), mk(c, a)))
             }
             SBern(_, param) => {
-                let span = tracing::span!(tracing::Level::DEBUG, "bernoulli", p = param);
+                let span = tracing::span!(tracing::Level::DEBUG, "bernoulli");
                 let _enter = span.enter();
 
-                let dist = statrs::distribution::Bernoulli::new(*param).unwrap();
+                let (cparam, param, _) = crate::compile::anf::eval_sanf(&ctx, param)?;
+
+                let dist = statrs::distribution::Bernoulli::new(cparam.sfloat()).unwrap();
                 let x = match self.rng.as_mut() {
                     Some(rng) => dist.sample(rng),
                     None => dist.sample(&mut rand::thread_rng()),
@@ -528,13 +530,15 @@ impl<'a> State<'a> {
 
                 o.sout = vec![SVal::SBool(x)];
                 let c = Compiled::from_output(o);
-                Ok((c.clone(), SBern(Box::new(c), *param)))
+                Ok((c.clone(), SBern(Box::new(c), Box::new(param))))
             }
             SDiscrete(_, ps) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "discrete");
                 let _enter = span.enter();
 
-                let dist = statrs::distribution::Categorical::new(ps).unwrap();
+                let (cps, ps) = crate::compile::anf::eval_sanfs(&ctx, ps)?;
+
+                let dist = statrs::distribution::Categorical::new(&cps.sfloats()).unwrap();
                 let x = match self.rng.as_mut() {
                     Some(rng) => dist.sample(rng),
                     None => dist.sample(&mut rand::thread_rng()),
@@ -552,7 +556,9 @@ impl<'a> State<'a> {
                 let span = tracing::span!(tracing::Level::DEBUG, "dirichlet");
                 let _enter = span.enter();
 
-                let dist = statrs::distribution::Dirichlet::new(ps.to_vec()).unwrap();
+                let (cps, ps) = crate::compile::anf::eval_sanfs(&ctx, ps)?;
+
+                let dist = statrs::distribution::Dirichlet::new(cps.sfloats()).unwrap();
                 let x = match self.rng.as_mut() {
                     Some(rng) => dist.sample(rng),
                     None => dist.sample(&mut rand::thread_rng()),
@@ -567,10 +573,13 @@ impl<'a> State<'a> {
                 Ok((c.clone(), SDiscrete(Box::new(c), ps.clone())))
             }
             SUniform(_, lo, hi) => {
-                let span = tracing::span!(tracing::Level::DEBUG, "uniform", l = lo, h = hi);
+                let span = tracing::span!(tracing::Level::DEBUG, "uniform");
                 let _enter = span.enter();
 
-                let dist = statrs::distribution::Uniform::new(*lo, *hi).unwrap();
+                let (clo, lo, _) = crate::compile::anf::eval_sanf(&ctx, lo)?;
+                let (chi, hi, _) = crate::compile::anf::eval_sanf(&ctx, hi)?;
+
+                let dist = statrs::distribution::Uniform::new(clo.sfloat(), chi.sfloat()).unwrap();
                 let x = match self.rng.as_mut() {
                     Some(rng) => dist.sample(rng),
                     None => dist.sample(&mut rand::thread_rng()),
@@ -581,13 +590,15 @@ impl<'a> State<'a> {
                 self.pq.q *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
                 o.sout = vec![SVal::SFloat(x)];
                 let c = Compiled::from_output(o);
-                Ok((c.clone(), SUniform(Box::new(c), *lo, *hi)))
+                Ok((c.clone(), SUniform(Box::new(c), Box::new(lo), Box::new(hi))))
             }
             SNormal(_, mn, sd) => {
-                let span = tracing::span!(tracing::Level::DEBUG, "normal", m = mn, sd = sd);
+                let span = tracing::span!(tracing::Level::DEBUG, "normal");
                 let _enter = span.enter();
+                let (cmn, mn, _) = crate::compile::anf::eval_sanf(&ctx, mn)?;
+                let (csd, sd, _) = crate::compile::anf::eval_sanf(&ctx, sd)?;
 
-                let dist = statrs::distribution::Normal::new(*mn, *sd).unwrap();
+                let dist = statrs::distribution::Normal::new(cmn.sfloat(), csd.sfloat()).unwrap();
                 let x = match self.rng.as_mut() {
                     Some(rng) => dist.sample(rng),
                     None => dist.sample(&mut rand::thread_rng()),
@@ -599,12 +610,14 @@ impl<'a> State<'a> {
                 self.pq.q *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
                 o.sout = vec![SVal::SFloat(x)];
                 let c = Compiled::from_output(o);
-                Ok((c.clone(), SNormal(Box::new(c), *mn, *sd)))
+                Ok((c.clone(), SNormal(Box::new(c), Box::new(mn), Box::new(sd))))
             }
             SBeta(_, a, b) => {
-                let span = tracing::span!(tracing::Level::DEBUG, "beta", a = a, b = b);
+                let span = tracing::span!(tracing::Level::DEBUG, "beta");
                 let _enter = span.enter();
-                let dist = statrs::distribution::Beta::new(*a, *b).unwrap();
+                let (ca, a, _) = crate::compile::anf::eval_sanf(&ctx, a)?;
+                let (cb, b, _) = crate::compile::anf::eval_sanf(&ctx, b)?;
+                let dist = statrs::distribution::Beta::new(ca.sfloat(), cb.sfloat()).unwrap();
                 let x = match self.rng.as_mut() {
                     Some(rng) => dist.sample(rng),
                     None => dist.sample(&mut rand::thread_rng()),
@@ -615,7 +628,7 @@ impl<'a> State<'a> {
                 self.pq.q *= weight; // <<<<<<<<<<<<<<<<<<<<<<<<<<<
                 o.sout = vec![SVal::SFloat(x)];
                 let c = Compiled::from_output(o);
-                Ok((c.clone(), SBeta(Box::new(c), *a, *b)))
+                Ok((c.clone(), SBeta(Box::new(c), Box::new(a), Box::new(b))))
             }
             SLetIn(d, name, bindee, body) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "slet", v = name);
@@ -647,7 +660,7 @@ impl<'a> State<'a> {
                 let span = tracing::span!(tracing::Level::DEBUG, "sample-ite");
                 let _enter = span.enter();
                 let (cguard, eguard, _) = crate::compile::anf::eval_sanf(&ctx, guard)?;
-                if SVal::vec_as_bool(&cguard.sval()) {
+                if cguard.sbool() {
                     self.eval_sexpr(ctx.clone(), truthy)
                 } else {
                     self.eval_sexpr(ctx, falsey)
