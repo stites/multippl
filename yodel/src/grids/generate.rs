@@ -24,12 +24,12 @@ impl ToString for ObsId {
         self.0.iter().map(|x| x.to_string()).join(":")
     }
 }
-pub fn disjunction<X: Debug>(vars: Vec<AnfInferable<X>>) -> AnfInferable<X>
+pub fn disjunction<X: Debug + Clone + PartialEq>(vars: Vec<AnfInferable<X>>) -> AnfInferable<X>
 where
     AVarExt<X>: ξ<Inferable>,
     AValExt<X>: ξ<Inferable>,
-    <AVarExt<X> as ξ<crate::typeinf::grammar::Inferable>>::Ext: Debug,
-    <AValExt<X> as ξ<crate::typeinf::grammar::Inferable>>::Ext: Debug,
+    <AVarExt<X> as ξ<crate::typeinf::grammar::Inferable>>::Ext: Debug + Clone + PartialEq,
+    <AValExt<X> as ξ<crate::typeinf::grammar::Inferable>>::Ext: Debug + Clone + PartialEq,
 {
     println!("{:?}", vars);
     vars.into_iter()

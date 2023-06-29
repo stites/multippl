@@ -256,7 +256,7 @@ impl LabelEnv {
         }
     }
 
-    pub fn annotate_anf<Val: Clone>(&mut self, a: &AnfUnq<Val>) -> Result<AnfAnn<Val>, CompileError>
+    pub fn annotate_anf<Val: DPC>(&mut self, a: &AnfUnq<Val>) -> Result<AnfAnn<Val>, CompileError>
     where
         AVarExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = NamedVar>,
         AValExt<Val>: ξ<Uniquify, Ext = ()> + ξ<Annotated, Ext = ()>,

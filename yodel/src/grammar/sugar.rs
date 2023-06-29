@@ -39,10 +39,10 @@ impl ESugar {
         match self {
             ESugar::Prim(e) => e,
             ESugar::LetIn(v, bind, body) => {
-                EExpr::ELetIn(None, v, Box::new(bind.desugar()), Box::new(body.desugar()))
+                EExpr::ELetIn((), v, Box::new(bind.desugar()), Box::new(body.desugar()))
             }
             ESugar::Ite(p, t, f) => {
-                EExpr::EIte(None, p, Box::new(t.desugar()), Box::new(f.desugar()))
+                EExpr::EIte((), p, Box::new(t.desugar()), Box::new(f.desugar()))
             }
             ESugar::Discrete(params) => discrete::from_params(&params),
             ESugar::Sample(s) => EExpr::ESample((), Box::new(s.desugar())),
