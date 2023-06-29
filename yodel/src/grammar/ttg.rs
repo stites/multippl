@@ -154,5 +154,15 @@ macro_rules! TTG {
         {
             $($body)*
         }
-    }
+    };
+    // ($X:ident { $($param:ident: $ext:expr),* }) => {
+    //     #[derive(Clone, PartialEq, Debug)]
+    //     pub struct $X;
+
+    //     $(
+    //         impl ξ<$X> for $param {
+    //             type Ext = $ext;
+    //         }
+    //     )*
+    // }
 }

@@ -1,6 +1,7 @@
 use crate::data::CompileError;
 use crate::grammar::*;
 use grammar::*;
+use std::fmt::Debug;
 
 pub mod grammar {
     use super::*;
@@ -186,10 +187,15 @@ pub mod grammar {
     }
 }
 
-pub fn typecheck_anf<X: Clone>(a: &grammar::AnfTyped<X>) -> Result<AnfUD<X>, CompileError>
+pub fn typecheck_anf<Val: Debug + PartialEq + Clone>(
+    a: &grammar::AnfTyped<Val>,
+) -> Result<AnfUD<Val>, CompileError>
 where
-    AVarExt<X>: ξ<Typed> + ξ<UD, Ext = ()>,
-    AValExt<X>: ξ<Typed> + ξ<UD, Ext = ()>,
+    AVarExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    AValExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    <AVarExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    <AValExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    Val: Debug + PartialEq + Clone,
 {
     use crate::grammar::Anf::*;
     match a {
@@ -208,12 +214,15 @@ where
     }
 }
 
-pub fn typecheck_anfs<X: Clone>(
-    anfs: &[grammar::AnfTyped<X>],
-) -> Result<Vec<AnfUD<X>>, CompileError>
+pub fn typecheck_anfs<Val: Debug + PartialEq + Clone>(
+    anfs: &[AnfTyped<Val>],
+) -> Result<Vec<AnfUD<Val>>, CompileError>
 where
-    AVarExt<X>: ξ<Typed> + ξ<UD, Ext = ()>,
-    AValExt<X>: ξ<Typed> + ξ<UD, Ext = ()>,
+    AVarExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    AValExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    <AVarExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    <AValExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    Val: Debug + PartialEq + Clone,
 {
     anfs.iter().map(typecheck_anf).collect()
 }

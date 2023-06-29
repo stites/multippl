@@ -6,6 +6,7 @@ use indexmap::set::IndexSet;
 use itertools::*;
 use std::collections::hash_map;
 use std::collections::HashMap;
+use std::fmt::Debug;
 use std::vec;
 use tracing::*;
 
@@ -98,6 +99,7 @@ impl DependencyEnv {
     where
         AValExt<Var>: ξ<crate::annotate::grammar::Annotated, Ext = ()>,
         AVarExt<Var>: ξ<crate::annotate::grammar::Annotated, Ext = NamedVar>,
+        Var: Clone + Debug + PartialEq,
     {
         use Anf::*;
         match a {

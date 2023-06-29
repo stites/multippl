@@ -2,7 +2,7 @@ use rsdd::repr::bdd::VarLabel;
 use rsdd::repr::wmc::{RealSemiring, WmcParams};
 use std::collections::HashMap;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Weight {
     pub lo: RealSemiring,
     pub hi: RealSemiring,

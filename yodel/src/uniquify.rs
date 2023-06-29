@@ -3,6 +3,7 @@ use crate::grammar::*;
 use crate::typeinf::grammar::ProgramInferable;
 use grammar::*;
 use std::collections::HashMap;
+use std::fmt::Debug;
 
 pub mod grammar {
     use super::*;
@@ -158,10 +159,11 @@ impl SymEnv {
             Some(sym) => Ok(sym),
         }
     }
-    pub fn uniquify_anf<X: Clone>(&mut self, a: &AnfUD<X>) -> Result<AnfUnq<X>, CompileError>
+    pub fn uniquify_anf<Val>(&mut self, a: &AnfUD<Val>) -> Result<AnfUnq<Val>, CompileError>
     where
-        AVarExt<X>: ξ<Uniquify, Ext = UniqueId> + ξ<UD>,
-        AValExt<X>: ξ<Uniquify, Ext = ()> + ξ<UD>,
+        AVarExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<UD, Ext = ()>,
+        AValExt<Val>: ξ<Uniquify, Ext = ()> + ξ<UD, Ext = ()>,
+        Val: Debug + Clone + PartialEq,
     {
         use crate::grammar::Anf::*;
         match a {
@@ -182,13 +184,14 @@ impl SymEnv {
             _ => todo!(),
         }
     }
-    pub fn uniquify_anfs<X: Clone>(
+    pub fn uniquify_anfs<Val: Clone>(
         &mut self,
-        anfs: &[AnfUD<X>],
-    ) -> Result<Vec<AnfUnq<X>>, CompileError>
+        anfs: &[AnfUD<Val>],
+    ) -> Result<Vec<AnfUnq<Val>>, CompileError>
     where
-        AVarExt<X>: ξ<Uniquify, Ext = UniqueId> + ξ<UD>,
-        AValExt<X>: ξ<Uniquify, Ext = ()> + ξ<UD>,
+        AVarExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<UD, Ext = ()>,
+        AValExt<Val>: ξ<Uniquify, Ext = ()> + ξ<UD, Ext = ()>,
+        Val: Debug + Clone + PartialEq,
     {
         anfs.iter().map(|a| self.uniquify_anf(a)).collect()
     }

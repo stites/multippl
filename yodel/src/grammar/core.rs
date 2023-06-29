@@ -98,6 +98,7 @@ where
     <AVarExt<Val> as ξ<X>>::Ext: Debug + PartialEq + Clone,
     <AValExt<Val> as ξ<X>>::Ext: Debug + PartialEq + Clone,
     Val: Debug + PartialEq + Clone,
+    X: Debug + PartialEq + Clone,
 {
     AVar(<AVarExt<Val> as ξ<X>>::Ext, String),
     AVal(<AValExt<Val> as ξ<X>>::Ext, Val),
@@ -121,8 +122,17 @@ where
     LTE(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
     EQ(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
 }
-pub trait DPC: Debug + PartialEq + Clone {}
-impl<X: DPC, Val: DPC> DPC for Anf<X, Val> {}
+// pub trait DPC: Debug + PartialEq + Clone {}
+// impl<X: DPC, Val: DPC> DPC for Anf<X, Val>
+// where
+//     AVarExt<Val>: ξ<X>,
+//     AValExt<Val>: ξ<X>,
+//     <AVarExt<Val> as ξ<X>>::Ext: DPC,
+//     <AValExt<Val> as ξ<X>>::Ext: DPC,
+//     X: DPC,
+//     Val: DPC,
+// {
+// }
 
 TTG!(
     #[derive(Debug, Clone, PartialEq)]
@@ -378,6 +388,9 @@ TTG!(
 );
 
 // UD comprises of the default, undecorated grammar. Grammar.rs seems to be the best place for this.
+// TTG!(UD: {
+//     AVarExt<SVal>: (),
+// })
 #[derive(Clone, PartialEq, Debug)]
 pub struct UD;
 impl ξ<UD> for AVarExt<SVal> {

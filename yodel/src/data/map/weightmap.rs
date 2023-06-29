@@ -3,7 +3,7 @@ use rsdd::repr::bdd::VarLabel;
 use rsdd::repr::wmc::{RealSemiring, WmcParams};
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct WeightMap {
     pub weights: HashMap<VarLabel, Weight>,
 }

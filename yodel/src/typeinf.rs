@@ -4,6 +4,7 @@ use crate::data::errors::{
 };
 use crate::grammar::*;
 use crate::typecheck::grammar::{AnfTyped, EExprTyped, LetInTypes, ProgramTyped, SExprTyped};
+use std::fmt::Debug;
 
 pub mod grammar {
     use super::*;
@@ -197,7 +198,7 @@ pub mod grammar {
 use crate::typecheck::grammar::Typed;
 use crate::typeinf::grammar::Inferable;
 
-pub fn typeinference_anf<T: Clone, X: Clone>(
+pub fn typeinference_anf<T: Debug + PartialEq + Clone, X: Debug + PartialEq + Clone>(
     ty: &T,
     a: &grammar::AnfInferable<X>,
 ) -> Result<AnfTyped<X>>
@@ -222,7 +223,7 @@ where
     }
 }
 
-pub fn typeinference_anfs<T: Clone, X: Clone>(
+pub fn typeinference_anfs<T: Debug + PartialEq + Clone, X: Debug + PartialEq + Clone>(
     ty: &T,
     anfs: &[grammar::AnfInferable<X>],
 ) -> Result<Vec<AnfTyped<X>>>

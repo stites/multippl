@@ -6,8 +6,8 @@ use grammar::*;
 use rsdd::repr::var_label::*;
 use rsdd::repr::var_order::VarOrder;
 use rsdd::repr::wmc::WmcParams;
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
+use std::fmt::Debug;
 
 pub type InvMap = HashMap<NamedVar, HashSet<BddVar>>;
 
@@ -256,7 +256,10 @@ impl LabelEnv {
         }
     }
 
-    pub fn annotate_anf<Val: DPC>(&mut self, a: &AnfUnq<Val>) -> Result<AnfAnn<Val>, CompileError>
+    pub fn annotate_anf<Val: Debug + Clone + PartialEq>(
+        &mut self,
+        a: &AnfUnq<Val>,
+    ) -> Result<AnfAnn<Val>, CompileError>
     where
         AVarExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = NamedVar>,
         AValExt<Val>: ξ<Uniquify, Ext = ()> + ξ<Annotated, Ext = ()>,
@@ -290,6 +293,7 @@ impl LabelEnv {
     where
         AVarExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = NamedVar>,
         AValExt<Val>: ξ<Uniquify, Ext = ()> + ξ<Annotated, Ext = ()>,
+        Val: Debug + Clone + PartialEq,
     {
         anfs.iter().map(|a| self.annotate_anf(a)).collect()
     }

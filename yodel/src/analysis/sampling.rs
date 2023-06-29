@@ -148,10 +148,12 @@ impl InsertionEnv {
 mod upcast {
     use super::*;
 
-    pub fn upcast_anf<X: Clone, Y>(a: &AnfAnn<X>) -> AnfInferable<X>
+    pub fn upcast_anf<X, Y>(a: &AnfAnn<X>) -> AnfInferable<X>
     where
         AVarExt<X>: ξ<Annotated, Ext = NamedVar> + ξ<Inferable, Ext = Option<Y>>,
         AValExt<X>: ξ<Annotated, Ext = ()> + ξ<Inferable, Ext = ()>,
+        X: Clone + Debug + PartialEq,
+        Y: Clone + Debug + PartialEq,
     {
         use crate::grammar::Anf::*;
         match a {
@@ -163,10 +165,12 @@ mod upcast {
             _ => todo!(),
         }
     }
-    pub fn upcast_anfs<Val: Clone, Ty>(anfs: &[AnfAnn<Val>]) -> Vec<AnfInferable<Val>>
+    pub fn upcast_anfs<Val, Ty>(anfs: &[AnfAnn<Val>]) -> Vec<AnfInferable<Val>>
     where
         AVarExt<Val>: ξ<Annotated, Ext = NamedVar> + ξ<Inferable, Ext = Option<Ty>>,
         AValExt<Val>: ξ<Annotated, Ext = ()> + ξ<Inferable, Ext = ()>,
+        Ty: Clone + Debug + PartialEq,
+        Val: Clone + Debug + PartialEq,
     {
         anfs.iter().map(|a| upcast_anf(a)).collect()
     }

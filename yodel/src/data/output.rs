@@ -12,7 +12,7 @@ use std::collections::HashMap;
 
 pub type SubstMap = HashMap<UniqueId, (Vec<BddPtr>, Var)>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Output {
     /// compiled distributions
     pub dists: Vec<BddPtr>,
@@ -102,7 +102,7 @@ impl Output {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Compiled {
     Output(Output),
     // Debug(Vec<Output>),

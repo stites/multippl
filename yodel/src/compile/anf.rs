@@ -72,16 +72,12 @@ pub fn eval_sanfs<'a>(
 }
 
 /// actually just eval_eanf, but not about to change this until later
-pub fn eval_anf<Val: Clone>(
+pub fn eval_anf(
     mgr: &mut Mgr,
     ctx: &Context,
-    a: &AnfAnn<Val>,
-    out: &dyn Fn(&mut Mgr, &Val) -> Result<(Output, AnfTr<Val>)>,
-) -> Result<(Output, AnfTr<Val>)>
-where
-    AValExt<Val>: ξ<Annotated, Ext = ()> + ξ<Trace, Ext = Box<Output>>,
-    AVarExt<Val>: ξ<Annotated, Ext = NamedVar> + ξ<Trace, Ext = Box<Output>>,
-{
+    a: &AnfAnn<EVal>,
+    out: &dyn Fn(&mut Mgr, &EVal) -> Result<(Output, AnfTr<EVal>)>,
+) -> Result<(Output, AnfTr<EVal>)> {
     use Anf::*;
     match a {
         AVal(_, v) => out(mgr, v),
@@ -112,18 +108,14 @@ where
     }
 }
 
-pub fn eval_anf_binop<Val: Clone>(
+pub fn eval_anf_binop(
     mgr: &mut Mgr,
     ctx: &Context,
-    bl: &AnfAnn<Val>,
-    br: &AnfAnn<Val>,
+    bl: &AnfAnn<EVal>,
+    br: &AnfAnn<EVal>,
     op: &dyn Fn(&mut Mgr, BddPtr, BddPtr) -> BddPtr,
-    out: &dyn Fn(&mut Mgr, &Val) -> Result<(Output, AnfTr<Val>)>,
-) -> Result<(AnfTr<Val>, AnfTr<Val>, Output)>
-where
-    AValExt<Val>: ξ<Annotated, Ext = ()> + ξ<Trace, Ext = Box<Output>>,
-    AVarExt<Val>: ξ<Annotated, Ext = NamedVar> + ξ<Trace, Ext = Box<Output>>,
-{
+    out: &dyn Fn(&mut Mgr, &EVal) -> Result<(Output, AnfTr<EVal>)>,
+) -> Result<(AnfTr<EVal>, AnfTr<EVal>, Output)> {
     let (l, ltr) = eval_anf(mgr, ctx, bl, out)?;
     let (r, rtr) = eval_anf(mgr, ctx, br, out)?;
 

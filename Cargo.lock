@@ -1652,7 +1652,7 @@ checksum = "3582f63211428f83597b51b2ddb88e2a91a9d52d12831f9d08f5e624e8977422"
 [[package]]
 name = "rsdd"
 version = "0.1.0"
-source = "git+https://github.com/stites/rsdd?branch=yodel-additions#2d57b0866804d6ff744ad73254454b97e5e98257"
+source = "git+https://github.com/stites/rsdd?branch=yodel-additions#7df91959153419b49b8da1288a31f5eb1db4a813"
 dependencies = [
  "bit-set",
  "bumpalo",
