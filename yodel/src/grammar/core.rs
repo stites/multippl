@@ -388,86 +388,34 @@ TTG!(
 );
 
 // UD comprises of the default, undecorated grammar. Grammar.rs seems to be the best place for this.
-// TTG!(UD: {
-//     AVarExt<SVal>: (),
-// })
-#[derive(Clone, PartialEq, Debug)]
-pub struct UD;
-impl ξ<UD> for AVarExt<SVal> {
-    type Ext = ();
-}
-impl ξ<UD> for AVarExt<EVal> {
-    type Ext = ();
-}
-impl ξ<UD> for AValExt<EVal> {
-    type Ext = ();
-}
-impl ξ<UD> for AValExt<SVal> {
-    type Ext = ();
-}
-impl ξ<UD> for EAnfExt {
-    type Ext = ();
-}
-impl ξ<UD> for EPrjExt {
-    type Ext = ();
-}
-impl ξ<UD> for EProdExt {
-    type Ext = ();
-}
-impl ξ<UD> for ELetInExt {
-    type Ext = ();
-}
-impl ξ<UD> for EIteExt {
-    type Ext = ();
-}
-impl ξ<UD> for EFlipExt {
-    type Ext = ();
-}
-impl ξ<UD> for EObserveExt {
-    type Ext = ();
-}
-impl ξ<UD> for SObserveExt {
-    type Ext = ();
-}
-impl ξ<UD> for ESampleExt {
-    type Ext = ();
-}
-impl ξ<UD> for SAnfExt {
-    type Ext = ();
-}
-impl ξ<UD> for SLetInExt {
-    type Ext = ();
-}
-impl ξ<UD> for SSeqExt {
-    type Ext = ();
-}
-impl ξ<UD> for SIteExt {
-    type Ext = ();
-}
-impl ξ<UD> for SBernExt {
-    type Ext = ();
-}
-impl ξ<UD> for SDiscreteExt {
-    type Ext = ();
-}
-impl ξ<UD> for SUniformExt {
-    type Ext = ();
-}
-impl ξ<UD> for SNormalExt {
-    type Ext = ();
-}
-impl ξ<UD> for SBetaExt {
-    type Ext = ();
-}
-impl ξ<UD> for SDirichletExt {
-    type Ext = ();
-}
+TTG!(UD: {
+    AVarExt<SVal>: (),
+    AVarExt<EVal>: (),
+    AValExt<EVal>: (),
+    AValExt<SVal>: (),
+    EAnfExt: (),
+    EPrjExt: (),
+    EProdExt: (),
+    ELetInExt: (),
+    EIteExt: (),
+    EFlipExt: (),
+    EObserveExt: (),
+    SObserveExt: (),
+    ESampleExt: (),
+    SAnfExt: (),
+    SLetInExt: (),
+    SSeqExt: (),
+    SIteExt: (),
+    SBernExt: (),
+    SDiscreteExt: (),
+    SUniformExt: (),
+    SNormalExt: (),
+    SBetaExt: (),
+    SDirichletExt: (),
+    SExactExt: (),
+});
 
-impl ξ<UD> for SExactExt {
-    type Ext = ();
+fn test_ud(l: ProgramUD, r: ProgramUD) -> bool {
+    println!("{:?}", l);
+    l.clone() == r.clone()
 }
-
-pub type AnfUD<X> = Anf<UD, X>;
-pub type EExprUD = EExpr<UD>;
-pub type SExprUD = SExpr<UD>;
-pub type ProgramUD = Program<UD>;

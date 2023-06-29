@@ -2444,6 +2444,7 @@ dependencies = [
  "itertools",
  "nalgebra",
  "num-traits",
+ "paste",
  "plotters",
  "quickcheck",
  "quickcheck_macros",

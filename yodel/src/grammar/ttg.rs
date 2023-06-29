@@ -155,14 +155,36 @@ macro_rules! TTG {
             $($body)*
         }
     };
-    // ($X:ident { $($param:ident: $ext:expr),* }) => {
-    //     #[derive(Clone, PartialEq, Debug)]
-    //     pub struct $X;
+    ($X:ident: { $($tail:tt)* }) => {
+        #[derive(Clone, PartialEq, Debug)]
+        pub struct $X;
+        paste::paste! {
+            pub type [< Anf $X >]<Val> = Anf<$X, Val>;
+            pub type [< EExpr $X >] = EExpr<$X>;
+            pub type [< SExpr $X >] = SExpr<$X>;
+            pub type [< Program $X >] = Program<$X>;
+        }
 
-    //     $(
-    //         impl ξ<$X> for $param {
-    //             type Ext = $ext;
-    //         }
-    //     )*
-    // }
+        associated_type!($X; $($tail)*);
+    };
+}
+
+#[macro_export]
+macro_rules! associated_type {
+    ($X:ident; ) => {};
+    ($X:ident; $param:ty: $ext:ty, $($tail:tt)*) => {
+        impl ξ<$X> for $param {
+            type Ext = $ext;
+        }
+        associated_type!($X; $($tail)*);
+    };
+    (@alias $base:ident, $alias:expr, $X:ident) => {
+        pub type $alias = $base<$X>;
+    };
+    // ($X:ident; $param:ty: $ext:ty, $($tail:tt)*) => {
+    //     impl ξ<$X> for $param<$val> {
+    //         type Ext = $ext;
+    //     }
+    //     associated_type!($X; $($tail)*);
+    // };
 }
