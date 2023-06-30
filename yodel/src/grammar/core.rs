@@ -387,45 +387,7 @@ TTG!(
     }
 );
 
-ttg::phase!(
-    pub struct UD: {
-        // UD comprises of the default, undecorated grammar.
-        // all extensions are of type ().
-    }
-);
+// UD comprises of the default, undecorated grammar.
+// all extensions are of type ().
+ttg::phase!(pub struct UD);
 ttg::alias!(UD + (Program, EExpr, SExpr, Anf<Var>));
-
-ttg::phase!(
-    pub struct UD2
-);
-ttg::alias!(UD2 + (Program, EExpr, SExpr, Anf<Var>));
-
-ttg::phase!(
-    pub struct UD3: usize
-);
-ttg::alias!(UD3 + (Program, EExpr, SExpr, Anf<Var>));
-
-ttg::phase!(
-    pub struct UD4: usize {
-      EProdExt : (),
-    }
-);
-ttg::alias!(UD4 + (Program, EExpr, SExpr, Anf<Var>));
-
-fn test_ud(l: ProgramUD4, r: ProgramUD3) -> bool {
-    let x = UD3.clone();
-    println!("{:?}", l);
-    let y = l.clone();
-    let z = r.clone();
-    true
-}
-// ttg::phase!(
-//     pub struct UD2: usize
-// );
-// ttg::alias!(UD2 + (Program, EExpr, SExpr, Anf<Var>));
-
-// fn test_ud(l: ProgramUD2, r: ProgramUD2) -> bool {
-//     let x = UD2.clone();
-//     println!("{:?}", l);
-//     l.clone() == r.clone()
-// }

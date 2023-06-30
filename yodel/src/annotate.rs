@@ -108,93 +108,16 @@ pub mod grammar {
         }
     }
 
-    #[derive(Debug, PartialEq, Clone)]
-    pub struct Annotated;
+    ttg::phase!(pub struct Annotated: {
+        AVarExt<SVal>: NamedVar,
+        AVarExt<EVal>: NamedVar,
 
-    impl ξ<Annotated> for AVarExt<SVal> {
-        type Ext = NamedVar;
-    }
-    impl ξ<Annotated> for AValExt<SVal> {
-        type Ext = ();
-    }
-    impl ξ<Annotated> for AVarExt<EVal> {
-        type Ext = NamedVar;
-    }
-    impl ξ<Annotated> for AValExt<EVal> {
-        type Ext = ();
-    }
+        ELetInExt: NamedVar,
+        EFlipExt: BddVar,
+
+        SLetInExt: NamedVar,
+    });
     pub type AnfAnn<Val> = Anf<Annotated, Val>;
-
-    impl ξ<Annotated> for EAnfExt {
-        type Ext = ();
-    }
-    impl ξ<Annotated> for EPrjExt {
-        // sampleable
-        type Ext = ();
-    }
-    impl ξ<Annotated> for EProdExt {
-        type Ext = ();
-    }
-    impl ξ<Annotated> for ELetInExt {
-        // vars up/down
-        // binders are "sample-able"
-        type Ext = NamedVar;
-    }
-    impl ξ<Annotated> for EIteExt {
-        type Ext = ();
-    }
-    impl ξ<Annotated> for EFlipExt {
-        // vars up/down
-        // flip is sample-able
-        type Ext = BddVar;
-    }
-    impl ξ<Annotated> for EObserveExt {
-        type Ext = ();
-    }
-    impl ξ<Annotated> for SObserveExt {
-        type Ext = ();
-    }
-
-    impl ξ<Annotated> for ESampleExt {
-        type Ext = ();
-    }
-
-    impl ξ<Annotated> for SAnfExt {
-        type Ext = ();
-    }
-    impl ξ<Annotated> for SLetInExt {
-        type Ext = NamedVar;
-    }
-    impl ξ<Annotated> for SSeqExt {
-        type Ext = ();
-    }
-    impl ξ<Annotated> for SIteExt {
-        type Ext = ();
-    }
-    // >>>>>>>>>>>>> do nothing special for sampled distributions
-    impl ξ<Annotated> for SBernExt {
-        type Ext = ();
-    }
-    impl ξ<Annotated> for SDiscreteExt {
-        type Ext = ();
-    }
-    impl ξ<Annotated> for SUniformExt {
-        type Ext = ();
-    }
-    impl ξ<Annotated> for SNormalExt {
-        type Ext = ();
-    }
-    impl ξ<Annotated> for SBetaExt {
-        type Ext = ();
-    }
-    impl ξ<Annotated> for SDirichletExt {
-        type Ext = ();
-    }
-    // <<<<<<<<<<<<< do nothing special for sampled distributions
-
-    impl ξ<Annotated> for SExactExt {
-        type Ext = ();
-    }
 
     pub type EExprAnn = EExpr<Annotated>;
     pub type SExprAnn = SExpr<Annotated>;

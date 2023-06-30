@@ -6,93 +6,24 @@ use std::fmt::Debug;
 pub mod grammar {
     use super::*;
 
-    #[derive(Debug, PartialEq, Clone)]
-    pub struct Typed;
+    ttg::phase!(pub struct Typed: {
+        AVarExt<EVal>:ETy,
+        EPrjExt:ETy,
+        EProdExt:ETy,
+        ELetInExt: LetInTypes<ETy>,
+        EIteExt: ETy,
+
+        AVarExt<SVal>: STy,
+        SLetInExt: LetInTypes<STy>,
+        SIteExt: STy,
+    });
+    ttg::alias!(Typed + (Program, EExpr, SExpr, Anf<Var>));
+
     #[derive(Debug, PartialEq, Clone)]
     pub struct LetInTypes<T> {
         pub bindee: T,
         pub body: T,
     }
-    impl ξ<Typed> for AVarExt<EVal> {
-        type Ext = ETy;
-    }
-    impl ξ<Typed> for AVarExt<SVal> {
-        type Ext = STy;
-    }
-    impl ξ<Typed> for AValExt<EVal> {
-        type Ext = ();
-    }
-    impl ξ<Typed> for AValExt<SVal> {
-        type Ext = ();
-    }
-    impl ξ<Typed> for EAnfExt {
-        type Ext = ();
-    }
-    impl ξ<Typed> for EPrjExt {
-        type Ext = ETy;
-    }
-    impl ξ<Typed> for EProdExt {
-        type Ext = ETy;
-    }
-    impl ξ<Typed> for ELetInExt {
-        type Ext = LetInTypes<ETy>;
-    }
-    impl ξ<Typed> for EIteExt {
-        type Ext = ETy;
-    }
-    impl ξ<Typed> for EFlipExt {
-        type Ext = ();
-    }
-    impl ξ<Typed> for EObserveExt {
-        type Ext = ();
-    }
-    impl ξ<Typed> for SObserveExt {
-        type Ext = ();
-    }
-    impl ξ<Typed> for ESampleExt {
-        type Ext = ();
-    }
-    impl ξ<Typed> for SAnfExt {
-        type Ext = ();
-    }
-    impl ξ<Typed> for SLetInExt {
-        type Ext = LetInTypes<STy>;
-    }
-    impl ξ<Typed> for SSeqExt {
-        type Ext = ();
-    }
-    impl ξ<Typed> for SIteExt {
-        type Ext = STy;
-    }
-    // types are precise and do not need to be inferred
-    impl ξ<Typed> for SBernExt {
-        type Ext = ();
-    }
-    impl ξ<Typed> for SDiscreteExt {
-        type Ext = ();
-    }
-    impl ξ<Typed> for SUniformExt {
-        type Ext = ();
-    }
-    impl ξ<Typed> for SNormalExt {
-        type Ext = ();
-    }
-    impl ξ<Typed> for SBetaExt {
-        type Ext = ();
-    }
-    impl ξ<Typed> for SDirichletExt {
-        type Ext = ();
-    }
-
-    impl ξ<Typed> for SExactExt {
-        type Ext = ();
-    }
-
-    pub type AnfTyped<Val> = Anf<Typed, Val>;
-    pub type EExprTyped = EExpr<Typed>;
-    pub type SExprTyped = SExpr<Typed>;
-    pub type ProgramTyped = Program<Typed>;
-
     impl IsTyped<STy> for AnfTyped<SVal> {
         fn as_type(&self) -> STy {
             use Anf::*;

@@ -33,85 +33,14 @@ use CompileError::*;
 
 use std::fmt::*;
 
-#[derive(Debug, PartialEq, Clone)]
-pub struct Trace;
-
-impl ξ<Trace> for AVarExt<EVal> {
-    type Ext = Box<Output>;
-}
-impl ξ<Trace> for AValExt<EVal> {
-    type Ext = Box<Output>;
-}
-impl ξ<Trace> for AVarExt<SVal> {
-    type Ext = Box<Output>;
-}
-impl ξ<Trace> for AValExt<SVal> {
-    type Ext = Box<Output>;
-}
-pub type AnfTr<Val> = Anf<Trace, Val>;
-
-impl ξ<Trace> for EAnfExt {
-    type Ext = Box<Compiled>;
-}
-impl ξ<Trace> for EPrjExt {
-    type Ext = Box<Compiled>;
-}
-impl ξ<Trace> for EProdExt {
-    type Ext = Box<Compiled>;
-}
-impl ξ<Trace> for ELetInExt {
-    type Ext = Box<Compiled>;
-}
-impl ξ<Trace> for EIteExt {
-    type Ext = Box<Compiled>;
-}
-impl ξ<Trace> for EFlipExt {
-    type Ext = Box<Compiled>;
-}
-impl ξ<Trace> for EObserveExt {
-    type Ext = Box<Compiled>;
-}
-impl ξ<Trace> for SObserveExt {
-    type Ext = Box<Compiled>;
-}
-impl ξ<Trace> for ESampleExt {
-    type Ext = Box<Compiled>;
-}
-impl ξ<Trace> for SAnfExt {
-    type Ext = Box<Compiled>;
-}
-impl ξ<Trace> for SLetInExt {
-    type Ext = Box<Compiled>;
-}
-impl ξ<Trace> for SSeqExt {
-    type Ext = Box<Compiled>;
-}
-impl ξ<Trace> for SIteExt {
-    type Ext = Box<Compiled>;
-}
-impl ξ<Trace> for SBernExt {
-    type Ext = Box<Compiled>;
-}
-impl ξ<Trace> for SDiscreteExt {
-    type Ext = Box<Compiled>;
-}
-impl ξ<Trace> for SUniformExt {
-    type Ext = Box<Compiled>;
-}
-impl ξ<Trace> for SNormalExt {
-    type Ext = Box<Compiled>;
-}
-impl ξ<Trace> for SBetaExt {
-    type Ext = Box<Compiled>;
-}
-impl ξ<Trace> for SDirichletExt {
-    type Ext = Box<Compiled>;
-}
-
-impl ξ<Trace> for SExactExt {
-    type Ext = Box<Compiled>;
-}
+ttg::phase!(pub struct Trace: Box<Compiled> {
+    AVarExt<EVal>: Box<Output>,
+    AValExt<EVal>: Box<Output>,
+    AVarExt<SVal>: Box<Output>,
+    AValExt<SVal>: Box<Output>,
+});
 
 pub type EExprTr = EExpr<Trace>;
 pub type SExprTr = SExpr<Trace>;
 pub type ProgramTr = Program<Trace>;
+pub type AnfTr<Val> = Anf<Trace, Val>;

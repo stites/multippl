@@ -9,89 +9,18 @@ use std::fmt::Debug;
 pub mod grammar {
     use super::*;
 
-    #[derive(Debug, PartialEq, Clone)]
-    pub struct Inferable;
+    ttg::phase!(pub struct Inferable: {
+        AVarExt<EVal>:Option<ETy>,
+        EPrjExt:Option<ETy>,
+        EProdExt:Option<ETy>,
+        ELetInExt: Option<LetInTypes<ETy>>,
+        EIteExt: Option<ETy>,
 
-    impl ξ<Inferable> for AVarExt<EVal> {
-        type Ext = Option<ETy>;
-    }
-    impl ξ<Inferable> for AValExt<EVal> {
-        type Ext = ();
-    }
-    impl ξ<Inferable> for AVarExt<SVal> {
-        type Ext = Option<STy>;
-    }
-    impl ξ<Inferable> for AValExt<SVal> {
-        type Ext = ();
-    }
-    impl ξ<Inferable> for EAnfExt {
-        type Ext = ();
-    }
-    impl ξ<Inferable> for EPrjExt {
-        type Ext = Option<ETy>;
-    }
-    impl ξ<Inferable> for EProdExt {
-        type Ext = Option<ETy>;
-    }
-    impl ξ<Inferable> for ELetInExt {
-        type Ext = Option<LetInTypes<ETy>>;
-    }
-    impl ξ<Inferable> for EIteExt {
-        type Ext = Option<ETy>;
-    }
-    impl ξ<Inferable> for EFlipExt {
-        type Ext = ();
-    }
-    impl ξ<Inferable> for EObserveExt {
-        type Ext = ();
-    }
-    impl ξ<Inferable> for SObserveExt {
-        type Ext = ();
-    }
-    impl ξ<Inferable> for ESampleExt {
-        type Ext = ();
-    }
-    impl ξ<Inferable> for SAnfExt {
-        type Ext = ();
-    }
-    impl ξ<Inferable> for SLetInExt {
-        type Ext = Option<LetInTypes<STy>>;
-    }
-    impl ξ<Inferable> for SSeqExt {
-        type Ext = ();
-    }
-    impl ξ<Inferable> for SIteExt {
-        type Ext = Option<STy>;
-    }
-
-    // types are precise and do not need to be inferred
-    impl ξ<Inferable> for SBernExt {
-        type Ext = ();
-    }
-    impl ξ<Inferable> for SDiscreteExt {
-        type Ext = ();
-    }
-    impl ξ<Inferable> for SUniformExt {
-        type Ext = ();
-    }
-    impl ξ<Inferable> for SNormalExt {
-        type Ext = ();
-    }
-    impl ξ<Inferable> for SBetaExt {
-        type Ext = ();
-    }
-    impl ξ<Inferable> for SDirichletExt {
-        type Ext = ();
-    }
-
-    impl ξ<Inferable> for SExactExt {
-        type Ext = ();
-    }
-
-    pub type AnfInferable<X> = Anf<Inferable, X>;
-    pub type EExprInferable = EExpr<Inferable>;
-    pub type SExprInferable = SExpr<Inferable>;
-    pub type ProgramInferable = Program<Inferable>;
+        AVarExt<SVal>: Option<STy>,
+        SLetInExt: Option<LetInTypes<STy>>,
+        SIteExt: Option<STy>,
+    });
+    ttg::alias!(Inferable + (Program, EExpr, SExpr, Anf<Var>));
 
     impl AnfInferable<SVal> {
         pub fn strip_anf(&self) -> Result<AnfInferable<EVal>> {
