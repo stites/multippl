@@ -387,40 +387,45 @@ TTG!(
     }
 );
 
-// UD comprises of the default, undecorated grammar. Grammar.rs seems to be the best place for this.
-
 ttg::phase!(
     pub struct UD: {
-        // AVarExt<SVal>: (),
-        // AVarExt<EVal>: (),
-        // AValExt<EVal>: (),
-        // AValExt<SVal>: (),
-        // EAnfExt: (),
-        // EPrjExt: (),
-        // EProdExt: (),
-        // ELetInExt: (),
-        // EIteExt: (),
-        // EFlipExt: (),
-        // EObserveExt: (),
-        // SObserveExt: (),
-        // ESampleExt: (),
-        // SAnfExt: (),
-        // SLetInExt: (),
-        // SSeqExt: (),
-        // SIteExt: (),
-        // SBernExt: (),
-        // SDiscreteExt: (),
-        // SUniformExt: (),
-        // SNormalExt: (),
-        // SBetaExt: (),
-        // SDirichletExt: (),
-        // SExactExt: (),
+        // UD comprises of the default, undecorated grammar.
+        // all extensions are of type ().
     }
 );
 ttg::alias!(UD + (Program, EExpr, SExpr, Anf<Var>));
 
-fn test_ud(l: ProgramUD, r: ProgramUD) -> bool {
-    let x = UD.clone();
+ttg::phase!(
+    pub struct UD2
+);
+ttg::alias!(UD2 + (Program, EExpr, SExpr, Anf<Var>));
+
+ttg::phase!(
+    pub struct UD3: usize
+);
+ttg::alias!(UD3 + (Program, EExpr, SExpr, Anf<Var>));
+
+ttg::phase!(
+    pub struct UD4: usize {
+      EProdExt : (),
+    }
+);
+ttg::alias!(UD4 + (Program, EExpr, SExpr, Anf<Var>));
+
+fn test_ud(l: ProgramUD4, r: ProgramUD3) -> bool {
+    let x = UD3.clone();
     println!("{:?}", l);
-    l.clone() == r.clone()
+    let y = l.clone();
+    let z = r.clone();
+    true
 }
+// ttg::phase!(
+//     pub struct UD2: usize
+// );
+// ttg::alias!(UD2 + (Program, EExpr, SExpr, Anf<Var>));
+
+// fn test_ud(l: ProgramUD2, r: ProgramUD2) -> bool {
+//     let x = UD2.clone();
+//     println!("{:?}", l);
+//     l.clone() == r.clone()
+// }

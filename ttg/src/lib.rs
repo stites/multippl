@@ -63,12 +63,22 @@ impl Parse for AllAssociations {
 fn get_ident(t: &Type) -> Ident {
     alias::split_type(t.clone()).ident
 }
-fn mk_basic_extensions() -> Result<HashMap<Type, Association>> {
+fn switch_default_ext(a: Association, ext: Option<Type>) -> Association {
+    match ext {
+        None => a,
+        Some(ext) => {
+            let mut a = a.clone();
+            a.extension = ext;
+            a
+        }
+    }
+}
+fn mk_basic_extensions(ext: Option<Type>) -> Result<HashMap<Type, Association>> {
     let assocs: AllAssociations = syn::parse_str(EXPRS)?;
     Ok(assocs
         .associations
         .into_iter()
-        .map(|assoc| (assoc.expr.clone(), assoc))
+        .map(|assoc| (assoc.expr.clone(), switch_default_ext(assoc, ext.clone())))
         .collect())
 }
 
@@ -93,18 +103,43 @@ struct TTGPhase {
     visibility: Visibility,
     struct_token: Token![struct],
     ident: Ident,
-    colon_token: Colon,
-    assocs: AllAssociations,
+    colon_token: Option<Token![:]>,
+    default_ext: Option<Type>,
+    assocs: Option<AllAssociations>,
 }
 impl Parse for TTGPhase {
     fn parse(input: ParseStream) -> Result<Self> {
-        Ok(TTGPhase {
-            visibility: input.parse()?,
-            struct_token: input.parse()?,
-            ident: input.parse()?,
-            colon_token: input.parse()?,
-            assocs: input.parse()?,
-        })
+        let visibility = input.parse()?;
+        let struct_token = input.parse()?;
+        let ident = input.parse()?;
+        let colon_token: Option<Token![:]> = input.parse()?;
+        if colon_token.is_none() {
+            Ok(TTGPhase {
+                visibility,
+                struct_token,
+                ident,
+                colon_token,
+                default_ext: None,
+                assocs: None,
+            })
+        } else {
+            let default_ext = match input.parse() {
+                Err(_) => None,
+                Ok(e) => Some(e),
+            };
+            let assocs = match input.parse() {
+                Err(_) => None,
+                Ok(e) => Some(e),
+            };
+            Ok(TTGPhase {
+                visibility,
+                struct_token,
+                ident,
+                colon_token,
+                default_ext,
+                assocs,
+            })
+        }
     }
 }
 fn expand_impl(phase: &Ident, assoc: &Association) -> TokenStream2 {
@@ -120,26 +155,29 @@ fn expand_impl(phase: &Ident, assoc: &Association) -> TokenStream2 {
 fn expand_phase(input: TTGPhase) -> TokenStream2 {
     let phase_name = input.ident.clone();
     let vis = input.visibility.clone();
-    let assocs = input
-        .assocs
-        .associations
-        .clone()
-        .into_iter()
-        .map(|assoc| expand_impl(&input.ident, &assoc));
 
+    let assocs = input.assocs.iter().flat_map(|ascs| {
+        ascs.associations
+            .clone()
+            .into_iter()
+            .map(|assoc| expand_impl(&input.ident, &assoc))
+    });
     let included: HashSet<Type> = input
         .assocs
-        .associations
-        .clone()
-        .into_iter()
-        .map(|a| a.expr)
+        .iter()
+        .flat_map(|ascs| {
+            ascs.associations
+                .clone()
+                .into_iter()
+                .map(|assoc| assoc.expr)
+        })
         .collect();
 
-    let remainder = mk_basic_extensions()
+    let remainder = mk_basic_extensions(input.default_ext.clone())
         .expect("this is always correct")
         .into_iter()
         .filter(|(i, _)| !included.contains(&i))
-        .map(|(i, assoc)| expand_impl(&input.ident, &assoc));
+        .map(|(_, assoc)| expand_impl(&input.ident, &assoc));
 
     quote! {
         #[automatically_derived]
