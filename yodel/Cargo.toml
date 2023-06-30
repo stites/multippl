@@ -29,6 +29,7 @@ tracing-subscriber = { workspace = true }
 tracing-test = { workspace = true }
 tree-sitter = { workspace = true }
 tree-sitter-yodel = { path = "../tree-sitter-yodel" }
+ttg = { path = "../ttg" }
 indexmap = "1.9.3"
 
 # depends on rustc-serialize v0.3.24 which will be deprecated

@@ -6,6 +6,7 @@ members = [
   "tree-sitter-formula",
   "lean", # this is just for prototyping and shouldn't be considered a member of this project.
   "rsgm_networks",
+  "ttg",
 ]
 [workspace.package]
 version = "0.0.0"
