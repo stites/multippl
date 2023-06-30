@@ -27,7 +27,7 @@ impl Parse for TTGPhaseAliases {
         })
     }
 }
-fn split_type(partial_type: Type) -> PathSegment {
+pub(crate) fn split_type(partial_type: Type) -> PathSegment {
     match partial_type {
         Type::Path(tp) => tp.path.segments.last().unwrap().clone(),
         _ => panic!(),

@@ -7,6 +7,7 @@ mod alias;
 
 use proc_macro::TokenStream;
 use quote::quote;
+use std::collections::{HashMap, HashSet};
 use syn::parse::{Parse, ParseStream};
 use syn::punctuated::Punctuated;
 use syn::token::{Colon, Plus};
@@ -15,8 +16,62 @@ use syn::{parse_macro_input, Result};
 use syn::{AngleBracketedGenericArguments, GenericArgument, PathArguments, PathSegment};
 
 use crate::alias::*;
+const EXPRS: &str = r"{
+    AVarExt<SVal>: (),
+    AVarExt<EVal>: (),
+    AValExt<EVal>: (),
+    AValExt<SVal>: (),
+    EAnfExt : (),
+    EPrjExt : (),
+    EProdExt : (),
+    ELetInExt : (),
+    EIteExt : (),
+    EFlipExt : (),
+    EObserveExt : (),
+    SObserveExt : (),
+    ESampleExt : (),
+    SAnfExt : (),
+    SLetInExt : (),
+    SSeqExt : (),
+    SIteExt : (),
+    SBernExt : (),
+    SDiscreteExt : (),
+    SUniformExt : (),
+    SNormalExt : (),
+    SBetaExt : (),
+    SDirichletExt : (),
+    SExactExt : (),
+}";
 
 type TokenStream2 = proc_macro2::TokenStream;
+
+#[derive(Clone)]
+struct AllAssociations {
+    brace_token: token::Brace,
+    associations: Punctuated<Association, Token![,]>,
+}
+
+impl Parse for AllAssociations {
+    fn parse(input: ParseStream) -> Result<Self> {
+        let content;
+        Ok(AllAssociations {
+            brace_token: braced!(content in input),
+            associations: content.parse_terminated(Association::parse, Token![,])?,
+        })
+    }
+}
+fn get_ident(t: &Type) -> Ident {
+    alias::split_type(t.clone()).ident
+}
+fn mk_basic_extensions() -> Result<HashMap<Type, Association>> {
+    let assocs: AllAssociations = syn::parse_str(EXPRS)?;
+    Ok(assocs
+        .associations
+        .into_iter()
+        .map(|assoc| (assoc.expr.clone(), assoc))
+        .collect())
+}
+
 #[derive(Clone)]
 struct Association {
     expr: Type,
@@ -38,43 +93,62 @@ struct TTGPhase {
     visibility: Visibility,
     struct_token: Token![struct],
     ident: Ident,
-    brace_token: token::Brace,
-    associations: Punctuated<Association, Token![,]>,
+    colon_token: Colon,
+    assocs: AllAssociations,
 }
 impl Parse for TTGPhase {
     fn parse(input: ParseStream) -> Result<Self> {
-        println!("parsing phase");
-        let content;
         Ok(TTGPhase {
             visibility: input.parse()?,
             struct_token: input.parse()?,
             ident: input.parse()?,
-            brace_token: braced!(content in input),
-            associations: content.parse_terminated(Association::parse, Token![,])?,
+            colon_token: input.parse()?,
+            assocs: input.parse()?,
         })
     }
 }
-
+fn expand_impl(phase: &Ident, assoc: &Association) -> TokenStream2 {
+    let expr = assoc.expr.clone();
+    let ext = assoc.extension.clone();
+    quote! {
+        #[automatically_derived]
+        impl ξ< #phase > for #expr {
+            type Ext = #ext;
+        }
+    }
+}
 fn expand_phase(input: TTGPhase) -> TokenStream2 {
     let phase_name = input.ident.clone();
     let vis = input.visibility.clone();
-    let assocs = input.associations.clone().into_iter().map(|assoc| {
-        let expr = assoc.expr;
-        let ext = assoc.extension;
-        let phase_name = input.ident.clone();
-        quote! {
-            #[automatically_derived]
-            impl ξ< #phase_name > for #expr {
-                type Ext = #ext;
-            }
-        }
-    });
+    let assocs = input
+        .assocs
+        .associations
+        .clone()
+        .into_iter()
+        .map(|assoc| expand_impl(&input.ident, &assoc));
+
+    let included: HashSet<Type> = input
+        .assocs
+        .associations
+        .clone()
+        .into_iter()
+        .map(|a| a.expr)
+        .collect();
+
+    let remainder = mk_basic_extensions()
+        .expect("this is always correct")
+        .into_iter()
+        .filter(|(i, _)| !included.contains(&i))
+        .map(|(i, assoc)| expand_impl(&input.ident, &assoc));
+
     quote! {
         #[automatically_derived]
         #[derive(Clone, Debug, PartialEq)]
         #vis struct #phase_name;
 
         #(#assocs)*
+        // pub struct FOOF;
+        #(#remainder)*
     }
 }
 
