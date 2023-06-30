@@ -40,7 +40,4 @@ ttg::phase!(pub struct Trace: Box<Compiled> {
     AValExt<SVal>: Box<Output>,
 });
 
-pub type EExprTr = EExpr<Trace>;
-pub type SExprTr = SExpr<Trace>;
-pub type ProgramTr = Program<Trace>;
-pub type AnfTr<Val> = Anf<Trace, Val>;
+ttg::alias!(Trace as Tr + (Program, EExpr, SExpr, Anf<Var>));

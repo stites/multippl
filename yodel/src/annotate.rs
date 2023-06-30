@@ -117,11 +117,8 @@ pub mod grammar {
 
         SLetInExt: NamedVar,
     });
-    pub type AnfAnn<Val> = Anf<Annotated, Val>;
 
-    pub type EExprAnn = EExpr<Annotated>;
-    pub type SExprAnn = SExpr<Annotated>;
-    pub type ProgramAnn = Program<Annotated>;
+    ttg::alias!(Annotated as Ann + (Program, EExpr, SExpr, Anf<Var>));
 }
 
 pub struct LabelEnv {

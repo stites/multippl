@@ -11,6 +11,7 @@ use syn::{AngleBracketedGenericArguments, GenericArgument, PathArguments, PathSe
 
 pub(crate) struct TTGPhaseAliases {
     phase: Ident,
+    short: Option<(token::As, Ident)>,
     plus_token: Plus,
     paren_token: token::Paren,
     aliases: Punctuated<Type, Token![,]>,
@@ -18,10 +19,17 @@ pub(crate) struct TTGPhaseAliases {
 
 impl Parse for TTGPhaseAliases {
     fn parse(input: ParseStream) -> Result<Self> {
+        let phase = input.parse()?;
+        let short = match input.parse::<token::As>() {
+            Err(_) => None,
+            Ok(a) => Some((a, input.parse()?)),
+        };
+        let plus_token = input.parse()?;
         let content;
         Ok(TTGPhaseAliases {
-            phase: input.parse()?,
-            plus_token: input.parse()?,
+            phase,
+            short,
+            plus_token,
             paren_token: syn::parenthesized!(content in input),
             aliases: content.parse_terminated(Type::parse, Token![,])?,
         })
@@ -98,10 +106,16 @@ fn cons_phase(phase: Ident, seg: PathSegment) -> NewPathSegment {
         _ => panic!("API misuse"),
     }
 }
-fn mk_alias_pair(phase_name: Ident, partial_type: Type) -> (Type, Type) {
+fn mk_alias_pair(
+    phase_name: Ident,
+    short: Option<(token::As, Ident)>,
+    partial_type: Type,
+) -> (Type, Type) {
     let pseg = split_type(partial_type);
+    let short: Option<Ident> = short.map(|(_, i)| i);
+    let suffix = short.unwrap_or_else(|| phase_name.clone());
     let alias_ident = Ident::new(
-        &format!("{}{}", pseg.ident, phase_name),
+        &format!("{}{}", pseg.ident, suffix),
         proc_macro2::Span::call_site(),
     );
     let newseg = cons_phase(phase_name, pseg);
@@ -114,7 +128,7 @@ fn mk_alias_pair(phase_name: Ident, partial_type: Type) -> (Type, Type) {
 
 pub(crate) fn expand_aliases(input: TTGPhaseAliases) -> TokenStream2 {
     let aliases = input.aliases.into_iter().map(|partial_type| {
-        let (alias, ty) = mk_alias_pair(input.phase.clone(), partial_type);
+        let (alias, ty) = mk_alias_pair(input.phase.clone(), input.short.clone(), partial_type);
 
         quote! {
             #[automatically_derived]

@@ -31,87 +31,22 @@ pub mod grammar {
         }
     }
 
-    #[derive(Debug, PartialEq, Clone)]
-    pub struct Uniquify;
+    ttg::phase!(pub struct Uniquify: {
+        AVarExt<SVal>: UniqueId,
+        AVarExt<EVal>: UniqueId,
+        ELetInExt: UniqueId,
+        EFlipExt: UniqueId,
+        SLetInExt: UniqueId,
 
-    impl ξ<Uniquify> for AVarExt<SVal> {
-        type Ext = UniqueId;
-    }
-    impl ξ<Uniquify> for AValExt<SVal> {
-        type Ext = ();
-    }
-    impl ξ<Uniquify> for AVarExt<EVal> {
-        type Ext = UniqueId;
-    }
-    impl ξ<Uniquify> for AValExt<EVal> {
-        type Ext = ();
-    }
-    pub type AnfUnq<X> = Anf<Uniquify, X>;
+        SBernExt: UniqueId,
+        SDiscreteExt: UniqueId,
+        SUniformExt: UniqueId,
+        SNormalExt: UniqueId,
+        SBetaExt: UniqueId,
+        SDirichletExt: UniqueId,
+    });
 
-    impl ξ<Uniquify> for EAnfExt {
-        type Ext = ();
-    }
-    impl ξ<Uniquify> for EPrjExt {
-        type Ext = ();
-    }
-    impl ξ<Uniquify> for EProdExt {
-        type Ext = ();
-    }
-    impl ξ<Uniquify> for ELetInExt {
-        type Ext = UniqueId;
-    }
-    impl ξ<Uniquify> for EIteExt {
-        type Ext = ();
-    }
-    impl ξ<Uniquify> for EFlipExt {
-        type Ext = UniqueId;
-    }
-    impl ξ<Uniquify> for EObserveExt {
-        type Ext = ();
-    }
-    impl ξ<Uniquify> for SObserveExt {
-        type Ext = ();
-    }
-    impl ξ<Uniquify> for ESampleExt {
-        type Ext = ();
-    }
-    impl ξ<Uniquify> for SAnfExt {
-        type Ext = ();
-    }
-    impl ξ<Uniquify> for SLetInExt {
-        type Ext = UniqueId;
-    }
-    impl ξ<Uniquify> for SSeqExt {
-        type Ext = ();
-    }
-    impl ξ<Uniquify> for SIteExt {
-        type Ext = ();
-    }
-    impl ξ<Uniquify> for SBernExt {
-        type Ext = UniqueId;
-    }
-    impl ξ<Uniquify> for SDiscreteExt {
-        type Ext = UniqueId;
-    }
-    impl ξ<Uniquify> for SUniformExt {
-        type Ext = UniqueId;
-    }
-    impl ξ<Uniquify> for SNormalExt {
-        type Ext = UniqueId;
-    }
-    impl ξ<Uniquify> for SBetaExt {
-        type Ext = UniqueId;
-    }
-    impl ξ<Uniquify> for SDirichletExt {
-        type Ext = UniqueId;
-    }
-    impl ξ<Uniquify> for SExactExt {
-        type Ext = ();
-    }
-
-    pub type EExprUnq = EExpr<Uniquify>;
-    pub type SExprUnq = SExpr<Uniquify>;
-    pub type ProgramUnq = Program<Uniquify>;
+    ttg::alias!(Uniquify as Unq + (Program, EExpr, SExpr, Anf<Var>));
 }
 
 pub struct SymEnv {
