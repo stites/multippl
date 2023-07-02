@@ -150,7 +150,7 @@ TTG!(
         SApp(<SAnfExt as ξ<X>>::Ext, String, Vec<Anf<X, SVal>>),
         SLambda(<SLambdaExt as ξ<X>>::Ext, Vec<String>, Box<SExpr<X>>),
 
-        SSample(<SSampleExt as ξ<X>>::Ext, Box<Anf<X, SVal>>),
+        SSample(<SSampleExt as ξ<X>>::Ext, Box<SExpr<X>>),
         SObserve(
             <SObserveExt as ξ<X>>::Ext,
             Box<Anf<X, SVal>>,

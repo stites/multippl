@@ -32,6 +32,9 @@ where
     LTE(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
     EQ(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
 
+    // x [ 0 ]
+    SPrj(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+
     // Distributions
     EFlip(Box<Anf<X, Val>>),
     SBern(Box<Anf<X, Val>>),

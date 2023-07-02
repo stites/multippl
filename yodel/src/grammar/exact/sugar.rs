@@ -101,6 +101,7 @@ impl Desugar<Anf<Inferable, SVal>> for Anf<Inferable, SVal> {
 #[derive(PartialEq, Debug, Clone)]
 pub enum SSugar {
     Prim(SExpr<Inferable>),
+    LetSample(String, Box<SSugar>, Box<SSugar>), // let x = ~(<sexpr>) in <sexpr>
     Exact(Box<ESugar>),
 }
 
@@ -113,9 +114,16 @@ impl Lang for SSugar {
 
 impl Desugar<SExpr<Inferable>> for SSugar {
     fn desugar(&self) -> SExpr<Inferable> {
+        use SExpr::*;
         match self {
             SSugar::Prim(e) => e.clone(),
-            SSugar::Exact(e) => SExpr::SExact((), Box::new(e.desugar())),
+            SSugar::Exact(e) => SExact((), Box::new(e.desugar())),
+            SSugar::LetSample(s, e0, e1) => SLetIn(
+                None,
+                s.clone(),
+                Box::new(SSample((), Box::new(e0.desugar()))),
+                Box::new(e1.desugar()),
+            ),
         }
     }
 }
