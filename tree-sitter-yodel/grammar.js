@@ -12,15 +12,18 @@ module.exports = grammar({
       seq($.sfun, $.program),
       seq($.efun, $.program),
     ),
+    sargs: $ => choice(
+      seq('(', $.identifier, ':', $.sty, ')'),
+      seq('(', repeat(seq($.identifier, ':', $.sty, ',')), $.identifier, ':', $.sty, ')')
+    ),
+    eargs: $ => choice(
+      seq('(', $.identifier, ':', $.ety, ')'),
+      seq('(', repeat(seq($.identifier, ':', $.ety, ',')), $.identifier, ':', $.ety, ')')
+    ),
 
-    sfun: $ => choice(
-      seq('fn', $.identifier, '@s', '(', $.identifier, ')', '{', $._sexpr, '}'),
-      seq('fn', $.identifier, '@s', '(', repeat(seq($.identifier, ',')), $.identifier,')', '{', $._sexpr, '}'),
-    ),
-    efun: $ => choice(
-      seq('fn', $.identifier, '@e', '(', $.identifier, ')', '{', $._eexpr, '}'),
-      seq('fn', $.identifier, '@e', '(', repeat(seq($.identifier, ',')), $.identifier,')', '{', $._eexpr, '}'),
-    ),
+    sfun: $ => seq('sample', 'fn', $.identifier, $.sargs, ':', $.sty, '{', $._sexpr, '}'),
+    efun: $ => seq('exact', 'fn', $.identifier, $.eargs, ':', $.ety, '{', $._eexpr, '}'),
+
     _eexpr: $ => choice(
       $.elet,
       $.eite,
@@ -35,17 +38,17 @@ module.exports = grammar({
       $.esnd,
       $.eprj,
       $.eprod,
-      $.app,
-      $.eanf,
-      seq('(', $._eexpr, ')')
+      $.eapp,
+      prec(6, $.eanf),
+      prec(5, seq('(', $._eexpr, ')'))
     ),
     ety: $ => choice($.tyBool, $.tyFloat, $.tyInt, $.tyProd), // includes sugar of int
     tyBool: $ => 'Bool',
     tyFloat: $ => 'Float',
 
-    app: $ => choice(
-      seq($.identifier, '(', $.sanf, ')'),
-      seq($.identifier, '(', repeat(seq($.sanf,  ',')), $.sanf, ')'),
+    eapp: $ => choice(
+      seq($.identifier, '(', $.eanf, ')'),
+      seq($.identifier, '(', repeat(seq($.eanf,  ',')), $.eanf, ')'),
     ),
 
     tyProd: $ => choice(
@@ -82,7 +85,7 @@ module.exports = grammar({
     eiterate: $ => seq('iterate', '(', $.identifier, ',',$.eanf, ',', $.eanf,  ')'),
     eobserve: $ => choice(
       seq('observe', $.eanf),
-      seq('observe', '(', $.eanf, ')'),
+      // seq('observe', '(', $.eanf, ')'),
     ),
     esample: $ => choice(
       seq('sample', '(', $._sexpr, ')' ),
@@ -123,13 +126,13 @@ module.exports = grammar({
       $.identifier,
       $._evalue,
       prec.left(2, seq($.eanf, $.numeric_op, $.eanf)),
-      prec.left(2, seq('(', $.eanf, $.numeric_op, $.eanf, ')')),
+      // prec.left(2, seq('(', $.eanf, $.numeric_op, $.eanf, ')')),
       prec.left(3, seq($.eanf, $.bool_biop, $.eanf)),
-      prec.left(3, seq('(', $.eanf, $.bool_biop, $.eanf, ')')),
+      // prec.left(3, seq('(', $.eanf, $.bool_biop, $.eanf, ')')),
       prec.left(4, seq($.eanf, $.compare_op, $.eanf)),
-      prec.left(4, seq('(', $.eanf, $.compare_op, $.eanf, ')')),
+      // prec.left(4, seq('(', $.eanf, $.compare_op, $.eanf, ')')),
       prec.left(5, seq($.bool_unop, $.eanf)),
-
+      seq('(', $.eanf, ')'),
     ),
 
     identifier: $ => /[a-zA-Z_][_a-zA-Z0-9]*/,
@@ -146,8 +149,9 @@ module.exports = grammar({
       $.site,
       $.ssample,
       $.slet,
+      $.sletsample,
       $.sanf,
-      $.app,
+      $.sapp,
       $.sann,
 
       seq('(', $._sexpr, ')')
@@ -158,11 +162,20 @@ module.exports = grammar({
       seq('if', '(', $.sanf, ')', '{', $._sexpr, '}', 'else', $.site ),
     ),
 
+    sapp: $ => choice(
+      seq($.identifier, '(', $.sanf, ')'),
+      seq($.identifier, '(', repeat(seq($.sanf,  ',')), $.sanf, ')'),
+    ),
+
+
 
     // sbinding_section: $ => seq("do", repeat(choice($.slet, $.sseq_first)), $._sexpr),
     slet: $ => choice(
       // seq($.identifier, ':', $.sty, "<-", $._sexpr, ';', $._sexpr),
       seq($.identifier, "<-", $._sexpr, ';', $._sexpr),
+    ),
+    sletsample: $ => choice(
+      seq($.identifier, "~", $._sexpr, ';', $._sexpr),
     ),
     sseq: $ => seq($._sexpr, ';', $._sexpr),
     // sseq_first: $ => seq($._sexpr, ';',),

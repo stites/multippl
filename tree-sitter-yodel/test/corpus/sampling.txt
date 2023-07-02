@@ -58,8 +58,8 @@ sample: healthcare
 ======================
 
 sample {
-  age <- discrete(0.35, 0.45, 0.20);
-  preExistingCond <-
+  age ~ discrete(0.35, 0.45, 0.20);
+  preExistingCond ~
     if (age == 0) {
       discrete(0.88, 0.10, 0.20)
     } else if (age == 1) {
@@ -67,7 +67,7 @@ sample {
     } else {
       discrete(0.42, 0.53, 0.05)
     };
-  outpatientExpenditure <-
+  outpatientExpenditure ~
     if (age == 0) {
       normal( 60.0,  100.0)
     } else if (age == 1) {
@@ -75,7 +75,7 @@ sample {
     } else {
       normal(360.0, 1600.0)
     };
-  anyHospitalStay <-
+  anyHospitalStay ~
     if (age == 0) {
       bern( 0.1 )
     } else if (age == 1) {
@@ -83,19 +83,19 @@ sample {
     } else {
       bern( 0.40 )
     };
-  daysHospitalStay <-
+  daysHospitalStay ~
     if (!anyHospitalStay) {
       0.0
     } else {
       if (age == 0) {
-        normal( 1.0, 0.25)
+        ~normal( 1.0, 0.25)
       } else if (age == 1) {
-        normal( 4.0, 1.00)
+        ~normal( 4.0, 1.00)
       } else {
-        normal( 7.0, 2.25)
+        ~normal( 7.0, 2.25)
       }
     };
-  inpatientExpenditure <-
+  inpatientExpenditure ~
     if (preExistingCond == 0) {
       normal( 100 + (300 * daysHospitalStay), 30^2 )
     } else if (preExistingCond == 1) {
@@ -103,55 +103,65 @@ sample {
     } else {
       normal( 100 + (800 * daysHospitalStay), 100^2 )
     };
-  taxes <- normal(120 + (1.02 * inpatientExpenditure) + (1.05 * outpatientExpenditure), 10^2);
+  taxes ~ normal(120 + (1.02 * inpatientExpenditure) + (1.05 * outpatientExpenditure), 10^2);
   taxes
 }
 
 ----------
 
-
 (source_file
   (program
-    (slet (identifier)
+    (sletsample (identifier)
       (sanf (sdiscrete (sanf (float)) (sanf (float)) (sanf (float))))
-    (slet (identifier)
+    (sletsample (identifier)
       (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-        (sanf (sdiscrete (sanf (float)) (sanf (float)) (sanf (float))))
-        (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-          (sanf (sdiscrete (sanf (float)) (sanf (float)) (sanf (float))))
-          (sanf (sdiscrete (sanf (float)) (sanf (float)) (sanf (float))))))
-    (slet (identifier)
+            (sanf (sdiscrete (sanf (float)) (sanf (float)) (sanf (float))))
       (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-        (sanf (snormal (sanf (float)) (sanf (float))))
-        (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-          (sanf (snormal (sanf (float)) (sanf (float))))
-          (sanf (snormal (sanf (float)) (sanf (float))))))
-    (slet (identifier)
+            (sanf (sdiscrete (sanf (float)) (sanf (float)) (sanf (float))))
+            (sanf (sdiscrete (sanf (float)) (sanf (float)) (sanf (float))))))
+    (sletsample (identifier)
       (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-        (sanf (sbern (sanf (float))))
-        (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-          (sanf (sbern (sanf (float))))
-          (sanf (sbern (sanf (float))))))
-    (slet (identifier)
-      (site (sanf (bool_unop) (sanf (identifier))) (sanf (float))
-        (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-          (sanf (snormal (sanf (float)) (sanf (float))))
-          (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
             (sanf (snormal (sanf (float)) (sanf (float))))
-            (sanf (snormal (sanf (float)) (sanf (float)))))))
-    (slet (identifier)
       (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-        (sanf (snormal (sanf (sanf (int)) (numeric_op) (sanf (sanf (int)) (numeric_op) (sanf (identifier)))) (sanf (sanf (int)) (numeric_op) (sanf (int)))))
-        (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-          (sanf (snormal (sanf (sanf (int)) (numeric_op) (sanf (sanf (int)) (numeric_op) (sanf (identifier)))) (sanf (sanf (int)) (numeric_op) (sanf (int)))))
-          (sanf (snormal (sanf (sanf (int)) (numeric_op) (sanf (sanf (int)) (numeric_op) (sanf (identifier)))) (sanf (sanf (int)) (numeric_op) (sanf (int)))))))
-    (slet
-      (identifier)
+            (sanf (snormal (sanf (float)) (sanf (float))))
+            (sanf (snormal (sanf (float)) (sanf (float))))))
+    (sletsample (identifier)
+      (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
+            (sanf (sbern (sanf (float))))
+      (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
+            (sanf (sbern (sanf (float))))
+            (sanf (sbern (sanf (float))))))
+    (sletsample (identifier)
+      (site (sanf (bool_unop) (sanf (identifier)))
+            (sanf (float))
+            (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
+                  (ssample (sanf (snormal (sanf (float)) (sanf (float)))))
+            (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
+                  (ssample (sanf (snormal (sanf (float)) (sanf (float)))))
+                  (ssample (sanf (snormal (sanf (float)) (sanf (float))))))))
+    (sletsample (identifier)
+      (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
+            (sanf (snormal (sanf (sanf (int)) (numeric_op) (sanf (sanf (int)) (numeric_op) (sanf (identifier))))
+            (sanf (sanf (int)) (numeric_op) (sanf (int)))))
+      (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
+            (sanf (snormal (sanf (sanf (int)) (numeric_op) (sanf (sanf (int)) (numeric_op) (sanf (identifier)))) (sanf (sanf (int)) (numeric_op) (sanf (int)))))
+            (sanf (snormal (sanf (sanf (int)) (numeric_op) (sanf (sanf (int)) (numeric_op) (sanf (identifier)))) (sanf (sanf (int)) (numeric_op) (sanf (int)))))))
+    (sletsample (identifier)
       (sanf (snormal
-          (sanf (sanf (sanf (int)) (numeric_op) (sanf (sanf (float)) (numeric_op) (sanf (identifier)))) (numeric_op) (sanf (sanf (float)) (numeric_op) (sanf (identifier))))
-          (sanf (sanf (int)) (numeric_op) (sanf (int)))))
-    (sanf (identifier)))))))))))
-
+                (sanf
+                    (sanf (sanf (int))
+                      (numeric_op)
+                        (sanf (sanf (float))
+                          (numeric_op)
+                            (sanf (identifier))))
+                (numeric_op)
+                    (sanf (sanf (float))
+                      (numeric_op)
+                        (sanf (identifier))))
+                    (sanf (sanf (int))
+                      (numeric_op)
+                        (sanf (int)))))
+      (sanf (identifier)))))))))))
 
 ======================
 sample(hybrid): healthcare
@@ -164,17 +174,16 @@ sample {
       if age == 1 then discrete(0.75, 0.20, 0.05) else
                        discrete(0.42, 0.53, 0.05) in
     let anyHospitalStay =
-      if (age == 0) then bern( 0.1 ) else
-      if (age == 1) then bern( 0.25 ) else
-                         bern( 0.40 ) in
+      if (age == 0) then flip( 0.1 ) else
+      if (age == 1) then flip( 0.25 ) else
+                         flip( 0.40 ) in
     (age, preExistingCond, anyHospitalStay)
   };
-
   age <- aph[0];
   preExistingCond <- aph[1];
   anyHospitalStay <- aph[2];
 
-  outpatientExpenditure <-
+  outpatientExpenditure ~
     if (age == 0) {
       normal( 60.0,  100.0)
     } else if (age == 1) {
@@ -188,14 +197,14 @@ sample {
       0.0
     } else {
       if (age == 0) {
-        normal( 1.0, 0.25)
+        ~normal( 1.0, 0.25)
       } else if (age == 1) {
-        normal( 4.0, 1.00)
+        ~normal( 4.0, 1.00)
       } else {
-        normal( 7.0, 2.25)
+        ~normal( 7.0, 2.25)
       }
     };
-  inpatientExpenditure <-
+  inpatientExpenditure ~
     if (preExistingCond == 0) {
       normal( 100 + (300 * daysHospitalStay), 30^2 )
     } else if (preExistingCond == 1) {
@@ -203,292 +212,60 @@ sample {
     } else {
       normal( 100 + (800 * daysHospitalStay), 100^2 )
     };
-  taxes <- normal(120 + (1.02 * inpatientExpenditure) + (1.05 * outpatientExpenditure), 10^2);
+  taxes ~ normal(120 + (1.02 * inpatientExpenditure) + (1.05 * outpatientExpenditure), 10^2);
   taxes
 }
 
 ----------
-
-
     (source_file
       (program
-        (slet
-          (identifier)
+        (slet (identifier)
           (sexact
-            (elet
-              (identifier)
-              (ediscrete
-                (eanf
-                  (float))
-                (eanf
-                  (float))
-                (eanf
-                  (float)))
-              (elet
-                (identifier)
-                (eite
-                  (eanf
-                    (eanf
-                      (identifier))
-                    (compare_op)
-                    (eanf
-                      (int)))
-                  (ediscrete
-                    (eanf
-                      (float))
-                    (eanf
-                      (float))
-                    (eanf
-                      (float)))
-                  (eite
-                    (eanf
-                      (eanf
-                        (identifier))
-                      (compare_op)
-                      (eanf
-                        (int)))
-                    (ediscrete
-                      (eanf
-                        (float))
-                      (eanf
-                        (float))
-                      (eanf
-                        (float)))
-                    (ediscrete
-                      (eanf
-                        (float))
-                      (eanf
-                        (float))
-                      (eanf
-                        (float)))))
-                (elet
-                  (identifier)
-                  (eite
-                    (eanf
-                      (eanf
-                        (identifier))
-                      (compare_op)
-                      (eanf
-                        (int)))
-                    (app
-                      (identifier)
-                      (sanf
-                        (float)))
-                    (eite
-                      (eanf
-                        (eanf
-                          (identifier))
-                        (compare_op)
-                        (eanf
-                          (int)))
-                      (app
-                        (identifier)
-                        (sanf
-                          (float)))
-                      (app
-                        (identifier)
-                        (sanf
-                          (float)))))
-                  (eprod
-                    (eanf
-                      (identifier))
-                    (eanf
-                      (identifier))
-                    (eanf
-                      (identifier)))))))
-          (slet
-            (identifier)
-            (sanf
-              (sprj
-                (identifier)
-                (int)))
-            (slet
-              (identifier)
-              (sanf
-                (sprj
-                  (identifier)
-                  (int)))
-              (slet
-                (identifier)
-                (sanf
-                  (sprj
-                    (identifier)
-                    (int)))
-                (slet
-                  (identifier)
-                  (site
-                    (sanf
-                      (sanf
-                        (identifier))
-                      (compare_op)
-                      (sanf
-                        (int)))
-                    (sanf
-                      (snormal
-                        (sanf
-                          (float))
-                        (sanf
-                          (float))))
-                    (site
-                      (sanf
-                        (sanf
-                          (identifier))
-                        (compare_op)
-                        (sanf
-                          (int)))
-                      (sanf
-                        (snormal
-                          (sanf
-                            (float))
-                          (sanf
-                            (float))))
-                      (sanf
-                        (snormal
-                          (sanf
-                            (float))
-                          (sanf
-                            (float))))))
-                  (slet
-                    (identifier)
-                    (site
-                      (sanf
-                        (bool_unop)
-                        (sanf
-                          (identifier)))
-                      (sanf
-                        (float))
-                      (site
-                        (sanf
-                          (sanf
-                            (identifier))
-                          (compare_op)
-                          (sanf
-                            (int)))
-                        (sanf
-                          (snormal
-                            (sanf
-                              (float))
-                            (sanf
-                              (float))))
-                        (site
-                          (sanf
-                            (sanf
-                              (identifier))
-                            (compare_op)
-                            (sanf
-                              (int)))
-                          (sanf
-                            (snormal
-                              (sanf
-                                (float))
-                              (sanf
-                                (float))))
-                          (sanf
-                            (snormal
-                              (sanf
-                                (float))
-                              (sanf
-                                (float)))))))
-                    (slet
-                      (identifier)
-                      (site
-                        (sanf
-                          (sanf
-                            (identifier))
-                          (compare_op)
-                          (sanf
-                            (int)))
-                        (sanf
-                          (snormal
-                            (sanf
-                              (sanf
-                                (int))
+            (elet (identifier)
+              (ediscrete (eanf (float)) (eanf (float)) (eanf (float)))
+            (elet (identifier)
+              (eite (eanf (eanf (identifier)) (compare_op) (eanf (int)))
+                (ediscrete (eanf (float)) (eanf (float)) (eanf (float)))
+              (eite (eanf (eanf (identifier)) (compare_op) (eanf (int)))
+                (ediscrete (eanf (float)) (eanf (float)) (eanf (float)))
+                (ediscrete (eanf (float)) (eanf (float)) (eanf (float)))))
+            (elet (identifier)
+              (eite (eanf (eanf (eanf (identifier)) (compare_op) (eanf (int))))
+                (eflip (eanf (eanf (float))))
+                (eite (eanf (eanf (eanf (identifier)) (compare_op) (eanf (int))))
+                  (eflip (eanf (eanf (float))))
+                  (eflip (eanf (eanf (float))))))
+            (eprod (eanf (identifier)) (eanf (identifier)) (eanf (identifier)))))))
+        (slet (identifier) (sanf (sprj (identifier) (int)))
+        (slet (identifier) (sanf (sprj (identifier) (int)))
+        (slet (identifier) (sanf (sprj (identifier) (int)))
+        (sletsample (identifier)
+            (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
+                  (sanf (snormal (sanf (float)) (sanf (float))))
+            (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
+                  (sanf (snormal (sanf (float)) (sanf (float))))
+                  (sanf (snormal (sanf (float)) (sanf (float))))))
+        (slet (identifier)
+            (site (sanf (bool_unop) (sanf (identifier)))
+                  (sanf (float))
+                  (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
+                        (ssample (sanf (snormal (sanf (float)) (sanf (float)))))
+                  (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
+                        (ssample (sanf (snormal (sanf (float)) (sanf (float)))))
+                        (ssample (sanf (snormal (sanf (float)) (sanf (float))))))))
+        (sletsample (identifier)
+            (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
+                  (sanf (snormal (sanf (sanf (int)) (numeric_op) (sanf (sanf (int)) (numeric_op) (sanf (identifier)))) (sanf (sanf (int)) (numeric_op) (sanf (int)))))
+            (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
+                  (sanf (snormal (sanf (sanf (int)) (numeric_op) (sanf (sanf (int)) (numeric_op) (sanf (identifier)))) (sanf (sanf (int)) (numeric_op) (sanf (int)))))
+                  (sanf (snormal (sanf (sanf (int)) (numeric_op) (sanf (sanf (int)) (numeric_op) (sanf (identifier)))) (sanf (sanf (int)) (numeric_op) (sanf (int)))))))
+        (sletsample (identifier)
+            (sanf (snormal
+                      (sanf (sanf (sanf (int)) (numeric_op) (sanf (sanf (float)) (numeric_op) (sanf (identifier))))
                               (numeric_op)
-                              (sanf
-                                (sanf
-                                  (int))
-                                (numeric_op)
-                                (sanf
-                                  (identifier))))
-                            (sanf
-                              (sanf
-                                (int))
-                              (numeric_op)
-                              (sanf
-                                (int)))))
-                        (site
-                          (sanf
-                            (sanf
-                              (identifier))
-                            (compare_op)
-                            (sanf
-                              (int)))
-                          (sanf
-                            (snormal
-                              (sanf
-                                (sanf
-                                  (int))
-                                (numeric_op)
-                                (sanf
-                                  (sanf
-                                    (int))
-                                  (numeric_op)
-                                  (sanf
-                                    (identifier))))
-                              (sanf
-                                (sanf
-                                  (int))
-                                (numeric_op)
-                                (sanf
-                                  (int)))))
-                          (sanf
-                            (snormal
-                              (sanf
-                                (sanf
-                                  (int))
-                                (numeric_op)
-                                (sanf
-                                  (sanf
-                                    (int))
-                                  (numeric_op)
-                                  (sanf
-                                    (identifier))))
-                              (sanf
-                                (sanf
-                                  (int))
-                                (numeric_op)
-                                (sanf
-                                  (int)))))))
-                      (slet
-                        (identifier)
-                        (sanf
-                          (snormal
-                            (sanf
-                              (sanf
-                                (sanf
-                                  (int))
-                                (numeric_op)
-                                (sanf
-                                  (sanf
-                                    (float))
-                                  (numeric_op)
-                                  (sanf
-                                    (identifier))))
-                              (numeric_op)
-                              (sanf
-                                (sanf
-                                  (float))
-                                (numeric_op)
-                                (sanf
-                                  (identifier))))
-                            (sanf
-                              (sanf
-                                (int))
-                              (numeric_op)
-                              (sanf
-                                (int)))))
-                        (sanf
-                          (identifier))))))))))))
+                            (sanf (sanf (float)) (numeric_op) (sanf (identifier))))
+                            (sanf (sanf (int)) (numeric_op) (sanf (int)))))
+                      (sanf (identifier))))))))))))
 
 ======================
 sample: array access is tucked away in anf
@@ -518,12 +295,41 @@ sample {
             (identifier))))))
 
 
-======================
-sample(hybrid): arrival problem
-======================
+==================
+sample(hybrid): arrival problem on diamond-network
+==================
+exact fn diamond (s1: Bool) : Bool {
+  let route = flip 0.5 in
+  let s2 = if route then s1 else false in
+  let s3 = if route then false else s1 in
+  let drop = flip 0.0001 in
+  s2 || (s3 && !drop)
+}
 sample {
   p <- poisson(0.4);
-  r1234 <- exact (iterate(f, true, p));
+  exact (iterate(diamond, true, p))
 }
+---------
 
-----------
+(source_file
+  (program
+    (efun
+      (identifier)
+      (eargs (identifier) (ety (tyBool)))
+      (ety (tyBool))
+    (elet (identifier) (eflip (eanf (float)))
+    (elet (identifier)
+          (eite (eanf (identifier)) (eanf (identifier)) (eanf (bool)))
+    (elet (identifier)
+          (eite (eanf (identifier)) (eanf (bool)) (eanf (identifier)))
+    (elet (identifier) (eflip (eanf (float)))
+          (eanf (eanf (identifier))
+                (bool_biop)
+                (eanf (eanf (eanf (identifier))
+                    (bool_biop)
+                    (eanf (bool_unop) (eanf (identifier)))))))))))
+
+    (program
+      (slet (identifier) (sanf (spoisson (sanf (float))))
+      (sexact
+        (eiterate (identifier) (eanf (bool)) (eanf (identifier))))))))

@@ -94,7 +94,7 @@ exact {
     (elet
       (identifier)
       (ety (tyBool))
-      (eflip (eanf (eanf (float)) (numeric_op) (eanf (float))))
+      (eflip (eanf (eanf (eanf (float)) (numeric_op) (eanf (float)))))
     (eann
       (eann (eanf (identifier)) (ety (tyBool)))
        (ety (tyBool))))))
@@ -116,7 +116,7 @@ exact {
   (program
     (elet
       (identifier)
-      (eflip (eanf (eanf (int)) (numeric_op) (eanf (int))))
+      (eflip (eanf (eanf (eanf (int)) (numeric_op) (eanf (int)))))
       (eanf (identifier))
        )))
 
@@ -134,7 +134,7 @@ exact {
  (program
   (elet
     (identifier) (ety (tyBool))
-    (eflip (eanf (eanf (int)) (numeric_op) (eanf (int))))
+    (eflip (eanf (eanf (eanf (int)) (numeric_op) (eanf (int)))))
   (eanf (identifier))
   )))
 
@@ -185,7 +185,7 @@ exact {
     (eflip (eanf (eanf (int)) (numeric_op) (eanf (int))))
   (elet
     (identifier)
-    (eobserve (eanf (eanf (identifier)) (bool_biop) (eanf (identifier))))
+    (eobserve (eanf (eanf (eanf (identifier)) (bool_biop) (eanf (identifier)))))
   (eanf (identifier)))))))
 
 
@@ -212,7 +212,7 @@ exact {
       (eflip (eanf (eanf (int)) (numeric_op) (eanf (int))))
     (elet
       (identifier)
-      (eobserve (eanf (eanf (identifier)) (bool_biop) (eanf (identifier))))
+      (eobserve (eanf (eanf (eanf (identifier)) (bool_biop) (eanf (identifier)))))
     (eanf (identifier)))))))
 
 ======================
@@ -283,3 +283,83 @@ exact {
         (eanf (identifier))
         (eanf (identifier))
         )))
+
+==================
+exact: diamond network
+==================
+exact fn diamond (s1:Bool):Bool {
+  let route = flip 0.5 in
+  let s2 = if route then s1 else false in
+  let s3 = if route then false else s1 in
+  let drop = flip 0.0001 in
+  s2 || (s3 && !drop)
+}
+exact {
+  let net1 = diamond(true) in
+  let net2 = diamond(net1) in
+  diamond(net2)
+}
+---------
+
+(source_file
+  (program
+    (efun
+      (identifier)
+      (eargs (identifier) (ety (tyBool)))
+      (ety (tyBool))
+    (elet (identifier) (eflip (eanf (float)))
+    (elet (identifier)
+          (eite (eanf (identifier)) (eanf (identifier)) (eanf (bool)))
+    (elet (identifier)
+          (eite (eanf (identifier)) (eanf (bool)) (eanf (identifier)))
+    (elet (identifier) (eflip (eanf (float)))
+          (eanf (eanf (identifier))
+                (bool_biop)
+                (eanf (eanf (eanf (identifier))
+                    (bool_biop)
+                    (eanf (bool_unop) (eanf (identifier)))))))))))
+
+
+    (program
+      (elet (identifier) (eapp (identifier) (eanf (bool)))
+      (elet (identifier) (eapp (identifier) (eanf (identifier)))
+      (eapp (identifier) (eanf (identifier))))))))
+
+==================
+exact(hybrid): arrival problem on diamond-network
+==================
+exact fn diamond (s1:Bool):Bool {
+  let route = flip 0.5 in
+  let s2 = if route then s1 else false in
+  let s3 = if route then false else s1 in
+  let drop = flip 0.0001 in
+  s2 || (s3 && !drop)
+}
+exact {
+  let p = sample(poisson(0.4)) in
+  iterate(diamond, true, p)
+}
+---------
+
+
+(source_file
+  (program
+    (efun
+      (identifier)
+      (eargs (identifier) (ety (tyBool)))
+      (ety (tyBool))
+    (elet (identifier) (eflip (eanf (float)))
+    (elet (identifier)
+          (eite (eanf (identifier)) (eanf (identifier)) (eanf (bool)))
+    (elet (identifier)
+          (eite (eanf (identifier)) (eanf (bool)) (eanf (identifier)))
+    (elet (identifier) (eflip (eanf (float)))
+          (eanf (eanf (identifier))
+                (bool_biop)
+                (eanf (eanf (eanf (identifier))
+                    (bool_biop)
+                    (eanf (bool_unop) (eanf (identifier)))))))))))
+
+    (program
+      (elet (identifier) (esample (sanf (spoisson (sanf (float)))))
+      (eiterate (identifier) (eanf (bool)) (eanf (identifier)))))))

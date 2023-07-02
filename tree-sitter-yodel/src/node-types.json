@@ -1,24 +1,5 @@
 [
   {
-    "type": "app",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "identifier",
-          "named": true
-        },
-        {
-          "type": "sanf",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
     "type": "bool",
     "named": true,
     "fields": {}
@@ -89,15 +70,15 @@
       "required": true,
       "types": [
         {
-          "type": "app",
-          "named": true
-        },
-        {
           "type": "eanf",
           "named": true
         },
         {
           "type": "eann",
+          "named": true
+        },
+        {
+          "type": "eapp",
           "named": true
         },
         {
@@ -146,6 +127,44 @@
         },
         {
           "type": "ety",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "eapp",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "eanf",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "eargs",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "ety",
+          "named": true
+        },
+        {
+          "type": "identifier",
           "named": true
         }
       ]
@@ -205,15 +224,19 @@
       "required": true,
       "types": [
         {
-          "type": "app",
-          "named": true
-        },
-        {
           "type": "eanf",
           "named": true
         },
         {
           "type": "eann",
+          "named": true
+        },
+        {
+          "type": "eapp",
+          "named": true
+        },
+        {
+          "type": "eargs",
           "named": true
         },
         {
@@ -261,6 +284,10 @@
           "named": true
         },
         {
+          "type": "ety",
+          "named": true
+        },
+        {
           "type": "identifier",
           "named": true
         }
@@ -276,15 +303,15 @@
       "required": true,
       "types": [
         {
-          "type": "app",
-          "named": true
-        },
-        {
           "type": "eanf",
           "named": true
         },
         {
           "type": "eann",
+          "named": true
+        },
+        {
+          "type": "eapp",
           "named": true
         },
         {
@@ -362,15 +389,15 @@
       "required": true,
       "types": [
         {
-          "type": "app",
-          "named": true
-        },
-        {
           "type": "eanf",
           "named": true
         },
         {
           "type": "eann",
+          "named": true
+        },
+        {
+          "type": "eapp",
           "named": true
         },
         {
@@ -486,15 +513,15 @@
       "required": true,
       "types": [
         {
-          "type": "app",
-          "named": true
-        },
-        {
           "type": "sanf",
           "named": true
         },
         {
           "type": "sann",
+          "named": true
+        },
+        {
+          "type": "sapp",
           "named": true
         },
         {
@@ -515,6 +542,10 @@
         },
         {
           "type": "slet",
+          "named": true
+        },
+        {
+          "type": "sletsample",
           "named": true
         },
         {
@@ -603,15 +634,15 @@
       "required": true,
       "types": [
         {
-          "type": "app",
-          "named": true
-        },
-        {
           "type": "eanf",
           "named": true
         },
         {
           "type": "eann",
+          "named": true
+        },
+        {
+          "type": "eapp",
           "named": true
         },
         {
@@ -675,6 +706,10 @@
           "named": true
         },
         {
+          "type": "sapp",
+          "named": true
+        },
+        {
           "type": "sexact",
           "named": true
         },
@@ -696,6 +731,10 @@
         },
         {
           "type": "slet",
+          "named": true
+        },
+        {
+          "type": "sletsample",
           "named": true
         },
         {
@@ -805,15 +844,15 @@
       "required": true,
       "types": [
         {
-          "type": "app",
-          "named": true
-        },
-        {
           "type": "sanf",
           "named": true
         },
         {
           "type": "sann",
+          "named": true
+        },
+        {
+          "type": "sapp",
           "named": true
         },
         {
@@ -837,6 +876,10 @@
           "named": true
         },
         {
+          "type": "sletsample",
+          "named": true
+        },
+        {
           "type": "smap",
           "named": true
         },
@@ -846,6 +889,44 @@
         },
         {
           "type": "ssample",
+          "named": true
+        },
+        {
+          "type": "sty",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sapp",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "sanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sargs",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "identifier",
           "named": true
         },
         {
@@ -924,15 +1005,15 @@
       "required": true,
       "types": [
         {
-          "type": "app",
-          "named": true
-        },
-        {
           "type": "eanf",
           "named": true
         },
         {
           "type": "eann",
+          "named": true
+        },
+        {
+          "type": "eapp",
           "named": true
         },
         {
@@ -991,10 +1072,6 @@
       "required": true,
       "types": [
         {
-          "type": "app",
-          "named": true
-        },
-        {
           "type": "identifier",
           "named": true
         },
@@ -1004,6 +1081,10 @@
         },
         {
           "type": "sann",
+          "named": true
+        },
+        {
+          "type": "sapp",
           "named": true
         },
         {
@@ -1024,6 +1105,10 @@
         },
         {
           "type": "slet",
+          "named": true
+        },
+        {
+          "type": "sletsample",
           "named": true
         },
         {
@@ -1050,10 +1135,6 @@
       "required": true,
       "types": [
         {
-          "type": "app",
-          "named": true
-        },
-        {
           "type": "identifier",
           "named": true
         },
@@ -1063,6 +1144,14 @@
         },
         {
           "type": "sann",
+          "named": true
+        },
+        {
+          "type": "sapp",
+          "named": true
+        },
+        {
+          "type": "sargs",
           "named": true
         },
         {
@@ -1086,6 +1175,10 @@
           "named": true
         },
         {
+          "type": "sletsample",
+          "named": true
+        },
+        {
           "type": "smap",
           "named": true
         },
@@ -1095,6 +1188,10 @@
         },
         {
           "type": "ssample",
+          "named": true
+        },
+        {
+          "type": "sty",
           "named": true
         }
       ]
@@ -1109,15 +1206,15 @@
       "required": true,
       "types": [
         {
-          "type": "app",
-          "named": true
-        },
-        {
           "type": "sanf",
           "named": true
         },
         {
           "type": "sann",
+          "named": true
+        },
+        {
+          "type": "sapp",
           "named": true
         },
         {
@@ -1138,6 +1235,10 @@
         },
         {
           "type": "slet",
+          "named": true
+        },
+        {
+          "type": "sletsample",
           "named": true
         },
         {
@@ -1164,10 +1265,6 @@
       "required": true,
       "types": [
         {
-          "type": "app",
-          "named": true
-        },
-        {
           "type": "identifier",
           "named": true
         },
@@ -1177,6 +1274,10 @@
         },
         {
           "type": "sann",
+          "named": true
+        },
+        {
+          "type": "sapp",
           "named": true
         },
         {
@@ -1197,6 +1298,10 @@
         },
         {
           "type": "slet",
+          "named": true
+        },
+        {
+          "type": "sletsample",
           "named": true
         },
         {
@@ -1223,10 +1328,6 @@
       "required": true,
       "types": [
         {
-          "type": "app",
-          "named": true
-        },
-        {
           "type": "identifier",
           "named": true
         },
@@ -1236,6 +1337,10 @@
         },
         {
           "type": "sann",
+          "named": true
+        },
+        {
+          "type": "sapp",
           "named": true
         },
         {
@@ -1256,6 +1361,73 @@
         },
         {
           "type": "slet",
+          "named": true
+        },
+        {
+          "type": "sletsample",
+          "named": true
+        },
+        {
+          "type": "smap",
+          "named": true
+        },
+        {
+          "type": "sobs",
+          "named": true
+        },
+        {
+          "type": "ssample",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sletsample",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "sanf",
+          "named": true
+        },
+        {
+          "type": "sann",
+          "named": true
+        },
+        {
+          "type": "sapp",
+          "named": true
+        },
+        {
+          "type": "sexact",
+          "named": true
+        },
+        {
+          "type": "sfold",
+          "named": true
+        },
+        {
+          "type": "site",
+          "named": true
+        },
+        {
+          "type": "slam",
+          "named": true
+        },
+        {
+          "type": "slet",
+          "named": true
+        },
+        {
+          "type": "sletsample",
           "named": true
         },
         {
@@ -1282,10 +1454,6 @@
       "required": true,
       "types": [
         {
-          "type": "app",
-          "named": true
-        },
-        {
           "type": "identifier",
           "named": true
         },
@@ -1295,6 +1463,10 @@
         },
         {
           "type": "sann",
+          "named": true
+        },
+        {
+          "type": "sapp",
           "named": true
         },
         {
@@ -1315,6 +1487,10 @@
         },
         {
           "type": "slet",
+          "named": true
+        },
+        {
+          "type": "sletsample",
           "named": true
         },
         {
@@ -1635,14 +1811,6 @@
   },
   {
     "type": ">=",
-    "named": false
-  },
-  {
-    "type": "@e",
-    "named": false
-  },
-  {
-    "type": "@s",
     "named": false
   },
   {
