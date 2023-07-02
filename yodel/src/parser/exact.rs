@@ -1,10 +1,11 @@
+use crate::grammar::*;
 use crate::typeinf::grammar::{AnfInferable, EExprInferable, ProgramInferable};
 use itertools::Itertools;
 use std::collections::VecDeque;
 use tree_sitter::*;
-use tree_sitter_yodel;
 
-use crate::grammar::*;
+use super::*;
+use tree_sitter_yodel;
 
 macro_rules! assert_children {
     ( $x:expr, $count:literal, $node:expr, $c:expr ) => {{
@@ -22,14 +23,6 @@ macro_rules! assert_children {
     }};
 }
 
-pub fn tree_parser(code: String) -> Option<Tree> {
-    let mut parser = Parser::new();
-    parser
-        .set_language(tree_sitter_yodel::language())
-        .expect("Error loading yodel grammar");
-    parser.parse(code, None)
-}
-
 // fn parse_anf<'a, 'b>(c: &'a mut TreeCursor<'b>, n: &'b Node) -> (ANF, Ty) {
 // anf: $ => choice(
 //   $.identifier,
@@ -44,6 +37,7 @@ fn parse_anf_child_h(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable<EV
     let a = cs.next().unwrap();
     parse_anf(src, c, a)
 }
+
 fn parse_anf(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable<EVal> {
     match n.named_child_count() {
         0 => parse_anf_enode(src, c, n),
@@ -94,6 +88,7 @@ fn parse_anf(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable<EVal> {
         _ => panic!("invalid program found!\nsexp: {}", n.to_sexp()),
     }
 }
+
 fn parse_anf_enode(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable<EVal> {
     let k = n.kind();
     match k {
@@ -118,46 +113,6 @@ fn parse_anf_enode(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable<EVal
     }
 }
 
-fn parse_float_h(src: &[u8], c: &mut TreeCursor, n: Node) -> f64 {
-    let utf8 = n.utf8_text(src).unwrap();
-    let fstr = String::from_utf8(utf8.into()).unwrap();
-    fstr.parse::<f64>().unwrap()
-}
-fn parse_float(src: &[u8], c: &mut TreeCursor, n: Node) -> f64 {
-    match n.named_child_count() {
-        0 => parse_float_h(src, c, n),
-        1 => {
-            let mut c_ = c.clone();
-            let mut cs = n.named_children(&mut c_);
-            let fnode = cs.next().unwrap();
-            parse_float_h(src, c, fnode)
-        }
-        2 => panic!("impossible"),
-        3 => {
-            // division operation
-            let mut _c = c.clone();
-            let mut cs = n.named_children(&mut _c);
-
-            let l = cs.next().unwrap();
-            let l = parse_float(src, c, l);
-
-            let op = cs.next().unwrap();
-            let utf8 = op.utf8_text(src).unwrap();
-            let op = String::from_utf8(utf8.into()).unwrap();
-            assert!(
-                op == "/".to_string(),
-                "invalid program found!\nsexp: {}",
-                n.to_sexp()
-            );
-
-            let r = cs.next().unwrap();
-            let r = parse_float(src, c, r);
-
-            l / r
-        }
-        _ => panic!("unexpected"),
-    }
-}
 fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ESugar {
     use EExpr::*;
     use SExpr::SExact;
@@ -252,8 +207,8 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ESugar {
         }
         "flip" => {
             println!("{}", n.to_sexp());
-            let f = parse_float(src, c, *n);
-            ESugar::Prim(EFlip((), f))
+            let f = parse_anf(src, c, *n);
+            ESugar::Prim(EFlip((), Box::new(f)))
         }
         "observe" => {
             let anf = parse_anf(src, c, *n);
@@ -273,10 +228,7 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ESugar {
     }
 }
 
-fn parse_program(src: &[u8], c: &mut TreeCursor, n: &Node) -> ProgramSugar {
-    ProgramSugar::Exact(parse_expr(src, c, n))
-}
-pub fn parse_tree(src: &[u8], t: Tree) -> ProgramSugar {
+pub fn parse_tree(src: &[u8], t: Tree) -> ESugar {
     // https://docs.rs/tree-sitter/latest/tree_sitter/struct.TreeTreeCursor.html
     let mut c = t.walk();
     let source = c.node();
@@ -290,20 +242,20 @@ pub fn parse_tree(src: &[u8], t: Tree) -> ProgramSugar {
     let mut c_ = c.clone();
     let mut cs = source.named_children(&mut c_);
     let root = cs.next().unwrap();
-    parse_program(src, &mut c, &root)
-}
-
-pub fn parse(code: &str) -> Option<ProgramSugar> {
-    let tree = tree_parser(code.to_string())?;
-    let expr = parse_tree(code.as_bytes(), tree);
-    Some(expr)
+    parse_expr(src, &mut c, &root)
 }
 
 #[cfg(test)]
-mod parser_tests {
+mod exact_parser_tests {
     use super::*;
     use crate::*;
     use std::any::TypeId;
+
+    fn parse(code: &str) -> Option<ProgramSugar> {
+        let tree = tree_parser(code.to_string())?;
+        let expr = parse_tree(code.as_bytes(), tree);
+        Some(expr)
+    }
 
     #[test]
     fn parse_anf() {
