@@ -4,91 +4,206 @@ module.exports = grammar({
   rules: {
 
     // source_file: $ => seq(repeat($._function), $._expr)
-    source_file: $ => $._expr,
+    source_file: $ => $.program,
 
-    _expr: $ => choice(
-      $.let_binding,
-      $.ite_binding,
-      $.flip,
-      $.discrete,
-      $.observe,
-      $.sample,
+    program: $ => choice(
+      seq("exact", '{', $._eexpr, '}'),
+      seq("sample", '{', $._sexpr, '}'),
+      seq($.sfun, $.program),
+      seq($.efun, $.program),
+    ),
+
+    sfun: $ => choice(
+      seq('fn', $.identifier, '@s', '(', $.identifier, ')', '{', $._sexpr, '}'),
+      seq('fn', $.identifier, '@s', '(', repeat(seq($.identifier, ',')), $.identifier,')', '{', $._sexpr, '}'),
+    ),
+    efun: $ => choice(
+      seq('fn', $.identifier, '@e', '(', $.identifier, ')', '{', $._eexpr, '}'),
+      seq('fn', $.identifier, '@e', '(', repeat(seq($.identifier, ',')), $.identifier,')', '{', $._eexpr, '}'),
+    ),
+    _eexpr: $ => choice(
+      $.elet,
+      $.eite,
+      $.eflip,
+      $.ediscrete,
+      $.eobserve,
+      $.esample,
       // seq($._function_name, '(', $.anf ,')'),
-      $.ann,
-      $.fst,
-      $.snd,
-      $.prj,
-      $.prod,
-      $.anf,
-      seq('(', $._expr, ')')
+      $.eann,
+      $.efst,
+      $.esnd,
+      $.eprj,
+      $.eprod,
+      $.app,
+      $.eanf,
+      seq('(', $._eexpr, ')')
     ),
-    ty: $ => choice($.tBool, $.tProd),
-    tBool: $ => 'Bool',
+    ety: $ => choice($.tyBool, $.tyFloat, $.tyInt, $.tyProd), // includes sugar of int
+    tyBool: $ => 'Bool',
+    tyFloat: $ => 'Float',
 
-    tProd: $ => choice(
-      seq('(', $.ty, ',', $.ty, ')'),
-      seq('(', $.ty, ',', repeat(seq($.ty, ',')), $.ty, ')'),
+    app: $ => choice(
+      seq($.identifier, '(', $.sanf, ')'),
+      seq($.identifier, '(', repeat(seq($.sanf,  ',')), $.sanf, ')'),
     ),
 
-    fst: $ => seq('fst', $.anf),
-    snd: $ => seq('snd', $.anf),
-    prj: $ => choice(
-        seq('prj',  $.index, $.anf ),
-        seq('prj', '(', $.index, ',', $.anf, ')'),
+    tyProd: $ => choice(
+      seq('(', $.ety, ',', $.ety, ')'),
+      seq('(', $.ety, ',', repeat(seq($.ety, ',')), $.ety, ')'),
+    ),
+
+    efst: $ => seq('fst', $.eanf),
+    esnd: $ => seq('snd', $.eanf),
+
+    eprj: $ => choice(
+        seq('prj',  $.index, $.eanf ),
+        seq('prj', '(', $.index, ',', $.eanf, ')'),
     ),
     index: $ => /\d+/,
 
-    prod: $ => choice(
-      seq('(', $.anf, ',', $.anf, ')'),
-      seq('(', $.anf, ',', repeat(seq($.anf, ',')), $.anf, ')'),
+    eprod: $ => choice(
+      seq('(', $.eanf, ',', $.eanf, ')'),
+      seq('(', $.eanf, ',', repeat(seq($.eanf, ',')), $.eanf, ')'),
     ),
 
 
-    let_binding: $ => choice(
-      seq('let', $.identifier, '=', $._expr, 'in', $._expr),
-      seq('let', $.identifier, ':', $.ty, '=', $._expr, 'in', $._expr),
-      // seq('let', $.identifier, ':', $.ty, '=', $._expr,  ';', $._expr), // TODO
-      // prec.left(10, seq('let', $.identifier, ':', $.ty, '=', $._expr, $._expr)), // TODO
+    elet: $ => choice(
+      seq('let', $.identifier, '=', $._eexpr, 'in', $._eexpr),
+      seq('let', $.identifier, ':', $.ety, '=', $._eexpr, 'in', $._eexpr),
+      // seq('let', $.identifier, ':', $.ety, '=', $._eexpr,  ';', $._eexpr), // TODO
+      // prec.left(10, seq('let', $.identifier, ':', $.ety, '=', $._eexpr, $._eexpr)), // TODO
     ),
-    ite_binding: $ =>
-      prec.left(2, seq('if', $.anf, 'then', $._expr, 'else', $._expr)),
-    flip: $ => seq('flip', $._float),
-    discrete: $ => seq('discrete', '(', repeat(seq($._float, ",")), $._float,  ')'),
-    observe: $ => choice(
-      seq('observe', $.anf),
-      seq('observe', '(', $.anf, ')'),
+    eite: $ =>
+      prec.left(2, seq('if', $.eanf, 'then', $._eexpr, 'else', $._eexpr)),
+
+    eflip: $ => seq('flip', $.eanf),
+    ediscrete: $ => seq('discrete', '(', repeat(seq($.eanf, ",")), $.eanf,  ')'),
+    eobserve: $ => choice(
+      seq('observe', $.eanf),
+      seq('observe', '(', $.eanf, ')'),
     ),
-    sample: $ => seq('sample', '(', $._expr, ')' ),
+    esample: $ => choice(
+      seq('sample', '(', $._sexpr, ')' ),
+      seq('sample', '{', $._sexpr, '}' ),
+    ),
 
     bool: $ => choice('true', 'false'),
     bool_biop: $ => choice('||', '&&'),
 
     bool_unop: $ => '!',
 
-    _float: $ => choice(
-      $.float,
-      seq($.float, $.float_op, $.float),
-      seq('(', $._float, ')'),
-    ),
-    float: $ => /\d+(?:\.\d*|)/, // 0.3  0.3. 3 0.
-    float_op: $ => choice('*', '/', '+', '-'),
+    float: $ => /\d+(?:\.\d*|)/, // 0.3  0.3. 3. 0.
 
-    _value: $ => choice(
+    // exact floats allow for int-looking floats
+    efloat: $ => /\d+(?:\.\d*|)/, // 0.3  0.3. 3 0.
+
+    int: $ => /\d+/,
+    numeric_op: $ => choice('*', '/', '+', '-'),
+
+    _evalue: $ => choice(
       $.bool,
-      prec(10, seq('(', $._value, ',', $._value, ')')),
-      prec(10, seq('(', $._value, ',', repeat(seq($._value, ',')), $._value, ')')),
+      $.float,
+      $.int,
+      prec(10, seq('(', $._evalue, ',', $._evalue, ')')),
+      prec(10, seq('(', $._evalue, ',', repeat(seq($._evalue, ',')), $._evalue, ')')),
     ),
 
-    ann: $ => prec.right(5, seq($._expr, ':', $.ty)),
-    anf: $ => choice(
+    eann: $ => prec.right(5, seq($._eexpr, ':', $.ety)),
+
+    eanf: $ => choice(
       $.identifier,
-      $._value,
-      prec.left(3, seq($.anf, $.bool_biop, $.anf)),
-      prec.left(5, seq($.bool_unop, $.anf)),
+      $._evalue,
+      prec.left(2, seq($.eanf, $.numeric_op, $.eanf)),
+      prec.left(2, seq('(', $.eanf, $.numeric_op, $.eanf, ')')),
+      prec.left(3, seq($.eanf, $.bool_biop, $.eanf)),
+      prec.left(3, seq('(', $.eanf, $.bool_biop, $.eanf, ')')),
+      prec.left(5, seq($.bool_unop, $.eanf)),
     ),
 
     identifier: $ => /[a-zA-Z_][_a-zA-Z0-9]*/,
-    // _func: $ => seq('fun', $._function_name, '(', $.VAR, ')', ':', $._type, '{', $._expr, '}'),
+    // _func: $ => seq('fun', $._function_name, '(', $.VAR, ')', ':', $._type, '{', $._eexpr, '}'),
+
+    _sexpr: $ => choice(
+      // $.sbinding_section,
+      $.slet,
+      $.smap,
+      $.sfold,
+      $.app,
+      $.slam,
+      $.sobs,
+      $.sexact,
+      $.ssample,
+      $.sanf,
+
+      seq('(', $._sexpr, ')')
+    ),
+
+    // sbinding_section: $ => seq("do", repeat(choice($.slet, $.sseq_first)), $._sexpr),
+    slet: $ => seq($.identifier, "<-", $._sexpr, ';', $._sexpr),
+    sseq: $ => seq($._sexpr, ';', $._sexpr),
+    // sseq_first: $ => seq($._sexpr, ';',),
+    smap: $ => seq('map', '(', $.identifier, '->', $._sexpr, ')', $.sanf),
+    ssample: $ => seq('~', $.sanf, ''),
+    sfold: $ => seq('fold', '(', $.sanf, '(', $.identifier, $.identifier, '->', $._sexpr, ')', $.sanf),
+
+    slam: $ => choice(
+      seq('(\\', $.identifier, '->', $._sexpr, ')'),
+      seq('(\\', repeat(seq($.identifier, ',')), $.identifier, '->', $._sexpr, ')'),
+    ),
+    sobs: $ => seq('observe', '(', $.sanf, ',', $.sanf, ')'),
+    sexact: $ => choice(
+      seq('exact', '(', $._eexpr, ')' ),
+      seq('exact', '{', $._eexpr, '}' ),
+    ),
+
+
+    sanf: $ => choice(
+      $.identifier,
+      prec.left(6, seq($.sanf, $.numeric_op, $.sanf)),
+      prec.left(6, seq('(', $.sanf, $.numeric_op, $.sanf, ')')),
+      prec.left(3, seq($.sanf, $.bool_biop, $.sanf)),
+      prec.left(3, seq('(', $.sanf, $.bool_biop, $.sanf, ')')),
+      prec.left(5, seq($.bool_unop, $.sanf)),
+      $._svalue,
+    ),
+
+    _svalue: $ => choice(
+      $.bool,
+      $.float,
+      $.int,
+      $.svec,
+
+      $.sbern,
+      $.spoisson,
+      $.suniform,
+      $.snormal,
+      $.sbeta,
+      $.sdiscrete,
+      $.sdirichlet,
+    ),
+    svec: $ => choice(
+      seq('[', $.sanf, ']'),
+      seq('[', repeat(seq($.sanf, ',')), $.sanf, ']'),
+    ),
+    sbern: $ => seq('bern', '(', $.sanf, ')'),
+    spoisson: $ => seq('poisson', '(', $.sanf, ')'),
+    suniform: $ => seq('uniform', '(', $.sanf, ',', $.sanf, ')'),
+    snormal: $ => seq('normal', '(', $.sanf, ',', $.sanf, ')'),
+    sbeta: $ => seq('beta', '(', $.sanf, ',', $.sanf, ')'),
+    sdiscrete: $ => choice(
+      seq('discrete', '(', $.sanf, ')'),
+      seq('discrete', '(', repeat(seq($.sanf, ',')), $.sanf, ')'),
+    ),
+    sdirichlet: $ => choice(
+      seq('dirichlet', '(', $.sanf, ')'),
+      seq('dirichlet', '(', repeat(seq($.sanf, ',')), $.sanf, ')'),
+    ),
+
+    sty: $ => choice($.tyBool, $.tyFloat, $.tyInt, $.tyVec, $.tyDistribution),
+    tyInt: $ => 'Int',
+    tyDistribution: $ => 'Dist',
+    tyVec: $ => seq('[', $.sty, ']'),
+
   }
 });
 

@@ -1,93 +1,18 @@
 [
   {
-    "type": "anf",
+    "type": "app",
     "named": true,
     "fields": {},
     "children": {
       "multiple": true,
       "required": true,
       "types": [
-        {
-          "type": "anf",
-          "named": true
-        },
-        {
-          "type": "bool",
-          "named": true
-        },
-        {
-          "type": "bool_biop",
-          "named": true
-        },
-        {
-          "type": "bool_unop",
-          "named": true
-        },
         {
           "type": "identifier",
           "named": true
-        }
-      ]
-    }
-  },
-  {
-    "type": "ann",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "anf",
-          "named": true
         },
         {
-          "type": "ann",
-          "named": true
-        },
-        {
-          "type": "discrete",
-          "named": true
-        },
-        {
-          "type": "flip",
-          "named": true
-        },
-        {
-          "type": "fst",
-          "named": true
-        },
-        {
-          "type": "ite_binding",
-          "named": true
-        },
-        {
-          "type": "let_binding",
-          "named": true
-        },
-        {
-          "type": "observe",
-          "named": true
-        },
-        {
-          "type": "prj",
-          "named": true
-        },
-        {
-          "type": "prod",
-          "named": true
-        },
-        {
-          "type": "sample",
-          "named": true
-        },
-        {
-          "type": "snd",
-          "named": true
-        },
-        {
-          "type": "ty",
+          "type": "sanf",
           "named": true
         }
       ]
@@ -104,148 +29,31 @@
     "fields": {}
   },
   {
-    "type": "discrete",
+    "type": "eanf",
     "named": true,
     "fields": {},
     "children": {
       "multiple": true,
       "required": true,
       "types": [
+        {
+          "type": "bool",
+          "named": true
+        },
+        {
+          "type": "bool_biop",
+          "named": true
+        },
+        {
+          "type": "bool_unop",
+          "named": true
+        },
+        {
+          "type": "eanf",
+          "named": true
+        },
         {
           "type": "float",
-          "named": true
-        },
-        {
-          "type": "float_op",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
-    "type": "flip",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "float",
-          "named": true
-        },
-        {
-          "type": "float_op",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
-    "type": "float_op",
-    "named": true,
-    "fields": {}
-  },
-  {
-    "type": "fst",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": false,
-      "required": true,
-      "types": [
-        {
-          "type": "anf",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
-    "type": "ite_binding",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "anf",
-          "named": true
-        },
-        {
-          "type": "ann",
-          "named": true
-        },
-        {
-          "type": "discrete",
-          "named": true
-        },
-        {
-          "type": "flip",
-          "named": true
-        },
-        {
-          "type": "fst",
-          "named": true
-        },
-        {
-          "type": "ite_binding",
-          "named": true
-        },
-        {
-          "type": "let_binding",
-          "named": true
-        },
-        {
-          "type": "observe",
-          "named": true
-        },
-        {
-          "type": "prj",
-          "named": true
-        },
-        {
-          "type": "prod",
-          "named": true
-        },
-        {
-          "type": "sample",
-          "named": true
-        },
-        {
-          "type": "snd",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
-    "type": "let_binding",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "anf",
-          "named": true
-        },
-        {
-          "type": "ann",
-          "named": true
-        },
-        {
-          "type": "discrete",
-          "named": true
-        },
-        {
-          "type": "flip",
-          "named": true
-        },
-        {
-          "type": "fst",
           "named": true
         },
         {
@@ -253,57 +61,18 @@
           "named": true
         },
         {
-          "type": "ite_binding",
+          "type": "int",
           "named": true
         },
         {
-          "type": "let_binding",
-          "named": true
-        },
-        {
-          "type": "observe",
-          "named": true
-        },
-        {
-          "type": "prj",
-          "named": true
-        },
-        {
-          "type": "prod",
-          "named": true
-        },
-        {
-          "type": "sample",
-          "named": true
-        },
-        {
-          "type": "snd",
-          "named": true
-        },
-        {
-          "type": "ty",
+          "type": "numeric_op",
           "named": true
         }
       ]
     }
   },
   {
-    "type": "observe",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": false,
-      "required": true,
-      "types": [
-        {
-          "type": "anf",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
-    "type": "prj",
+    "type": "eann",
     "named": true,
     "fields": {},
     "children": {
@@ -311,7 +80,335 @@
       "required": true,
       "types": [
         {
-          "type": "anf",
+          "type": "app",
+          "named": true
+        },
+        {
+          "type": "eanf",
+          "named": true
+        },
+        {
+          "type": "eann",
+          "named": true
+        },
+        {
+          "type": "ediscrete",
+          "named": true
+        },
+        {
+          "type": "eflip",
+          "named": true
+        },
+        {
+          "type": "efst",
+          "named": true
+        },
+        {
+          "type": "eite",
+          "named": true
+        },
+        {
+          "type": "elet",
+          "named": true
+        },
+        {
+          "type": "eobserve",
+          "named": true
+        },
+        {
+          "type": "eprj",
+          "named": true
+        },
+        {
+          "type": "eprod",
+          "named": true
+        },
+        {
+          "type": "esample",
+          "named": true
+        },
+        {
+          "type": "esnd",
+          "named": true
+        },
+        {
+          "type": "ety",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "ediscrete",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "eanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "eflip",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "eanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "efst",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "eanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "efun",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "app",
+          "named": true
+        },
+        {
+          "type": "eanf",
+          "named": true
+        },
+        {
+          "type": "eann",
+          "named": true
+        },
+        {
+          "type": "ediscrete",
+          "named": true
+        },
+        {
+          "type": "eflip",
+          "named": true
+        },
+        {
+          "type": "efst",
+          "named": true
+        },
+        {
+          "type": "eite",
+          "named": true
+        },
+        {
+          "type": "elet",
+          "named": true
+        },
+        {
+          "type": "eobserve",
+          "named": true
+        },
+        {
+          "type": "eprj",
+          "named": true
+        },
+        {
+          "type": "eprod",
+          "named": true
+        },
+        {
+          "type": "esample",
+          "named": true
+        },
+        {
+          "type": "esnd",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "eite",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "app",
+          "named": true
+        },
+        {
+          "type": "eanf",
+          "named": true
+        },
+        {
+          "type": "eann",
+          "named": true
+        },
+        {
+          "type": "ediscrete",
+          "named": true
+        },
+        {
+          "type": "eflip",
+          "named": true
+        },
+        {
+          "type": "efst",
+          "named": true
+        },
+        {
+          "type": "eite",
+          "named": true
+        },
+        {
+          "type": "elet",
+          "named": true
+        },
+        {
+          "type": "eobserve",
+          "named": true
+        },
+        {
+          "type": "eprj",
+          "named": true
+        },
+        {
+          "type": "eprod",
+          "named": true
+        },
+        {
+          "type": "esample",
+          "named": true
+        },
+        {
+          "type": "esnd",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "elet",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "app",
+          "named": true
+        },
+        {
+          "type": "eanf",
+          "named": true
+        },
+        {
+          "type": "eann",
+          "named": true
+        },
+        {
+          "type": "ediscrete",
+          "named": true
+        },
+        {
+          "type": "eflip",
+          "named": true
+        },
+        {
+          "type": "efst",
+          "named": true
+        },
+        {
+          "type": "eite",
+          "named": true
+        },
+        {
+          "type": "elet",
+          "named": true
+        },
+        {
+          "type": "eobserve",
+          "named": true
+        },
+        {
+          "type": "eprj",
+          "named": true
+        },
+        {
+          "type": "eprod",
+          "named": true
+        },
+        {
+          "type": "esample",
+          "named": true
+        },
+        {
+          "type": "esnd",
+          "named": true
+        },
+        {
+          "type": "ety",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "eobserve",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "eanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "eprj",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "eanf",
           "named": true
         },
         {
@@ -322,7 +419,7 @@
     }
   },
   {
-    "type": "prod",
+    "type": "eprod",
     "named": true,
     "fields": {},
     "children": {
@@ -330,14 +427,14 @@
       "required": true,
       "types": [
         {
-          "type": "anf",
+          "type": "eanf",
           "named": true
         }
       ]
     }
   },
   {
-    "type": "sample",
+    "type": "esample",
     "named": true,
     "fields": {},
     "children": {
@@ -345,58 +442,46 @@
       "required": true,
       "types": [
         {
-          "type": "anf",
+          "type": "app",
           "named": true
         },
         {
-          "type": "ann",
+          "type": "sanf",
           "named": true
         },
         {
-          "type": "discrete",
+          "type": "sexact",
           "named": true
         },
         {
-          "type": "flip",
+          "type": "sfold",
           "named": true
         },
         {
-          "type": "fst",
+          "type": "slam",
           "named": true
         },
         {
-          "type": "ite_binding",
+          "type": "slet",
           "named": true
         },
         {
-          "type": "let_binding",
+          "type": "smap",
           "named": true
         },
         {
-          "type": "observe",
+          "type": "sobs",
           "named": true
         },
         {
-          "type": "prj",
-          "named": true
-        },
-        {
-          "type": "prod",
-          "named": true
-        },
-        {
-          "type": "sample",
-          "named": true
-        },
-        {
-          "type": "snd",
+          "type": "ssample",
           "named": true
         }
       ]
     }
   },
   {
-    "type": "snd",
+    "type": "esnd",
     "named": true,
     "fields": {},
     "children": {
@@ -404,7 +489,644 @@
       "required": true,
       "types": [
         {
-          "type": "anf",
+          "type": "eanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "ety",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "tyBool",
+          "named": true
+        },
+        {
+          "type": "tyFloat",
+          "named": true
+        },
+        {
+          "type": "tyInt",
+          "named": true
+        },
+        {
+          "type": "tyProd",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "float",
+    "named": true,
+    "fields": {}
+  },
+  {
+    "type": "index",
+    "named": true,
+    "fields": {}
+  },
+  {
+    "type": "int",
+    "named": true,
+    "fields": {}
+  },
+  {
+    "type": "numeric_op",
+    "named": true,
+    "fields": {}
+  },
+  {
+    "type": "program",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "app",
+          "named": true
+        },
+        {
+          "type": "eanf",
+          "named": true
+        },
+        {
+          "type": "eann",
+          "named": true
+        },
+        {
+          "type": "ediscrete",
+          "named": true
+        },
+        {
+          "type": "eflip",
+          "named": true
+        },
+        {
+          "type": "efst",
+          "named": true
+        },
+        {
+          "type": "efun",
+          "named": true
+        },
+        {
+          "type": "eite",
+          "named": true
+        },
+        {
+          "type": "elet",
+          "named": true
+        },
+        {
+          "type": "eobserve",
+          "named": true
+        },
+        {
+          "type": "eprj",
+          "named": true
+        },
+        {
+          "type": "eprod",
+          "named": true
+        },
+        {
+          "type": "esample",
+          "named": true
+        },
+        {
+          "type": "esnd",
+          "named": true
+        },
+        {
+          "type": "program",
+          "named": true
+        },
+        {
+          "type": "sanf",
+          "named": true
+        },
+        {
+          "type": "sexact",
+          "named": true
+        },
+        {
+          "type": "sfold",
+          "named": true
+        },
+        {
+          "type": "sfun",
+          "named": true
+        },
+        {
+          "type": "slam",
+          "named": true
+        },
+        {
+          "type": "slet",
+          "named": true
+        },
+        {
+          "type": "smap",
+          "named": true
+        },
+        {
+          "type": "sobs",
+          "named": true
+        },
+        {
+          "type": "ssample",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sanf",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "bool",
+          "named": true
+        },
+        {
+          "type": "bool_biop",
+          "named": true
+        },
+        {
+          "type": "bool_unop",
+          "named": true
+        },
+        {
+          "type": "float",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "int",
+          "named": true
+        },
+        {
+          "type": "numeric_op",
+          "named": true
+        },
+        {
+          "type": "sanf",
+          "named": true
+        },
+        {
+          "type": "sbern",
+          "named": true
+        },
+        {
+          "type": "sbeta",
+          "named": true
+        },
+        {
+          "type": "sdirichlet",
+          "named": true
+        },
+        {
+          "type": "sdiscrete",
+          "named": true
+        },
+        {
+          "type": "snormal",
+          "named": true
+        },
+        {
+          "type": "spoisson",
+          "named": true
+        },
+        {
+          "type": "suniform",
+          "named": true
+        },
+        {
+          "type": "svec",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sbern",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "sanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sbeta",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "sanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sdirichlet",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "sanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sdiscrete",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "sanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sexact",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "app",
+          "named": true
+        },
+        {
+          "type": "eanf",
+          "named": true
+        },
+        {
+          "type": "eann",
+          "named": true
+        },
+        {
+          "type": "ediscrete",
+          "named": true
+        },
+        {
+          "type": "eflip",
+          "named": true
+        },
+        {
+          "type": "efst",
+          "named": true
+        },
+        {
+          "type": "eite",
+          "named": true
+        },
+        {
+          "type": "elet",
+          "named": true
+        },
+        {
+          "type": "eobserve",
+          "named": true
+        },
+        {
+          "type": "eprj",
+          "named": true
+        },
+        {
+          "type": "eprod",
+          "named": true
+        },
+        {
+          "type": "esample",
+          "named": true
+        },
+        {
+          "type": "esnd",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sfold",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "app",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "sanf",
+          "named": true
+        },
+        {
+          "type": "sexact",
+          "named": true
+        },
+        {
+          "type": "sfold",
+          "named": true
+        },
+        {
+          "type": "slam",
+          "named": true
+        },
+        {
+          "type": "slet",
+          "named": true
+        },
+        {
+          "type": "smap",
+          "named": true
+        },
+        {
+          "type": "sobs",
+          "named": true
+        },
+        {
+          "type": "ssample",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sfun",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "app",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "sanf",
+          "named": true
+        },
+        {
+          "type": "sexact",
+          "named": true
+        },
+        {
+          "type": "sfold",
+          "named": true
+        },
+        {
+          "type": "slam",
+          "named": true
+        },
+        {
+          "type": "slet",
+          "named": true
+        },
+        {
+          "type": "smap",
+          "named": true
+        },
+        {
+          "type": "sobs",
+          "named": true
+        },
+        {
+          "type": "ssample",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "slam",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "app",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "sanf",
+          "named": true
+        },
+        {
+          "type": "sexact",
+          "named": true
+        },
+        {
+          "type": "sfold",
+          "named": true
+        },
+        {
+          "type": "slam",
+          "named": true
+        },
+        {
+          "type": "slet",
+          "named": true
+        },
+        {
+          "type": "smap",
+          "named": true
+        },
+        {
+          "type": "sobs",
+          "named": true
+        },
+        {
+          "type": "ssample",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "slet",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "app",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "sanf",
+          "named": true
+        },
+        {
+          "type": "sexact",
+          "named": true
+        },
+        {
+          "type": "sfold",
+          "named": true
+        },
+        {
+          "type": "slam",
+          "named": true
+        },
+        {
+          "type": "slet",
+          "named": true
+        },
+        {
+          "type": "smap",
+          "named": true
+        },
+        {
+          "type": "sobs",
+          "named": true
+        },
+        {
+          "type": "ssample",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "smap",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "app",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "sanf",
+          "named": true
+        },
+        {
+          "type": "sexact",
+          "named": true
+        },
+        {
+          "type": "sfold",
+          "named": true
+        },
+        {
+          "type": "slam",
+          "named": true
+        },
+        {
+          "type": "slet",
+          "named": true
+        },
+        {
+          "type": "smap",
+          "named": true
+        },
+        {
+          "type": "sobs",
+          "named": true
+        },
+        {
+          "type": "ssample",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "snormal",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "sanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sobs",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "sanf",
           "named": true
         }
       ]
@@ -419,73 +1141,14 @@
       "required": true,
       "types": [
         {
-          "type": "anf",
-          "named": true
-        },
-        {
-          "type": "ann",
-          "named": true
-        },
-        {
-          "type": "discrete",
-          "named": true
-        },
-        {
-          "type": "flip",
-          "named": true
-        },
-        {
-          "type": "fst",
-          "named": true
-        },
-        {
-          "type": "ite_binding",
-          "named": true
-        },
-        {
-          "type": "let_binding",
-          "named": true
-        },
-        {
-          "type": "observe",
-          "named": true
-        },
-        {
-          "type": "prj",
-          "named": true
-        },
-        {
-          "type": "prod",
-          "named": true
-        },
-        {
-          "type": "sample",
-          "named": true
-        },
-        {
-          "type": "snd",
+          "type": "program",
           "named": true
         }
       ]
     }
   },
   {
-    "type": "tProd",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "ty",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
-    "type": "ty",
+    "type": "spoisson",
     "named": true,
     "fields": {},
     "children": {
@@ -493,15 +1156,121 @@
       "required": true,
       "types": [
         {
-          "type": "tBool",
-          "named": true
-        },
-        {
-          "type": "tProd",
+          "type": "sanf",
           "named": true
         }
       ]
     }
+  },
+  {
+    "type": "ssample",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "sanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sty",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "tyBool",
+          "named": true
+        },
+        {
+          "type": "tyDistribution",
+          "named": true
+        },
+        {
+          "type": "tyFloat",
+          "named": true
+        },
+        {
+          "type": "tyInt",
+          "named": true
+        },
+        {
+          "type": "tyVec",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "suniform",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "sanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "svec",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "sanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "tyProd",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "ety",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "tyVec",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "sty",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "",
+    "named": false
   },
   {
     "type": "&&",
@@ -509,6 +1278,10 @@
   },
   {
     "type": "(",
+    "named": false
+  },
+  {
+    "type": "(\\",
     "named": false
   },
   {
@@ -532,6 +1305,10 @@
     "named": false
   },
   {
+    "type": "->",
+    "named": false
+  },
+  {
     "type": "/",
     "named": false
   },
@@ -540,7 +1317,39 @@
     "named": false
   },
   {
+    "type": ";",
+    "named": false
+  },
+  {
+    "type": "<-",
+    "named": false
+  },
+  {
     "type": "=",
+    "named": false
+  },
+  {
+    "type": "@e",
+    "named": false
+  },
+  {
+    "type": "@s",
+    "named": false
+  },
+  {
+    "type": "[",
+    "named": false
+  },
+  {
+    "type": "]",
+    "named": false
+  },
+  {
+    "type": "bern",
+    "named": false
+  },
+  {
+    "type": "beta",
     "named": false
   },
   {
@@ -548,11 +1357,19 @@
     "named": true
   },
   {
+    "type": "dirichlet",
+    "named": false
+  },
+  {
     "type": "discrete",
     "named": false
   },
   {
     "type": "else",
+    "named": false
+  },
+  {
+    "type": "exact",
     "named": false
   },
   {
@@ -564,8 +1381,12 @@
     "named": false
   },
   {
-    "type": "float",
-    "named": true
+    "type": "fn",
+    "named": false
+  },
+  {
+    "type": "fold",
+    "named": false
   },
   {
     "type": "fst",
@@ -584,15 +1405,23 @@
     "named": false
   },
   {
-    "type": "index",
-    "named": true
-  },
-  {
     "type": "let",
     "named": false
   },
   {
+    "type": "map",
+    "named": false
+  },
+  {
+    "type": "normal",
+    "named": false
+  },
+  {
     "type": "observe",
+    "named": false
+  },
+  {
+    "type": "poisson",
     "named": false
   },
   {
@@ -608,10 +1437,6 @@
     "named": false
   },
   {
-    "type": "tBool",
-    "named": true
-  },
-  {
     "type": "then",
     "named": false
   },
@@ -620,7 +1445,39 @@
     "named": false
   },
   {
+    "type": "tyBool",
+    "named": true
+  },
+  {
+    "type": "tyDistribution",
+    "named": true
+  },
+  {
+    "type": "tyFloat",
+    "named": true
+  },
+  {
+    "type": "tyInt",
+    "named": true
+  },
+  {
+    "type": "uniform",
+    "named": false
+  },
+  {
+    "type": "{",
+    "named": false
+  },
+  {
     "type": "||",
+    "named": false
+  },
+  {
+    "type": "}",
+    "named": false
+  },
+  {
+    "type": "~",
     "named": false
   }
 ]
