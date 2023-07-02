@@ -29,6 +29,11 @@
     "fields": {}
   },
   {
+    "type": "compare_op",
+    "named": true,
+    "fields": {}
+  },
+  {
     "type": "eanf",
     "named": true,
     "fields": {},
@@ -46,6 +51,10 @@
         },
         {
           "type": "bool_unop",
+          "named": true
+        },
+        {
+          "type": "compare_op",
           "named": true
         },
         {
@@ -105,6 +114,10 @@
         },
         {
           "type": "eite",
+          "named": true
+        },
+        {
+          "type": "eiterate",
           "named": true
         },
         {
@@ -220,6 +233,10 @@
           "named": true
         },
         {
+          "type": "eiterate",
+          "named": true
+        },
+        {
           "type": "elet",
           "named": true
         },
@@ -287,6 +304,10 @@
           "named": true
         },
         {
+          "type": "eiterate",
+          "named": true
+        },
+        {
           "type": "elet",
           "named": true
         },
@@ -308,6 +329,25 @@
         },
         {
           "type": "esnd",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "eiterate",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "eanf",
+          "named": true
+        },
+        {
+          "type": "identifier",
           "named": true
         }
       ]
@@ -347,6 +387,10 @@
         },
         {
           "type": "eite",
+          "named": true
+        },
+        {
+          "type": "eiterate",
           "named": true
         },
         {
@@ -450,11 +494,19 @@
           "named": true
         },
         {
+          "type": "sann",
+          "named": true
+        },
+        {
           "type": "sexact",
           "named": true
         },
         {
           "type": "sfold",
+          "named": true
+        },
+        {
+          "type": "site",
           "named": true
         },
         {
@@ -583,6 +635,10 @@
           "named": true
         },
         {
+          "type": "eiterate",
+          "named": true
+        },
+        {
           "type": "elet",
           "named": true
         },
@@ -615,6 +671,10 @@
           "named": true
         },
         {
+          "type": "sann",
+          "named": true
+        },
+        {
           "type": "sexact",
           "named": true
         },
@@ -624,6 +684,10 @@
         },
         {
           "type": "sfun",
+          "named": true
+        },
+        {
+          "type": "site",
           "named": true
         },
         {
@@ -667,6 +731,10 @@
         },
         {
           "type": "bool_unop",
+          "named": true
+        },
+        {
+          "type": "compare_op",
           "named": true
         },
         {
@@ -714,11 +782,74 @@
           "named": true
         },
         {
+          "type": "sprj",
+          "named": true
+        },
+        {
           "type": "suniform",
           "named": true
         },
         {
           "type": "svec",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sann",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "app",
+          "named": true
+        },
+        {
+          "type": "sanf",
+          "named": true
+        },
+        {
+          "type": "sann",
+          "named": true
+        },
+        {
+          "type": "sexact",
+          "named": true
+        },
+        {
+          "type": "sfold",
+          "named": true
+        },
+        {
+          "type": "site",
+          "named": true
+        },
+        {
+          "type": "slam",
+          "named": true
+        },
+        {
+          "type": "slet",
+          "named": true
+        },
+        {
+          "type": "smap",
+          "named": true
+        },
+        {
+          "type": "sobs",
+          "named": true
+        },
+        {
+          "type": "ssample",
+          "named": true
+        },
+        {
+          "type": "sty",
           "named": true
         }
       ]
@@ -821,6 +952,10 @@
           "named": true
         },
         {
+          "type": "eiterate",
+          "named": true
+        },
+        {
           "type": "elet",
           "named": true
         },
@@ -868,11 +1003,19 @@
           "named": true
         },
         {
+          "type": "sann",
+          "named": true
+        },
+        {
           "type": "sexact",
           "named": true
         },
         {
           "type": "sfold",
+          "named": true
+        },
+        {
+          "type": "site",
           "named": true
         },
         {
@@ -919,11 +1062,74 @@
           "named": true
         },
         {
+          "type": "sann",
+          "named": true
+        },
+        {
           "type": "sexact",
           "named": true
         },
         {
           "type": "sfold",
+          "named": true
+        },
+        {
+          "type": "site",
+          "named": true
+        },
+        {
+          "type": "slam",
+          "named": true
+        },
+        {
+          "type": "slet",
+          "named": true
+        },
+        {
+          "type": "smap",
+          "named": true
+        },
+        {
+          "type": "sobs",
+          "named": true
+        },
+        {
+          "type": "ssample",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "site",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "app",
+          "named": true
+        },
+        {
+          "type": "sanf",
+          "named": true
+        },
+        {
+          "type": "sann",
+          "named": true
+        },
+        {
+          "type": "sexact",
+          "named": true
+        },
+        {
+          "type": "sfold",
+          "named": true
+        },
+        {
+          "type": "site",
           "named": true
         },
         {
@@ -970,11 +1176,19 @@
           "named": true
         },
         {
+          "type": "sann",
+          "named": true
+        },
+        {
           "type": "sexact",
           "named": true
         },
         {
           "type": "sfold",
+          "named": true
+        },
+        {
+          "type": "site",
           "named": true
         },
         {
@@ -1021,11 +1235,19 @@
           "named": true
         },
         {
+          "type": "sann",
+          "named": true
+        },
+        {
           "type": "sexact",
           "named": true
         },
         {
           "type": "sfold",
+          "named": true
+        },
+        {
+          "type": "site",
           "named": true
         },
         {
@@ -1072,11 +1294,19 @@
           "named": true
         },
         {
+          "type": "sann",
+          "named": true
+        },
+        {
           "type": "sexact",
           "named": true
         },
         {
           "type": "sfold",
+          "named": true
+        },
+        {
+          "type": "site",
           "named": true
         },
         {
@@ -1157,6 +1387,65 @@
       "types": [
         {
           "type": "sanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sprj",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "bool",
+          "named": true
+        },
+        {
+          "type": "float",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "int",
+          "named": true
+        },
+        {
+          "type": "sbern",
+          "named": true
+        },
+        {
+          "type": "sbeta",
+          "named": true
+        },
+        {
+          "type": "sdirichlet",
+          "named": true
+        },
+        {
+          "type": "sdiscrete",
+          "named": true
+        },
+        {
+          "type": "snormal",
+          "named": true
+        },
+        {
+          "type": "spoisson",
+          "named": true
+        },
+        {
+          "type": "suniform",
+          "named": true
+        },
+        {
+          "type": "svec",
           "named": true
         }
       ]
@@ -1321,11 +1610,31 @@
     "named": false
   },
   {
+    "type": "<",
+    "named": false
+  },
+  {
     "type": "<-",
     "named": false
   },
   {
+    "type": "<=",
+    "named": false
+  },
+  {
     "type": "=",
+    "named": false
+  },
+  {
+    "type": "==",
+    "named": false
+  },
+  {
+    "type": ">",
+    "named": false
+  },
+  {
+    "type": ">=",
     "named": false
   },
   {
@@ -1342,6 +1651,10 @@
   },
   {
     "type": "]",
+    "named": false
+  },
+  {
+    "type": "^",
     "named": false
   },
   {
@@ -1402,6 +1715,10 @@
   },
   {
     "type": "in",
+    "named": false
+  },
+  {
+    "type": "iterate",
     "named": false
   },
   {

@@ -26,6 +26,7 @@ module.exports = grammar({
       $.eite,
       $.eflip,
       $.ediscrete,
+      $.eiterate,
       $.eobserve,
       $.esample,
       // seq($._function_name, '(', $.anf ,')'),
@@ -78,6 +79,7 @@ module.exports = grammar({
 
     eflip: $ => seq('flip', $.eanf),
     ediscrete: $ => seq('discrete', '(', repeat(seq($.eanf, ",")), $.eanf,  ')'),
+    eiterate: $ => seq('iterate', '(', $.identifier, ',',$.eanf, ',', $.eanf,  ')'),
     eobserve: $ => choice(
       seq('observe', $.eanf),
       seq('observe', '(', $.eanf, ')'),
@@ -93,12 +95,19 @@ module.exports = grammar({
     bool_unop: $ => '!',
 
     float: $ => /\d+(?:\.\d*|)/, // 0.3  0.3. 3. 0.
+    // I think I need to disallow whitespace before continuing with this
+    // https://gist.github.com/Aerijo/df27228d70c633e088b0591b8857eeef
+    // _comment: $ => token(/\/\/.*/), // like this
+    // _comment: $ => token(seq('%', /.*/)),
+    // _comment: $ => token(seq("//", /[^\n]*/)), // like this
+
 
     // exact floats allow for int-looking floats
     efloat: $ => /\d+(?:\.\d*|)/, // 0.3  0.3. 3 0.
 
     int: $ => /\d+/,
-    numeric_op: $ => choice('*', '/', '+', '-'),
+    numeric_op: $ => choice('*', '/', '+', '-', '^'),
+    compare_op: $ => choice('==', '<', '<=', '>', '>='),
 
     _evalue: $ => choice(
       $.bool,
@@ -117,29 +126,44 @@ module.exports = grammar({
       prec.left(2, seq('(', $.eanf, $.numeric_op, $.eanf, ')')),
       prec.left(3, seq($.eanf, $.bool_biop, $.eanf)),
       prec.left(3, seq('(', $.eanf, $.bool_biop, $.eanf, ')')),
+      prec.left(4, seq($.eanf, $.compare_op, $.eanf)),
+      prec.left(4, seq('(', $.eanf, $.compare_op, $.eanf, ')')),
       prec.left(5, seq($.bool_unop, $.eanf)),
+
     ),
 
     identifier: $ => /[a-zA-Z_][_a-zA-Z0-9]*/,
     // _func: $ => seq('fun', $._function_name, '(', $.VAR, ')', ':', $._type, '{', $._eexpr, '}'),
 
     _sexpr: $ => choice(
+      // $._comment,
       // $.sbinding_section,
-      $.slet,
       $.smap,
       $.sfold,
-      $.app,
       $.slam,
       $.sobs,
       $.sexact,
+      $.site,
       $.ssample,
+      $.slet,
       $.sanf,
+      $.app,
+      $.sann,
 
       seq('(', $._sexpr, ')')
     ),
 
+    site: $ => choice(
+      seq('if', '(', $.sanf, ')', '{', $._sexpr, '}', 'else', '{', $._sexpr, '}'),
+      seq('if', '(', $.sanf, ')', '{', $._sexpr, '}', 'else', $.site ),
+    ),
+
+
     // sbinding_section: $ => seq("do", repeat(choice($.slet, $.sseq_first)), $._sexpr),
-    slet: $ => seq($.identifier, "<-", $._sexpr, ';', $._sexpr),
+    slet: $ => choice(
+      // seq($.identifier, ':', $.sty, "<-", $._sexpr, ';', $._sexpr),
+      seq($.identifier, "<-", $._sexpr, ';', $._sexpr),
+    ),
     sseq: $ => seq($._sexpr, ';', $._sexpr),
     // sseq_first: $ => seq($._sexpr, ';',),
     smap: $ => seq('map', '(', $.identifier, '->', $._sexpr, ')', $.sanf),
@@ -156,17 +180,22 @@ module.exports = grammar({
       seq('exact', '{', $._eexpr, '}' ),
     ),
 
-
     sanf: $ => choice(
+      $.sprj,
       $.identifier,
       prec.left(6, seq($.sanf, $.numeric_op, $.sanf)),
       prec.left(6, seq('(', $.sanf, $.numeric_op, $.sanf, ')')),
       prec.left(3, seq($.sanf, $.bool_biop, $.sanf)),
       prec.left(3, seq('(', $.sanf, $.bool_biop, $.sanf, ')')),
+      prec.left(4, seq($.sanf, $.compare_op, $.sanf)),
+      prec.left(4, seq('(', $.sanf, $.compare_op, $.sanf, ')')),
       prec.left(5, seq($.bool_unop, $.sanf)),
       $._svalue,
     ),
 
+    sprj: $ => seq($.identifier, '[', $._svalue, ']'), // vector access
+
+    sann: $ => prec.right(4, seq($._sexpr, ':', $.sty)),
     _svalue: $ => choice(
       $.bool,
       $.float,

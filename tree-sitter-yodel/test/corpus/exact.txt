@@ -264,3 +264,22 @@ exact {
         (eanf (float))
         (eanf (float))
         )))
+
+======================
+exact: bounded iteration
+======================
+
+exact {
+  iterate(fun, init, k)
+}
+
+---
+
+
+(source_file
+  (program
+      (eiterate
+        (identifier)
+        (eanf (identifier))
+        (eanf (identifier))
+        )))
