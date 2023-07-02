@@ -15,6 +15,7 @@ pub mod grammar {
         EProdExt:Option<ETy>,
         ELetInExt: Option<LetInTypes<ETy>>,
         EIteExt: Option<ETy>,
+        EAppExt: Option<ETy>,
 
         AVarExt<SVal>: Option<STy>,
         SLetInExt: Option<LetInTypes<STy>>,

@@ -5,6 +5,8 @@ use crate::typeinf::grammar::{EExprInferable, Inferable};
 /// compilation. going to be honest it's pretty atrocious in rust.
 use crate::*;
 
+use crate::grammar::program::Program;
+
 use ::core::fmt;
 use ::core::fmt::Debug;
 use itertools::Itertools;
@@ -13,10 +15,23 @@ use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::string::String;
 
+trait Desugar<As> {
+    fn desugar(&self) -> As;
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum EAnfSugar {
     EAnfPrim(Box<Anf<Inferable, EVal>>),
     EInteger(usize),
+}
+impl Desugar<Anf<Inferable, EVal>> for EAnfSugar {
+    fn desugar(&self) -> Anf<Inferable, EVal> {
+        use EAnfSugar::*;
+        match self {
+            EAnfPrim(a) => *a.clone(),
+            EInteger(i) => todo!(),
+        }
+    }
 }
 
 #[derive(PartialEq, Debug, Clone)]
@@ -28,33 +43,58 @@ pub enum ESugar {
     Sample(Box<SSugar>),
 
     // integer support
-    Discrete(Vec<f64>), // => if-then-else chain returning a one-hot encoding
+    Discrete(Vec<f64>),     // => if-then-else chain returning a one-hot encoding
     IntAnf(Box<EAnfSugar>), // => integer desugaring
-                        // IntPrj(Box<EAnfSugar>, Box<Anf<Inferable, EVal>>), // => TODO: EPrj using a variable for the index
+    IntPrj(Box<EAnfSugar>, Box<Anf<Inferable, EVal>>), // => TODO: EPrj using a variable for the index
+
+    // iterate(f, init, k)
+    Iterate(String, Box<EAnfSugar>, Box<EAnfSugar>),
 }
 
-impl ESugar {
-    pub fn desugar(self) -> EExpr<Inferable> {
+impl Desugar<EExpr<Inferable>> for ESugar {
+    fn desugar(&self) -> EExpr<Inferable> {
         use EAnfSugar::*;
         match self {
-            ESugar::Prim(e) => e,
-            ESugar::LetIn(v, bind, body) => {
-                EExpr::ELetIn(None, v, Box::new(bind.desugar()), Box::new(body.desugar()))
-            }
-            ESugar::Ite(p, t, f) => {
-                EExpr::EIte(None, p, Box::new(t.desugar()), Box::new(f.desugar()))
-            }
-            ESugar::Discrete(params) => discrete::from_params(&params),
+            ESugar::Prim(e) => e.clone(),
+            ESugar::LetIn(v, bind, body) => EExpr::ELetIn(
+                None,
+                v.clone(),
+                Box::new(bind.desugar()),
+                Box::new(body.desugar()),
+            ),
+            ESugar::Ite(p, t, f) => EExpr::EIte(
+                None,
+                p.clone(),
+                Box::new(t.desugar()),
+                Box::new(f.desugar()),
+            ),
+            ESugar::Discrete(params) => discrete::from_params(params),
             ESugar::Sample(s) => EExpr::ESample((), Box::new(s.desugar())),
-            ESugar::IntAnf(a) => match *a {
+            ESugar::IntAnf(a) => match *a.clone() {
                 EAnfPrim(anf) => EExpr::EAnf((), anf.clone()),
                 EInteger(i) => EExpr::EAnf((), Box::new(integers::as_prod(i))),
             },
-            // ESugar::IntPrj(ix_anf, prod_anf) => match *ix_anf {
-            //     EInteger(i) => EExpr::EPrj(None, i, prod_anf.clone()),
-            //     EAnfPrim(anf) => todo!("not yet useful"),
-            // },
+            ESugar::IntPrj(ix_anf, prod_anf) => match *ix_anf.clone() {
+                EInteger(i) => EExpr::EPrj(None, i, prod_anf.clone()),
+                EAnfPrim(anf) => todo!("not yet useful"),
+            },
+            ESugar::Iterate(f, init, kanf) => match *kanf.clone() {
+                EInteger(i) => EExpr::EApp(None, f.clone(), vec![init.desugar()]),
+                EAnfPrim(anf) => todo!("not yet useful"),
+            },
         }
+    }
+}
+
+impl Lang for ESugar {
+    type Ty = ETy;
+    type Function = crate::grammar::Function<Self>;
+    type Anf = EAnfSugar;
+    type Val = EVal;
+}
+impl Desugar<Anf<Inferable, SVal>> for Anf<Inferable, SVal> {
+    fn desugar(&self) -> Anf<Inferable, SVal> {
+        self.clone()
     }
 }
 
@@ -64,10 +104,17 @@ pub enum SSugar {
     Exact(Box<ESugar>),
 }
 
-impl SSugar {
-    pub fn desugar(self) -> SExpr<Inferable> {
+impl Lang for SSugar {
+    type Ty = STy;
+    type Function = crate::grammar::Function<SSugar>;
+    type Anf = crate::grammar::Anf<Inferable, SVal>;
+    type Val = SVal;
+}
+
+impl Desugar<SExpr<Inferable>> for SSugar {
+    fn desugar(&self) -> SExpr<Inferable> {
         match self {
-            SSugar::Prim(e) => e,
+            SSugar::Prim(e) => e.clone(),
             SSugar::Exact(e) => SExpr::SExact((), Box::new(e.desugar())),
         }
     }
@@ -77,13 +124,56 @@ impl SSugar {
 pub enum ProgramSugar {
     Exact(ESugar),
     Sample(SSugar),
+    ExactFn(Function<ESugar>, Box<ProgramSugar>),
+    SampleFn(Function<SSugar>, Box<ProgramSugar>),
 }
 
-impl ProgramSugar {
-    pub fn desugar(self) -> Program<Inferable> {
+// TTG!(impl Desugar<Function<EExpr<Inferable>>> for Function<ESugar> {
+//     pub fn desugar(self) -> Function<EExpr<Inferable>> {
+//         Function {
+//             name: self.name.clone(),
+//             arguments: self
+//                 .arguments
+//                 .clone()
+//                 .into_iter()
+//                 .map(|x| x.desugar())
+//                 .collect(),
+//             body: self.body.clone().desugar(),
+//         }
+//     }
+// });
+
+impl<Sugar, Inf> Desugar<Function<Inf>> for Function<Sugar>
+where
+    Sugar: Lang + Debug + Clone + PartialEq,
+    Inf: Lang + Debug + Clone + PartialEq,
+    <Inf as Lang>::Anf: PartialEq + Clone + Debug,
+    <Sugar as Lang>::Anf: PartialEq + Debug + Clone,
+    <Sugar as Lang>::Anf: Desugar<<Inf as Lang>::Anf>,
+    Sugar: Desugar<Inf>,
+{
+    fn desugar(&self) -> Function<Inf> {
+        Function {
+            name: self.name.clone(),
+            arguments: self
+                .arguments
+                .clone()
+                .into_iter()
+                .map(|x| x.desugar())
+                .collect(),
+            body: self.body.clone().desugar(),
+        }
+    }
+}
+
+impl Desugar<Program<Inferable>> for ProgramSugar {
+    fn desugar(&self) -> Program<Inferable> {
+        use ProgramSugar::*;
         match self {
-            ProgramSugar::Exact(body) => Program::EBody(body.desugar()),
-            ProgramSugar::Sample(body) => Program::SBody(body.desugar()),
+            Exact(body) => Program::EBody(body.desugar()),
+            Sample(body) => Program::SBody(body.desugar()),
+            ExactFn(f, body) => Program::EDefine(f.desugar(), Box::new(body.desugar())),
+            SampleFn(f, body) => Program::SDefine(f.desugar(), Box::new(body.desugar())),
         }
     }
 }
@@ -95,24 +185,47 @@ pub mod integers {
         val.push(EVal::EBool(true));
         Anf::AVal((), EVal::EProd(val))
     }
-    pub fn from_prod(e: &Anf<Inferable, EVal>) -> usize {
-        match e {
-            Anf::AVal((), EVal::EProd(vs)) => {
-                assert_eq!(
-                    vs.iter()
-                        .map(|v| v.as_bool().expect("value should be one-hot encoding") as usize)
-                        .sum::<usize>(),
-                    1,
-                    "attempting to convert prod which is not one-hot encoded, should be a type-checking error"
-                );
-                vs.iter().enumerate().find(|(ix, x)| x.is_true()).unwrap().0
+    // pub fn from_prod(e: &Anf<Inferable, EVal>) -> usize {
+    //     match e {
+    //         Anf::AVal((), EVal::EProd(vs)) => {
+    //             assert_eq!(
+    //                 vs.iter()
+    //                     .map(|v| v.as_bool().expect("value should be one-hot encoding") as usize)
+    //                     .sum::<usize>(),
+    //                 1,
+    //                 "attempting to convert prod which is not one-hot encoded, should be a type-checking error"
+    //             );
+    //             vs.iter().enumerate().find(|(ix, x)| x.is_true()).unwrap().0
+    //         }
+    //         _ => panic!("api misuse"),
+    //     }
+    // }
+    pub fn integer_op(e: &Anf<Inferable, EVal>) {
+        todo!()
+    }
+    pub fn prod2usize(p: Anf<Inferable, EVal>) -> Option<usize> {
+        match p {
+            Anf::AVal(_, EVal::EProd(prod)) => {
+                let (ix, sum) =
+                    prod.iter()
+                        .enumerate()
+                        .fold(Some((0, 0)), |memo, (ix, x)| match (memo, x) {
+                            (Some((one_ix, tot)), EVal::EBool(b)) => {
+                                Some(if *b { (ix, tot + 1) } else { (one_ix, tot) })
+                            }
+                            _ => None,
+                        })?;
+
+                if sum != 1 {
+                    None
+                } else {
+                    Some(ix)
+                }
             }
-            _ => panic!("api misuse"),
+            _ => None,
         }
     }
-    pub fn integer_op(e: &Anf<Inferable, EVal>) {}
 }
-
 pub mod discrete {
     use crate::grammar::{Anf, EExpr, ETy, EVal};
     use crate::typeinf::grammar::{EExprInferable, Inferable};
@@ -191,6 +304,10 @@ pub mod discrete {
         params2named_statements(&discrete_id, &names, params)
     }
 
+    pub fn float2eanf(f: f64) -> Anf<Inferable, EVal> {
+        Anf::AVal((), EVal::EFloat(f))
+    }
+
     pub fn params2named_statements(
         namespace: &String,
         names: &Vec<String>,
@@ -203,7 +320,12 @@ pub mod discrete {
         let mut flips: Vec<(String, EExprInferable)> = names
             .iter()
             .zip(probs.iter())
-            .map(|(n, p)| (format!("{}_{}_flip", namespace, n), EExpr::EFlip((), *p)))
+            .map(|(n, p)| {
+                (
+                    format!("{}_{}_flip", namespace, n),
+                    EExpr::EFlip((), Box::new(float2eanf(*p))),
+                )
+            })
             .collect_vec();
         flips.pop();
 
@@ -233,6 +355,7 @@ pub mod discrete {
             .collect_vec();
         from_named_params(&discrete_id, &names, params)
     }
+
     pub fn from_named_params(
         namespace: &String,
         names: &Vec<String>,
@@ -247,7 +370,7 @@ pub mod discrete {
                 (params.iter().sum::<f64>() - 1.0).abs() < 1e-30,
                 "Bernoulli must be normalized"
             );
-            EExpr::EFlip((), params[0])
+            EExpr::EFlip((), Box::new(float2eanf(params[0])))
         } else {
             let mut statements = params2named_statements(namespace, names, params);
             let mut binding = statements.last().unwrap().1.clone();

@@ -25,21 +25,24 @@ const EXPRS: &str = r"{
     EPrjExt : (),
     EProdExt : (),
     ELetInExt : (),
+    EAppExt : (),
     EIteExt : (),
     EFlipExt : (),
     EObserveExt : (),
-    SObserveExt : (),
     ESampleExt : (),
+
+    SObserveExt : (),
     SAnfExt : (),
     SLetInExt : (),
     SSeqExt : (),
     SIteExt : (),
-    SBernExt : (),
-    SDiscreteExt : (),
-    SUniformExt : (),
-    SNormalExt : (),
-    SBetaExt : (),
-    SDirichletExt : (),
+
+    SMapExt : (),
+    SFoldExt : (),
+    SAppExt : (),
+    SLambdaExt : (),
+    SSampleExt : (),
+
     SExactExt : (),
 }";
 
