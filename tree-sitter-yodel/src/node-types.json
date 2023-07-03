@@ -444,11 +444,6 @@
     }
   },
   {
-    "type": "float",
-    "named": true,
-    "fields": {}
-  },
-  {
     "type": "numeric_op",
     "named": true,
     "fields": {}
@@ -1242,6 +1237,10 @@
   {
     "type": "flip",
     "named": false
+  },
+  {
+    "type": "float",
+    "named": true
   },
   {
     "type": "fn",

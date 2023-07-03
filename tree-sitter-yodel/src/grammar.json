@@ -1004,11 +1004,7 @@
     },
     "float": {
       "type": "PATTERN",
-      "value": "\\d+(?:\\.\\d*|)"
-    },
-    "efloat": {
-      "type": "PATTERN",
-      "value": "\\d+(?:\\.\\d*|)"
+      "value": "\\d+\\.(?:\\d*|)"
     },
     "int": {
       "type": "PATTERN",
@@ -1073,11 +1069,11 @@
         },
         {
           "type": "SYMBOL",
-          "name": "float"
+          "name": "int"
         },
         {
           "type": "SYMBOL",
-          "name": "int"
+          "name": "float"
         },
         {
           "type": "PREC",

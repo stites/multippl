@@ -140,11 +140,11 @@ exact {
               (eanf
                 (eanf
                   (evalue
-                    (float)))
+                    (int)))
                 (numeric_op)
                 (eanf
                   (evalue
-                    (float)))))))
+                    (int)))))))
         (eexpr
           (eanf
             (identifier)))))))
@@ -171,11 +171,11 @@ exact {
               (eanf
                 (eanf
                   (evalue
-                    (float)))
+                    (int)))
                 (numeric_op)
                 (eanf
                   (evalue
-                    (float)))))))
+                    (int)))))))
         (eexpr
           (eanf
             (identifier)))))))
@@ -211,11 +211,11 @@ exact {
                     (eanf
                       (eanf
                         (evalue
-                          (float)))
+                          (int)))
                       (numeric_op)
                       (eanf
                         (evalue
-                          (float))))))
+                          (int))))))
                 (eexpr
                   (eanf
                     (eanf
@@ -257,11 +257,11 @@ exact {
                     (eanf
                       (eanf
                         (evalue
-                          (float)))
+                          (int)))
                       (numeric_op)
                       (eanf
                         (evalue
-                          (float))))))
+                          (int))))))
                 (eexpr
                   (elet
                     (identifier)
@@ -307,11 +307,11 @@ exact {
                           (sanf
                             (sanf
                               (svalue
-                                (float)))
+                                (int)))
                             (numeric_op)
                             (sanf
                               (svalue
-                                (float)))))))))))
+                                (int)))))))))))
             (eexpr
               (elet
                 (identifier)
@@ -320,11 +320,11 @@ exact {
                     (eanf
                       (eanf
                         (evalue
-                          (float)))
+                          (int)))
                       (numeric_op)
                       (eanf
                         (evalue
-                          (float))))))
+                          (int))))))
                 (eexpr
                   (elet
                     (identifier)

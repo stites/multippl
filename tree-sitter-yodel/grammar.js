@@ -96,16 +96,12 @@ module.exports = grammar({
 
     bool_unop: $ => '!',
 
-    float: $ => /\d+(?:\.\d*|)/, // 0.3  0.3. 3. 0.
+    float: $ => /\d+\.(?:\d*|)/, // 0.3  0.3. 3. 0.
     // I think I need to disallow whitespace before continuing with this
     // https://gist.github.com/Aerijo/df27228d70c633e088b0591b8857eeef
     // _comment: $ => token(/\/\/.*/), // like this
     // _comment: $ => token(seq('%', /.*/)),
     // _comment: $ => token(seq("//", /[^\n]*/)), // like this
-
-
-    // exact floats allow for int-looking floats
-    efloat: $ => /\d+(?:\.\d*|)/, // 0.3  0.3. 3 0.
 
     int: $ => /\d+/,
     numeric_op: $ => choice('*', '/', '+', '-', '^'),
@@ -113,8 +109,8 @@ module.exports = grammar({
 
     evalue: $ => choice(
       $.bool,
-      $.float,
       $.int,
+      $.float,
       prec(10, seq('(', $.evalue, ',', $.evalue, ')')),
       prec(10, seq('(', $.evalue, ',', repeat(seq($.evalue, ',')), $.evalue, ')')),
     ),
