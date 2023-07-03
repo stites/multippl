@@ -1,1 +1,279 @@
+use super::exact::parse_eexpr;
+use super::shared::*;
+use crate::grammar::*;
+use crate::typeinf::grammar::{AnfInferable, Inferable, ProgramInferable, SExprInferable};
+use itertools::Itertools;
+use std::collections::VecDeque;
+use tree_sitter::*;
 
+use super::*;
+use tree_sitter_yodel;
+
+macro_rules! assert_children {
+    ( $x:expr, $count:literal, $node:expr, $c:expr ) => {{
+        let mut c__ = $c.clone();
+        let cs = $node.named_children(&mut c__).into_iter().collect_vec();
+        assert!(
+            $node.named_child_count() == $count,
+            "{} #named_children: {} (expected {})\nchildren: {:?}\nsexp: {}\n",
+            $x,
+            $node.named_child_count(),
+            $count,
+            cs,
+            $node.to_sexp()
+        );
+    }};
+}
+
+// fn parse_sanf<'a, 'b>(c: &'a mut TreeCursor<'b>, n: &'b Node) -> (ANF, Ty) {
+// anf: $ => choice(
+//   $.identifier,
+//   $._value,
+//   prec.left(3, seq($.anf, $.bool_biop, $.anf)),
+//   prec.left(5, seq($.bool_unop, $.anf)),
+// ),
+
+pub fn parse_sanf_child_h(src: &[u8], c: &mut TreeCursor, n: &Node) -> Anf<Inferable, SVal> {
+    let mut c_ = c.clone();
+    let mut cs = n.named_children(&mut c_);
+    let a = cs.next().unwrap();
+    parse_sanf(src, c, &a)
+}
+
+pub fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: &Node) -> Anf<Inferable, SVal> {
+    match n.named_child_count() {
+        0 => parse_sanf_node(src, c, n),
+        1 => parse_sanf_child_h(src, c, n),
+        2 => {
+            // unary operation
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+            let op = cs.next().unwrap();
+            let utf8 = op.utf8_text(src).unwrap();
+            let op = String::from_utf8(utf8.into()).unwrap();
+            assert_eq!(
+                op,
+                "!".to_string(),
+                "invalid program found!\nsexp: {}",
+                n.to_sexp()
+            );
+            let a = cs.next().unwrap(); // will be "anf"
+            let anf = parse_sanf(src, c, &a);
+            Anf::Neg(Box::new(anf))
+        }
+        3 => {
+            // binary operation
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let l = cs.next().unwrap();
+            let l = parse_sanf(src, c, &l);
+
+            let op = cs.next().unwrap();
+            let utf8 = op.utf8_text(src).unwrap();
+            let op = String::from_utf8(utf8.into()).unwrap();
+            assert!(
+                op == "&&".to_string() || op == "||".to_string(),
+                "invalid program found!\nsexp: {}",
+                n.to_sexp()
+            );
+
+            let r = cs.next().unwrap();
+            let r = parse_sanf(src, c, &r);
+
+            if op == "&&".to_string() {
+                Anf::And(Box::new(l), Box::new(r))
+            } else {
+                Anf::Or(Box::new(l), Box::new(r))
+            }
+        }
+        _ => panic!("invalid program found!\nsexp: {}", n.to_sexp()),
+    }
+}
+
+pub fn parse_sval(src: &[u8], c: &mut TreeCursor, n: &Node) -> SVal {
+    match n.kind() {
+        _ => panic!("invalid value! found sexp:\n{}", n.to_sexp()),
+    }
+}
+pub fn parse_sanf_node(src: &[u8], c: &mut TreeCursor, n: &Node) -> Anf<Inferable, SVal> {
+    let k = n.kind();
+    match k {
+        _ => todo!(),
+    }
+}
+
+pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable> {
+    use SExpr::*;
+    assert_eq!(n.kind(), "sexpr");
+    let mut c_ = c.clone();
+    let mut cs = n.named_children(&mut c_);
+    let n = cs.next().unwrap();
+    println!("{}", n.to_sexp());
+
+    let k = n.kind();
+    match k {
+        "sexpr" => {
+            // made it to a nested paren! run again
+            parse_sexpr(src, c, &n)
+        }
+        "sanf" => {
+            let anf = parse_sanf(src, c, &n);
+            SExpr::SAnf((), Box::new(anf))
+        }
+        "slet" => {
+            assert_children!(k, 3, n, c);
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let ident = cs.next().unwrap();
+            let ident = parse_str(src, &ident);
+
+            let bindee = cs.next().unwrap();
+            let bindee = parse_sexpr(src, c, &bindee);
+
+            let body = cs.next().unwrap();
+            let body = parse_sexpr(src, c, &body);
+            SExpr::SLetIn(None, ident, Box::new(bindee), Box::new(body))
+        }
+        // sugar: let x = ~(<sexpr>) in <sexpr>
+        "sletsample" => {
+            assert_children!(k, 3, n, c);
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let ident = cs.next().unwrap();
+            let utf8 = ident.utf8_text(src).unwrap();
+            let ident = String::from_utf8(utf8.into()).unwrap();
+
+            let bindee = cs.next().unwrap();
+            let bindee = parse_sexpr(src, c, &bindee);
+
+            let body = cs.next().unwrap();
+            let body = parse_sexpr(src, c, &body);
+            SExpr::SLetSample((), ident, Box::new(bindee), Box::new(body))
+        }
+        "site" => {
+            assert_children!(k, 3, n, c);
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let pred = cs.next().unwrap();
+            let pred = parse_sanf(src, c, &pred);
+
+            let tbranch = cs.next().unwrap();
+            let tbranch = parse_sexpr(src, c, &tbranch);
+
+            let fbranch = cs.next().unwrap();
+            let fbranch = parse_sexpr(src, c, &fbranch);
+            SExpr::SIte(None, Box::new(pred), Box::new(tbranch), Box::new(fbranch))
+        }
+        "sobserve" => {
+            let a0 = parse_sanf(src, c, &n);
+            let a1 = parse_sanf(src, c, &n);
+            SExpr::SObserve((), Box::new(a0), Box::new(a1))
+        }
+
+        "sseq" => {
+            assert_children!(k, 2, n, c);
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let e0 = cs.next().unwrap();
+            let e0 = parse_sexpr(src, c, &e0);
+
+            let e1 = cs.next().unwrap();
+            let e1 = parse_sexpr(src, c, &e1);
+            SExpr::SSeq((), Box::new(e0), Box::new(e1))
+        }
+        "ssample" => {
+            assert_children!(k, 1, n, c);
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let distobj = cs.next().unwrap();
+            let distobj = parse_sanf(src, c, &distobj);
+
+            SExpr::SSample((), Box::new(distobj))
+        }
+        "sexact" => {
+            assert_children!(k, 1, n, c);
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let e = cs.next().unwrap();
+            let e = parse_eexpr(src, c, &e);
+
+            SExpr::SExact((), Box::new(e))
+        }
+        "sapp" => {
+            assert_children!(k, 2, n, c);
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let fnname = cs.next().unwrap();
+            let fnname = parse_str(src, &fnname);
+
+            let args = parse_vec(src, c, n, |a, b, c| parse_sanf(a, b, c));
+
+            SExpr::SApp((), fnname, args)
+        }
+        "slambda" => {
+            assert_children!(k, 2, n, c);
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let args = parse_vec(src, c, n, |a, b, c| parse_str(a, c));
+
+            let e = cs.next().unwrap();
+            let e = parse_sexpr(src, c, &e);
+
+            SExpr::SLambda((), args, Box::new(e))
+        }
+        "smap" => {
+            assert_children!(k, 5, n, c);
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let x = cs.next().unwrap();
+            let x = parse_str(src, &x);
+
+            let mapfn = cs.next().unwrap();
+            let mapfn = parse_sexpr(src, c, &mapfn);
+
+            let xs = cs.next().unwrap();
+            let xs = parse_sanf(src, c, &xs);
+
+            SExpr::SMap((), x, Box::new(mapfn), Box::new(xs))
+        }
+
+        "sfold" => {
+            assert_children!(k, 5, n, c);
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let init = cs.next().unwrap();
+            let init = parse_sanf(src, c, &init);
+
+            let acc = cs.next().unwrap();
+            let acc = parse_str(src, &acc);
+
+            let x = cs.next().unwrap();
+            let x = parse_str(src, &x);
+
+            let foldfn = cs.next().unwrap();
+            let foldfn = parse_sexpr(src, c, &foldfn);
+
+            let xs = cs.next().unwrap();
+            let xs = parse_sanf(src, c, &xs);
+
+            SExpr::SFold((), Box::new(init), acc, x, Box::new(foldfn), Box::new(xs))
+        }
+        s => panic!(
+            "unexpected tree-sitter node kind `{}` (#named_children: {})! Likely, you need to rebuild the tree-sitter parser\nsexp: {}", s, n.named_child_count(), n.to_sexp()
+        ),
+    }
+}
+
+#[cfg(test)]
+mod sampling_parser_tests {}

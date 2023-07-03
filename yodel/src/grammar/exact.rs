@@ -87,6 +87,7 @@ impl IsTyped<ETy> for EVal {
             EBool(_) => ETy::EBool,
             EFloat(_) => ETy::EFloat,
             EProd(vs) => ETy::EProd(vs.iter().map(|x| x.as_type()).collect_vec()),
+            EInteger(i) => ETy::EProd(vec![ETy::EBool; *i]),
         }
     }
 }
@@ -117,9 +118,14 @@ TTG!(
         ESample(<ESampleExt as ξ<X>>::Ext, Box<SExpr<X>>),
 
         // sugar: integer support
-        EDiscrete(<EDiscreteExt as ξ<X>>::Ext, Vec<f64>),     // => if-then-else chain returning a one-hot encoding
+        EDiscrete(<EDiscreteExt as ξ<X>>::Ext, Vec<Anf<X, EVal>>), // => if-then-else chain returning a one-hot encoding
         // sugar: iterate(f, init, k)
-        EIterate(<EIterateExt as ξ<X>>::Ext,String, Box<Anf<Inferable, EValSugar>>, Box<Anf<Inferable, EValSugar>>),
+        EIterate(
+            <EIterateExt as ξ<X>>::Ext,
+            String,
+            Box<Anf<X, EVal>>,
+            Box<Anf<X, EVal>>,
+        ),
     }
 );
 

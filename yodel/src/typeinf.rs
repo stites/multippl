@@ -8,8 +8,9 @@ use std::fmt::Debug;
 
 pub mod grammar {
     use super::*;
+    use crate::grammar::*;
 
-    ttg::phase!(pub struct Inferable: {
+    ::ttg::phase!(pub struct Inferable: {
         AVarExt<EVal>:Option<ETy>,
         EPrjExt:Option<ETy>,
         EProdExt:Option<ETy>,

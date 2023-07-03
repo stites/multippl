@@ -44,6 +44,10 @@ const EXPRS: &str = r"{
     SSampleExt : (),
 
     SExactExt : (),
+
+    SLetSampleExt: (),
+    EDiscreteExt: (),
+    EIterateExt: (),
 }";
 
 type TokenStream2 = proc_macro2::TokenStream;

@@ -7,61 +7,6 @@ use tree_sitter_yodel;
 use crate::grammar::*;
 
 pub mod exact;
+pub mod program;
 pub mod sampling;
-
-pub fn tree_parser(code: String) -> Option<Tree> {
-    let mut parser = Parser::new();
-    parser
-        .set_language(tree_sitter_yodel::language())
-        .expect("Error loading yodel grammar");
-    parser.parse(code, None)
-}
-// fn parse_program(src: &[u8], c: &mut TreeCursor, n: &Node) -> ProgramSugar {
-//     ProgramSugar::Exact(parse_expr(src, c, n))
-// }
-// pub fn parse(code: &str) -> Option<ProgramSugar> {
-//     let tree = tree_parser(code.to_string())?;
-//     let expr = parse_tree(code.as_bytes(), tree);
-//     Some(expr)
-// }
-
-fn parse_float_h(src: &[u8], c: &mut TreeCursor, n: Node) -> f64 {
-    let utf8 = n.utf8_text(src).unwrap();
-    let fstr = String::from_utf8(utf8.into()).unwrap();
-    fstr.parse::<f64>().unwrap()
-}
-fn parse_float(src: &[u8], c: &mut TreeCursor, n: Node) -> f64 {
-    match n.named_child_count() {
-        0 => parse_float_h(src, c, n),
-        1 => {
-            let mut c_ = c.clone();
-            let mut cs = n.named_children(&mut c_);
-            let fnode = cs.next().unwrap();
-            parse_float_h(src, c, fnode)
-        }
-        2 => panic!("impossible"),
-        3 => {
-            // division operation
-            let mut _c = c.clone();
-            let mut cs = n.named_children(&mut _c);
-
-            let l = cs.next().unwrap();
-            let l = parse_float(src, c, l);
-
-            let op = cs.next().unwrap();
-            let utf8 = op.utf8_text(src).unwrap();
-            let op = String::from_utf8(utf8.into()).unwrap();
-            assert!(
-                op == "/".to_string(),
-                "invalid program found!\nsexp: {}",
-                n.to_sexp()
-            );
-
-            let r = cs.next().unwrap();
-            let r = parse_float(src, c, r);
-
-            l / r
-        }
-        _ => panic!("unexpected"),
-    }
-}
+pub mod shared;

@@ -184,18 +184,21 @@ macro_rules! snd {
         snd!(b!(@anf $x))
     }};
     ( $x:expr ) => {{
-        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EPrj(None, 1, Box::new($x))
+        let i = $crate::EVal::EInteger(1);
+        let i = $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, $crate::EVal>::AVal((), i);
+        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EPrj(None, Box::new(i), Box::new($x))
     }};
 }
 
 #[macro_export]
 macro_rules! discrete {
         ( $( $param:expr),+ ) => {{
-            let mut params : Vec<f64> = vec![];
+            let mut params : Vec<$crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>> = vec![];
             $(
-                params.push($param);
+                let p = $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVal((), $crate::EVal::EFloat($param));
+                params.push(p);
             )+
-            $crate::grammar::discrete::from_params(&params)
+            $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EDiscrete((), params)
         }};
     }
 
@@ -216,7 +219,10 @@ macro_rules! prj {
         prj!($i, b!(@anf $x))
     }};
     ( $i:literal, $x:expr ) => {{
-        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EPrj(None, $i, Box::new($x))
+        let i = $crate::EVal::EInteger($i);
+        let i = $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, $crate::EVal>::AVal((), i);
+
+        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EPrj(None, Box::new(i), Box::new($x))
     }};
 }
 #[macro_export]
@@ -225,7 +231,9 @@ macro_rules! fst {
         fst!(b!(@anf $x))
     }};
     ( $x:expr ) => {{
-        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EPrj(None, 0, Box::new($x))
+        let i = $crate::EVal::EInteger(0);
+        let i = $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, $crate::EVal>::AVal((), i);
+        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EPrj(None, Box::new(i), Box::new($x))
     }};
 }
 #[macro_export]
@@ -273,17 +281,28 @@ macro_rules! observe {
 #[macro_export]
 macro_rules! flip {
     ( $num:literal / $denom:literal) => {{
-        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EFlip(
+        let n = $crate::Anf::AVal::<$crate::typeinf::grammar::Inferable, $crate::EVal>(
             (),
-            $num as f64 / $denom as f64,
-        )
+            $crate::EVal::EInteger($num),
+        );
+        let d = $crate::Anf::AVal::<$crate::typeinf::grammar::Inferable, $crate::EVal>(
+            (),
+            $crate::EVal::EInteger($denom),
+        );
+        let p = $crate::Anf::Div::<$crate::typeinf::grammar::Inferable, $crate::EVal>(
+            Box::new(n),
+            Box::new(d),
+        );
+        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EFlip((), Box::new(p))
     }};
-    ( $p:literal ) => {{
-        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EFlip((), $p)
-    }};
-    (@ $p:expr ) => {{
-        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EFlip((), $p)
-    }};
+    ( $p:expr ) => {{
+        let p = $crate::EVal::EFloat($p);
+        let p =
+            $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, $crate::EVal>::AVal((), p);
+        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EFlip((), Box::new(p))
+    }}; // (@ $p:expr ) => {{
+        //     $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EFlip((), $p)
+        // }};
 }
 #[macro_export]
 macro_rules! bern {

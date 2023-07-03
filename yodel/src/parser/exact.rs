@@ -1,9 +1,10 @@
 use crate::grammar::*;
-use crate::typeinf::grammar::{AnfInferable, EExprInferable, ProgramInferable};
+use crate::typeinf::grammar::{AnfInferable, EExprInferable, Inferable, ProgramInferable};
 use itertools::Itertools;
 use std::collections::VecDeque;
 use tree_sitter::*;
 
+use super::shared::*;
 use super::*;
 use tree_sitter_yodel;
 
@@ -31,14 +32,14 @@ macro_rules! assert_children {
 //   prec.left(5, seq($.bool_unop, $.anf)),
 // ),
 
-fn parse_anf_child_h(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable<EVal> {
+fn parse_anf_child_h(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EVal> {
     let mut c_ = c.clone();
     let mut cs = n.named_children(&mut c_);
     let a = cs.next().unwrap();
     parse_anf(src, c, a)
 }
 
-fn parse_anf(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable<EVal> {
+fn parse_anf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EVal> {
     match n.named_child_count() {
         0 => parse_anf_enode(src, c, n),
         1 => parse_anf_child_h(src, c, n),
@@ -70,33 +71,25 @@ fn parse_anf(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable<EVal> {
             let op = cs.next().unwrap();
             let utf8 = op.utf8_text(src).unwrap();
             let op = String::from_utf8(utf8.into()).unwrap();
-            assert!(
-                op == "&&".to_string() || op == "||".to_string(),
-                "invalid program found!\nsexp: {}",
-                n.to_sexp()
-            );
 
             let r = cs.next().unwrap();
             let r = parse_anf(src, c, r);
-
-            if op == "&&".to_string() {
-                Anf::And(Box::new(l), Box::new(r))
-            } else {
-                Anf::Or(Box::new(l), Box::new(r))
+            match op.as_str() {
+                "&&" => Anf::And(Box::new(l), Box::new(r)),
+                "||" => Anf::Or(Box::new(l), Box::new(r)),
+                "/" => Anf::Div(Box::new(l), Box::new(r)),
+                "*" => Anf::Mult(Box::new(l), Box::new(r)),
+                "+" => Anf::Plus(Box::new(l), Box::new(r)),
+                "-" => Anf::Minus(Box::new(l), Box::new(r)),
+                _ => panic!("invalid program found!\nsexp: {}", n.to_sexp()),
             }
         }
         _ => panic!("invalid program found!\nsexp: {}", n.to_sexp()),
     }
 }
 
-fn parse_anf_enode(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable<EVal> {
-    let k = n.kind();
-    match k {
-        "identifier" => {
-            let utf8 = n.utf8_text(src).unwrap();
-            let var = String::from_utf8(utf8.into()).unwrap();
-            Anf::AVar(None, var)
-        }
+fn parse_eval(src: &[u8], c: &mut TreeCursor, n: Node) -> EVal {
+    match n.kind() {
         "bool" => {
             let utf8 = n.utf8_text(src).unwrap();
             let var = String::from_utf8(utf8.into()).unwrap();
@@ -107,50 +100,88 @@ fn parse_anf_enode(src: &[u8], c: &mut TreeCursor, n: Node) -> AnfInferable<EVal
             } else {
                 panic!("impossible")
             };
-            Anf::AVal((), EVal::EBool(b))
+            EVal::EBool(b)
         }
-        _ => panic!("invalid program found!\nsexp: {}", n.to_sexp()),
+        "int" => {
+            let utf8 = n.utf8_text(src).unwrap();
+            let istr = String::from_utf8(utf8.into()).unwrap();
+            let ix = istr.parse::<usize>().unwrap();
+            EVal::EInteger(ix)
+        }
+        "float" => {
+            let utf8 = n.utf8_text(src).unwrap();
+            let istr = String::from_utf8(utf8.into()).unwrap();
+            let x = istr.parse::<f64>().unwrap();
+            EVal::EFloat(x)
+        }
+        _ => panic!("invalid value! found sexp:\n{}", n.to_sexp()),
+    }
+}
+fn parse_anf_enode(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EVal> {
+    let k = n.kind();
+    match k {
+        "identifier" => {
+            let utf8 = n.utf8_text(src).unwrap();
+            let var = String::from_utf8(utf8.into()).unwrap();
+            Anf::AVar(None, var)
+        }
+        _ => {
+            if k == "bool" || k == "float" || k == "int" {
+                let eval = parse_eval(src, c, n);
+                Anf::AVal((), eval)
+            } else {
+                panic!("invalid anf! found sexp:\n{}", n.to_sexp())
+            }
+        }
     }
 }
 
-fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ESugar {
+pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable> {
     use EExpr::*;
     use SExpr::SExact;
+    assert_eq!(n.kind(), "eexpr");
+    let mut c_ = c.clone();
+    let mut cs = n.named_children(&mut c_);
+    let n = cs.next().unwrap();
+
     let k = n.kind();
     match k {
-        "anf" => {
+        "eexpr" => {
+            // made it to a nested paren! run again
+            parse_eexpr(src, c, &n)
+        }
+        "eanf" => {
             println!("{}", n.to_sexp());
-            let anf = parse_anf(src, c, *n);
-            ESugar::Prim(EAnf((), Box::new(anf)))
+            let anf = parse_anf(src, c, n);
+            EExpr::EAnf((), Box::new(anf))
         }
-        "fst" => {
+        "efst" => {
             let mut c_ = c.clone();
             let mut cs = n.named_children(&mut c_);
             let anf = cs.next().unwrap();
             let anf = parse_anf(src, c, anf);
-            ESugar::Prim(EPrj(None, 0, Box::new(anf)))
+            EExpr::EPrj(None, Box::new(Anf::AVal((), EVal::EInteger(0))), Box::new(anf))
         }
-        "snd" => {
+        "esnd" => {
             let mut c_ = c.clone();
             let mut cs = n.named_children(&mut c_);
             let anf = cs.next().unwrap();
             let anf = parse_anf(src, c, anf);
-            ESugar::Prim(EPrj(None, 1, Box::new(anf)))
+            EExpr::EPrj(None, Box::new(Anf::AVal((), EVal::EInteger(1))), Box::new(anf))
         }
-        "prj" => {
+        "eprj" => {
             let mut c_ = c.clone();
             let mut cs = n.named_children(&mut c_);
 
-            let i = cs.next().unwrap();
-            let utf8 = i.utf8_text(src).unwrap();
-            let istr = String::from_utf8(utf8.into()).unwrap();
-            let ix = istr.parse::<usize>().unwrap();
+            let ix = cs.next().unwrap();
+            let ix = parse_anf(src, c, ix);
 
             let anf = cs.next().unwrap();
             let anf = parse_anf(src, c, anf);
-            ESugar::Prim(EPrj(None, ix, Box::new(anf)))
+
+            EExpr::EPrj(None, Box::new(ix), Box::new(anf))
         }
-        "prod" => {
+        "eprod" => {
             let mut anfs = vec![];
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
@@ -159,20 +190,32 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ESugar {
                 let a = parse_anf(src, c, a);
                 anfs.push(a);
             }
-            ESugar::Prim(EProd(None, anfs))
+            EExpr::EProd(None, anfs)
         }
-        "discrete" => {
+        "eapp" => {
+            assert_children!(k, 2, n, c);
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let fnname = cs.next().unwrap();
+            let fnname = parse_str(src, &fnname);
+
+            let args = parse_vec(src, c, n, |a, b, c| parse_anf(a, b, *c));
+
+            EExpr::EApp(None, fnname, args)
+        }
+        "ediscrete" => {
             let mut params = vec![];
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
             for _ in 0..n.named_child_count() {
                 let n = cs.next().unwrap();
-                let f = parse_float(src, &mut c.clone(), n);
+                let f = parse_anf(src, &mut c.clone(), n);
                 params.push(f);
             }
-            ESugar::Discrete(params)
+            EExpr::EDiscrete((), params)
         }
-        "let_binding" => {
+        "elet" => {
             println!("{}", n.to_sexp());
             assert_children!(k, 3, n, c);
             let mut _c = c.clone();
@@ -183,13 +226,13 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ESugar {
             let ident = String::from_utf8(utf8.into()).unwrap();
 
             let bindee = cs.next().unwrap();
-            let bindee = parse_expr(src, c, &bindee);
+            let bindee = parse_eexpr(src, c, &bindee);
 
             let body = cs.next().unwrap();
-            let body = parse_expr(src, c, &body);
-            ESugar::LetIn(ident, Box::new(bindee), Box::new(body))
+            let body = parse_eexpr(src, c, &body);
+            EExpr::ELetIn(None, ident, Box::new(bindee), Box::new(body))
         }
-        "ite_binding" => {
+        "eite" => {
             println!("{}", n.to_sexp());
             assert_children!(k, 3, n, c);
             let mut _c = c.clone();
@@ -199,28 +242,45 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ESugar {
             let pred = parse_anf(src, c, pred);
 
             let tbranch = cs.next().unwrap();
-            let tbranch = parse_expr(src, c, &tbranch);
+            let tbranch = parse_eexpr(src, c, &tbranch);
 
             let fbranch = cs.next().unwrap();
-            let fbranch = parse_expr(src, c, &fbranch);
-            ESugar::Ite(Box::new(pred), Box::new(tbranch), Box::new(fbranch))
+            let fbranch = parse_eexpr(src, c, &fbranch);
+            EExpr::EIte(None, Box::new(pred), Box::new(tbranch), Box::new(fbranch))
         }
-        "flip" => {
+        "eflip" => {
             println!("{}", n.to_sexp());
-            let f = parse_anf(src, c, *n);
-            ESugar::Prim(EFlip((), Box::new(f)))
+            let f = parse_anf(src, c, n);
+            EExpr::EFlip((), Box::new(f))
         }
-        "observe" => {
-            let anf = parse_anf(src, c, *n);
-            ESugar::Prim(EObserve((), Box::new(anf)))
+        "eobserve" => {
+            let anf = parse_anf(src, c, n);
+            EExpr::EObserve((), Box::new(anf))
         }
-        "sample" => {
+        "esample" => {
             println!("{}", n.to_sexp());
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
             let subp = cs.next().unwrap();
-            let e = parse_expr(src, c, &subp);
-            ESugar::Sample(Box::new(SSugar::Exact(Box::new(e))))
+            let sexpr = super::sampling::parse_sexpr(src, c, &subp);
+            EExpr::ESample((), Box::new(sexpr))
+        }
+        "eiterate" => {
+            println!("{}", n.to_sexp());
+            assert_children!(k, 3, n, c);
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let ident = cs.next().unwrap();
+            let utf8 = ident.utf8_text(src).unwrap();
+            let ident = String::from_utf8(utf8.into()).unwrap();
+
+            let init = cs.next().unwrap();
+            let init = parse_anf(src, c, init);
+
+            let niters = cs.next().unwrap();
+            let niters = parse_anf(src, c, niters);
+            EExpr::EIterate((), ident, Box::new(init), Box::new(niters))
         }
         s => panic!(
             "unexpected tree-sitter node kind `{}` (#named_children: {})! Likely, you need to rebuild the tree-sitter parser\nsexp: {}", s, n.named_child_count(), n.to_sexp()
@@ -228,51 +288,29 @@ fn parse_expr(src: &[u8], c: &mut TreeCursor, n: &Node) -> ESugar {
     }
 }
 
-pub fn parse_tree(src: &[u8], t: Tree) -> ESugar {
-    // https://docs.rs/tree-sitter/latest/tree_sitter/struct.TreeTreeCursor.html
-    let mut c = t.walk();
-    let source = c.node();
-    assert_eq!(
-        source.named_child_count(),
-        1,
-        "expected one root in {:?}\nsexpr: {}",
-        source,
-        source.to_sexp(),
-    );
-    let mut c_ = c.clone();
-    let mut cs = source.named_children(&mut c_);
-    let root = cs.next().unwrap();
-    parse_expr(src, &mut c, &root)
-}
-
 #[cfg(test)]
-mod exact_parser_tests {
+mod tests {
     use super::*;
+    use crate::parser::program::parse;
     use crate::*;
     use std::any::TypeId;
 
-    fn parse(code: &str) -> Option<ProgramSugar> {
-        let tree = tree_parser(code.to_string())?;
-        let expr = parse_tree(code.as_bytes(), tree);
-        Some(expr)
-    }
-
     #[test]
     fn parse_anf() {
-        assert_eq!(parse(r#"true"#).unwrap().desugar(), program!(b!(true)));
-        assert_eq!(parse(r#"false"#).unwrap().desugar(), program!(b!(false)));
-        assert_eq!(parse(r#"x"#).unwrap().desugar(), program!(b!("x")));
-        assert_eq!(parse(r#"!a"#).unwrap().desugar(), program!(anf!(not!("a"))));
+        assert_eq!(parse(r#"exact {true}"#).unwrap(), program!(b!(true)));
+        assert_eq!(parse(r#"exact {false}"#).unwrap(), program!(b!(false)));
+        assert_eq!(parse(r#"exact {x}"#).unwrap(), program!(b!("x")));
+        assert_eq!(parse(r#"exact {!a}"#).unwrap(), program!(anf!(not!("a"))));
         assert_eq!(
-            parse(r#"a && b"#).unwrap().desugar(),
+            parse(r#"exact {a && b}"#).unwrap(),
             program!(b!("a" && "b"))
         );
         assert_eq!(
-            parse(r#"a || b"#).unwrap().desugar(),
+            parse(r#"exact {a || b}"#).unwrap(),
             program!(b!("a" || "b"))
         );
         assert_eq!(
-            parse(r#"a && b && c"#).unwrap().desugar(),
+            parse(r#"exact { a && b && c }"#).unwrap(),
             program!(b!("a" && "b" && "c"))
         );
     }
@@ -280,19 +318,21 @@ mod exact_parser_tests {
     #[test]
     fn prods() {
         assert_eq!(
-            parse(r#"(a, b, c)"#).unwrap().desugar(),
+            parse(r#"exact { (a, b, c) }"#).unwrap(),
             program!(b!("a", "b", "c"))
         );
         assert_eq!(
-            parse(r#"let x = (a, b) in fst x"#).unwrap().desugar(),
+            parse(r#"exact { let x = (a, b) in fst x }"#).unwrap(),
             program!(lets!["x" ;= b!("a", "b"); ...? fst!("x")])
         );
         assert_eq!(
-            parse(r#"let x = (a, b) in snd x"#).unwrap().desugar(),
+            parse(r#"exact { let x = (a, b) in snd x }"#).unwrap(),
             program!(lets!["x" ;= b!("a", "b"); ...? snd!("x")])
         );
+        let p = parse(r#"exact { let x = (a, b) in (prj 0 x) }"#).unwrap();
+        println!("{:?}", p);
         assert_eq!(
-            parse(r#"let x = (a, b) in (prj 0 x)"#).unwrap().desugar(),
+            parse(r#"exact { let x = (a, b) in (prj 0 x) }"#).unwrap(),
             program!(lets!["x" ;= b!("a", "b"); ...? prj!(0, "x")])
         );
     }
@@ -300,31 +340,39 @@ mod exact_parser_tests {
     #[test]
     fn one_ite() {
         assert_eq!(
-            parse(r#"if true then x else y"#).unwrap().desugar(),
+            parse(r#"exact {if true then x else y}"#).unwrap(),
             program!(ite!( if ( b!(true) ) then { b!("x")  } else { b!("y") } ))
         );
     }
 
-    /// ======================
-    /// exact: trivial
-    /// ======================
-    ///
-    /// let x = true in
-    /// x
-    ///
-    /// ---
-    ///
-    /// (source_file
-    ///   (let_binding
-    ///     (identifier)
-    ///     (anf (bool))
-    ///   (anf (identifier))))
+    // ======================
+    // exact: untyped trivial
+    // ======================
+    //
+    // exact {
+    //   let x = true in x
+    // }
+    //
+    // ---
+    //
+    //     (source_file
+    //       (program
+    //         (eexpr
+    //           (elet
+    //             (identifier)
+    //             (eexpr
+    //               (eanf
+    //                 (evalue
+    //                   (bool))))
+    //             (eexpr
+    //               (eanf
+    //                 (identifier)))))))
     #[test]
     fn one_let() {
-        let code = r#"let x = true in x"#;
+        let code = r#"exact { let x = true in x }"#;
         let expr = parse(code);
         assert_eq!(
-            expr.unwrap().desugar(),
+            expr.unwrap(),
             program!(lets!["x" ;= b!("true"); in var!("x")])
         );
     }
@@ -344,12 +392,12 @@ mod exact_parser_tests {
     #[test]
     fn one_untyped_flip() {
         assert_eq!(
-            parse(r#"let x = flip 0.5 in x"#).unwrap().desugar(),
+            parse(r#"exact { let x = flip 0.5 in x }"#).unwrap(),
             program!(lets!["x" ;= flip!(0.5); in var!("x")])
         );
         assert_eq!(
-            parse(r#"let x = flip (1/3) in x"#).unwrap().desugar(),
-            program!(lets!["x" ;= flip!(1.0/3.0); in var!("x")])
+            parse(r#"exact { let x = flip (1/3) in x }"#).unwrap(),
+            program!(lets!["x" ;= flip!(1/3); in var!("x")])
         );
     }
 
@@ -378,17 +426,18 @@ mod exact_parser_tests {
     ///   (anf (identifier))))))
     #[test]
     fn observed_two_flips() {
-        let code = r#"
-        let x = flip 0.3333 in
-        let y = flip 1/4 in
-        let _ = observe (x || y) in
-        x"#;
+        let code = r#"exact {
+          let x = flip 0.3333 in
+          let y = flip 1/4 in
+          let _ = observe (x || y) in
+          x
+        }"#;
         let expr = parse(code);
         assert_eq!(
-            expr.unwrap().desugar(),
+            expr.unwrap(),
             program!(lets![
                 "x" ;= flip!(0.3333);
-                "y" ;= flip!(1.0/4.0);
+                "y" ;= flip!(1/4);
                 "_" ;= observe!(b!("x" || "y"));
                 ...? b!("x")])
         );
@@ -418,17 +467,18 @@ mod exact_parser_tests {
     ///   (anf (identifier))))))
     #[test]
     fn observed_two_flips_with_sample() {
-        let code = r#"
-        let x = sample (flip 1/3) in
-        let y = flip 1/4 in
-        let _ = observe (x || y) in
-        x"#;
+        let code = r#"exact {
+          let x = sample { bern(1/3) } in
+          let y = flip 1/4 in
+          let _ = observe (x || y) in
+          x
+        }"#;
         let expr = parse(code);
         assert_eq!(
-            expr.unwrap().desugar(),
+            expr.unwrap(),
             program!(lets![
-                "x" ;= sample!(flip!(1.0/3.0));
-                "y" ;= flip!(1.0/4.0);
+                "x" ;= sample!(flip!(1/3));
+                "y" ;= flip!(1/4);
                 "_" ;= observe!(b!("x" || "y"));
                 ...? b!("x")])
         );
@@ -450,9 +500,9 @@ mod exact_parser_tests {
     #[test]
     fn discrete_3_arg() {
         let code = r#"
-        discrete(0, 0.2, 1.5)
+        exact { discrete(0., 0.2, 1.5) }
         "#;
         let expr = parse(code);
-        assert_eq!(expr.unwrap().desugar(), program!(discrete![0.0, 0.2, 1.5]));
+        assert_eq!(expr.unwrap(), program!(discrete![0.0, 0.2, 1.5]));
     }
 }

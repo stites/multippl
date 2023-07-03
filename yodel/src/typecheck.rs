@@ -1,12 +1,12 @@
+use self::grammar::*;
 use crate::data::CompileError;
 use crate::grammar::*;
-use grammar::*;
 use std::fmt::Debug;
 
 pub mod grammar {
     use super::*;
 
-    ttg::phase!(pub struct Typed: {
+    ::ttg::phase!(pub struct Typed: {
         AVarExt<EVal>:ETy,
         EPrjExt:ETy,
         EProdExt:ETy,
@@ -17,7 +17,7 @@ pub mod grammar {
         SLetInExt: LetInTypes<STy>,
         SIteExt: STy,
     });
-    ttg::alias!(Typed + (Program, EExpr, SExpr, Anf<Var>));
+    ::ttg::alias!(Typed + (Program, EExpr, SExpr, Anf<Var>));
 
     #[derive(Debug, PartialEq, Clone)]
     pub struct LetInTypes<T> {
