@@ -8,12 +8,18 @@ exact {
 
 ---
 
-(source_file
-  (program
-    (elet
-      (identifier)
-      (eanf (bool))
-    (eanf (identifier)))))
+    (source_file
+      (program
+        (eexpr
+          (elet
+            (identifier)
+            (eexpr
+              (eanf
+                (evalue
+                  (bool))))
+            (eexpr
+              (eanf
+                (identifier)))))))
 
 ======================
 exact: typed trivial
@@ -27,13 +33,11 @@ exact {
 ---
 
 (source_file
-  (program
-    (elet
-      (identifier)
-      (ety (tyBool))
-      (eanf (bool))
-    (eann (eanf (identifier)) (ety (tyBool))))))
-
+  (program (eexpr
+      (elet (identifier) (ety (tyBool))
+        (eexpr (eanf (evalue (bool))))
+        (eexpr (eann (eexpr (eanf (identifier)))
+            (ety (tyBool))))))))
 ======================
 exact: FIXME!!! trivial with extra annotation (not sure if types are going to the right places)
 ======================
@@ -45,17 +49,13 @@ exact {
 
 ---
 
-
-(source_file
-  (program
-    (elet
-      (identifier)
-      (ety (tyBool))
-      (eanf (bool))
-    (eann
-      (eann (eanf (identifier)) (ety (tyBool)))
-       (ety (tyBool))))))
-
+(source_file (program (eexpr
+      (elet (identifier) (ety (tyBool))
+        (eexpr (eanf (evalue (bool))))
+        (eexpr (eann (eexpr (eexpr
+                     (eann (eexpr (eanf (identifier)))
+                     (ety (tyBool)))))
+               (ety (tyBool))))))))
 
 ======================
 exact: trivial with extra product annotation
@@ -68,14 +68,12 @@ exact {
 
 ---
 
-(source_file
-(program
-  (elet
-    (identifier) (ety (tyBool))
-    (eanf (bool))
-    (eann (eann (eanf (identifier)) (ety (tyProd (ety (tyBool)) (ety (tyBool))))) (ety (tyProd (ety (tyBool)) (ety (tyBool)) (ety (tyBool))))) ))
-)
-
+(source_file (program (eexpr
+      (elet (identifier) (ety (tyBool))
+        (eexpr (eanf (evalue (bool))))
+        (eexpr (eann (eexpr (eexpr (eann (eexpr (eanf (identifier)))
+                  (ety (tyProd (ety (tyBool)) (ety (tyBool)))))))
+            (ety (tyProd (ety (tyBool)) (ety (tyBool)) (ety (tyBool))))))))))
 ======================
 exact: one typed flip
 ======================
@@ -91,14 +89,34 @@ exact {
 
 (source_file
   (program
-    (elet
-      (identifier)
-      (ety (tyBool))
-      (eflip (eanf (eanf (eanf (float)) (numeric_op) (eanf (float)))))
-    (eann
-      (eann (eanf (identifier)) (ety (tyBool)))
-       (ety (tyBool))))))
-
+    (eexpr
+      (elet
+        (identifier)
+        (ety
+          (tyBool))
+        (eexpr
+          (eflip
+            (eanf
+              (eanf
+                (eanf
+                  (evalue
+                    (float)))
+                (numeric_op)
+                (eanf
+                  (evalue
+                    (float)))))))
+        (eexpr
+          (eann
+            (eexpr
+              (eexpr
+                (eann
+                  (eexpr
+                    (eanf
+                      (identifier)))
+                  (ety
+                    (tyBool)))))
+            (ety
+              (tyBool))))))))
 
 ======================
 exact: one untyped flip
@@ -111,15 +129,25 @@ exact {
 
 ---
 
-
 (source_file
   (program
-    (elet
-      (identifier)
-      (eflip (eanf (eanf (eanf (int)) (numeric_op) (eanf (int)))))
-      (eanf (identifier))
-       )))
-
+    (eexpr
+      (elet
+        (identifier)
+        (eexpr
+          (eflip
+            (eanf
+              (eanf
+                (eanf
+                  (evalue
+                    (float)))
+                (numeric_op)
+                (eanf
+                  (evalue
+                    (float)))))))
+        (eexpr
+          (eanf
+            (identifier)))))))
 
 ======================
 exact: one flip needs inference
@@ -131,13 +159,26 @@ exact {
 ---
 
 (source_file
- (program
-  (elet
-    (identifier) (ety (tyBool))
-    (eflip (eanf (eanf (eanf (int)) (numeric_op) (eanf (int)))))
-  (eanf (identifier))
-  )))
-
+  (program
+    (eexpr
+      (elet
+        (identifier)
+        (ety
+          (tyBool))
+        (eexpr
+          (eflip
+            (eanf
+              (eanf
+                (eanf
+                  (evalue
+                    (float)))
+                (numeric_op)
+                (eanf
+                  (evalue
+                    (float)))))))
+        (eexpr
+          (eanf
+            (identifier)))))))
 
 ======================
 exact: two flips untyped
@@ -151,15 +192,38 @@ exact {
 
 ---
 
-(source_file
- (program
-  (elet (identifier) (eflip (eanf (float)))
-   (elet (identifier) (eflip (eanf (eanf (int)) (numeric_op) (eanf (int))))
-    (eanf (eanf (identifier)) (bool_biop) (eanf (identifier)))
-   )
-  )
- )
-)
+
+    (source_file
+      (program
+        (eexpr
+          (elet
+            (identifier)
+            (eexpr
+              (eflip
+                (eanf
+                  (evalue
+                    (float)))))
+            (eexpr
+              (elet
+                (identifier)
+                (eexpr
+                  (eflip
+                    (eanf
+                      (eanf
+                        (evalue
+                          (float)))
+                      (numeric_op)
+                      (eanf
+                        (evalue
+                          (float))))))
+                (eexpr
+                  (eanf
+                    (eanf
+                      (identifier))
+                    (bool_biop)
+                    (eanf
+                      (identifier))))))))))
+
 
 ===========================
 exact: observed two flips
@@ -175,19 +239,44 @@ exact {
 ---
 
 
-(source_file
- (program
-  (elet
-    (identifier)
-    (eflip (eanf (float)))
-  (elet
-    (identifier)
-    (eflip (eanf (eanf (int)) (numeric_op) (eanf (int))))
-  (elet
-    (identifier)
-    (eobserve (eanf (eanf (eanf (identifier)) (bool_biop) (eanf (identifier)))))
-  (eanf (identifier)))))))
-
+    (source_file
+      (program
+        (eexpr
+          (elet
+            (identifier)
+            (eexpr
+              (eflip
+                (eanf
+                  (evalue
+                    (float)))))
+            (eexpr
+              (elet
+                (identifier)
+                (eexpr
+                  (eflip
+                    (eanf
+                      (eanf
+                        (evalue
+                          (float)))
+                      (numeric_op)
+                      (eanf
+                        (evalue
+                          (float))))))
+                (eexpr
+                  (elet
+                    (identifier)
+                    (eexpr
+                      (eobserve
+                        (eanf
+                          (eanf
+                            (eanf
+                              (identifier))
+                            (bool_biop)
+                            (eanf
+                              (identifier))))))
+                    (eexpr
+                      (eanf
+                        (identifier)))))))))))
 
 ======================
 exact(hybrid): observed two flips
@@ -202,18 +291,55 @@ exact {
 
 ---
 
-(source_file
-  (program
-    (elet
-      (identifier)
-      (esample (ssample (sanf (sbern (sanf (sanf (int)) (numeric_op) (sanf (int)))))))
-    (elet
-      (identifier)
-      (eflip (eanf (eanf (int)) (numeric_op) (eanf (int))))
-    (elet
-      (identifier)
-      (eobserve (eanf (eanf (eanf (identifier)) (bool_biop) (eanf (identifier)))))
-    (eanf (identifier)))))))
+
+    (source_file
+      (program
+        (eexpr
+          (elet
+            (identifier)
+            (eexpr
+              (esample
+                (sexpr
+                  (ssample
+                    (sanf
+                      (svalue
+                        (sbern
+                          (sanf
+                            (sanf
+                              (svalue
+                                (float)))
+                            (numeric_op)
+                            (sanf
+                              (svalue
+                                (float)))))))))))
+            (eexpr
+              (elet
+                (identifier)
+                (eexpr
+                  (eflip
+                    (eanf
+                      (eanf
+                        (evalue
+                          (float)))
+                      (numeric_op)
+                      (eanf
+                        (evalue
+                          (float))))))
+                (eexpr
+                  (elet
+                    (identifier)
+                    (eexpr
+                      (eobserve
+                        (eanf
+                          (eanf
+                            (eanf
+                              (identifier))
+                            (bool_biop)
+                            (eanf
+                              (identifier))))))
+                    (eexpr
+                      (eanf
+                        (identifier)))))))))))
 
 ======================
 exact: discrete zero is invalid
@@ -224,11 +350,13 @@ exact {
 }
 
 ---
+
 (source_file
   (program
+    (eexpr
       (ediscrete
         (eanf
-          (MISSING identifier)))))
+          (MISSING identifier))))))
 
 ======================
 exact: discrete 1 arg
@@ -240,11 +368,13 @@ exact {
 
 ---
 
-(source_file
-  (program
-    (ediscrete
-      (eanf
-        (float)))))
+    (source_file
+      (program
+        (eexpr
+          (ediscrete
+            (eanf
+              (evalue
+                (float)))))))
 
 ======================
 exact: discrete 3 arg
@@ -256,14 +386,19 @@ exact {
 
 ---
 
-
-(source_file
-  (program
-      (ediscrete
-        (eanf (float))
-        (eanf (float))
-        (eanf (float))
-        )))
+    (source_file
+      (program
+        (eexpr
+          (ediscrete
+            (eanf
+              (evalue
+                (float)))
+            (eanf
+              (evalue
+                (float)))
+            (eanf
+              (evalue
+                (float)))))))
 
 ======================
 exact: bounded iteration
@@ -276,13 +411,15 @@ exact {
 ---
 
 
-(source_file
-  (program
-      (eiterate
-        (identifier)
-        (eanf (identifier))
-        (eanf (identifier))
-        )))
+    (source_file
+      (program
+        (eexpr
+          (eiterate
+            (identifier)
+            (eanf
+              (identifier))
+            (eanf
+              (identifier))))))
 
 ==================
 exact: diamond network
@@ -301,29 +438,97 @@ exact {
 }
 ---------
 
-(source_file
-  (program
-    (efun
-      (identifier)
-      (eargs (identifier) (ety (tyBool)))
-      (ety (tyBool))
-    (elet (identifier) (eflip (eanf (float)))
-    (elet (identifier)
-          (eite (eanf (identifier)) (eanf (identifier)) (eanf (bool)))
-    (elet (identifier)
-          (eite (eanf (identifier)) (eanf (bool)) (eanf (identifier)))
-    (elet (identifier) (eflip (eanf (float)))
-          (eanf (eanf (identifier))
-                (bool_biop)
-                (eanf (eanf (eanf (identifier))
-                    (bool_biop)
-                    (eanf (bool_unop) (eanf (identifier)))))))))))
-
-
-    (program
-      (elet (identifier) (eapp (identifier) (eanf (bool)))
-      (elet (identifier) (eapp (identifier) (eanf (identifier)))
-      (eapp (identifier) (eanf (identifier))))))))
+    (source_file
+      (program
+        (efun
+          (identifier)
+          (eargs
+            (identifier)
+            (ety
+              (tyBool)))
+          (ety
+            (tyBool))
+          (eexpr
+            (elet
+              (identifier)
+              (eexpr
+                (eflip
+                  (eanf
+                    (evalue
+                      (float)))))
+              (eexpr
+                (elet
+                  (identifier)
+                  (eexpr
+                    (eite
+                      (eanf
+                        (identifier))
+                      (eexpr
+                        (eanf
+                          (identifier)))
+                      (eexpr
+                        (eanf
+                          (evalue
+                            (bool))))))
+                  (eexpr
+                    (elet
+                      (identifier)
+                      (eexpr
+                        (eite
+                          (eanf
+                            (identifier))
+                          (eexpr
+                            (eanf
+                              (evalue
+                                (bool))))
+                          (eexpr
+                            (eanf
+                              (identifier)))))
+                      (eexpr
+                        (elet
+                          (identifier)
+                          (eexpr
+                            (eflip
+                              (eanf
+                                (evalue
+                                  (float)))))
+                          (eexpr
+                            (eanf
+                              (eanf
+                                (identifier))
+                              (bool_biop)
+                              (eanf
+                                (eanf
+                                  (eanf
+                                    (identifier))
+                                  (bool_biop)
+                                  (eanf
+                                    (bool_unop)
+                                    (eanf
+                                      (identifier))))))))))))))))
+        (program
+          (eexpr
+            (elet
+              (identifier)
+              (eexpr
+                (eapp
+                  (identifier)
+                  (eanf
+                    (evalue
+                      (bool)))))
+              (eexpr
+                (elet
+                  (identifier)
+                  (eexpr
+                    (eapp
+                      (identifier)
+                      (eanf
+                        (identifier))))
+                  (eexpr
+                    (eapp
+                      (identifier)
+                      (eanf
+                        (identifier)))))))))))
 
 ==================
 exact(hybrid): arrival problem on diamond-network
@@ -341,25 +546,92 @@ exact {
 }
 ---------
 
-
-(source_file
-  (program
-    (efun
-      (identifier)
-      (eargs (identifier) (ety (tyBool)))
-      (ety (tyBool))
-    (elet (identifier) (eflip (eanf (float)))
-    (elet (identifier)
-          (eite (eanf (identifier)) (eanf (identifier)) (eanf (bool)))
-    (elet (identifier)
-          (eite (eanf (identifier)) (eanf (bool)) (eanf (identifier)))
-    (elet (identifier) (eflip (eanf (float)))
-          (eanf (eanf (identifier))
-                (bool_biop)
-                (eanf (eanf (eanf (identifier))
-                    (bool_biop)
-                    (eanf (bool_unop) (eanf (identifier)))))))))))
-
-    (program
-      (elet (identifier) (esample (sanf (spoisson (sanf (float)))))
-      (eiterate (identifier) (eanf (bool)) (eanf (identifier)))))))
+    (source_file
+      (program
+        (efun
+          (identifier)
+          (eargs
+            (identifier)
+            (ety
+              (tyBool)))
+          (ety
+            (tyBool))
+          (eexpr
+            (elet
+              (identifier)
+              (eexpr
+                (eflip
+                  (eanf
+                    (evalue
+                      (float)))))
+              (eexpr
+                (elet
+                  (identifier)
+                  (eexpr
+                    (eite
+                      (eanf
+                        (identifier))
+                      (eexpr
+                        (eanf
+                          (identifier)))
+                      (eexpr
+                        (eanf
+                          (evalue
+                            (bool))))))
+                  (eexpr
+                    (elet
+                      (identifier)
+                      (eexpr
+                        (eite
+                          (eanf
+                            (identifier))
+                          (eexpr
+                            (eanf
+                              (evalue
+                                (bool))))
+                          (eexpr
+                            (eanf
+                              (identifier)))))
+                      (eexpr
+                        (elet
+                          (identifier)
+                          (eexpr
+                            (eflip
+                              (eanf
+                                (evalue
+                                  (float)))))
+                          (eexpr
+                            (eanf
+                              (eanf
+                                (identifier))
+                              (bool_biop)
+                              (eanf
+                                (eanf
+                                  (eanf
+                                    (identifier))
+                                  (bool_biop)
+                                  (eanf
+                                    (bool_unop)
+                                    (eanf
+                                      (identifier))))))))))))))))
+        (program
+          (eexpr
+            (elet
+              (identifier)
+              (eexpr
+                (esample
+                  (sexpr
+                    (sanf
+                      (svalue
+                        (spoisson
+                          (sanf
+                            (svalue
+                              (float)))))))))
+              (eexpr
+                (eiterate
+                  (identifier)
+                  (eanf
+                    (evalue
+                      (bool)))
+                  (eanf
+                    (identifier)))))))))

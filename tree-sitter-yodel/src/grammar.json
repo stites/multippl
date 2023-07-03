@@ -22,7 +22,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_eexpr"
+              "name": "eexpr"
             },
             {
               "type": "STRING",
@@ -43,7 +43,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_sexpr"
+              "name": "sexpr"
             },
             {
               "type": "STRING",
@@ -270,7 +270,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "_sexpr"
+          "name": "sexpr"
         },
         {
           "type": "STRING",
@@ -311,7 +311,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "_eexpr"
+          "name": "eexpr"
         },
         {
           "type": "STRING",
@@ -319,7 +319,7 @@
         }
       ]
     },
-    "_eexpr": {
+    "eexpr": {
       "type": "CHOICE",
       "members": [
         {
@@ -394,7 +394,7 @@
               },
               {
                 "type": "SYMBOL",
-                "name": "_eexpr"
+                "name": "eexpr"
               },
               {
                 "type": "STRING",
@@ -606,7 +606,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "index"
+              "name": "eanf"
             },
             {
               "type": "SYMBOL",
@@ -627,7 +627,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "index"
+              "name": "eanf"
             },
             {
               "type": "STRING",
@@ -644,10 +644,6 @@
           ]
         }
       ]
-    },
-    "index": {
-      "type": "PATTERN",
-      "value": "\\d+"
     },
     "eprod": {
       "type": "CHOICE",
@@ -740,7 +736,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_eexpr"
+              "name": "eexpr"
             },
             {
               "type": "STRING",
@@ -748,7 +744,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_eexpr"
+              "name": "eexpr"
             }
           ]
         },
@@ -777,7 +773,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_eexpr"
+              "name": "eexpr"
             },
             {
               "type": "STRING",
@@ -785,7 +781,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_eexpr"
+              "name": "eexpr"
             }
           ]
         }
@@ -811,7 +807,7 @@
           },
           {
             "type": "SYMBOL",
-            "name": "_eexpr"
+            "name": "eexpr"
           },
           {
             "type": "STRING",
@@ -819,7 +815,7 @@
           },
           {
             "type": "SYMBOL",
-            "name": "_eexpr"
+            "name": "eexpr"
           }
         ]
       }
@@ -945,7 +941,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_sexpr"
+              "name": "sexpr"
             },
             {
               "type": "STRING",
@@ -966,7 +962,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_sexpr"
+              "name": "sexpr"
             },
             {
               "type": "STRING",
@@ -1068,7 +1064,7 @@
         }
       ]
     },
-    "_evalue": {
+    "evalue": {
       "type": "CHOICE",
       "members": [
         {
@@ -1095,7 +1091,7 @@
               },
               {
                 "type": "SYMBOL",
-                "name": "_evalue"
+                "name": "evalue"
               },
               {
                 "type": "STRING",
@@ -1103,7 +1099,7 @@
               },
               {
                 "type": "SYMBOL",
-                "name": "_evalue"
+                "name": "evalue"
               },
               {
                 "type": "STRING",
@@ -1124,7 +1120,7 @@
               },
               {
                 "type": "SYMBOL",
-                "name": "_evalue"
+                "name": "evalue"
               },
               {
                 "type": "STRING",
@@ -1137,7 +1133,7 @@
                   "members": [
                     {
                       "type": "SYMBOL",
-                      "name": "_evalue"
+                      "name": "evalue"
                     },
                     {
                       "type": "STRING",
@@ -1148,7 +1144,7 @@
               },
               {
                 "type": "SYMBOL",
-                "name": "_evalue"
+                "name": "evalue"
               },
               {
                 "type": "STRING",
@@ -1167,7 +1163,7 @@
         "members": [
           {
             "type": "SYMBOL",
-            "name": "_eexpr"
+            "name": "eexpr"
           },
           {
             "type": "STRING",
@@ -1189,7 +1185,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "_evalue"
+          "name": "evalue"
         },
         {
           "type": "PREC_LEFT",
@@ -1294,7 +1290,7 @@
       "type": "PATTERN",
       "value": "[a-zA-Z_][_a-zA-Z0-9]*"
     },
-    "_sexpr": {
+    "sexpr": {
       "type": "CHOICE",
       "members": [
         {
@@ -1354,7 +1350,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_sexpr"
+              "name": "sexpr"
             },
             {
               "type": "STRING",
@@ -1392,7 +1388,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_sexpr"
+              "name": "sexpr"
             },
             {
               "type": "STRING",
@@ -1408,7 +1404,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_sexpr"
+              "name": "sexpr"
             },
             {
               "type": "STRING",
@@ -1441,7 +1437,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_sexpr"
+              "name": "sexpr"
             },
             {
               "type": "STRING",
@@ -1538,7 +1534,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_sexpr"
+              "name": "sexpr"
             },
             {
               "type": "STRING",
@@ -1546,7 +1542,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_sexpr"
+              "name": "sexpr"
             }
           ]
         }
@@ -1568,7 +1564,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_sexpr"
+              "name": "sexpr"
             },
             {
               "type": "STRING",
@@ -1576,7 +1572,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_sexpr"
+              "name": "sexpr"
             }
           ]
         }
@@ -1587,7 +1583,7 @@
       "members": [
         {
           "type": "SYMBOL",
-          "name": "_sexpr"
+          "name": "sexpr"
         },
         {
           "type": "STRING",
@@ -1595,7 +1591,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "_sexpr"
+          "name": "sexpr"
         }
       ]
     },
@@ -1620,7 +1616,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "_sexpr"
+          "name": "sexpr"
         },
         {
           "type": "STRING",
@@ -1682,7 +1678,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "_sexpr"
+          "name": "sexpr"
         },
         {
           "type": "STRING",
@@ -1714,7 +1710,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_sexpr"
+              "name": "sexpr"
             },
             {
               "type": "STRING",
@@ -1755,7 +1751,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_sexpr"
+              "name": "sexpr"
             },
             {
               "type": "STRING",
@@ -1810,7 +1806,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_eexpr"
+              "name": "eexpr"
             },
             {
               "type": "STRING",
@@ -1831,7 +1827,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "_eexpr"
+              "name": "eexpr"
             },
             {
               "type": "STRING",
@@ -2021,7 +2017,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "_svalue"
+          "name": "svalue"
         }
       ]
     },
@@ -2038,7 +2034,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "_svalue"
+          "name": "svalue"
         },
         {
           "type": "STRING",
@@ -2054,7 +2050,7 @@
         "members": [
           {
             "type": "SYMBOL",
-            "name": "_sexpr"
+            "name": "sexpr"
           },
           {
             "type": "STRING",
@@ -2067,7 +2063,7 @@
         ]
       }
     },
-    "_svalue": {
+    "svalue": {
       "type": "CHOICE",
       "members": [
         {

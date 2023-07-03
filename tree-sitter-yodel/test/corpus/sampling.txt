@@ -9,12 +9,19 @@ sample {
 
 ---
 
-(source_file
-  (program
-    (slet
-      (identifier)
-      (sanf (bool))
-    (sanf (identifier)))))
+
+    (source_file
+      (program
+        (sexpr
+          (slet
+            (identifier)
+            (sexpr
+              (sanf
+                (svalue
+                  (bool))))
+            (sexpr
+              (sanf
+                (identifier)))))))
 
 ======================
 sample: typed trivial
@@ -27,13 +34,27 @@ sample {
 
 ---
 
-(source_file
-  (program
-    (slet
-      (identifier)
-      (sann (sanf (bool)) (sty (tyBool)))
-    (sann (sanf (identifier)) (sty (tyBool))))))
 
+    (source_file
+      (program
+        (sexpr
+          (slet
+            (identifier)
+            (sexpr
+              (sann
+                (sexpr
+                  (sanf
+                    (svalue
+                      (bool))))
+                (sty
+                  (tyBool))))
+            (sexpr
+              (sann
+                (sexpr
+                  (sanf
+                    (identifier)))
+                (sty
+                  (tyBool))))))))
 
 ======================
 sample: trivial with vec
@@ -46,12 +67,32 @@ sample {
 
 ---
 
-(source_file
- (program
-  (slet
-    (identifier)
-    (sanf (svec (sanf (bool)) (sanf (bool))))
-    (sann (sanf (identifier)) (sty (tyVec (sty (tyBool))))))))
+
+    (source_file
+      (program
+        (sexpr
+          (slet
+            (identifier)
+            (sexpr
+              (sanf
+                (svalue
+                  (svec
+                    (sanf
+                      (svalue
+                        (bool)))
+                    (sanf
+                      (svalue
+                        (bool)))))))
+            (sexpr
+              (sann
+                (sexpr
+                  (sanf
+                    (identifier)))
+                (sty
+                  (tyVec
+                    (sty
+                      (tyBool))))))))))
+
 
 ======================
 sample: healthcare
@@ -109,59 +150,369 @@ sample {
 
 ----------
 
-(source_file
-  (program
-    (sletsample (identifier)
-      (sanf (sdiscrete (sanf (float)) (sanf (float)) (sanf (float))))
-    (sletsample (identifier)
-      (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-            (sanf (sdiscrete (sanf (float)) (sanf (float)) (sanf (float))))
-      (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-            (sanf (sdiscrete (sanf (float)) (sanf (float)) (sanf (float))))
-            (sanf (sdiscrete (sanf (float)) (sanf (float)) (sanf (float))))))
-    (sletsample (identifier)
-      (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-            (sanf (snormal (sanf (float)) (sanf (float))))
-      (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-            (sanf (snormal (sanf (float)) (sanf (float))))
-            (sanf (snormal (sanf (float)) (sanf (float))))))
-    (sletsample (identifier)
-      (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-            (sanf (sbern (sanf (float))))
-      (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-            (sanf (sbern (sanf (float))))
-            (sanf (sbern (sanf (float))))))
-    (sletsample (identifier)
-      (site (sanf (bool_unop) (sanf (identifier)))
-            (sanf (float))
-            (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-                  (ssample (sanf (snormal (sanf (float)) (sanf (float)))))
-            (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-                  (ssample (sanf (snormal (sanf (float)) (sanf (float)))))
-                  (ssample (sanf (snormal (sanf (float)) (sanf (float))))))))
-    (sletsample (identifier)
-      (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-            (sanf (snormal (sanf (sanf (int)) (numeric_op) (sanf (sanf (int)) (numeric_op) (sanf (identifier))))
-            (sanf (sanf (int)) (numeric_op) (sanf (int)))))
-      (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-            (sanf (snormal (sanf (sanf (int)) (numeric_op) (sanf (sanf (int)) (numeric_op) (sanf (identifier)))) (sanf (sanf (int)) (numeric_op) (sanf (int)))))
-            (sanf (snormal (sanf (sanf (int)) (numeric_op) (sanf (sanf (int)) (numeric_op) (sanf (identifier)))) (sanf (sanf (int)) (numeric_op) (sanf (int)))))))
-    (sletsample (identifier)
-      (sanf (snormal
-                (sanf
-                    (sanf (sanf (int))
-                      (numeric_op)
-                        (sanf (sanf (float))
-                          (numeric_op)
-                            (sanf (identifier))))
-                (numeric_op)
-                    (sanf (sanf (float))
-                      (numeric_op)
-                        (sanf (identifier))))
-                    (sanf (sanf (int))
-                      (numeric_op)
-                        (sanf (int)))))
-      (sanf (identifier)))))))))))
+
+    (source_file
+      (program
+        (sexpr
+          (sletsample
+            (identifier)
+            (sexpr
+              (sanf
+                (svalue
+                  (sdiscrete
+                    (sanf
+                      (svalue
+                        (float)))
+                    (sanf
+                      (svalue
+                        (float)))
+                    (sanf
+                      (svalue
+                        (float)))))))
+            (sexpr
+              (sletsample
+                (identifier)
+                (sexpr
+                  (site
+                    (sanf
+                      (sanf
+                        (identifier))
+                      (compare_op)
+                      (sanf
+                        (svalue
+                          (float))))
+                    (sexpr
+                      (sanf
+                        (svalue
+                          (sdiscrete
+                            (sanf
+                              (svalue
+                                (float)))
+                            (sanf
+                              (svalue
+                                (float)))
+                            (sanf
+                              (svalue
+                                (float)))))))
+                    (site
+                      (sanf
+                        (sanf
+                          (identifier))
+                        (compare_op)
+                        (sanf
+                          (svalue
+                            (float))))
+                      (sexpr
+                        (sanf
+                          (svalue
+                            (sdiscrete
+                              (sanf
+                                (svalue
+                                  (float)))
+                              (sanf
+                                (svalue
+                                  (float)))
+                              (sanf
+                                (svalue
+                                  (float)))))))
+                      (sexpr
+                        (sanf
+                          (svalue
+                            (sdiscrete
+                              (sanf
+                                (svalue
+                                  (float)))
+                              (sanf
+                                (svalue
+                                  (float)))
+                              (sanf
+                                (svalue
+                                  (float))))))))))
+                (sexpr
+                  (sletsample
+                    (identifier)
+                    (sexpr
+                      (site
+                        (sanf
+                          (sanf
+                            (identifier))
+                          (compare_op)
+                          (sanf
+                            (svalue
+                              (float))))
+                        (sexpr
+                          (sanf
+                            (svalue
+                              (snormal
+                                (sanf
+                                  (svalue
+                                    (float)))
+                                (sanf
+                                  (svalue
+                                    (float)))))))
+                        (site
+                          (sanf
+                            (sanf
+                              (identifier))
+                            (compare_op)
+                            (sanf
+                              (svalue
+                                (float))))
+                          (sexpr
+                            (sanf
+                              (svalue
+                                (snormal
+                                  (sanf
+                                    (svalue
+                                      (float)))
+                                  (sanf
+                                    (svalue
+                                      (float)))))))
+                          (sexpr
+                            (sanf
+                              (svalue
+                                (snormal
+                                  (sanf
+                                    (svalue
+                                      (float)))
+                                  (sanf
+                                    (svalue
+                                      (float))))))))))
+                    (sexpr
+                      (sletsample
+                        (identifier)
+                        (sexpr
+                          (site
+                            (sanf
+                              (sanf
+                                (identifier))
+                              (compare_op)
+                              (sanf
+                                (svalue
+                                  (float))))
+                            (sexpr
+                              (sanf
+                                (svalue
+                                  (sbern
+                                    (sanf
+                                      (svalue
+                                        (float)))))))
+                            (site
+                              (sanf
+                                (sanf
+                                  (identifier))
+                                (compare_op)
+                                (sanf
+                                  (svalue
+                                    (float))))
+                              (sexpr
+                                (sanf
+                                  (svalue
+                                    (sbern
+                                      (sanf
+                                        (svalue
+                                          (float)))))))
+                              (sexpr
+                                (sanf
+                                  (svalue
+                                    (sbern
+                                      (sanf
+                                        (svalue
+                                          (float))))))))))
+                        (sexpr
+                          (sletsample
+                            (identifier)
+                            (sexpr
+                              (site
+                                (sanf
+                                  (bool_unop)
+                                  (sanf
+                                    (identifier)))
+                                (sexpr
+                                  (sanf
+                                    (svalue
+                                      (float))))
+                                (sexpr
+                                  (site
+                                    (sanf
+                                      (sanf
+                                        (identifier))
+                                      (compare_op)
+                                      (sanf
+                                        (svalue
+                                          (float))))
+                                    (sexpr
+                                      (ssample
+                                        (sanf
+                                          (svalue
+                                            (snormal
+                                              (sanf
+                                                (svalue
+                                                  (float)))
+                                              (sanf
+                                                (svalue
+                                                  (float))))))))
+                                    (site
+                                      (sanf
+                                        (sanf
+                                          (identifier))
+                                        (compare_op)
+                                        (sanf
+                                          (svalue
+                                            (float))))
+                                      (sexpr
+                                        (ssample
+                                          (sanf
+                                            (svalue
+                                              (snormal
+                                                (sanf
+                                                  (svalue
+                                                    (float)))
+                                                (sanf
+                                                  (svalue
+                                                    (float))))))))
+                                      (sexpr
+                                        (ssample
+                                          (sanf
+                                            (svalue
+                                              (snormal
+                                                (sanf
+                                                  (svalue
+                                                    (float)))
+                                                (sanf
+                                                  (svalue
+                                                    (float)))))))))))))
+                            (sexpr
+                              (sletsample
+                                (identifier)
+                                (sexpr
+                                  (site
+                                    (sanf
+                                      (sanf
+                                        (identifier))
+                                      (compare_op)
+                                      (sanf
+                                        (svalue
+                                          (float))))
+                                    (sexpr
+                                      (sanf
+                                        (svalue
+                                          (snormal
+                                            (sanf
+                                              (sanf
+                                                (svalue
+                                                  (float)))
+                                              (numeric_op)
+                                              (sanf
+                                                (sanf
+                                                  (svalue
+                                                    (float)))
+                                                (numeric_op)
+                                                (sanf
+                                                  (identifier))))
+                                            (sanf
+                                              (sanf
+                                                (svalue
+                                                  (float)))
+                                              (numeric_op)
+                                              (sanf
+                                                (svalue
+                                                  (float))))))))
+                                    (site
+                                      (sanf
+                                        (sanf
+                                          (identifier))
+                                        (compare_op)
+                                        (sanf
+                                          (svalue
+                                            (float))))
+                                      (sexpr
+                                        (sanf
+                                          (svalue
+                                            (snormal
+                                              (sanf
+                                                (sanf
+                                                  (svalue
+                                                    (float)))
+                                                (numeric_op)
+                                                (sanf
+                                                  (sanf
+                                                    (svalue
+                                                      (float)))
+                                                  (numeric_op)
+                                                  (sanf
+                                                    (identifier))))
+                                              (sanf
+                                                (sanf
+                                                  (svalue
+                                                    (float)))
+                                                (numeric_op)
+                                                (sanf
+                                                  (svalue
+                                                    (float))))))))
+                                      (sexpr
+                                        (sanf
+                                          (svalue
+                                            (snormal
+                                              (sanf
+                                                (sanf
+                                                  (svalue
+                                                    (float)))
+                                                (numeric_op)
+                                                (sanf
+                                                  (sanf
+                                                    (svalue
+                                                      (float)))
+                                                  (numeric_op)
+                                                  (sanf
+                                                    (identifier))))
+                                              (sanf
+                                                (sanf
+                                                  (svalue
+                                                    (float)))
+                                                (numeric_op)
+                                                (sanf
+                                                  (svalue
+                                                    (float)))))))))))
+                                (sexpr
+                                  (sletsample
+                                    (identifier)
+                                    (sexpr
+                                      (sanf
+                                        (svalue
+                                          (snormal
+                                            (sanf
+                                              (sanf
+                                                (sanf
+                                                  (svalue
+                                                    (float)))
+                                                (numeric_op)
+                                                (sanf
+                                                  (sanf
+                                                    (svalue
+                                                      (float)))
+                                                  (numeric_op)
+                                                  (sanf
+                                                    (identifier))))
+                                              (numeric_op)
+                                              (sanf
+                                                (sanf
+                                                  (svalue
+                                                    (float)))
+                                                (numeric_op)
+                                                (sanf
+                                                  (identifier))))
+                                            (sanf
+                                              (sanf
+                                                (svalue
+                                                  (float)))
+                                              (numeric_op)
+                                              (sanf
+                                                (svalue
+                                                  (float))))))))
+                                    (sexpr
+                                      (sanf
+                                        (identifier)))))))))))))))))))
 
 ======================
 sample(hybrid): healthcare
@@ -217,55 +568,402 @@ sample {
 }
 
 ----------
+
     (source_file
       (program
-        (slet (identifier)
-          (sexact
-            (elet (identifier)
-              (ediscrete (eanf (float)) (eanf (float)) (eanf (float)))
-            (elet (identifier)
-              (eite (eanf (eanf (identifier)) (compare_op) (eanf (int)))
-                (ediscrete (eanf (float)) (eanf (float)) (eanf (float)))
-              (eite (eanf (eanf (identifier)) (compare_op) (eanf (int)))
-                (ediscrete (eanf (float)) (eanf (float)) (eanf (float)))
-                (ediscrete (eanf (float)) (eanf (float)) (eanf (float)))))
-            (elet (identifier)
-              (eite (eanf (eanf (eanf (identifier)) (compare_op) (eanf (int))))
-                (eflip (eanf (eanf (float))))
-                (eite (eanf (eanf (eanf (identifier)) (compare_op) (eanf (int))))
-                  (eflip (eanf (eanf (float))))
-                  (eflip (eanf (eanf (float))))))
-            (eprod (eanf (identifier)) (eanf (identifier)) (eanf (identifier)))))))
-        (slet (identifier) (sanf (sprj (identifier) (int)))
-        (slet (identifier) (sanf (sprj (identifier) (int)))
-        (slet (identifier) (sanf (sprj (identifier) (int)))
-        (sletsample (identifier)
-            (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-                  (sanf (snormal (sanf (float)) (sanf (float))))
-            (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-                  (sanf (snormal (sanf (float)) (sanf (float))))
-                  (sanf (snormal (sanf (float)) (sanf (float))))))
-        (slet (identifier)
-            (site (sanf (bool_unop) (sanf (identifier)))
-                  (sanf (float))
-                  (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-                        (ssample (sanf (snormal (sanf (float)) (sanf (float)))))
-                  (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-                        (ssample (sanf (snormal (sanf (float)) (sanf (float)))))
-                        (ssample (sanf (snormal (sanf (float)) (sanf (float))))))))
-        (sletsample (identifier)
-            (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-                  (sanf (snormal (sanf (sanf (int)) (numeric_op) (sanf (sanf (int)) (numeric_op) (sanf (identifier)))) (sanf (sanf (int)) (numeric_op) (sanf (int)))))
-            (site (sanf (sanf (identifier)) (compare_op) (sanf (int)))
-                  (sanf (snormal (sanf (sanf (int)) (numeric_op) (sanf (sanf (int)) (numeric_op) (sanf (identifier)))) (sanf (sanf (int)) (numeric_op) (sanf (int)))))
-                  (sanf (snormal (sanf (sanf (int)) (numeric_op) (sanf (sanf (int)) (numeric_op) (sanf (identifier)))) (sanf (sanf (int)) (numeric_op) (sanf (int)))))))
-        (sletsample (identifier)
-            (sanf (snormal
-                      (sanf (sanf (sanf (int)) (numeric_op) (sanf (sanf (float)) (numeric_op) (sanf (identifier))))
-                              (numeric_op)
-                            (sanf (sanf (float)) (numeric_op) (sanf (identifier))))
-                            (sanf (sanf (int)) (numeric_op) (sanf (int)))))
-                      (sanf (identifier))))))))))))
+        (sexpr
+          (slet
+            (identifier)
+            (sexpr
+              (sexact
+                (eexpr
+                  (elet
+                    (identifier)
+                    (eexpr
+                      (ediscrete
+                        (eanf
+                          (evalue
+                            (float)))
+                        (eanf
+                          (evalue
+                            (float)))
+                        (eanf
+                          (evalue
+                            (float)))))
+                    (eexpr
+                      (elet
+                        (identifier)
+                        (eexpr
+                          (eite
+                            (eanf
+                              (eanf
+                                (identifier))
+                              (compare_op)
+                              (eanf
+                                (evalue
+                                  (float))))
+                            (eexpr
+                              (ediscrete
+                                (eanf
+                                  (evalue
+                                    (float)))
+                                (eanf
+                                  (evalue
+                                    (float)))
+                                (eanf
+                                  (evalue
+                                    (float)))))
+                            (eexpr
+                              (eite
+                                (eanf
+                                  (eanf
+                                    (identifier))
+                                  (compare_op)
+                                  (eanf
+                                    (evalue
+                                      (float))))
+                                (eexpr
+                                  (ediscrete
+                                    (eanf
+                                      (evalue
+                                        (float)))
+                                    (eanf
+                                      (evalue
+                                        (float)))
+                                    (eanf
+                                      (evalue
+                                        (float)))))
+                                (eexpr
+                                  (ediscrete
+                                    (eanf
+                                      (evalue
+                                        (float)))
+                                    (eanf
+                                      (evalue
+                                        (float)))
+                                    (eanf
+                                      (evalue
+                                        (float)))))))))
+                        (eexpr
+                          (elet
+                            (identifier)
+                            (eexpr
+                              (eite
+                                (eanf
+                                  (eanf
+                                    (eanf
+                                      (identifier))
+                                    (compare_op)
+                                    (eanf
+                                      (evalue
+                                        (float)))))
+                                (eexpr
+                                  (eflip
+                                    (eanf
+                                      (eanf
+                                        (evalue
+                                          (float))))))
+                                (eexpr
+                                  (eite
+                                    (eanf
+                                      (eanf
+                                        (eanf
+                                          (identifier))
+                                        (compare_op)
+                                        (eanf
+                                          (evalue
+                                            (float)))))
+                                    (eexpr
+                                      (eflip
+                                        (eanf
+                                          (eanf
+                                            (evalue
+                                              (float))))))
+                                    (eexpr
+                                      (eflip
+                                        (eanf
+                                          (eanf
+                                            (evalue
+                                              (float))))))))))
+                            (eexpr
+                              (eprod
+                                (eanf
+                                  (identifier))
+                                (eanf
+                                  (identifier))
+                                (eanf
+                                  (identifier))))))))))))
+            (sexpr
+              (slet
+                (identifier)
+                (sexpr
+                  (sanf
+                    (sprj
+                      (identifier)
+                      (svalue
+                        (float)))))
+                (sexpr
+                  (slet
+                    (identifier)
+                    (sexpr
+                      (sanf
+                        (sprj
+                          (identifier)
+                          (svalue
+                            (float)))))
+                    (sexpr
+                      (slet
+                        (identifier)
+                        (sexpr
+                          (sanf
+                            (sprj
+                              (identifier)
+                              (svalue
+                                (float)))))
+                        (sexpr
+                          (sletsample
+                            (identifier)
+                            (sexpr
+                              (site
+                                (sanf
+                                  (sanf
+                                    (identifier))
+                                  (compare_op)
+                                  (sanf
+                                    (svalue
+                                      (float))))
+                                (sexpr
+                                  (sanf
+                                    (svalue
+                                      (snormal
+                                        (sanf
+                                          (svalue
+                                            (float)))
+                                        (sanf
+                                          (svalue
+                                            (float)))))))
+                                (site
+                                  (sanf
+                                    (sanf
+                                      (identifier))
+                                    (compare_op)
+                                    (sanf
+                                      (svalue
+                                        (float))))
+                                  (sexpr
+                                    (sanf
+                                      (svalue
+                                        (snormal
+                                          (sanf
+                                            (svalue
+                                              (float)))
+                                          (sanf
+                                            (svalue
+                                              (float)))))))
+                                  (sexpr
+                                    (sanf
+                                      (svalue
+                                        (snormal
+                                          (sanf
+                                            (svalue
+                                              (float)))
+                                          (sanf
+                                            (svalue
+                                              (float))))))))))
+                            (sexpr
+                              (slet
+                                (identifier)
+                                (sexpr
+                                  (site
+                                    (sanf
+                                      (bool_unop)
+                                      (sanf
+                                        (identifier)))
+                                    (sexpr
+                                      (sanf
+                                        (svalue
+                                          (float))))
+                                    (sexpr
+                                      (site
+                                        (sanf
+                                          (sanf
+                                            (identifier))
+                                          (compare_op)
+                                          (sanf
+                                            (svalue
+                                              (float))))
+                                        (sexpr
+                                          (ssample
+                                            (sanf
+                                              (svalue
+                                                (snormal
+                                                  (sanf
+                                                    (svalue
+                                                      (float)))
+                                                  (sanf
+                                                    (svalue
+                                                      (float))))))))
+                                        (site
+                                          (sanf
+                                            (sanf
+                                              (identifier))
+                                            (compare_op)
+                                            (sanf
+                                              (svalue
+                                                (float))))
+                                          (sexpr
+                                            (ssample
+                                              (sanf
+                                                (svalue
+                                                  (snormal
+                                                    (sanf
+                                                      (svalue
+                                                        (float)))
+                                                    (sanf
+                                                      (svalue
+                                                        (float))))))))
+                                          (sexpr
+                                            (ssample
+                                              (sanf
+                                                (svalue
+                                                  (snormal
+                                                    (sanf
+                                                      (svalue
+                                                        (float)))
+                                                    (sanf
+                                                      (svalue
+                                                        (float)))))))))))))
+                                (sexpr
+                                  (sletsample
+                                    (identifier)
+                                    (sexpr
+                                      (site
+                                        (sanf
+                                          (sanf
+                                            (identifier))
+                                          (compare_op)
+                                          (sanf
+                                            (svalue
+                                              (float))))
+                                        (sexpr
+                                          (sanf
+                                            (svalue
+                                              (snormal
+                                                (sanf
+                                                  (sanf
+                                                    (svalue
+                                                      (float)))
+                                                  (numeric_op)
+                                                  (sanf
+                                                    (sanf
+                                                      (svalue
+                                                        (float)))
+                                                    (numeric_op)
+                                                    (sanf
+                                                      (identifier))))
+                                                (sanf
+                                                  (sanf
+                                                    (svalue
+                                                      (float)))
+                                                  (numeric_op)
+                                                  (sanf
+                                                    (svalue
+                                                      (float))))))))
+                                        (site
+                                          (sanf
+                                            (sanf
+                                              (identifier))
+                                            (compare_op)
+                                            (sanf
+                                              (svalue
+                                                (float))))
+                                          (sexpr
+                                            (sanf
+                                              (svalue
+                                                (snormal
+                                                  (sanf
+                                                    (sanf
+                                                      (svalue
+                                                        (float)))
+                                                    (numeric_op)
+                                                    (sanf
+                                                      (sanf
+                                                        (svalue
+                                                          (float)))
+                                                      (numeric_op)
+                                                      (sanf
+                                                        (identifier))))
+                                                  (sanf
+                                                    (sanf
+                                                      (svalue
+                                                        (float)))
+                                                    (numeric_op)
+                                                    (sanf
+                                                      (svalue
+                                                        (float))))))))
+                                          (sexpr
+                                            (sanf
+                                              (svalue
+                                                (snormal
+                                                  (sanf
+                                                    (sanf
+                                                      (svalue
+                                                        (float)))
+                                                    (numeric_op)
+                                                    (sanf
+                                                      (sanf
+                                                        (svalue
+                                                          (float)))
+                                                      (numeric_op)
+                                                      (sanf
+                                                        (identifier))))
+                                                  (sanf
+                                                    (sanf
+                                                      (svalue
+                                                        (float)))
+                                                    (numeric_op)
+                                                    (sanf
+                                                      (svalue
+                                                        (float)))))))))))
+                                    (sexpr
+                                      (sletsample
+                                        (identifier)
+                                        (sexpr
+                                          (sanf
+                                            (svalue
+                                              (snormal
+                                                (sanf
+                                                  (sanf
+                                                    (sanf
+                                                      (svalue
+                                                        (float)))
+                                                    (numeric_op)
+                                                    (sanf
+                                                      (sanf
+                                                        (svalue
+                                                          (float)))
+                                                      (numeric_op)
+                                                      (sanf
+                                                        (identifier))))
+                                                  (numeric_op)
+                                                  (sanf
+                                                    (sanf
+                                                      (svalue
+                                                        (float)))
+                                                    (numeric_op)
+                                                    (sanf
+                                                      (identifier))))
+                                                (sanf
+                                                  (sanf
+                                                    (svalue
+                                                      (float)))
+                                                  (numeric_op)
+                                                  (sanf
+                                                    (svalue
+                                                      (float))))))))
+                                        (sexpr
+                                          (sanf
+                                            (identifier)))))))))))))))))))))
 
 ======================
 sample: array access is tucked away in anf
@@ -278,22 +976,29 @@ sample {
 
 ----------
 
-(source_file
-    (program
-      (slet
-        (identifier)
-        (sexact
-          (eanf
-            (identifier)))
-        (slet
-          (identifier)
-          (sanf
-            (sprj
-              (identifier)
-              (int)))
-          (sanf
-            (identifier))))))
 
+    (source_file
+      (program
+        (sexpr
+          (slet
+            (identifier)
+            (sexpr
+              (sexact
+                (eexpr
+                  (eanf
+                    (identifier)))))
+            (sexpr
+              (slet
+                (identifier)
+                (sexpr
+                  (sanf
+                    (sprj
+                      (identifier)
+                      (svalue
+                        (float)))))
+                (sexpr
+                  (sanf
+                    (identifier)))))))))
 
 ==================
 sample(hybrid): arrival problem on diamond-network
@@ -311,25 +1016,93 @@ sample {
 }
 ---------
 
-(source_file
-  (program
-    (efun
-      (identifier)
-      (eargs (identifier) (ety (tyBool)))
-      (ety (tyBool))
-    (elet (identifier) (eflip (eanf (float)))
-    (elet (identifier)
-          (eite (eanf (identifier)) (eanf (identifier)) (eanf (bool)))
-    (elet (identifier)
-          (eite (eanf (identifier)) (eanf (bool)) (eanf (identifier)))
-    (elet (identifier) (eflip (eanf (float)))
-          (eanf (eanf (identifier))
-                (bool_biop)
-                (eanf (eanf (eanf (identifier))
-                    (bool_biop)
-                    (eanf (bool_unop) (eanf (identifier)))))))))))
 
-    (program
-      (slet (identifier) (sanf (spoisson (sanf (float))))
-      (sexact
-        (eiterate (identifier) (eanf (bool)) (eanf (identifier))))))))
+    (source_file
+      (program
+        (efun
+          (identifier)
+          (eargs
+            (identifier)
+            (ety
+              (tyBool)))
+          (ety
+            (tyBool))
+          (eexpr
+            (elet
+              (identifier)
+              (eexpr
+                (eflip
+                  (eanf
+                    (evalue
+                      (float)))))
+              (eexpr
+                (elet
+                  (identifier)
+                  (eexpr
+                    (eite
+                      (eanf
+                        (identifier))
+                      (eexpr
+                        (eanf
+                          (identifier)))
+                      (eexpr
+                        (eanf
+                          (evalue
+                            (bool))))))
+                  (eexpr
+                    (elet
+                      (identifier)
+                      (eexpr
+                        (eite
+                          (eanf
+                            (identifier))
+                          (eexpr
+                            (eanf
+                              (evalue
+                                (bool))))
+                          (eexpr
+                            (eanf
+                              (identifier)))))
+                      (eexpr
+                        (elet
+                          (identifier)
+                          (eexpr
+                            (eflip
+                              (eanf
+                                (evalue
+                                  (float)))))
+                          (eexpr
+                            (eanf
+                              (eanf
+                                (identifier))
+                              (bool_biop)
+                              (eanf
+                                (eanf
+                                  (eanf
+                                    (identifier))
+                                  (bool_biop)
+                                  (eanf
+                                    (bool_unop)
+                                    (eanf
+                                      (identifier))))))))))))))))
+        (program
+          (sexpr
+            (slet
+              (identifier)
+              (sexpr
+                (sanf
+                  (svalue
+                    (spoisson
+                      (sanf
+                        (svalue
+                          (float)))))))
+              (sexpr
+                (sexact
+                  (eexpr
+                    (eiterate
+                      (identifier)
+                      (eanf
+                        (evalue
+                          (bool)))
+                      (eanf
+                        (identifier)))))))))))
