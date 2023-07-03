@@ -35,6 +35,11 @@ pub struct SObserveExt;
 pub struct SExactExt;
 pub struct SSampleExt;
 
+// sugar
+pub struct SLetSampleExt;
+pub struct EDiscreteExt;
+pub struct EIterateExt;
+
 #[macro_export]
 macro_rules! TTG {
     (#[derive(Debug, Clone, PartialEq)] pub enum $name:ident<X> { $($body:tt)* }) => {
@@ -92,6 +97,15 @@ macro_rules! TTG {
             <SSeqExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <SIteExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <SExactExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+
+            // sugar
+            SLetSampleExt: ξ<X>,
+            EDiscreteExt: ξ<X>,
+            EIterateExt: ξ<X>,
+            <SLetSampleExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <EDiscreteExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <EIterateExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+
             X: Debug + PartialEq + Clone,
         {
             $($body)*
@@ -151,7 +165,19 @@ macro_rules! TTG {
             <SSeqExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <SIteExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <SExactExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+
+
+            // sugar
+            SLetSampleExt: ξ<X>,
+            EDiscreteExt: ξ<X>,
+            EIterateExt: ξ<X>,
+            <SLetSampleExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <EDiscreteExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <EIterateExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+
+
             X: Debug + PartialEq + Clone,
+
         {
             $($body)*
         }
@@ -210,6 +236,15 @@ macro_rules! TTG {
             <SSeqExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <SIteExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <SExactExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+
+            // sugar
+            SLetSampleExt: ξ<X>,
+            EDiscreteExt: ξ<X>,
+            EIterateExt: ξ<X>,
+            <SLetSampleExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <EDiscreteExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <EIterateExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+
             X: Debug + PartialEq + Clone,
         {
             $($body)*

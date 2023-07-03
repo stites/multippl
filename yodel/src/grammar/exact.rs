@@ -1,5 +1,3 @@
-pub mod sugar;
-
 use crate::*;
 use ::core::fmt;
 use ::core::fmt::Debug;
@@ -26,6 +24,7 @@ pub enum ETy {
     EBool,
     EFloat,
     EProd(Vec<ETy>),
+    EInt,
 }
 impl ETy {
     pub fn right(&self) -> Option<ETy> {
@@ -53,6 +52,7 @@ pub enum EVal {
     EBool(bool),
     EFloat(f64),
     EProd(Vec<EVal>),
+    EInteger(usize), // not part of the core IR, just included in the maximal values as part of TTG
 }
 impl EVal {
     pub fn as_bool(&self) -> Option<bool> {
@@ -96,7 +96,7 @@ TTG!(
     pub enum EExpr<X> {
         EAnf(<SAnfExt as ξ<X>>::Ext, Box<Anf<X, EVal>>),
 
-        EPrj(<EPrjExt as ξ<X>>::Ext, usize, Box<Anf<X, EVal>>),
+        EPrj(<EPrjExt as ξ<X>>::Ext, Box<Anf<X, EVal>>, Box<Anf<X, EVal>>),
         EProd(<EProdExt as ξ<X>>::Ext, Vec<Anf<X, EVal>>),
 
         EApp(<EAppExt as ξ<X>>::Ext, String, Vec<Anf<X, EVal>>),
@@ -115,6 +115,11 @@ TTG!(
         EFlip(<EFlipExt as ξ<X>>::Ext, Box<Anf<X, EVal>>),
         EObserve(<EObserveExt as ξ<X>>::Ext, Box<Anf<X, EVal>>),
         ESample(<ESampleExt as ξ<X>>::Ext, Box<SExpr<X>>),
+
+        // sugar: integer support
+        EDiscrete(<EDiscreteExt as ξ<X>>::Ext, Vec<f64>),     // => if-then-else chain returning a one-hot encoding
+        // sugar: iterate(f, init, k)
+        EIterate(<EIterateExt as ξ<X>>::Ext,String, Box<Anf<Inferable, EValSugar>>, Box<Anf<Inferable, EValSugar>>),
     }
 );
 

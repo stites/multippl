@@ -125,6 +125,7 @@ TTG!(
             Box<SExpr<X>>,
             Box<SExpr<X>>,
         ),
+
         SSeq(<SSeqExt as ξ<X>>::Ext, Box<SExpr<X>>, Box<SExpr<X>>),
         SIte(
             <SIteExt as ξ<X>>::Ext,
@@ -159,6 +160,11 @@ TTG!(
 
         // Multi-language boundary
         SExact(<SExactExt as ξ<X>>::Ext, Box<EExpr<X>>),
+
+        // sugar: let x = ~(<sexpr>) in <sexpr>
+        SLetSample(<SLetSampleExt as ξ<X>>::Ext, String,
+            Box<SExpr<X>>,
+            Box<SExpr<X>>,),
     }
 );
 
