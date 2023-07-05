@@ -134,6 +134,7 @@ module.exports = grammar({
       // $._comment,
       // $.sbinding_section,
       $.smap,
+      $.swhile,
       $.sfold,
       $.slam,
       $.sobs,
@@ -172,6 +173,11 @@ module.exports = grammar({
     sseq: $ => seq($.sexpr, ';', $.sexpr),
     // sseq_first: $ => seq($.sexpr, ';',),
     smap: $ => seq('map', '(', $.identifier, '->', $.sexpr, ')', $.sanf),
+    swhile: $ => choice(
+      seq('while', '(',  $.sanf, ')', '{', $.sexpr, '}'),
+      seq('while', $.sanf, '{', $.sexpr, '}'),
+    ),
+
     ssample: $ => seq('~', $.sanf, ''),
     sfold: $ => seq('fold', '(', $.sanf, '(', $.identifier, $.identifier, '->', $.sexpr, ')', $.sanf),
 

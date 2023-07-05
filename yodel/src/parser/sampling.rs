@@ -347,6 +347,19 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
 
             SExpr::SLambda((), args, Box::new(e))
         }
+        "swhile" => {
+            assert_children!(k, 2, n, c);
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let guard = cs.next().unwrap();
+            let guard = parse_sanf(src, c, guard);
+
+            let block = cs.next().unwrap();
+            let block = parse_sexpr(src, c, &block);
+
+            SExpr::SWhile((), Box::new(guard), Box::new(block))
+        }
         "smap" => {
             assert_children!(k, 5, n, c);
             let mut _c = c.clone();
