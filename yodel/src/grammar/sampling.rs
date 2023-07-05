@@ -147,7 +147,11 @@ TTG!(
             Box<SExpr<X>>,     // fold function body
             Box<Anf<X, SVal>>, // value to fold
         ),
-
+        SWhile(
+            <SWhileExt as ξ<X>>::Ext,
+            Box<Anf<X, SVal>>, // guard
+            Box<SExpr<X>>,     // body
+        ),
         SApp(<SAnfExt as ξ<X>>::Ext, String, Vec<Anf<X, SVal>>),
         SLambda(<SLambdaExt as ξ<X>>::Ext, Vec<String>, Box<SExpr<X>>),
 

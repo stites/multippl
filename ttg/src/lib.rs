@@ -38,6 +38,7 @@ const EXPRS: &str = r"{
     SIteExt : (),
 
     SMapExt : (),
+    SWhileExt : (),
     SFoldExt : (),
     SAppExt : (),
     SLambdaExt : (),

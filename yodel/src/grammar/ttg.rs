@@ -27,6 +27,7 @@ pub struct SIteExt;
 pub struct SReturnExt;
 pub struct SMapExt;
 pub struct SFoldExt;
+pub struct SWhileExt;
 
 pub struct SAppExt;
 pub struct SLambdaExt;
@@ -81,11 +82,13 @@ macro_rules! TTG {
             SAppExt: ξ<X>,
             SLambdaExt: ξ<X>,
             SMapExt: ξ<X>,
+            SWhileExt: ξ<X>,
             SFoldExt: ξ<X>,
             SSampleExt: ξ<X>,
             <SAppExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <SLambdaExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <SMapExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <SWhileExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <SFoldExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <SSampleExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
 
@@ -148,12 +151,14 @@ macro_rules! TTG {
             SAppExt: ξ<X>,
             SLambdaExt: ξ<X>,
             SMapExt: ξ<X>,
+            SWhileExt: ξ<X>,
             SFoldExt: ξ<X>,
             SSampleExt: ξ<X>,
 
             <SAppExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <SLambdaExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <SMapExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <SWhileExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <SFoldExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <SSampleExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
 
@@ -219,12 +224,14 @@ macro_rules! TTG {
             SAppExt: ξ<X>,
             SLambdaExt: ξ<X>,
             SMapExt: ξ<X>,
+            SWhileExt: ξ<X>,
             SFoldExt: ξ<X>,
             SSampleExt: ξ<X>,
 
             <SAppExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <SLambdaExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <SMapExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <SWhileExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <SFoldExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <SSampleExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
 
