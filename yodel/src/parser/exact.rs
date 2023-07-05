@@ -200,7 +200,7 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
             let fnname = cs.next().unwrap();
             let fnname = parse_str(src, &fnname);
 
-            let args = parse_vec(src, c, n, |a, b, c| parse_anf(a, b, *c));
+            let args = parse_vec(src, c, n, |a, b, c| parse_anf(a, b, c));
 
             EExpr::EApp(None, fnname, args)
         }

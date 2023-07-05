@@ -121,11 +121,8 @@ module.exports = grammar({
       $.identifier,
       $.evalue,
       prec.left(2, seq($.eanf, $.numeric_op, $.eanf)),
-      // prec.left(2, seq('(', $.eanf, $.numeric_op, $.eanf, ')')),
       prec.left(3, seq($.eanf, $.bool_biop, $.eanf)),
-      // prec.left(3, seq('(', $.eanf, $.bool_biop, $.eanf, ')')),
       prec.left(4, seq($.eanf, $.compare_op, $.eanf)),
-      // prec.left(4, seq('(', $.eanf, $.compare_op, $.eanf, ')')),
       prec.left(5, seq($.bool_unop, $.eanf)),
       seq('(', $.eanf, ')'),
     ),
@@ -189,8 +186,19 @@ module.exports = grammar({
     ),
 
     sanf: $ => choice(
-      $.sprj,
       $.identifier,
+      prec(6, $.svalue), // prefer values over anf
+
+      $.sanfprj,
+      $.sanfvec,
+
+      $.sanfbern,
+      $.sanfpoisson,
+      $.sanfuniform,
+      $.sanfnormal,
+      $.sanfbeta,
+      $.sanfdiscrete,
+      $.sanfdirichlet,
       prec.left(6, seq($.sanf, $.numeric_op, $.sanf)),
       prec.left(6, seq('(', $.sanf, $.numeric_op, $.sanf, ')')),
       prec.left(3, seq($.sanf, $.bool_biop, $.sanf)),
@@ -198,10 +206,8 @@ module.exports = grammar({
       prec.left(4, seq($.sanf, $.compare_op, $.sanf)),
       prec.left(4, seq('(', $.sanf, $.compare_op, $.sanf, ')')),
       prec.left(5, seq($.bool_unop, $.sanf)),
-      $.svalue,
     ),
 
-    sprj: $ => seq($.identifier, '[', $.svalue, ']'), // vector access
 
     sann: $ => prec.right(4, seq($.sexpr, ':', $.sty)),
     svalue: $ => choice(
@@ -218,23 +224,49 @@ module.exports = grammar({
       $.sdiscrete,
       $.sdirichlet,
     ),
-    svec: $ => choice(
+    sanfprj: $ => seq($.identifier, '[', $.sanf, ']'), // vector access
+    sanfvec: $ => choice(
       seq('[', $.sanf, ']'),
       seq('[', repeat(seq($.sanf, ',')), $.sanf, ']'),
     ),
-    sbern: $ => seq('bern', '(', $.sanf, ')'),
-    spoisson: $ => seq('poisson', '(', $.sanf, ')'),
-    suniform: $ => seq('uniform', '(', $.sanf, ',', $.sanf, ')'),
-    snormal: $ => seq('normal', '(', $.sanf, ',', $.sanf, ')'),
-    sbeta: $ => seq('beta', '(', $.sanf, ',', $.sanf, ')'),
-    sdiscrete: $ => choice(
+    svec: $ => choice(
+      seq('[', $.svalue, ']'),
+      seq('[', repeat(seq($.svalue, ',')), $.svalue, ']'),
+    ),
+
+    // // [x] && x [ 0 ]
+    // AnfPrj(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+
+    /// anf forms of distributions
+    sanfbern: $ => seq('bern', '(', $.sanf, ')'),
+    sanfpoisson: $ => seq('poisson', '(', $.sanf, ')'),
+    sanfuniform: $ => seq('uniform', '(', $.sanf, ',', $.sanf, ')'),
+    sanfnormal: $ => seq('normal', '(', $.sanf, ',', $.sanf, ')'),
+    sanfbeta: $ => seq('beta', '(', $.sanf, ',', $.sanf, ')'),
+    sanfdiscrete: $ => choice(
       seq('discrete', '(', $.sanf, ')'),
       seq('discrete', '(', repeat(seq($.sanf, ',')), $.sanf, ')'),
     ),
-    sdirichlet: $ => choice(
+    sanfdirichlet: $ => choice(
       seq('dirichlet', '(', $.sanf, ')'),
       seq('dirichlet', '(', repeat(seq($.sanf, ',')), $.sanf, ')'),
     ),
+
+    /// value forms of distributions
+    sbern: $ => seq('bern', '(', $.svalue, ')'),
+    spoisson: $ => seq('poisson', '(', $.svalue, ')'),
+    suniform: $ => seq('uniform', '(', $.svalue, ',', $.svalue, ')'),
+    snormal: $ => seq('normal', '(', $.svalue, ',', $.svalue, ')'),
+    sbeta: $ => seq('beta', '(', $.svalue, ',', $.svalue, ')'),
+    sdiscrete: $ => choice(
+      seq('discrete', '(', $.svalue, ')'),
+      seq('discrete', '(', repeat(seq($.svalue, ',')), $.svalue, ')'),
+    ),
+    sdirichlet: $ => choice(
+      seq('dirichlet', '(', $.svalue, ')'),
+      seq('dirichlet', '(', repeat(seq($.svalue, ',')), $.svalue, ')'),
+    ),
+
 
     sty: $ => choice($.tyBool, $.tyFloat, $.tyInt, $.tyVec, $.tyDistribution),
     tyInt: $ => 'Int',

@@ -24,81 +24,198 @@ macro_rules! assert_children {
         );
     }};
 }
-
-// fn parse_sanf<'a, 'b>(c: &'a mut TreeCursor<'b>, n: &'b Node) -> (ANF, Ty) {
-// anf: $ => choice(
-//   $.identifier,
-//   $._value,
-//   prec.left(3, seq($.anf, $.bool_biop, $.anf)),
-//   prec.left(5, seq($.bool_unop, $.anf)),
-// ),
-
-pub fn parse_sanf_child_h(src: &[u8], c: &mut TreeCursor, n: &Node) -> Anf<Inferable, SVal> {
-    let mut c_ = c.clone();
-    let mut cs = n.named_children(&mut c_);
-    let a = cs.next().unwrap();
-    parse_sanf(src, c, &a)
-}
-
-pub fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: &Node) -> Anf<Inferable, SVal> {
+pub fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVal> {
     match n.named_child_count() {
-        0 => parse_sanf_node(src, c, n),
-        1 => parse_sanf_child_h(src, c, n),
+        0 => parse_sanf_node(src, c, &n), // parse that node!
+        1 => {
+            // found an extra paren, unwrap and continue
+            let mut c_ = c.clone();
+            let mut cs = n.named_children(&mut c_);
+            let a = cs.next().unwrap();
+            parse_sanf(src, c, n)
+        }
         2 => {
-            // unary operation
+            // unary operation + dist constructors
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
             let op = cs.next().unwrap();
             let utf8 = op.utf8_text(src).unwrap();
             let op = String::from_utf8(utf8.into()).unwrap();
-            assert_eq!(
-                op,
-                "!".to_string(),
-                "invalid program found!\nsexp: {}",
-                n.to_sexp()
-            );
-            let a = cs.next().unwrap(); // will be "anf"
-            let anf = parse_sanf(src, c, &a);
-            Anf::Neg(Box::new(anf))
+
+            let a = cs.next().unwrap();
+            let anf = parse_sanf(src, c, a);
+            match op.as_str() {
+                "!" => Anf::Neg(Box::new(anf)),
+                "sbern" => Anf::AnfBernoulli(Box::new(anf)),
+                "spoisson" => Anf::AnfPoisson(Box::new(anf)),
+                "sdirichlet" => {
+                    Anf::AnfDirichlet(parse_vec(src, c, a, |a, b, c| parse_sanf_node(a, b, &c)))
+                }
+                "sdiscrete" => {
+                    Anf::AnfDiscrete(parse_vec(src, c, a, |a, b, c| parse_sanf_node(a, b, &c)))
+                }
+                _ => panic!("invalid unary operator found!\nsexp: {}", n.to_sexp()),
+            }
         }
         3 => {
             // binary operation
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
 
-            let l = cs.next().unwrap();
-            let l = parse_sanf(src, c, &l);
+            let c0 = cs.next().unwrap();
+            let prefixop = parse_str(src, &c0);
+            let isprefix_dist = match prefixop.as_str() {
+                "sprj" => Some(false),
+                "sanfuniform" => Some(true),
+                "sanfnormal" => Some(true),
+                "sanfbeta" => Some(true),
+                "sanfbeta" => Some(true),
+                _ => None,
+            };
+            if isprefix_dist.is_none() {
+                let c0 = parse_sanf(src, c, c0);
 
-            let op = cs.next().unwrap();
-            let utf8 = op.utf8_text(src).unwrap();
-            let op = String::from_utf8(utf8.into()).unwrap();
-            assert!(
-                op == "&&".to_string() || op == "||".to_string(),
-                "invalid program found!\nsexp: {}",
-                n.to_sexp()
-            );
+                let c1 = cs.next().unwrap();
+                let utf8 = c1.utf8_text(src).unwrap();
+                let infix_str = String::from_utf8(utf8.into()).unwrap();
 
-            let r = cs.next().unwrap();
-            let r = parse_sanf(src, c, &r);
+                let c2 = cs.next().unwrap();
+                let c2 = parse_sanf(src, c, c2);
 
-            if op == "&&".to_string() {
-                Anf::And(Box::new(l), Box::new(r))
+                match infix_str.as_str() {
+                    "&&" => Anf::And(Box::new(c0), Box::new(c2)),
+                    "||" => Anf::Or(Box::new(c0), Box::new(c2)),
+
+                    "/" => Anf::Div(Box::new(c0), Box::new(c2)),
+                    "*" => Anf::Mult(Box::new(c0), Box::new(c2)),
+                    "+" => Anf::Plus(Box::new(c0), Box::new(c2)),
+                    "-" => Anf::Minus(Box::new(c0), Box::new(c2)),
+
+                    "<" => Anf::LT(Box::new(c0), Box::new(c2)),
+                    "<=" => Anf::LTE(Box::new(c0), Box::new(c2)),
+                    ">" => Anf::GT(Box::new(c0), Box::new(c2)),
+                    ">=" => Anf::GTE(Box::new(c0), Box::new(c2)),
+                    "==" => Anf::EQ(Box::new(c0), Box::new(c2)),
+                    _ => panic!("invalid binary operator found!\nsexp: {}", n.to_sexp()),
+                }
+            } else if isprefix_dist == Some(true) {
+                let c1 = cs.next().unwrap();
+                let c1 = parse_sanf(src, c, c1);
+
+                let c2 = cs.next().unwrap();
+                let c2 = parse_sanf(src, c, c2);
+                match prefixop.as_str() {
+                    "sanfuniform" => Anf::AnfUniform(Box::new(c1), Box::new(c2)),
+                    "sanfnormal" => Anf::AnfNormal(Box::new(c1), Box::new(c2)),
+                    "sanfbeta" => Anf::AnfBeta(Box::new(c1), Box::new(c2)),
+                    _ => panic!("invalid binary operator found!\nsexp: {}", n.to_sexp()),
+                }
+            } else if isprefix_dist == Some(false) {
+                match prefixop.as_str() {
+                    "sanfprj" => {
+                        let c1 = cs.next().unwrap();
+                        let utf8 = c1.utf8_text(src).unwrap();
+                        let arr_str = String::from_utf8(utf8.into()).unwrap();
+
+                        let c2 = cs.next().unwrap();
+                        let c2 = parse_sanf(src, c, c2);
+                        Anf::AnfPrj(arr_str, Box::new(c2))
+                    }
+                    _ => panic!("invalid operator found!\nsexp: {}", n.to_sexp()),
+                }
             } else {
-                Anf::Or(Box::new(l), Box::new(r))
+                panic!("incomplete function is impossible")
             }
         }
-        _ => panic!("invalid program found!\nsexp: {}", n.to_sexp()),
+        _ => panic!("invalid a-normal form found!\nsexp: {}", n.to_sexp()),
     }
 }
 
 pub fn parse_sval(src: &[u8], c: &mut TreeCursor, n: &Node) -> SVal {
-    match n.kind() {
-        _ => panic!("invalid value! found sexp:\n{}", n.to_sexp()),
+    match shared::parse_gval(src, c, n) {
+        Some(GVal::Bool(x)) => SVal::SBool(x),
+        Some(GVal::Float(x)) => SVal::SFloat(x),
+        Some(GVal::Int(x)) => SVal::SInt(x),
+        None => match n.kind() {
+            "svec" => SVal::SVec(parse_vec(src, c, *n, |a, b, c| parse_sval(a, b, &c))),
+            "sbern" => {
+                let mut _c = c.clone();
+                let mut cs = n.named_children(&mut _c);
+
+                let p = cs.next().unwrap();
+                let p = parse_float(src, c, &p);
+
+                SVal::SBern(p)
+            }
+            "spoisson" => {
+                let mut _c = c.clone();
+                let mut cs = n.named_children(&mut _c);
+
+                let p = cs.next().unwrap();
+                let p = parse_float(src, c, &p);
+
+                SVal::SPoisson(p)
+            }
+            "suniform" => {
+                let mut _c = c.clone();
+                let mut cs = n.named_children(&mut _c);
+
+                let a0 = cs.next().unwrap();
+                let a0 = parse_float(src, c, &a0);
+
+                let a1 = cs.next().unwrap();
+                let a1 = parse_float(src, c, &a1);
+
+                SVal::SUniform(a0, a1)
+            }
+            "snormal" => {
+                let mut _c = c.clone();
+                let mut cs = n.named_children(&mut _c);
+
+                let a0 = cs.next().unwrap();
+                let a0 = parse_float(src, c, &a0);
+
+                let a1 = cs.next().unwrap();
+                let a1 = parse_float(src, c, &a1);
+
+                SVal::SNormal(a0, a1)
+            }
+            "sbeta" => {
+                let mut _c = c.clone();
+                let mut cs = n.named_children(&mut _c);
+
+                let a0 = cs.next().unwrap();
+                let a0 = parse_float(src, c, &a0);
+
+                let a1 = cs.next().unwrap();
+                let a1 = parse_float(src, c, &a1);
+
+                SVal::SBeta(a0, a1)
+            }
+            "suniform" => {
+                let mut _c = c.clone();
+                let mut cs = n.named_children(&mut _c);
+
+                let a0 = cs.next().unwrap();
+                let a0 = parse_float(src, c, &a0);
+
+                let a1 = cs.next().unwrap();
+                let a1 = parse_float(src, c, &a1);
+
+                SVal::SUniform(a0, a1)
+            }
+            "sdiscrete" => SVal::SDiscrete(parse_vec(src, c, *n, |a, b, c| parse_float(a, b, &c))),
+            "sdirichlet" => {
+                SVal::SDirichlet(parse_vec(src, c, *n, |a, b, c| parse_float(a, b, &c)))
+            }
+            _ => panic!("invalid value! found sexp:\n{}", n.to_sexp()),
+        },
     }
 }
 pub fn parse_sanf_node(src: &[u8], c: &mut TreeCursor, n: &Node) -> Anf<Inferable, SVal> {
-    let k = n.kind();
-    match k {
+    match n.kind() {
+        "identifier" => Anf::AVar(None, parse_str(src, &n)),
+        "svalue" => Anf::AVal((), parse_sval(src, c, &n)),
         _ => todo!(),
     }
 }
@@ -118,7 +235,7 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             parse_sexpr(src, c, &n)
         }
         "sanf" => {
-            let anf = parse_sanf(src, c, &n);
+            let anf = parse_sanf(src, c, n);
             SExpr::SAnf((), Box::new(anf))
         }
         "slet" => {
@@ -159,7 +276,7 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             let mut cs = n.named_children(&mut _c);
 
             let pred = cs.next().unwrap();
-            let pred = parse_sanf(src, c, &pred);
+            let pred = parse_sanf(src, c, pred);
 
             let tbranch = cs.next().unwrap();
             let tbranch = parse_sexpr(src, c, &tbranch);
@@ -169,8 +286,8 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             SExpr::SIte(None, Box::new(pred), Box::new(tbranch), Box::new(fbranch))
         }
         "sobserve" => {
-            let a0 = parse_sanf(src, c, &n);
-            let a1 = parse_sanf(src, c, &n);
+            let a0 = parse_sanf(src, c, n);
+            let a1 = parse_sanf(src, c, n);
             SExpr::SObserve((), Box::new(a0), Box::new(a1))
         }
 
@@ -192,7 +309,7 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             let mut cs = n.named_children(&mut _c);
 
             let distobj = cs.next().unwrap();
-            let distobj = parse_sanf(src, c, &distobj);
+            let distobj = parse_sanf(src, c, distobj);
 
             SExpr::SSample((), Box::new(distobj))
         }
@@ -223,7 +340,7 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
 
-            let args = parse_vec(src, c, n, |a, b, c| parse_str(a, c));
+            let args = parse_vec(src, c, n, |a, b, c| parse_str(a, &c));
 
             let e = cs.next().unwrap();
             let e = parse_sexpr(src, c, &e);
@@ -242,7 +359,7 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             let mapfn = parse_sexpr(src, c, &mapfn);
 
             let xs = cs.next().unwrap();
-            let xs = parse_sanf(src, c, &xs);
+            let xs = parse_sanf(src, c, xs);
 
             SExpr::SMap((), x, Box::new(mapfn), Box::new(xs))
         }
@@ -253,7 +370,7 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             let mut cs = n.named_children(&mut _c);
 
             let init = cs.next().unwrap();
-            let init = parse_sanf(src, c, &init);
+            let init = parse_sanf(src, c, init);
 
             let acc = cs.next().unwrap();
             let acc = parse_str(src, &acc);
@@ -265,7 +382,7 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             let foldfn = parse_sexpr(src, c, &foldfn);
 
             let xs = cs.next().unwrap();
-            let xs = parse_sanf(src, c, &xs);
+            let xs = parse_sanf(src, c, xs);
 
             SExpr::SFold((), Box::new(init), acc, x, Box::new(foldfn), Box::new(xs))
         }

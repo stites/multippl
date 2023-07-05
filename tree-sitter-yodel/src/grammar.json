@@ -1838,11 +1838,51 @@
       "members": [
         {
           "type": "SYMBOL",
-          "name": "sprj"
+          "name": "identifier"
+        },
+        {
+          "type": "PREC",
+          "value": 6,
+          "content": {
+            "type": "SYMBOL",
+            "name": "svalue"
+          }
         },
         {
           "type": "SYMBOL",
-          "name": "identifier"
+          "name": "sanfprj"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sanfvec"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sanfbern"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sanfpoisson"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sanfuniform"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sanfnormal"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sanfbeta"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sanfdiscrete"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sanfdirichlet"
         },
         {
           "type": "PREC_LEFT",
@@ -2010,31 +2050,6 @@
               }
             ]
           }
-        },
-        {
-          "type": "SYMBOL",
-          "name": "svalue"
-        }
-      ]
-    },
-    "sprj": {
-      "type": "SEQ",
-      "members": [
-        {
-          "type": "SYMBOL",
-          "name": "identifier"
-        },
-        {
-          "type": "STRING",
-          "value": "["
-        },
-        {
-          "type": "SYMBOL",
-          "name": "svalue"
-        },
-        {
-          "type": "STRING",
-          "value": "]"
         }
       ]
     },
@@ -2108,7 +2123,28 @@
         }
       ]
     },
-    "svec": {
+    "sanfprj": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "identifier"
+        },
+        {
+          "type": "STRING",
+          "value": "["
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sanf"
+        },
+        {
+          "type": "STRING",
+          "value": "]"
+        }
+      ]
+    },
+    "sanfvec": {
       "type": "CHOICE",
       "members": [
         {
@@ -2163,7 +2199,62 @@
         }
       ]
     },
-    "sbern": {
+    "svec": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "["
+            },
+            {
+              "type": "SYMBOL",
+              "name": "svalue"
+            },
+            {
+              "type": "STRING",
+              "value": "]"
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "["
+            },
+            {
+              "type": "REPEAT",
+              "content": {
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "svalue"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": ","
+                  }
+                ]
+              }
+            },
+            {
+              "type": "SYMBOL",
+              "name": "svalue"
+            },
+            {
+              "type": "STRING",
+              "value": "]"
+            }
+          ]
+        }
+      ]
+    },
+    "sanfbern": {
       "type": "SEQ",
       "members": [
         {
@@ -2184,7 +2275,7 @@
         }
       ]
     },
-    "spoisson": {
+    "sanfpoisson": {
       "type": "SEQ",
       "members": [
         {
@@ -2205,7 +2296,7 @@
         }
       ]
     },
-    "suniform": {
+    "sanfuniform": {
       "type": "SEQ",
       "members": [
         {
@@ -2234,7 +2325,7 @@
         }
       ]
     },
-    "snormal": {
+    "sanfnormal": {
       "type": "SEQ",
       "members": [
         {
@@ -2263,7 +2354,7 @@
         }
       ]
     },
-    "sbeta": {
+    "sanfbeta": {
       "type": "SEQ",
       "members": [
         {
@@ -2292,7 +2383,7 @@
         }
       ]
     },
-    "sdiscrete": {
+    "sanfdiscrete": {
       "type": "CHOICE",
       "members": [
         {
@@ -2355,7 +2446,7 @@
         }
       ]
     },
-    "sdirichlet": {
+    "sanfdirichlet": {
       "type": "CHOICE",
       "members": [
         {
@@ -2409,6 +2500,261 @@
             {
               "type": "SYMBOL",
               "name": "sanf"
+            },
+            {
+              "type": "STRING",
+              "value": ")"
+            }
+          ]
+        }
+      ]
+    },
+    "sbern": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "bern"
+        },
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "SYMBOL",
+          "name": "svalue"
+        },
+        {
+          "type": "STRING",
+          "value": ")"
+        }
+      ]
+    },
+    "spoisson": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "poisson"
+        },
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "SYMBOL",
+          "name": "svalue"
+        },
+        {
+          "type": "STRING",
+          "value": ")"
+        }
+      ]
+    },
+    "suniform": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "uniform"
+        },
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "SYMBOL",
+          "name": "svalue"
+        },
+        {
+          "type": "STRING",
+          "value": ","
+        },
+        {
+          "type": "SYMBOL",
+          "name": "svalue"
+        },
+        {
+          "type": "STRING",
+          "value": ")"
+        }
+      ]
+    },
+    "snormal": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "normal"
+        },
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "SYMBOL",
+          "name": "svalue"
+        },
+        {
+          "type": "STRING",
+          "value": ","
+        },
+        {
+          "type": "SYMBOL",
+          "name": "svalue"
+        },
+        {
+          "type": "STRING",
+          "value": ")"
+        }
+      ]
+    },
+    "sbeta": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "beta"
+        },
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "SYMBOL",
+          "name": "svalue"
+        },
+        {
+          "type": "STRING",
+          "value": ","
+        },
+        {
+          "type": "SYMBOL",
+          "name": "svalue"
+        },
+        {
+          "type": "STRING",
+          "value": ")"
+        }
+      ]
+    },
+    "sdiscrete": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "discrete"
+            },
+            {
+              "type": "STRING",
+              "value": "("
+            },
+            {
+              "type": "SYMBOL",
+              "name": "svalue"
+            },
+            {
+              "type": "STRING",
+              "value": ")"
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "discrete"
+            },
+            {
+              "type": "STRING",
+              "value": "("
+            },
+            {
+              "type": "REPEAT",
+              "content": {
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "svalue"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": ","
+                  }
+                ]
+              }
+            },
+            {
+              "type": "SYMBOL",
+              "name": "svalue"
+            },
+            {
+              "type": "STRING",
+              "value": ")"
+            }
+          ]
+        }
+      ]
+    },
+    "sdirichlet": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "dirichlet"
+            },
+            {
+              "type": "STRING",
+              "value": "("
+            },
+            {
+              "type": "SYMBOL",
+              "name": "svalue"
+            },
+            {
+              "type": "STRING",
+              "value": ")"
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "dirichlet"
+            },
+            {
+              "type": "STRING",
+              "value": "("
+            },
+            {
+              "type": "REPEAT",
+              "content": {
+                "type": "SEQ",
+                "members": [
+                  {
+                    "type": "SYMBOL",
+                    "name": "svalue"
+                  },
+                  {
+                    "type": "STRING",
+                    "value": ","
+                  }
+                ]
+              }
+            },
+            {
+              "type": "SYMBOL",
+              "name": "svalue"
             },
             {
               "type": "STRING",

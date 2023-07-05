@@ -32,16 +32,16 @@ where
     LTE(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
     EQ(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
 
-    // x [ 0 ]
-    SPrj(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    // [x] && x [ 0 ]
+    AnfVec(Vec<Anf<X, Val>>),
+    AnfPrj(String, Box<Anf<X, Val>>),
 
     // Distributions
-    EFlip(Box<Anf<X, Val>>),
-    SBern(Box<Anf<X, Val>>),
-    SDiscrete(Vec<Anf<X, Val>>),
-    SUniform(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
-    SNormal(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
-    SPoisson(Box<Anf<X, Val>>),
-    SBeta(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
-    SDirichlet(Vec<Anf<X, Val>>),
+    AnfBernoulli(Box<Anf<X, Val>>),
+    AnfDiscrete(Vec<Anf<X, Val>>),
+    AnfUniform(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    AnfNormal(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    AnfPoisson(Box<Anf<X, Val>>),
+    AnfBeta(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    AnfDirichlet(Vec<Anf<X, Val>>),
 }

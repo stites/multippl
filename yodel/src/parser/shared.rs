@@ -1,3 +1,6 @@
+use crate::typeinf::grammar::Inferable;
+use crate::*;
+use std::fmt::Debug;
 use tree_sitter::{Node, Parser, Tree, TreeCursor};
 
 pub fn tree_parser(code: String) -> Option<Tree> {
@@ -24,7 +27,7 @@ pub fn parse_vec<X>(
     src: &[u8],
     c: &mut TreeCursor,
     n: Node,
-    parse_el: impl Fn(&[u8], &mut TreeCursor, &Node) -> X,
+    parse_el: impl Fn(&[u8], &mut TreeCursor, Node) -> X,
 ) -> Vec<X> {
     let mut xs = vec![];
     let mut _c = c.clone();
@@ -32,49 +35,130 @@ pub fn parse_vec<X>(
 
     for _ in 0..n.named_child_count() {
         let x = cs.next().unwrap();
-        let x = parse_el(src, c, &x);
+        let x = parse_el(src, c, x);
         xs.push(x);
     }
     xs
 }
-pub fn parse_float_h(src: &[u8], c: &mut TreeCursor, n: Node) -> f64 {
+
+pub fn parse_float(src: &[u8], c: &mut TreeCursor, n: &Node) -> f64 {
     let utf8 = n.utf8_text(src).unwrap();
     let fstr = String::from_utf8(utf8.into()).unwrap();
     fstr.parse::<f64>().unwrap()
 }
 
-pub fn parse_float(src: &[u8], c: &mut TreeCursor, n: Node) -> f64 {
-    match n.named_child_count() {
-        0 => parse_float_h(src, c, n),
-        1 => {
-            let mut c_ = c.clone();
-            let mut cs = n.named_children(&mut c_);
-            let fnode = cs.next().unwrap();
-            parse_float_h(src, c, fnode)
+// generic values
+#[derive(Debug, Clone, PartialEq)]
+pub enum GVal {
+    Bool(bool),
+    Float(f64),
+    Int(u64),
+}
+
+pub fn parse_gval(src: &[u8], c: &mut TreeCursor, n: &Node) -> Option<GVal> {
+    match n.kind() {
+        "bool" => {
+            let utf8 = n.utf8_text(src).unwrap();
+            let var = String::from_utf8(utf8.into()).unwrap();
+            let b = if var == "true".to_string() {
+                true
+            } else if var == "false".to_string() {
+                false
+            } else {
+                panic!("impossible")
+            };
+            Some(GVal::Bool(b))
         }
-        2 => panic!("impossible"),
-        3 => {
-            // division operation
-            let mut _c = c.clone();
-            let mut cs = n.named_children(&mut _c);
-
-            let l = cs.next().unwrap();
-            let l = parse_float(src, c, l);
-
-            let op = cs.next().unwrap();
-            let utf8 = op.utf8_text(src).unwrap();
-            let op = String::from_utf8(utf8.into()).unwrap();
-            assert!(
-                op == "/".to_string(),
-                "invalid program found!\nsexp: {}",
-                n.to_sexp()
-            );
-
-            let r = cs.next().unwrap();
-            let r = parse_float(src, c, r);
-
-            l / r
+        "int" => {
+            let utf8 = n.utf8_text(src).unwrap();
+            let istr = String::from_utf8(utf8.into()).unwrap();
+            let ix = istr.parse::<u64>().unwrap();
+            Some(GVal::Int(ix))
         }
-        _ => panic!("unexpected"),
+        "float" => {
+            let utf8 = n.utf8_text(src).unwrap();
+            let istr = String::from_utf8(utf8.into()).unwrap();
+            let x = istr.parse::<f64>().unwrap();
+            Some(GVal::Float(x))
+        }
+        _ => None,
     }
 }
+
+// pub fn parse_anf<Val>(src: &[u8], c: &mut TreeCursor, n: Node, parse_anf_node: impl Fn(&[u8], &mut TreeCursor, Node)->Anf<Inferable, Val>) -> Anf<Inferable, Val>
+//     where
+//       Val: PartialEq + Clone + Debug,
+//       AValExt<Val>: ξ<Inferable>,
+//       AVarExt<Val>: ξ<Inferable>,
+//       <ttg::AValExt<Val> as ξ<Inferable>>::Ext: PartialEq + Clone + Debug,
+//       <ttg::AVarExt<Val> as ξ<Inferable>>::Ext: PartialEq + Clone + Debug,
+// {
+//     match n.named_child_count() {
+//         0 => parse_anf_node(src, c, n), // parse that node!
+//         1 => {
+//             // found an extra paren, unwrap and continue
+//             let mut c_ = c.clone();
+//             let mut cs = n.named_children(&mut c_);
+//             let a = cs.next().unwrap();
+//             parse_anf(src, c, n, parse_anf_node)
+//         },
+//         2 => {
+//             // unary operation + dist constructors
+//             let mut _c = c.clone();
+//             let mut cs = n.named_children(&mut _c);
+//             let op = cs.next().unwrap();
+//             let utf8 = op.utf8_text(src).unwrap();
+//             let op = String::from_utf8(utf8.into()).unwrap();
+
+//             let a = cs.next().unwrap();
+//             let anf = parse_anf(src, c, a, parse_anf_node);
+//             match op.as_str() {
+//                 "!" => Anf::Neg(Box::new(anf)),
+//                 "eflip" => Anf::EFlip(Box::new(anf)),
+//                 "sbern" => Anf::SBern(Box::new(anf)),
+//                 "spoisson" => Anf::SPoisson(Box::new(anf)),
+//                 "sdirichlet" => Anf::SDirichlet(parse_vec(src, c, anf, |a, b, c| parse_anf_node(a, b,c))),
+//                 "sdiscrete" => Anf::SDiscrete(parse_vec(src, c, anf, |a, b, c| parse_anf_node(a, b,c))),
+//                 _ => panic!("invalid unary operator found!\nsexp: {}", n.to_sexp())
+//             }
+//         }
+//         3 => {
+//             // binary operation
+//             let mut _c = c.clone();
+//             let mut cs = n.named_children(&mut _c);
+
+//             let l = cs.next().unwrap();
+//             let l = parse_anf(src, c, l, parse_anf_node);
+
+//             let op = cs.next().unwrap();
+//             let utf8 = op.utf8_text(src).unwrap();
+//             let op = String::from_utf8(utf8.into()).unwrap();
+
+//             let r = cs.next().unwrap();
+//             let r = parse_anf(src, c, r, parse_anf_node);
+//             match op.as_str() {
+//                 "&&" => Anf::And(Box::new(l), Box::new(r)),
+//                 "||" => Anf::Or(Box::new(l), Box::new(r)),
+
+//                 "/" => Anf::Div(Box::new(l), Box::new(r)),
+//                 "*" => Anf::Mult(Box::new(l), Box::new(r)),
+//                 "+" => Anf::Plus(Box::new(l), Box::new(r)),
+//                 "-" => Anf::Minus(Box::new(l), Box::new(r)),
+
+//                 "<" => Anf::LT(Box::new(l), Box::new(r)),
+//                 "<=" => Anf::LTE(Box::new(l), Box::new(r)),
+//                 ">" => Anf::GT(Box::new(l), Box::new(r)),
+//                 ">=" => Anf::GTE(Box::new(l), Box::new(r)),
+//                 "==" => Anf::EQ(Box::new(l), Box::new(r)),
+
+//                 /// fixme, these are not binary infix operators
+//                 "suniform" => Anf::SUniform(Box::new(l), Box::new(r))
+//                 "snormal" => Anf::SNormal(Box::new(l), Box::new(r))
+//                 "sbeta" => Anf::SBeta(Box::new(l), Box::new(r))
+//                 "sprj" => Anf::SPrj(Box::new(l), Box::new(r)) // FIXME: this is (sprj) (indent) (anf)
+//                 _ => panic!("invalid binary operator found!\nsexp: {}", n.to_sexp()),
+//             }
+//         }
+//         _ => panic!("invalid a-normal form found!\nsexp: {}", n.to_sexp()),
+//     }
+// }
