@@ -23,6 +23,18 @@ pub fn parse_str(src: &[u8], n: &Node) -> String {
     String::from_utf8(utf8.into()).unwrap()
 }
 
+#[macro_export]
+macro_rules! parse_todo {
+    ( $src:expr, $n:expr ) => {{
+        todo!(
+            "\nkind: {}\nsexp: {}\nsrc: {}\n",
+            $n.kind(),
+            $n.to_sexp(),
+            parse_str($src, &$n)
+        )
+    }};
+}
+
 pub fn parse_vec<X>(
     src: &[u8],
     c: &mut TreeCursor,

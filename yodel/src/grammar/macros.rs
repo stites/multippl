@@ -307,9 +307,23 @@ macro_rules! flip {
 #[macro_export]
 macro_rules! bern {
     ( $num:literal / $denom:literal) => {{
-        $crate::grammar::SExpr::<$crate::typeinf::grammar::Inferable>::SBern(
+        $crate::grammar::SExpr::<$crate::typeinf::grammar::Inferable>::SAnf(
             (),
-            $num as f64 / $denom as f64,
+            Box::new($crate::grammar::Anf::<
+                $crate::typeinf::grammar::Inferable,
+                $crate::SVal,
+            >::AnfBernoulli(Box::new(
+                $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, $crate::SVal>::Div(
+                    Box::new($crate::grammar::Anf::<
+                        $crate::typeinf::grammar::Inferable,
+                        $crate::SVal,
+                    >::AVal((), $crate::SVal::SInt($num))),
+                    Box::new($crate::grammar::Anf::<
+                        $crate::typeinf::grammar::Inferable,
+                        $crate::SVal,
+                    >::AVal((), $crate::SVal::SInt($denom))),
+                ),
+            ))),
         )
     }};
     ( $p:expr  ) => {{

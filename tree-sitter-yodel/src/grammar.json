@@ -79,6 +79,23 @@
         }
       ]
     },
+    "sarg": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "identifier"
+        },
+        {
+          "type": "STRING",
+          "value": ":"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sty"
+        }
+      ]
+    },
     "sargs": {
       "type": "CHOICE",
       "members": [
@@ -91,15 +108,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "identifier"
-            },
-            {
-              "type": "STRING",
-              "value": ":"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "sty"
+              "name": "sarg"
             },
             {
               "type": "STRING",
@@ -121,15 +130,7 @@
                 "members": [
                   {
                     "type": "SYMBOL",
-                    "name": "identifier"
-                  },
-                  {
-                    "type": "STRING",
-                    "value": ":"
-                  },
-                  {
-                    "type": "SYMBOL",
-                    "name": "sty"
+                    "name": "sarg"
                   },
                   {
                     "type": "STRING",
@@ -140,21 +141,30 @@
             },
             {
               "type": "SYMBOL",
-              "name": "identifier"
-            },
-            {
-              "type": "STRING",
-              "value": ":"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "sty"
+              "name": "sarg"
             },
             {
               "type": "STRING",
               "value": ")"
             }
           ]
+        }
+      ]
+    },
+    "earg": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "SYMBOL",
+          "name": "identifier"
+        },
+        {
+          "type": "STRING",
+          "value": ":"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "ety"
         }
       ]
     },
@@ -170,15 +180,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "identifier"
-            },
-            {
-              "type": "STRING",
-              "value": ":"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "ety"
+              "name": "earg"
             },
             {
               "type": "STRING",
@@ -200,15 +202,7 @@
                 "members": [
                   {
                     "type": "SYMBOL",
-                    "name": "identifier"
-                  },
-                  {
-                    "type": "STRING",
-                    "value": ":"
-                  },
-                  {
-                    "type": "SYMBOL",
-                    "name": "ety"
+                    "name": "earg"
                   },
                   {
                     "type": "STRING",
@@ -219,15 +213,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "identifier"
-            },
-            {
-              "type": "STRING",
-              "value": ":"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "ety"
+              "name": "earg"
             },
             {
               "type": "STRING",
@@ -1295,6 +1281,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "swhile"
+        },
+        {
+          "type": "SYMBOL",
           "name": "sfold"
         },
         {
@@ -1621,6 +1611,69 @@
         {
           "type": "SYMBOL",
           "name": "sanf"
+        }
+      ]
+    },
+    "swhile": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "while"
+            },
+            {
+              "type": "STRING",
+              "value": "("
+            },
+            {
+              "type": "SYMBOL",
+              "name": "sanf"
+            },
+            {
+              "type": "STRING",
+              "value": ")"
+            },
+            {
+              "type": "STRING",
+              "value": "{"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "sexpr"
+            },
+            {
+              "type": "STRING",
+              "value": "}"
+            }
+          ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "while"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "sanf"
+            },
+            {
+              "type": "STRING",
+              "value": "{"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "sexpr"
+            },
+            {
+              "type": "STRING",
+              "value": "}"
+            }
+          ]
         }
       ]
     },

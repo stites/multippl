@@ -92,7 +92,7 @@
     }
   },
   {
-    "type": "eargs",
+    "type": "earg",
     "named": true,
     "fields": {},
     "children": {
@@ -105,6 +105,21 @@
         },
         {
           "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "eargs",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "earg",
           "named": true
         }
       ]
@@ -732,7 +747,7 @@
     }
   },
   {
-    "type": "sargs",
+    "type": "sarg",
     "named": true,
     "fields": {},
     "children": {
@@ -745,6 +760,21 @@
         },
         {
           "type": "sty",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sargs",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "sarg",
           "named": true
         }
       ]
@@ -883,6 +913,10 @@
         },
         {
           "type": "ssample",
+          "named": true
+        },
+        {
+          "type": "swhile",
           "named": true
         }
       ]
@@ -1233,6 +1267,25 @@
     }
   },
   {
+    "type": "swhile",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "sanf",
+          "named": true
+        },
+        {
+          "type": "sexpr",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "tyProd",
     "named": true,
     "fields": {},
@@ -1484,6 +1537,10 @@
   },
   {
     "type": "uniform",
+    "named": false
+  },
+  {
+    "type": "while",
     "named": false
   },
   {

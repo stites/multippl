@@ -136,6 +136,32 @@ fn parse_anf_enode(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EV
     }
 }
 
+pub fn parse_etype(src: &[u8], c: &mut TreeCursor, n: &Node) -> ETy {
+    use ETy::*;
+    assert_eq!(n.kind(), "ety");
+    let mut c_ = c.clone();
+    let mut cs = n.named_children(&mut c_);
+    let n = cs.next().unwrap();
+    let k = n.kind();
+    match k {
+        "tyBool" => {
+            ETy::EBool
+        }
+        "tyFloat" => {
+            ETy::EFloat
+        }
+        "tyInt" => {
+            ETy::EInt
+        }
+        "tyProd" => {
+            ETy::EProd(parse_vec(src, c, n, |a, b, c| parse_etype(a, b, &c)))
+        }
+        s => panic!(
+            "unexpected tree-sitter type (kind `{}`) (#named_children: {})! Likely, you need to rebuild the tree-sitter parser\nsexp: {}", s, n.named_child_count(), n.to_sexp()
+        ),
+    }
+}
+
 pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable> {
     use EExpr::*;
     use SExpr::SExact;
@@ -473,11 +499,12 @@ mod tests {
           let _ = observe (x || y) in
           x
         }"#;
+
         let expr = parse(code);
         assert_eq!(
             expr.unwrap(),
             program!(lets![
-                "x" ;= sample!(flip!(1/3));
+                "x" ;= sample!(~ bern!(1/3));
                 "y" ;= flip!(1/4);
                 "_" ;= observe!(b!("x" || "y"));
                 ...? b!("x")])

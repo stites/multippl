@@ -39,7 +39,7 @@ exact {
         (eexpr (eann (eexpr (eanf (identifier)))
             (ety (tyBool))))))))
 ======================
-exact: FIXME!!! trivial with extra annotation (not sure if types are going to the right places)
+exact: trivial with extra annotation (not sure if types are going to the right places)
 ======================
 
 exact {
@@ -291,55 +291,54 @@ exact {
 
 ---
 
-
-    (source_file
-      (program
+(source_file
+  (program
+    (eexpr
+      (elet
+        (identifier)
+        (eexpr
+          (esample
+            (sexpr
+              (ssample
+                (sanf
+                  (sanfbern
+                    (sanf
+                      (sanf
+                        (svalue
+                          (int)))
+                        (numeric_op)
+                        (sanf
+                          (svalue
+                            (int))))))))))
         (eexpr
           (elet
             (identifier)
             (eexpr
-              (esample
-                (sexpr
-                  (ssample
-                    (sanf
-                      (svalue
-                        (sbern
-                          (sanf
-                            (sanf
-                              (svalue
-                                (int)))
-                            (numeric_op)
-                            (sanf
-                              (svalue
-                                (int)))))))))))
+              (eflip
+                (eanf
+                  (eanf
+                    (evalue
+                      (int)))
+                  (numeric_op)
+                  (eanf
+                    (evalue
+                      (int))))))
             (eexpr
               (elet
                 (identifier)
                 (eexpr
-                  (eflip
+                  (eobserve
                     (eanf
                       (eanf
-                        (evalue
-                          (int)))
-                      (numeric_op)
-                      (eanf
-                        (evalue
-                          (int))))))
-                (eexpr
-                  (elet
-                    (identifier)
-                    (eexpr
-                      (eobserve
                         (eanf
-                          (eanf
-                            (eanf
-                              (identifier))
-                            (bool_biop)
-                            (eanf
-                              (identifier))))))
-                    (eexpr
-                      (eanf
-                        (identifier)))))))))))
+                          (identifier))
+                        (bool_biop)
+                        (eanf
+                          (identifier))))))
+                (eexpr
+                  (eanf
+                    (identifier)))))))))))
+
 
 ======================
 exact: discrete zero is invalid
@@ -437,15 +436,15 @@ exact {
   diamond(net2)
 }
 ---------
-
     (source_file
       (program
         (efun
           (identifier)
           (eargs
-            (identifier)
-            (ety
-              (tyBool)))
+            (earg
+              (identifier)
+              (ety
+                (tyBool))))
           (ety
             (tyBool))
           (eexpr
@@ -551,9 +550,10 @@ exact {
         (efun
           (identifier)
           (eargs
-            (identifier)
-            (ety
-              (tyBool)))
+            (earg
+              (identifier)
+              (ety
+                (tyBool))))
           (ety
             (tyBool))
           (eexpr
@@ -622,11 +622,10 @@ exact {
                 (esample
                   (sexpr
                     (sanf
-                      (svalue
-                        (spoisson
-                          (sanf
-                            (svalue
-                              (float)))))))))
+                      (sanfpoisson
+                        (sanf
+                          (svalue
+                            (float))))))))
               (eexpr
                 (eiterate
                   (identifier)

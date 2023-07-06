@@ -12,13 +12,15 @@ module.exports = grammar({
       seq($.sfun, $.program),
       seq($.efun, $.program),
     ),
+    sarg: $ => seq( $.identifier, ':', $.sty ),
     sargs: $ => choice(
-      seq('(', $.identifier, ':', $.sty, ')'),
-      seq('(', repeat(seq($.identifier, ':', $.sty, ',')), $.identifier, ':', $.sty, ')')
+      seq('(', $.sarg, ')'),
+      seq('(', repeat(seq($.sarg, ',')), $.sarg, ')')
     ),
+    earg: $ => seq($.identifier, ':', $.ety),
     eargs: $ => choice(
-      seq('(', $.identifier, ':', $.ety, ')'),
-      seq('(', repeat(seq($.identifier, ':', $.ety, ',')), $.identifier, ':', $.ety, ')')
+      seq('(', $.earg, ')'),
+      seq('(', repeat(seq($.earg, ',')), $.earg, ')')
     ),
 
     sfun: $ => seq('sample', 'fn', $.identifier, $.sargs, ':', $.sty, '{', $.sexpr, '}'),

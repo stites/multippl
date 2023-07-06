@@ -75,14 +75,13 @@ sample {
             (identifier)
             (sexpr
               (sanf
-                (svalue
-                  (svec
-                    (sanf
+                (sanfvec
+                   (sanf
                       (svalue
                         (bool)))
-                    (sanf
+                   (sanf
                       (svalue
-                        (bool)))))))
+                        (bool))))))
             (sexpr
               (sann
                 (sexpr
@@ -157,17 +156,16 @@ sample {
             (identifier)
             (sexpr
               (sanf
-                (svalue
-                  (sdiscrete
-                    (sanf
-                      (svalue
-                        (float)))
-                    (sanf
-                      (svalue
-                        (float)))
-                    (sanf
-                      (svalue
-                        (float)))))))
+                (sanfdiscrete
+                  (sanf
+                    (svalue
+                      (float)))
+                  (sanf
+                    (svalue
+                      (float)))
+                  (sanf
+                    (svalue
+                      (float))))))
             (sexpr
               (sletsample
                 (identifier)
@@ -182,17 +180,16 @@ sample {
                           (int))))
                     (sexpr
                       (sanf
-                        (svalue
-                          (sdiscrete
-                            (sanf
-                              (svalue
-                                (float)))
-                            (sanf
-                              (svalue
-                                (float)))
-                            (sanf
-                              (svalue
-                                (float)))))))
+                        (sanfdiscrete
+                          (sanf
+                            (svalue
+                              (float)))
+                          (sanf
+                            (svalue
+                              (float)))
+                          (sanf
+                            (svalue
+                              (float))))))
                     (site
                       (sanf
                         (sanf
@@ -203,30 +200,28 @@ sample {
                             (int))))
                       (sexpr
                         (sanf
-                          (svalue
-                            (sdiscrete
-                              (sanf
-                                (svalue
-                                  (float)))
-                              (sanf
-                                (svalue
-                                  (float)))
-                              (sanf
-                                (svalue
-                                  (float)))))))
+                          (sanfdiscrete
+                            (sanf
+                              (svalue
+                                (float)))
+                            (sanf
+                              (svalue
+                                (float)))
+                            (sanf
+                              (svalue
+                                (float))))))
                       (sexpr
                         (sanf
-                          (svalue
-                            (sdiscrete
-                              (sanf
-                                (svalue
-                                  (float)))
-                              (sanf
-                                (svalue
-                                  (float)))
-                              (sanf
-                                (svalue
-                                  (float))))))))))
+                          (sanfdiscrete
+                            (sanf
+                              (svalue
+                                (float)))
+                            (sanf
+                              (svalue
+                                (float)))
+                            (sanf
+                              (svalue
+                                (float)))))))))
                 (sexpr
                   (sletsample
                     (identifier)
@@ -241,14 +236,13 @@ sample {
                               (int))))
                         (sexpr
                           (sanf
-                            (svalue
-                              (snormal
-                                (sanf
-                                  (svalue
-                                    (float)))
-                                (sanf
-                                  (svalue
-                                    (float)))))))
+                            (sanfnormal
+                              (sanf
+                                (svalue
+                                  (float)))
+                              (sanf
+                                (svalue
+                                  (float))))))
                         (site
                           (sanf
                             (sanf
@@ -259,24 +253,22 @@ sample {
                                 (int))))
                           (sexpr
                             (sanf
-                              (svalue
-                                (snormal
-                                  (sanf
-                                    (svalue
-                                      (float)))
-                                  (sanf
-                                    (svalue
-                                      (float)))))))
+                              (sanfnormal
+                                (sanf
+                                  (svalue
+                                    (float)))
+                                (sanf
+                                  (svalue
+                                    (float))))))
                           (sexpr
                             (sanf
-                              (svalue
-                                (snormal
-                                  (sanf
-                                    (svalue
-                                      (float)))
-                                  (sanf
-                                    (svalue
-                                      (float))))))))))
+                              (sanfnormal
+                                (sanf
+                                  (svalue
+                                    (float)))
+                                (sanf
+                                  (svalue
+                                    (float)))))))))
                     (sexpr
                       (sletsample
                         (identifier)
@@ -291,11 +283,10 @@ sample {
                                   (int))))
                             (sexpr
                               (sanf
-                                (svalue
-                                  (sbern
-                                    (sanf
-                                      (svalue
-                                        (float)))))))
+                                (sanfbern
+                                  (sanf
+                                    (svalue
+                                      (float))))))
                             (site
                               (sanf
                                 (sanf
@@ -306,18 +297,16 @@ sample {
                                     (int))))
                               (sexpr
                                 (sanf
-                                  (svalue
-                                    (sbern
-                                      (sanf
-                                        (svalue
-                                          (float)))))))
+                                  (sanfbern
+                                    (sanf
+                                      (svalue
+                                        (float))))))
                               (sexpr
                                 (sanf
-                                  (svalue
-                                    (sbern
-                                      (sanf
-                                        (svalue
-                                          (float))))))))))
+                                  (sanfbern
+                                    (sanf
+                                      (svalue
+                                        (float)))))))))
                         (sexpr
                           (sletsample
                             (identifier)
@@ -343,14 +332,13 @@ sample {
                                     (sexpr
                                       (ssample
                                         (sanf
-                                          (svalue
-                                            (snormal
-                                              (sanf
-                                                (svalue
-                                                  (float)))
-                                              (sanf
-                                                (svalue
-                                                  (float))))))))
+                                          (sanfnormal
+                                            (sanf
+                                              (svalue
+                                                (float)))
+                                            (sanf
+                                              (svalue
+                                                (float)))))))
                                     (site
                                       (sanf
                                         (sanf
@@ -362,25 +350,23 @@ sample {
                                       (sexpr
                                         (ssample
                                           (sanf
-                                            (svalue
-                                              (snormal
-                                                (sanf
-                                                  (svalue
-                                                    (float)))
-                                                (sanf
-                                                  (svalue
-                                                    (float))))))))
+                                            (sanfnormal
+                                              (sanf
+                                                (svalue
+                                                  (float)))
+                                              (sanf
+                                                (svalue
+                                                  (float)))))))
                                       (sexpr
                                         (ssample
                                           (sanf
-                                            (svalue
-                                              (snormal
-                                                (sanf
-                                                  (svalue
-                                                    (float)))
-                                                (sanf
-                                                  (svalue
-                                                    (float)))))))))))))
+                                            (sanfnormal
+                                              (sanf
+                                                (svalue
+                                                  (float)))
+                                              (sanf
+                                                (svalue
+                                                  (float))))))))))))
                             (sexpr
                               (sletsample
                                 (identifier)
@@ -395,28 +381,27 @@ sample {
                                           (int))))
                                     (sexpr
                                       (sanf
-                                        (svalue
-                                          (snormal
+                                        (sanfnormal
+                                          (sanf
+                                            (sanf
+                                              (svalue
+                                                (int)))
+                                            (numeric_op)
                                             (sanf
                                               (sanf
                                                 (svalue
                                                   (int)))
                                               (numeric_op)
                                               (sanf
-                                                (sanf
-                                                  (svalue
-                                                    (int)))
-                                                (numeric_op)
-                                                (sanf
-                                                  (identifier))))
+                                                (identifier))))
+                                          (sanf
                                             (sanf
-                                              (sanf
-                                                (svalue
-                                                  (int)))
-                                              (numeric_op)
-                                              (sanf
-                                                (svalue
-                                                  (int))))))))
+                                              (svalue
+                                                (int)))
+                                            (numeric_op)
+                                            (sanf
+                                              (svalue
+                                                (int)))))))
                                     (site
                                       (sanf
                                         (sanf
@@ -427,77 +412,16 @@ sample {
                                             (int))))
                                       (sexpr
                                         (sanf
-                                          (svalue
-                                            (snormal
-                                              (sanf
-                                                (sanf
-                                                  (svalue
-                                                    (int)))
-                                                (numeric_op)
-                                                (sanf
-                                                  (sanf
-                                                    (svalue
-                                                      (int)))
-                                                  (numeric_op)
-                                                  (sanf
-                                                    (identifier))))
-                                              (sanf
-                                                (sanf
-                                                  (svalue
-                                                    (int)))
-                                                (numeric_op)
-                                                (sanf
-                                                  (svalue
-                                                    (int))))))))
-                                      (sexpr
-                                        (sanf
-                                          (svalue
-                                            (snormal
-                                              (sanf
-                                                (sanf
-                                                  (svalue
-                                                    (int)))
-                                                (numeric_op)
-                                                (sanf
-                                                  (sanf
-                                                    (svalue
-                                                      (int)))
-                                                  (numeric_op)
-                                                  (sanf
-                                                    (identifier))))
-                                              (sanf
-                                                (sanf
-                                                  (svalue
-                                                    (int)))
-                                                (numeric_op)
-                                                (sanf
-                                                  (svalue
-                                                    (int)))))))))))
-                                (sexpr
-                                  (sletsample
-                                    (identifier)
-                                    (sexpr
-                                      (sanf
-                                        (svalue
-                                          (snormal
+                                          (sanfnormal
                                             (sanf
                                               (sanf
-                                                (sanf
-                                                  (svalue
-                                                    (int)))
-                                                (numeric_op)
-                                                (sanf
-                                                  (sanf
-                                                    (svalue
-                                                      (float)))
-                                                  (numeric_op)
-                                                  (sanf
-                                                    (identifier))))
+                                                (svalue
+                                                  (int)))
                                               (numeric_op)
                                               (sanf
                                                 (sanf
                                                   (svalue
-                                                    (float)))
+                                                    (int)))
                                                 (numeric_op)
                                                 (sanf
                                                   (identifier))))
@@ -508,7 +432,65 @@ sample {
                                               (numeric_op)
                                               (sanf
                                                 (svalue
-                                                  (int))))))))
+                                                  (int)))))))
+                                      (sexpr
+                                        (sanf
+                                          (sanfnormal
+                                            (sanf
+                                              (sanf
+                                                (svalue
+                                                  (int)))
+                                              (numeric_op)
+                                              (sanf
+                                                (sanf
+                                                  (svalue
+                                                    (int)))
+                                                (numeric_op)
+                                                (sanf
+                                                  (identifier))))
+                                            (sanf
+                                              (sanf
+                                                (svalue
+                                                  (int)))
+                                              (numeric_op)
+                                              (sanf
+                                                (svalue
+                                                  (int))))))))))
+                                (sexpr
+                                  (sletsample
+                                    (identifier)
+                                    (sexpr
+                                      (sanf
+                                        (sanfnormal
+                                          (sanf
+                                            (sanf
+                                              (sanf
+                                                (svalue
+                                                  (int)))
+                                              (numeric_op)
+                                              (sanf
+                                                (sanf
+                                                  (svalue
+                                                    (float)))
+                                                (numeric_op)
+                                                (sanf
+                                                  (identifier))))
+                                            (numeric_op)
+                                            (sanf
+                                              (sanf
+                                                (svalue
+                                                  (float)))
+                                              (numeric_op)
+                                              (sanf
+                                                (identifier))))
+                                          (sanf
+                                            (sanf
+                                              (svalue
+                                                (int)))
+                                            (numeric_op)
+                                            (sanf
+                                              (svalue
+                                                (int)))))))
                                     (sexpr
                                       (sanf
                                         (identifier)))))))))))))))))))
@@ -697,28 +679,31 @@ sample {
                 (identifier)
                 (sexpr
                   (sanf
-                    (sprj
+                    (sanfprj
                       (identifier)
-                      (svalue
-                        (int)))))
+                      (sanf
+                        (svalue
+                          (int))))))
                 (sexpr
                   (slet
                     (identifier)
                     (sexpr
                       (sanf
-                        (sprj
+                        (sanfprj
                           (identifier)
-                          (svalue
-                            (int)))))
+                          (sanf
+                            (svalue
+                              (int))))))
                     (sexpr
                       (slet
                         (identifier)
                         (sexpr
                           (sanf
-                            (sprj
+                            (sanfprj
                               (identifier)
-                              (svalue
-                                (int)))))
+                              (sanf
+                                (svalue
+                                  (int))))))
                         (sexpr
                           (sletsample
                             (identifier)
@@ -733,14 +718,13 @@ sample {
                                       (int))))
                                 (sexpr
                                   (sanf
-                                    (svalue
-                                      (snormal
-                                        (sanf
-                                          (svalue
-                                            (float)))
-                                        (sanf
-                                          (svalue
-                                            (float)))))))
+                                    (sanfnormal
+                                      (sanf
+                                        (svalue
+                                          (float)))
+                                      (sanf
+                                        (svalue
+                                          (float))))))
                                 (site
                                   (sanf
                                     (sanf
@@ -751,24 +735,22 @@ sample {
                                         (int))))
                                   (sexpr
                                     (sanf
-                                      (svalue
-                                        (snormal
-                                          (sanf
-                                            (svalue
-                                              (float)))
-                                          (sanf
-                                            (svalue
-                                              (float)))))))
+                                      (sanfnormal
+                                        (sanf
+                                          (svalue
+                                            (float)))
+                                        (sanf
+                                          (svalue
+                                            (float))))))
                                   (sexpr
                                     (sanf
-                                      (svalue
-                                        (snormal
-                                          (sanf
-                                            (svalue
-                                              (float)))
-                                          (sanf
-                                            (svalue
-                                              (float))))))))))
+                                      (sanfnormal
+                                        (sanf
+                                          (svalue
+                                            (float)))
+                                        (sanf
+                                          (svalue
+                                            (float)))))))))
                             (sexpr
                               (slet
                                 (identifier)
@@ -794,14 +776,13 @@ sample {
                                         (sexpr
                                           (ssample
                                             (sanf
-                                              (svalue
-                                                (snormal
-                                                  (sanf
-                                                    (svalue
-                                                      (float)))
-                                                  (sanf
-                                                    (svalue
-                                                      (float))))))))
+                                              (sanfnormal
+                                                (sanf
+                                                  (svalue
+                                                    (float)))
+                                                (sanf
+                                                  (svalue
+                                                    (float)))))))
                                         (site
                                           (sanf
                                             (sanf
@@ -813,25 +794,23 @@ sample {
                                           (sexpr
                                             (ssample
                                               (sanf
-                                                (svalue
-                                                  (snormal
-                                                    (sanf
-                                                      (svalue
-                                                        (float)))
-                                                    (sanf
-                                                      (svalue
-                                                        (float))))))))
+                                                (sanfnormal
+                                                  (sanf
+                                                    (svalue
+                                                      (float)))
+                                                  (sanf
+                                                    (svalue
+                                                      (float)))))))
                                           (sexpr
                                             (ssample
                                               (sanf
-                                                (svalue
-                                                  (snormal
-                                                    (sanf
-                                                      (svalue
-                                                        (float)))
-                                                    (sanf
-                                                      (svalue
-                                                        (float)))))))))))))
+                                                (sanfnormal
+                                                  (sanf
+                                                    (svalue
+                                                      (float)))
+                                                  (sanf
+                                                    (svalue
+                                                      (float))))))))))))
                                 (sexpr
                                   (sletsample
                                     (identifier)
@@ -846,28 +825,27 @@ sample {
                                               (int))))
                                         (sexpr
                                           (sanf
-                                            (svalue
-                                              (snormal
+                                            (sanfnormal
+                                              (sanf
+                                                (sanf
+                                                  (svalue
+                                                    (int)))
+                                                (numeric_op)
                                                 (sanf
                                                   (sanf
                                                     (svalue
                                                       (int)))
                                                   (numeric_op)
                                                   (sanf
-                                                    (sanf
-                                                      (svalue
-                                                        (int)))
-                                                    (numeric_op)
-                                                    (sanf
-                                                      (identifier))))
+                                                    (identifier))))
+                                              (sanf
                                                 (sanf
-                                                  (sanf
-                                                    (svalue
-                                                      (int)))
-                                                  (numeric_op)
-                                                  (sanf
-                                                    (svalue
-                                                      (int))))))))
+                                                  (svalue
+                                                    (int)))
+                                                (numeric_op)
+                                                (sanf
+                                                  (svalue
+                                                    (int)))))))
                                         (site
                                           (sanf
                                             (sanf
@@ -878,77 +856,16 @@ sample {
                                                 (int))))
                                           (sexpr
                                             (sanf
-                                              (svalue
-                                                (snormal
-                                                  (sanf
-                                                    (sanf
-                                                      (svalue
-                                                        (int)))
-                                                    (numeric_op)
-                                                    (sanf
-                                                      (sanf
-                                                        (svalue
-                                                          (int)))
-                                                      (numeric_op)
-                                                      (sanf
-                                                        (identifier))))
-                                                  (sanf
-                                                    (sanf
-                                                      (svalue
-                                                        (int)))
-                                                    (numeric_op)
-                                                    (sanf
-                                                      (svalue
-                                                        (int))))))))
-                                          (sexpr
-                                            (sanf
-                                              (svalue
-                                                (snormal
-                                                  (sanf
-                                                    (sanf
-                                                      (svalue
-                                                        (int)))
-                                                    (numeric_op)
-                                                    (sanf
-                                                      (sanf
-                                                        (svalue
-                                                          (int)))
-                                                      (numeric_op)
-                                                      (sanf
-                                                        (identifier))))
-                                                  (sanf
-                                                    (sanf
-                                                      (svalue
-                                                        (int)))
-                                                    (numeric_op)
-                                                    (sanf
-                                                      (svalue
-                                                        (int)))))))))))
-                                    (sexpr
-                                      (sletsample
-                                        (identifier)
-                                        (sexpr
-                                          (sanf
-                                            (svalue
-                                              (snormal
+                                              (sanfnormal
                                                 (sanf
                                                   (sanf
-                                                    (sanf
-                                                      (svalue
-                                                        (int)))
-                                                    (numeric_op)
-                                                    (sanf
-                                                      (sanf
-                                                        (svalue
-                                                          (float)))
-                                                      (numeric_op)
-                                                      (sanf
-                                                        (identifier))))
+                                                    (svalue
+                                                      (int)))
                                                   (numeric_op)
                                                   (sanf
                                                     (sanf
                                                       (svalue
-                                                        (float)))
+                                                        (int)))
                                                     (numeric_op)
                                                     (sanf
                                                       (identifier))))
@@ -959,10 +876,69 @@ sample {
                                                   (numeric_op)
                                                   (sanf
                                                     (svalue
-                                                      (int))))))))
+                                                      (int)))))))
+                                          (sexpr
+                                            (sanf
+                                              (sanfnormal
+                                                (sanf
+                                                  (sanf
+                                                    (svalue
+                                                      (int)))
+                                                  (numeric_op)
+                                                  (sanf
+                                                    (sanf
+                                                      (svalue
+                                                        (int)))
+                                                    (numeric_op)
+                                                    (sanf
+                                                      (identifier))))
+                                                (sanf
+                                                  (sanf
+                                                    (svalue
+                                                      (int)))
+                                                  (numeric_op)
+                                                  (sanf
+                                                    (svalue
+                                                      (int))))))))))
+                                    (sexpr
+                                      (sletsample
+                                        (identifier)
+                                        (sexpr
+                                          (sanf
+                                            (sanfnormal
+                                              (sanf
+                                                (sanf
+                                                  (sanf
+                                                    (svalue
+                                                      (int)))
+                                                  (numeric_op)
+                                                  (sanf
+                                                    (sanf
+                                                      (svalue
+                                                        (float)))
+                                                    (numeric_op)
+                                                    (sanf
+                                                      (identifier))))
+                                                (numeric_op)
+                                                (sanf
+                                                  (sanf
+                                                    (svalue
+                                                      (float)))
+                                                  (numeric_op)
+                                                  (sanf
+                                                    (identifier))))
+                                              (sanf
+                                                (sanf
+                                                  (svalue
+                                                    (int)))
+                                                (numeric_op)
+                                                (sanf
+                                                  (svalue
+                                                    (int)))))))
                                         (sexpr
                                           (sanf
                                             (identifier)))))))))))))))))))))
+
 ======================
 sample: array access is tucked away in anf
 ======================
@@ -973,7 +949,6 @@ sample {
 }
 
 ----------
-
 
     (source_file
       (program
@@ -990,10 +965,11 @@ sample {
                 (identifier)
                 (sexpr
                   (sanf
-                    (sprj
+                    (sanfprj
                       (identifier)
-                      (svalue
-                        (int)))))
+                      (sanf
+                        (svalue
+                          (int))))))
                 (sexpr
                   (sanf
                     (identifier)))))))))
@@ -1014,15 +990,15 @@ sample {
 }
 ---------
 
-
     (source_file
       (program
         (efun
           (identifier)
           (eargs
-            (identifier)
-            (ety
-              (tyBool)))
+            (earg
+              (identifier)
+              (ety
+                (tyBool))))
           (ety
             (tyBool))
           (eexpr
@@ -1089,11 +1065,10 @@ sample {
               (identifier)
               (sexpr
                 (sanf
-                  (svalue
-                    (spoisson
-                      (sanf
-                        (svalue
-                          (float)))))))
+                  (sanfpoisson
+                    (sanf
+                      (svalue
+                        (float))))))
               (sexpr
                 (sexact
                   (eexpr

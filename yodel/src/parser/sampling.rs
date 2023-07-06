@@ -26,38 +26,35 @@ macro_rules! assert_children {
 }
 pub fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVal> {
     match n.named_child_count() {
-        0 => parse_sanf_node(src, c, &n), // parse that node!
+        0 => {
+            // println!("parse 0: {}", n.to_sexp());
+            parse_sanf_node(src, c, &n)
+        } // parse that node!
         1 => {
-            // found an extra paren, unwrap and continue
-            let mut c_ = c.clone();
-            let mut cs = n.named_children(&mut c_);
-            let a = cs.next().unwrap();
-            parse_sanf(src, c, n)
-        }
-        2 => {
-            // unary operation + dist constructors
+            // unwrap an svalue, or an anf wrapped with extra parens
+            // println!("parse 1: {}", n.to_sexp());
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
-            let op = cs.next().unwrap();
-            let utf8 = op.utf8_text(src).unwrap();
-            let op = String::from_utf8(utf8.into()).unwrap();
+            let node = cs.next().unwrap();
 
-            let a = cs.next().unwrap();
-            let anf = parse_sanf(src, c, a);
-            match op.as_str() {
-                "!" => Anf::Neg(Box::new(anf)),
-                "sbern" => Anf::AnfBernoulli(Box::new(anf)),
-                "spoisson" => Anf::AnfPoisson(Box::new(anf)),
-                "sdirichlet" => {
-                    Anf::AnfDirichlet(parse_vec(src, c, a, |a, b, c| parse_sanf_node(a, b, &c)))
+            match node.kind() {
+                "sanf" => parse_sanf(src, c, node),
+                "identifier" => Anf::AVar(None, parse_str(src, &node)),
+                "svalue" => Anf::AVal((), parse_sval(src, c, &node)),
+                "!" => Anf::Neg(Box::new(parse_sanf(src, c, node))),
+                "sanfbern" => Anf::AnfBernoulli(Box::new(parse_sanf(src, c, node))),
+                "sanfpoisson" => Anf::AnfPoisson(Box::new(parse_sanf(src, c, node))),
+                "sanfdirichlet" => {
+                    Anf::AnfDirichlet(parse_vec(src, c, node, |a, b, c| parse_sanf_node(a, b, &c)))
                 }
-                "sdiscrete" => {
-                    Anf::AnfDiscrete(parse_vec(src, c, a, |a, b, c| parse_sanf_node(a, b, &c)))
+                "sanfdiscrete" => {
+                    Anf::AnfDiscrete(parse_vec(src, c, node, |a, b, c| parse_sanf_node(a, b, &c)))
                 }
                 _ => panic!("invalid unary operator found!\nsexp: {}", n.to_sexp()),
             }
         }
         3 => {
+            // println!("parse 3: {}", n.to_sexp());
             // binary operation
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
@@ -127,7 +124,11 @@ pub fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVa
                 panic!("incomplete function is impossible")
             }
         }
-        _ => panic!("invalid a-normal form found!\nsexp: {}", n.to_sexp()),
+        nchilds => panic!(
+            "invalid a-normal form found with {} children!\nsexp: {}",
+            nchilds,
+            n.to_sexp()
+        ),
     }
 }
 
@@ -137,6 +138,13 @@ pub fn parse_sval(src: &[u8], c: &mut TreeCursor, n: &Node) -> SVal {
         Some(GVal::Float(x)) => SVal::SFloat(x),
         Some(GVal::Int(x)) => SVal::SInt(x),
         None => match n.kind() {
+            "svalue" => {
+                let mut _c = c.clone();
+                let mut cs = n.named_children(&mut _c);
+
+                let n = cs.next().unwrap();
+                parse_sval(src, c, &n)
+            }
             "svec" => SVal::SVec(parse_vec(src, c, *n, |a, b, c| parse_sval(a, b, &c))),
             "sbern" => {
                 let mut _c = c.clone();
@@ -212,11 +220,52 @@ pub fn parse_sval(src: &[u8], c: &mut TreeCursor, n: &Node) -> SVal {
         },
     }
 }
+
+pub fn parse_stype(src: &[u8], c: &mut TreeCursor, n: &Node) -> STy {
+    assert_eq!(n.kind(), "sty");
+    let mut c_ = c.clone();
+    let mut cs = n.named_children(&mut c_);
+    let n = cs.next().unwrap();
+    match n.kind() {
+        "tyBool" => {
+            STy::SBool
+        }
+        "tyFloat" => {
+            STy::SFloat
+        }
+        "tyInt" => {
+            STy::SInt
+        }
+        "tyDistribution" => {
+            STy::SDistribution
+        }
+        "tyVec" => {
+            let mut c_ = c.clone();
+            let mut cs = n.named_children(&mut c_);
+
+            let ty = cs.next().unwrap();
+            let ty = parse_stype(src, c, &ty);
+
+            STy::SVec(Box::new(ty))
+        }
+        "tyProd" => {
+            STy::SProd(parse_vec(src, c, n, |a, b, c| parse_stype(a, b, &c)))
+        }
+        s => panic!(
+            "unexpected tree-sitter type (kind `{}`) (#named_children: {})! Likely, you need to rebuild the tree-sitter parser\nsexp: {}", s, n.named_child_count(), n.to_sexp()
+        ),
+    }
+}
 pub fn parse_sanf_node(src: &[u8], c: &mut TreeCursor, n: &Node) -> Anf<Inferable, SVal> {
     match n.kind() {
         "identifier" => Anf::AVar(None, parse_str(src, &n)),
-        "svalue" => Anf::AVal((), parse_sval(src, c, &n)),
-        _ => todo!(),
+        "svalue" => {
+            // println!("parse_sanf_node: svalue");
+            Anf::AVal((), parse_sval(src, c, &n))
+        }
+        _ => {
+            todo!("parse_sanf_node, not ready for: {}", n.kind())
+        }
     }
 }
 
@@ -226,8 +275,7 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
     let mut c_ = c.clone();
     let mut cs = n.named_children(&mut c_);
     let n = cs.next().unwrap();
-    println!("{}", n.to_sexp());
-
+    // println!("parse sexpr: {}", n.to_sexp());
     let k = n.kind();
     match k {
         "sexpr" => {
@@ -406,4 +454,63 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
 }
 
 #[cfg(test)]
-mod sampling_parser_tests {}
+mod sampling_parser_tests {
+    use super::*;
+    use crate::parser::program::*;
+    use crate::*;
+
+    #[test]
+    fn user_defined_functions() {
+        use Anf::*;
+        use EExpr::*;
+        use ETy::*;
+        use Program::*;
+        use SExpr::*;
+        use STy::*;
+        let code = r#"
+            exact fn foo (s1: Bool) : Bool {
+              bar
+            }
+            sample fn foo (s1: Bool) : Bool {
+              bar
+            }
+            sample {
+              p <- poisson(0.4);
+              exact { baz(p) }
+            }
+        "#;
+        let expr = parse(code);
+        let efun: Function<EExpr<Inferable>> = Function {
+            name: Some("foo".to_string()),
+            arguments: [AVar(Some(EBool), "s1".to_string())].to_vec(),
+            body: EAnf((), Box::new(AVar(None, "bar".to_string()))),
+            returnty: EBool,
+        };
+        let sfun: Function<SExpr<Inferable>> = Function {
+            name: Some("foo".to_string()),
+            arguments: [AVar(Some(SBool), "s1".to_string())].to_vec(),
+            body: SAnf((), Box::new(AVar(None, "bar".to_string()))),
+            returnty: SBool,
+        };
+        let prg = SLetIn(
+            None,
+            "p".to_string(),
+            Box::new(SAnf(
+                (),
+                Box::new(AnfPoisson(Box::new(AVal((), SVal::SFloat(0.4))))),
+            )),
+            Box::new(SExact(
+                (),
+                Box::new(EApp(
+                    None,
+                    "baz".to_string(),
+                    [AVar(None, "baz".to_string()), AVar(None, "p".to_string())].to_vec(),
+                )),
+            )),
+        );
+        assert_eq!(
+            expr.unwrap(),
+            Program::EDefine(efun, Box::new(Program::SDefine(sfun, Box::new(SBody(prg)))))
+        );
+    }
+}

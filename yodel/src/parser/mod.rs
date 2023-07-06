@@ -7,6 +7,7 @@ use tree_sitter_yodel;
 use crate::grammar::*;
 
 pub mod exact;
+pub mod function;
 pub mod program;
 pub mod sampling;
 pub mod shared;

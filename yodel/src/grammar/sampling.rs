@@ -27,6 +27,7 @@ pub enum SVal {
     SFloat(f64),
     SInt(u64),
     SVec(Vec<SVal>),
+    SProd(Vec<SVal>),
 
     SBern(f64),
     SDiscrete(Vec<f64>),
