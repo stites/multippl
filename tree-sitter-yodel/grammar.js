@@ -44,7 +44,7 @@ module.exports = grammar({
       prec(6, $.eanf),
       prec(5, seq('(', $.eexpr, ')'))
     ),
-    ety: $ => choice($.tyBool, $.tyFloat, $.tyInt, $.tyProd), // includes sugar of int
+    ety: $ => choice($.tyBool, $.tyFloat, $.tyInt, $.etyProd), // includes sugar of int
     tyBool: $ => 'Bool',
     tyFloat: $ => 'Float',
 
@@ -53,7 +53,7 @@ module.exports = grammar({
       seq($.identifier, '(', repeat(seq($.eanf,  ',')), $.eanf, ')'),
     ),
 
-    tyProd: $ => choice(
+    etyProd: $ => choice(
       seq('(', $.ety, ',', $.ety, ')'),
       seq('(', $.ety, ',', repeat(seq($.ety, ',')), $.ety, ')'),
     ),
@@ -199,6 +199,7 @@ module.exports = grammar({
 
       $.sanfprj,
       $.sanfvec,
+      $.sanfprod,
 
       $.sanfbern,
       $.sanfpoisson,
@@ -223,6 +224,7 @@ module.exports = grammar({
       $.float,
       $.int,
       $.svec,
+      $.sprod,
 
       $.sbern,
       $.spoisson,
@@ -241,6 +243,16 @@ module.exports = grammar({
       seq('[', $.svalue, ']'),
       seq('[', repeat(seq($.svalue, ',')), $.svalue, ']'),
     ),
+    sanfprod: $ => choice(
+      seq('(', $.sanf, ',', $.sanf, ')'),
+      seq('(', $.sanf, ',', repeat(seq($.sanf, ',')), $.sanf, ')'),
+    ),
+    sprod: $ => choice(
+      seq('(', $.svalue, ',', $.svalue, ')'),
+      seq('(', $.svalue, ',', repeat(seq($.svalue, ',')), $.svalue, ')'),
+    ),
+
+
 
     // // [x] && x [ 0 ]
     // AnfPrj(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
@@ -276,10 +288,15 @@ module.exports = grammar({
     ),
 
 
-    sty: $ => choice($.tyBool, $.tyFloat, $.tyInt, $.tyVec, $.tyDistribution),
+    sty: $ => choice($.tyBool, $.tyFloat, $.tyInt, $.tyVec, $.tyDistribution, $.styProd),
     tyInt: $ => 'Int',
     tyDistribution: $ => 'Dist',
     tyVec: $ => seq('[', $.sty, ']'),
+    styProd: $ => choice(
+      seq('(', $.sty, ',', $.sty, ')'),
+      seq('(', $.sty, ',', repeat(seq($.sty, ',')), $.sty, ')'),
+    ),
+
 
   }
 });

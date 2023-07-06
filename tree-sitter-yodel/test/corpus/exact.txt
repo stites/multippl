@@ -72,8 +72,8 @@ exact {
       (elet (identifier) (ety (tyBool))
         (eexpr (eanf (evalue (bool))))
         (eexpr (eann (eexpr (eexpr (eann (eexpr (eanf (identifier)))
-                  (ety (tyProd (ety (tyBool)) (ety (tyBool)))))))
-            (ety (tyProd (ety (tyBool)) (ety (tyBool)) (ety (tyBool))))))))))
+                  (ety (etyProd (ety (tyBool)) (ety (tyBool)))))))
+            (ety (etyProd (ety (tyBool)) (ety (tyBool)) (ety (tyBool))))))))))
 ======================
 exact: one typed flip
 ======================

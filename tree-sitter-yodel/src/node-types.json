@@ -413,6 +413,10 @@
       "required": true,
       "types": [
         {
+          "type": "etyProd",
+          "named": true
+        },
+        {
           "type": "tyBool",
           "named": true
         },
@@ -423,9 +427,20 @@
         {
           "type": "tyInt",
           "named": true
-        },
+        }
+      ]
+    }
+  },
+  {
+    "type": "etyProd",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
         {
-          "type": "tyProd",
+          "type": "ety",
           "named": true
         }
       ]
@@ -555,6 +570,10 @@
           "named": true
         },
         {
+          "type": "sanfprod",
+          "named": true
+        },
+        {
           "type": "sanfuniform",
           "named": true
         },
@@ -671,6 +690,21 @@
           "type": "identifier",
           "named": true
         },
+        {
+          "type": "sanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sanfprod",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
         {
           "type": "sanf",
           "named": true
@@ -1136,6 +1170,21 @@
     }
   },
   {
+    "type": "sprod",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "svalue",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "ssample",
     "named": true,
     "fields": {},
@@ -1159,6 +1208,10 @@
       "required": true,
       "types": [
         {
+          "type": "styProd",
+          "named": true
+        },
+        {
           "type": "tyBool",
           "named": true
         },
@@ -1176,6 +1229,21 @@
         },
         {
           "type": "tyVec",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "styProd",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "sty",
           "named": true
         }
       ]
@@ -1241,6 +1309,10 @@
           "named": true
         },
         {
+          "type": "sprod",
+          "named": true
+        },
+        {
           "type": "suniform",
           "named": true
         },
@@ -1280,21 +1352,6 @@
         },
         {
           "type": "sexpr",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
-    "type": "tyProd",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "ety",
           "named": true
         }
       ]

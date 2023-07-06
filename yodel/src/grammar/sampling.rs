@@ -43,7 +43,8 @@ pub enum STy {
     SBool,
     SFloat,
     SInt,
-    SVec(Vec<STy>),
+    SVec(Box<STy>),
+    SProd(Vec<STy>),
     SDistribution,
 }
 
@@ -57,7 +58,8 @@ impl super::classes::IsTyped<STy> for SVal {
             SBool(_) => STy::SBool,
             SFloat(_) => STy::SFloat,
             SInt(_) => STy::SInt,
-            SVec(vs) => STy::SVec(vs.iter().map(|x| x.as_type()).collect()),
+            SVec(vs) => STy::SVec(Box::new(vs.first().unwrap().as_type())),
+            SProd(vs) => STy::SProd(vs.iter().map(|x| x.as_type()).collect()),
             _ => STy::SDistribution,
         }
     }

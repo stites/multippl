@@ -34,6 +34,7 @@ where
 
     // [x] && x [ 0 ]
     AnfVec(Vec<Anf<X, Val>>),
+    AnfProd(Vec<Anf<X, Val>>),
     AnfPrj(String, Box<Anf<X, Val>>),
 
     // Distributions
