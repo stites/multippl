@@ -70,14 +70,7 @@ impl EVal {
     }
 }
 
-pub trait IsTyped<T: PartialEq> {
-    fn is_prod(&self) -> bool;
-    fn as_type(&self) -> T;
-    fn is_type(&self, ty: &T) -> bool {
-        self.as_type() == *ty
-    }
-}
-impl IsTyped<ETy> for EVal {
+impl super::classes::IsTyped<ETy> for EVal {
     fn is_prod(&self) -> bool {
         matches!(self, EVal::EProd(_))
     }

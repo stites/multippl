@@ -257,29 +257,43 @@ fn typeinference_sexpr(e: &grammar::SExprInferable) -> Result<SExprTyped> {
     }
 }
 
-fn typeinference_sfun(f: &Function<grammar::SExprInferable>) -> Result<Function<SExprTyped>> {
+fn typeinference_fun<ExprI, ExprT, Val, T>(
+    typeinference_expr: impl Fn(&ExprI) -> Result<ExprT>,
+    ty: T,
+    f: &Function<ExprI>,
+) -> Result<Function<ExprT>>
+where
+    <ExprI as Lang>::Anf: PartialEq + Debug + Clone,
+    <ExprT as Lang>::Anf: PartialEq + Debug + Clone,
+    <ExprI as Lang>::Ty: PartialEq + Debug + Clone,
+    <ExprT as Lang>::Ty: PartialEq + Debug + Clone,
+    ExprI: PartialEq + Debug + Clone + Lang<Anf = Anf<Inferable, Val>, Ty = T>,
+    ExprT: PartialEq + Debug + Clone + Lang<Anf = Anf<Typed, Val>, Ty = T>,
+    AVarExt<Val>: ξ<Inferable, Ext = Option<T>> + ξ<Typed, Ext = <ExprT as Lang>::Ty>,
+    AValExt<Val>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
+    Val: Debug + PartialEq + Clone,
+{
     Ok(Function {
         name: f.name.clone(),
-        arguments: typeinference_anfs(&ignored_stype(), &f.arguments)?,
-        body: typeinference_sexpr(&f.body)?,
+        arguments: typeinference_anfs(&ty, &f.arguments)?,
+        body: typeinference_expr(&f.body)?,
         returnty: f.returnty.clone(),
     })
 }
-fn typeinference_efun(f: &Function<grammar::EExprInferable>) -> Result<Function<EExprTyped>> {
-    Ok(Function {
-        name: f.name.clone(),
-        arguments: typeinference_anfs(&ignored_etype(), &f.arguments)?,
-        body: typeinference_eexpr(&f.body)?,
-        returnty: f.returnty.clone(),
-    })
-}
+
 pub fn typeinference(p: &grammar::ProgramInferable) -> Result<ProgramTyped> {
     use Program::*;
     match p {
         EBody(e) => Ok(EBody(typeinference_eexpr(e)?)),
         SBody(e) => Ok(SBody(typeinference_sexpr(e)?)),
-        EDefine(f, p) => Ok(EDefine(typeinference_efun(f)?, Box::new(typeinference(p)?))),
-        SDefine(f, p) => Ok(SDefine(typeinference_sfun(f)?, Box::new(typeinference(p)?))),
+        EDefine(f, p) => Ok(EDefine(
+            typeinference_fun(typeinference_eexpr, ignored_etype(), f)?,
+            Box::new(typeinference(p)?),
+        )),
+        SDefine(f, p) => Ok(SDefine(
+            typeinference_fun(typeinference_sexpr, ignored_stype(), f)?,
+            Box::new(typeinference(p)?),
+        )),
     }
 }
 

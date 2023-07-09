@@ -66,7 +66,6 @@ pub fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVa
                 "sanfuniform" => Some(true),
                 "sanfnormal" => Some(true),
                 "sanfbeta" => Some(true),
-                "sanfbeta" => Some(true),
                 _ => None,
             };
             if isprefix_dist.is_none() {
@@ -199,18 +198,6 @@ pub fn parse_sval(src: &[u8], c: &mut TreeCursor, n: &Node) -> SVal {
                 let a1 = parse_float(src, c, &a1);
 
                 SVal::SBeta(a0, a1)
-            }
-            "suniform" => {
-                let mut _c = c.clone();
-                let mut cs = n.named_children(&mut _c);
-
-                let a0 = cs.next().unwrap();
-                let a0 = parse_float(src, c, &a0);
-
-                let a1 = cs.next().unwrap();
-                let a1 = parse_float(src, c, &a1);
-
-                SVal::SUniform(a0, a1)
             }
             "sdiscrete" => SVal::SDiscrete(parse_vec(src, c, *n, |a, b, c| parse_float(a, b, &c))),
             "sdirichlet" => {

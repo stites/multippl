@@ -1,10 +1,12 @@
 use self::grammar::*;
-use crate::data::CompileError;
 use crate::grammar::*;
+use crate::ttg::*;
+use crate::*;
 use std::fmt::Debug;
 
 pub mod grammar {
     use super::*;
+    use crate::grammar::classes::IsTyped;
 
     ::ttg::phase!(pub struct Typed: {
         AVarExt<EVal>:ETy,
@@ -19,11 +21,6 @@ pub mod grammar {
     });
     ::ttg::alias!(Typed + (Program, EExpr, SExpr, Anf<Var>));
 
-    #[derive(Debug, PartialEq, Clone)]
-    pub struct LetInTypes<T> {
-        pub bindee: T,
-        pub body: T,
-    }
     impl IsTyped<STy> for AnfTyped<SVal> {
         fn as_type(&self) -> STy {
             use Anf::*;
@@ -74,23 +71,9 @@ pub mod grammar {
                 EIte(t, _, _, _) => t.clone(),
                 EFlip(_, _) => ETy::EBool,
                 EObserve(_, _) => ETy::EBool,
-                ESample(_, e) => natural_embedding_s(e.as_type()),
+                ESample(_, e) => todo!("natural_embedding_s(e.as_type())"),
+                _ => todo!(),
             }
-        }
-    }
-
-    pub fn natural_embedding_e(ty: ETy) -> STy {
-        match ty {
-            ETy::EBool => STy::SBool,
-            _ => todo!("probably need to return a result"),
-        }
-    }
-
-    pub fn natural_embedding_s(ty: STy) -> ETy {
-        match ty {
-            STy::SBool => ETy::EBool,
-            // TODO: can also convert vec<bool> to discrete
-            _ => todo!("probably need to return a result"),
         }
     }
 
@@ -99,28 +82,45 @@ pub mod grammar {
             todo!()
         }
         fn as_type(&self) -> STy {
-            use SExpr::*;
-            match self {
-                SAnf(_, anf) => anf.as_type(),
-                SLetIn(t, _, _, _) => t.body.clone(),
-                SSeq(t, e0, e1) => e1.as_type(),
-                SIte(t, _, _, _) => t.clone(),
-                SBern(_, param) => STy::SBool,
-                SDiscrete(_, ps) => STy::SInt,
-                SUniform(_, lo, hi) => STy::SFloat,
-                SNormal(_, mean, var) => STy::SFloat,
-                SBeta(_, a, b) => STy::SFloat,
-                SDirichlet(_, ps) => STy::SVec(ps.iter().map(|_| STy::SFloat).collect()),
-                SObserve(_, _, _) => STy::SBool, // returns Top, 2 is the next best thing
-                SExact(_, e) => natural_embedding_e(e.as_type()),
-            }
+            todo!()
         }
     }
 }
 
+fn typecheck_anf_binop<Val>(
+    l: &grammar::AnfTyped<Val>,
+    r: &grammar::AnfTyped<Val>,
+    op: impl Fn(Box<AnfUD<Val>>, Box<AnfUD<Val>>) -> AnfUD<Val>,
+) -> Result<AnfUD<Val>>
+where
+    AVarExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    AValExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    <AVarExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    <AValExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    Val: Debug + PartialEq + Clone,
+{
+    Ok(op(Box::new(typecheck_anf(l)?), Box::new(typecheck_anf(r)?)))
+}
+fn typecheck_anf_vec<Val>(
+    xs: &[grammar::AnfTyped<Val>],
+    op: impl Fn(Vec<AnfUD<Val>>) -> AnfUD<Val>,
+) -> Result<AnfUD<Val>>
+where
+    AVarExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    AValExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    <AVarExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    <AValExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    Val: Debug + PartialEq + Clone,
+{
+    Ok(op(xs
+        .iter()
+        .map(|a| typecheck_anf(a))
+        .collect::<Result<Vec<AnfUD<Val>>>>()?))
+}
+
 pub fn typecheck_anf<Val: Debug + PartialEq + Clone>(
     a: &grammar::AnfTyped<Val>,
-) -> Result<AnfUD<Val>, CompileError>
+) -> Result<AnfUD<Val>>
 where
     AVarExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     AValExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
@@ -132,22 +132,44 @@ where
     match a {
         AVar(_, s) => Ok(AVar((), s.clone())),
         AVal(_, v) => Ok(AVal((), v.clone())),
-        And(bl, br) => Ok(And(
-            Box::new(typecheck_anf(bl)?),
-            Box::new(typecheck_anf(br)?),
-        )),
-        Or(bl, br) => Ok(Or(
-            Box::new(typecheck_anf(bl)?),
-            Box::new(typecheck_anf(br)?),
-        )),
+
+        // Booleans
+        And(l, r) => typecheck_anf_binop(l, r, And),
+        Or(l, r) => typecheck_anf_binop(l, r, Or),
         Neg(bl) => Ok(Neg(Box::new(typecheck_anf(bl)?))),
-        _ => todo!(),
+
+        // Numerics
+        Plus(l, r) => typecheck_anf_binop(l, r, Plus),
+        Minus(l, r) => typecheck_anf_binop(l, r, Minus),
+        Mult(l, r) => typecheck_anf_binop(l, r, Mult),
+        Div(l, r) => typecheck_anf_binop(l, r, Div),
+
+        // Ord
+        GT(l, r) => typecheck_anf_binop(l, r, GT),
+        LT(l, r) => typecheck_anf_binop(l, r, LT),
+        GTE(l, r) => typecheck_anf_binop(l, r, GTE),
+        LTE(l, r) => typecheck_anf_binop(l, r, LTE),
+        EQ(l, r) => typecheck_anf_binop(l, r, EQ),
+
+        // [x]; (l,r); x[0]
+        AnfVec(xs) => typecheck_anf_vec(xs, AnfVec),
+        AnfProd(xs) => typecheck_anf_vec(xs, AnfProd),
+        AnfPrj(var, ix) => Ok(AnfPrj(var.clone(), Box::new(typecheck_anf(ix)?))),
+
+        // Distributions
+        AnfBernoulli(x) => Ok(AnfBernoulli(Box::new(typecheck_anf(x)?))),
+        AnfPoisson(x) => Ok(AnfPoisson(Box::new(typecheck_anf(x)?))),
+        AnfUniform(l, r) => typecheck_anf_binop(l, r, AnfUniform),
+        AnfNormal(l, r) => typecheck_anf_binop(l, r, AnfNormal),
+        AnfBeta(l, r) => typecheck_anf_binop(l, r, AnfBeta),
+        AnfDiscrete(xs) => typecheck_anf_vec(xs, AnfDiscrete),
+        AnfDirichlet(xs) => typecheck_anf_vec(xs, AnfDirichlet),
     }
 }
 
 pub fn typecheck_anfs<Val: Debug + PartialEq + Clone>(
     anfs: &[AnfTyped<Val>],
-) -> Result<Vec<AnfUD<Val>>, CompileError>
+) -> Result<Vec<AnfUD<Val>>>
 where
     AVarExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     AValExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
@@ -158,16 +180,15 @@ where
     anfs.iter().map(typecheck_anf).collect()
 }
 
-pub fn typecheck_eexpr(e: &grammar::EExprTyped) -> Result<EExprUD, CompileError> {
+fn typecheck_eexpr(e: &grammar::EExprTyped) -> Result<EExprUD> {
     use crate::grammar::EExpr::*;
     match e {
         EAnf(_, a) => Ok(EAnf((), Box::new(typecheck_anf(a)?))),
-        EPrj(_ty, i, a) => {
-            // ignore types for now.
-            // let aty = a.as_type();
-            // assert!(aty.left() == Some(*ty.clone()), "actual {:?} != expected {:?}. type is: {:?}", aty.left(), Some(*ty.clone()), ty);
-            Ok(EPrj((), *i, Box::new(typecheck_anf(a)?)))
-        }
+        EPrj(_ty, i, a) => Ok(EPrj(
+            (),
+            Box::new(typecheck_anf(i)?),
+            Box::new(typecheck_anf(a)?),
+        )),
         EProd(_ty, anfs) => Ok(EProd((), typecheck_anfs(anfs)?)),
         ELetIn(_ty, s, ebound, ebody) => Ok(ELetIn(
             (),
@@ -181,13 +202,22 @@ pub fn typecheck_eexpr(e: &grammar::EExprTyped) -> Result<EExprUD, CompileError>
             Box::new(typecheck_eexpr(t)?),
             Box::new(typecheck_eexpr(f)?),
         )),
-        EFlip(_, param) => Ok(EFlip((), *param)),
+        EFlip(_, param) => Ok(EFlip((), Box::new(typecheck_anf(param)?))),
         EObserve(_, a) => Ok(EObserve((), Box::new(typecheck_anf(a)?))),
         ESample(_, e) => Ok(ESample((), Box::new(typecheck_sexpr(e)?))),
+
+        EApp(_, f, args) => Ok(EApp((), f.clone(), typecheck_anfs(args)?)),
+        EDiscrete(_, args) => Ok(EDiscrete((), typecheck_anfs(args)?)),
+        EIterate(_, f, init, times) => Ok(EIterate(
+            (),
+            f.clone(),
+            Box::new(typecheck_anf(init)?),
+            Box::new(typecheck_anf(times)?),
+        )),
     }
 }
 
-pub fn typecheck_sexpr(e: &grammar::SExprTyped) -> Result<SExprUD, CompileError> {
+fn typecheck_sexpr(e: &grammar::SExprTyped) -> Result<SExprUD> {
     use crate::grammar::SExpr::*;
     match e {
         SAnf(_, a) => Ok(SAnf((), Box::new(typecheck_anf(a)?))),
@@ -208,51 +238,88 @@ pub fn typecheck_sexpr(e: &grammar::SExprTyped) -> Result<SExprUD, CompileError>
             Box::new(typecheck_sexpr(t)?),
             Box::new(typecheck_sexpr(f)?),
         )),
-
-        SBern(_, param) => {
-            let param = typecheck_anf(param)?;
-            Ok(SBern((), Box::new(param)))
-        }
-        SUniform(_, lo, hi) => {
-            let lo = typecheck_anf(lo)?;
-            let hi = typecheck_anf(hi)?;
-            Ok(SUniform((), Box::new(lo), Box::new(hi)))
-        }
-        SNormal(_, mean, var) => {
-            let mean = typecheck_anf(mean)?;
-            let var = typecheck_anf(var)?;
-            Ok(SNormal((), Box::new(mean), Box::new(var)))
-        }
-        SBeta(_, a, b) => {
-            let a = typecheck_anf(a)?;
-            let b = typecheck_anf(b)?;
-            Ok(SBeta((), Box::new(a), Box::new(b)))
-        }
-        SDiscrete(_, ps) => {
-            let ps = typecheck_anfs(ps)?;
-            Ok(SDiscrete((), ps))
-        }
-        SDirichlet(_, ps) => {
-            let ps = typecheck_anfs(ps)?;
-            Ok(SDirichlet((), ps))
-        }
-        SObserve(_, a, e) => Ok(SObserve(
+        SMap(_, arg, map, xs) => Ok(SMap(
             (),
-            Box::new(typecheck_anf(a)?),
-            Box::new(typecheck_sexpr(e)?),
+            arg.clone(),
+            Box::new(typecheck_sexpr(map)?),
+            Box::new(typecheck_anf(xs)?),
+        )),
+        SFold(_, init, accum, arg, fold, xs) => Ok(SFold(
+            (),
+            Box::new(typecheck_anf(init)?),
+            accum.clone(),
+            arg.clone(),
+            Box::new(typecheck_sexpr(fold)?),
+            Box::new(typecheck_anf(xs)?),
+        )),
+        SWhile(_, guard, body) => Ok(SWhile(
+            (),
+            Box::new(typecheck_anf(guard)?),
+            Box::new(typecheck_sexpr(body)?),
         )),
 
+        SApp(_, f, args) => Ok(SApp((), f.clone(), typecheck_anfs(args)?)),
+        SLambda(_, args, body) => Ok(SLambda((), args.clone(), Box::new(typecheck_sexpr(body)?))),
+
+        SSample(_, dist) => Ok(SSample((), Box::new(typecheck_anf(dist)?))),
+        SObserve(_, val, dist) => Ok(SObserve(
+            (),
+            Box::new(typecheck_anf(val)?),
+            Box::new(typecheck_anf(dist)?),
+        )),
+
+        // Multi-language boundary
         SExact(_, e) => Ok(SExact((), Box::new(typecheck_eexpr(e)?))),
+
+        // sugar: let x = ~(<sexpr>) in <sexpr>
+        SLetSample(_, var, model, rest) => Ok(SLetSample(
+            (),
+            var.clone(),
+            Box::new(typecheck_sexpr(model)?),
+            Box::new(typecheck_sexpr(rest)?),
+        )),
     }
 }
 
-pub fn typecheck(p: &grammar::ProgramTyped) -> Result<ProgramUD, CompileError> {
+fn typecheck_fun<ExprIn, ExprOut, Val, T>(
+    translate_expr: impl Fn(&ExprIn) -> Result<ExprOut>,
+    f: &Function<ExprIn>,
+) -> Result<Function<ExprOut>>
+where
+    <ExprIn as Lang>::Anf: PartialEq + Debug + Clone,
+    <ExprOut as Lang>::Anf: PartialEq + Debug + Clone,
+    <ExprIn as Lang>::Ty: PartialEq + Debug + Clone,
+    <ExprOut as Lang>::Ty: PartialEq + Debug + Clone,
+    ExprIn: PartialEq + Debug + Clone + Lang<Anf = Anf<Typed, Val>, Ty = T>,
+    ExprOut: PartialEq + Debug + Clone + Lang<Anf = Anf<UD, Val>, Ty = T>,
+    AVarExt<Val>: ξ<UD, Ext = ()> + ξ<Typed, Ext = <ExprOut as Lang>::Ty>,
+    AValExt<Val>: ξ<UD, Ext = ()> + ξ<Typed, Ext = ()>,
+    Val: Debug + PartialEq + Clone,
+{
+    Ok(Function {
+        name: f.name.clone(),
+        arguments: typecheck_anfs(&f.arguments)?,
+        body: translate_expr(&f.body)?,
+        returnty: f.returnty.clone(),
+    })
+}
+
+pub fn typecheck(p: &grammar::ProgramTyped) -> Result<ProgramUD> {
+    use Program::*;
     match p {
-        Program::EBody(e) => Ok(Program::EBody(typecheck_eexpr(e)?)),
-        Program::SBody(e) => Ok(Program::SBody(typecheck_sexpr(e)?)),
+        EBody(e) => Ok(EBody(typecheck_eexpr(e)?)),
+        SBody(e) => Ok(SBody(typecheck_sexpr(e)?)),
+        EDefine(f, p) => Ok(EDefine(
+            typecheck_fun(typecheck_eexpr, f)?,
+            Box::new(typecheck(p)?),
+        )),
+        SDefine(f, p) => Ok(SDefine(
+            typecheck_fun(typecheck_sexpr, f)?,
+            Box::new(typecheck(p)?),
+        )),
     }
 }
 
-pub fn pipeline(p: &crate::typeinf::grammar::ProgramInferable) -> Result<ProgramUD, CompileError> {
+pub fn pipeline(p: &crate::typeinf::grammar::ProgramInferable) -> Result<ProgramUD> {
     typecheck(&crate::typeinf::pipeline(p)?)
 }
