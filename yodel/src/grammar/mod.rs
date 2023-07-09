@@ -6,6 +6,7 @@ pub mod exact;
 pub mod function;
 pub mod program;
 pub mod sampling;
+pub mod strip;
 pub mod ttg;
 pub mod undecorated;
 
@@ -16,8 +17,16 @@ pub use crate::grammar::anf::*;
 pub use crate::grammar::classes::*;
 pub use crate::grammar::function::*;
 pub use crate::grammar::program::*;
+pub use crate::grammar::strip::*;
 pub use crate::grammar::ttg::*;
 pub use crate::grammar::undecorated::*;
 
 pub mod macros;
 pub use crate::grammar::macros::*;
+
+// shared across sampling and exact
+#[derive(Debug, PartialEq, Clone)]
+pub struct LetInTypes<T> {
+    pub bindee: T,
+    pub body: T,
+}
