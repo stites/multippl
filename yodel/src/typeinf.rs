@@ -3,7 +3,7 @@ use crate::data::errors::{
     Result,
 };
 use crate::grammar::*;
-use crate::typecheck::grammar::{AnfTyped, EExprTyped, LetInTypes, ProgramTyped, SExprTyped};
+use crate::typecheck::grammar::{AnfTyped, EExprTyped, ProgramTyped, SExprTyped};
 use std::fmt::Debug;
 
 pub mod grammar {
@@ -22,114 +22,42 @@ pub mod grammar {
         SLetInExt: Option<LetInTypes<STy>>,
         SIteExt: Option<STy>,
     });
-    ttg::alias!(Inferable + (Program, EExpr, SExpr, Anf<Var>));
-
-    impl AnfInferable<SVal> {
-        pub fn strip_anf(&self) -> Result<AnfInferable<EVal>> {
-            use Anf::*;
-            match self {
-                AVar(ext, s) => Ok(AVar(None, s.clone())),
-                AVal(ext, SVal::SBool(b)) => Ok(AVal((), EVal::EBool(*b))),
-                AVal(_, _) => Err(SemanticsError("not in the natural embedding".to_string())),
-                And(l, r) => Ok(And(Box::new(l.strip_anf()?), Box::new(r.strip_anf()?))),
-                Or(l, r) => Ok(Or(Box::new(l.strip_anf()?), Box::new(r.strip_anf()?))),
-                Neg(n) => Ok(Neg(Box::new(n.strip_anf()?))),
-                _ => todo!(),
-            }
-        }
-    }
-
-    impl ProgramInferable {
-        pub fn strip_samples(&self) -> Result<ProgramInferable> {
-            use Program::*;
-            match self {
-                SBody(e) => Ok(EBody(e.strip_samples1()?)),
-                EBody(e) => {
-                    // FIXME: this shouldn't be necessary and I think I already fixed the bug that causes this.
-                    let mut cur = e.strip_samples1()?;
-                    loop {
-                        let nxt = cur.strip_samples1()?;
-
-                        if nxt == cur {
-                            return Ok(EBody(nxt));
-                        } else {
-                            cur = nxt;
-                        }
-                    }
-                }
-            }
-        }
-    }
-    impl SExprInferable {
-        pub fn strip_samples1(&self) -> Result<EExprInferable> {
-            use EExpr::*;
-            use SExpr::*;
-            match self {
-                SAnf(x, a) => Ok(EAnf(x.clone(), Box::new(a.strip_anf()?))),
-                SBern(_, param) => match *param.clone() {
-                    Anf::AVal(_, SVal::SFloat(f)) => Ok(EFlip((), f)),
-                    a => Err(SemanticsError(format!(
-                        "cannot strip Bern({:?}) to EFlip",
-                        a
-                    ))),
-                },
-                SDiscrete(_, ps) => todo!("can't convert discrete, need to produce ESugar"),
-                SUniform(_, lo, hi) => Err(SemanticsError("can't convert uniform".to_string())),
-                SNormal(_, mean, var) => Err(SemanticsError("can't convert normal".to_string())),
-                SBeta(_, a, b) => Err(SemanticsError("can't convert beta".to_string())),
-                SDirichlet(_, ps) => Err(SemanticsError("can't convert Dirichlet".to_string())),
-                SExact(_, e) => Ok(e.strip_samples1()?),
-                SLetIn(ex, s, x, y) => Ok(ELetIn(
-                    None,
-                    s.clone(),
-                    Box::new(x.strip_samples1()?),
-                    Box::new(y.strip_samples1()?),
-                )),
-                SIte(ex, p, x, y) => Ok(EIte(
-                    None,
-                    Box::new(p.strip_anf()?),
-                    Box::new(x.strip_samples1()?),
-                    Box::new(y.strip_samples1()?),
-                )),
-                SObserve(_, a, e) => Err(SemanticsError(
-                    "can't convert observes from sampling language".to_string(),
-                )),
-                SSeq(ex, x, y) => Ok(ELetIn(
-                    None,
-                    String::from("_"),
-                    Box::new(x.strip_samples1()?),
-                    Box::new(y.strip_samples1()?),
-                )),
-            }
-        }
-    }
-    impl EExprInferable {
-        pub fn strip_samples1(&self) -> Result<EExprInferable> {
-            use EExpr::*;
-            match self {
-                ESample(_, e) => Ok(e.strip_samples1()?),
-                ELetIn(ex, s, x, y) => Ok(ELetIn(
-                    ex.clone(),
-                    s.clone(),
-                    Box::new(x.strip_samples1()?),
-                    Box::new(y.strip_samples1()?),
-                )),
-                EIte(ex, p, x, y) => Ok(EIte(
-                    ex.clone(),
-                    p.clone(),
-                    Box::new(x.strip_samples1()?),
-                    Box::new(y.strip_samples1()?),
-                )),
-                e => Ok(e.clone()),
-            }
-        }
-    }
+    ::ttg::alias!(Inferable + (Program, EExpr, SExpr, Anf<Var>));
 }
 
 use crate::typecheck::grammar::Typed;
 use crate::typeinf::grammar::Inferable;
 
-pub fn typeinference_anf<T: Debug + PartialEq + Clone, X: Debug + PartialEq + Clone>(
+fn typeinf_anf_binop<T: Debug + PartialEq + Clone, X: Debug + PartialEq + Clone>(
+    ty: &T,
+    l: &grammar::AnfInferable<X>,
+    r: &grammar::AnfInferable<X>,
+    op: impl Fn(Box<AnfTyped<X>>, Box<AnfTyped<X>>) -> AnfTyped<X>,
+) -> Result<AnfTyped<X>>
+where
+    AVarExt<X>: ξ<Inferable, Ext = Option<T>> + ξ<Typed, Ext = T>,
+    AValExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
+{
+    Ok(op(
+        Box::new(typeinference_anf(ty, l)?),
+        Box::new(typeinference_anf(ty, r)?),
+    ))
+}
+fn typeinf_anf_vec<T: Debug + PartialEq + Clone, X: Debug + PartialEq + Clone>(
+    ty: &T,
+    xs: &[grammar::AnfInferable<X>],
+    op: impl Fn(Vec<AnfTyped<X>>) -> AnfTyped<X>,
+) -> Result<AnfTyped<X>>
+where
+    AVarExt<X>: ξ<Inferable, Ext = Option<T>> + ξ<Typed, Ext = T>,
+    AValExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
+{
+    Ok(op(xs
+        .iter()
+        .map(|a| typeinference_anf(ty, a))
+        .collect::<Result<Vec<AnfTyped<X>>>>()?))
+}
+fn typeinference_anf<T: Debug + PartialEq + Clone, X: Debug + PartialEq + Clone>(
     ty: &T,
     a: &grammar::AnfInferable<X>,
 ) -> Result<AnfTyped<X>>
@@ -141,20 +69,42 @@ where
     match a {
         AVar(_, s) => Ok(AVar(ty.clone(), s.clone())),
         AVal(_, v) => Ok(AVal((), v.clone())),
-        And(bl, br) => Ok(And(
-            Box::new(typeinference_anf(ty, bl)?),
-            Box::new(typeinference_anf(ty, br)?),
-        )),
-        Or(bl, br) => Ok(Or(
-            Box::new(typeinference_anf(ty, bl)?),
-            Box::new(typeinference_anf(ty, br)?),
-        )),
+
+        // Booleans
+        And(l, r) => typeinf_anf_binop(ty, l, r, And),
+        Or(l, r) => typeinf_anf_binop(ty, l, r, Or),
         Neg(bl) => Ok(Neg(Box::new(typeinference_anf(ty, bl)?))),
-        _ => todo!(),
+
+        // Numerics
+        Plus(l, r) => typeinf_anf_binop(ty, l, r, Plus),
+        Minus(l, r) => typeinf_anf_binop(ty, l, r, Minus),
+        Mult(l, r) => typeinf_anf_binop(ty, l, r, Mult),
+        Div(l, r) => typeinf_anf_binop(ty, l, r, Div),
+
+        // Ord
+        GT(l, r) => typeinf_anf_binop(ty, l, r, GT),
+        LT(l, r) => typeinf_anf_binop(ty, l, r, LT),
+        GTE(l, r) => typeinf_anf_binop(ty, l, r, GTE),
+        LTE(l, r) => typeinf_anf_binop(ty, l, r, LTE),
+        EQ(l, r) => typeinf_anf_binop(ty, l, r, EQ),
+
+        // [x]; (l,r); x[0]
+        AnfVec(xs) => typeinf_anf_vec(ty, xs, AnfVec),
+        AnfProd(xs) => typeinf_anf_vec(ty, xs, AnfProd),
+        AnfPrj(var, ix) => Ok(AnfPrj(var.clone(), Box::new(typeinference_anf(ty, ix)?))),
+
+        // Distributions
+        AnfBernoulli(x) => Ok(AnfBernoulli(Box::new(typeinference_anf(ty, x)?))),
+        AnfPoisson(x) => Ok(AnfPoisson(Box::new(typeinference_anf(ty, x)?))),
+        AnfUniform(l, r) => typeinf_anf_binop(ty, l, r, AnfUniform),
+        AnfNormal(l, r) => typeinf_anf_binop(ty, l, r, AnfNormal),
+        AnfBeta(l, r) => typeinf_anf_binop(ty, l, r, AnfBeta),
+        AnfDiscrete(xs) => typeinf_anf_vec(ty, xs, AnfDiscrete),
+        AnfDirichlet(xs) => typeinf_anf_vec(ty, xs, AnfDirichlet),
     }
 }
 
-pub fn typeinference_anfs<T: Debug + PartialEq + Clone, X: Debug + PartialEq + Clone>(
+fn typeinference_anfs<T: Debug + PartialEq + Clone, X: Debug + PartialEq + Clone>(
     ty: &T,
     anfs: &[grammar::AnfInferable<X>],
 ) -> Result<Vec<AnfTyped<X>>>
@@ -165,7 +115,7 @@ where
     anfs.iter().map(|a| typeinference_anf(ty, a)).collect()
 }
 
-fn ignored_type() -> ETy {
+fn ignored_etype() -> ETy {
     ETy::EBool
 }
 
@@ -173,44 +123,63 @@ fn ignored_stype() -> STy {
     STy::SBool
 }
 
-pub fn typeinference_eexpr(e: &grammar::EExprInferable) -> Result<EExprTyped> {
+fn typeinference_eexpr(e: &grammar::EExprInferable) -> Result<EExprTyped> {
     use crate::grammar::EExpr::*;
     match e {
         EAnf(_, a) => Ok(EAnf((), Box::new(typeinference_anf(&ETy::EBool, a)?))),
         EPrj(_ty, i, a) => {
             // ignore types for now.
             Ok(EPrj(
-                ignored_type(),
-                *i,
-                Box::new(typeinference_anf(&ETy::EBool, a)?),
+                ignored_etype(),
+                Box::new(typeinference_anf(&ignored_etype(), i)?),
+                Box::new(typeinference_anf(&ignored_etype(), a)?),
             ))
         }
         EProd(_ty, anfs) => Ok(EProd(
-            ignored_type(),
-            typeinference_anfs(&ignored_type(), anfs)?,
+            ignored_etype(),
+            typeinference_anfs(&ignored_etype(), anfs)?,
         )),
         ELetIn(_ty, s, ebound, ebody) => Ok(ELetIn(
             LetInTypes {
-                bindee: ignored_type(),
-                body: ignored_type(),
+                bindee: ignored_etype(),
+                body: ignored_etype(),
             },
             s.clone(),
             Box::new(typeinference_eexpr(ebound)?),
             Box::new(typeinference_eexpr(ebody)?),
         )),
         EIte(_ty, cond, t, f) => Ok(EIte(
-            ignored_type(),
+            ignored_etype(),
             Box::new(typeinference_anf(&ETy::EBool, cond)?),
             Box::new(typeinference_eexpr(t)?),
             Box::new(typeinference_eexpr(f)?),
         )),
-        EFlip(_, param) => Ok(EFlip((), *param)),
-        EObserve(_, a) => Ok(EObserve((), Box::new(typeinference_anf(&ETy::EBool, a)?))),
+        EFlip(_, param) => Ok(EFlip(
+            (),
+            Box::new(typeinference_anf(&ignored_etype(), param)?),
+        )),
+        EObserve(_, a) => Ok(EObserve(
+            (),
+            Box::new(typeinference_anf(&ignored_etype(), a)?),
+        )),
         ESample(_, e) => Ok(ESample((), Box::new(typeinference_sexpr(e)?))),
+
+        EApp(_, f, args) => Ok(EApp(
+            (),
+            f.clone(),
+            typeinference_anfs(&ignored_etype(), args)?,
+        )),
+        EDiscrete(_, args) => Ok(EDiscrete((), typeinference_anfs(&ignored_etype(), args)?)),
+        EIterate(_, f, init, times) => Ok(EIterate(
+            (),
+            f.clone(),
+            Box::new(typeinference_anf(&ignored_etype(), init)?),
+            Box::new(typeinference_anf(&ignored_etype(), times)?),
+        )),
     }
 }
 
-pub fn typeinference_sexpr(e: &grammar::SExprInferable) -> Result<SExprTyped> {
+fn typeinference_sexpr(e: &grammar::SExprInferable) -> Result<SExprTyped> {
     use crate::grammar::SExpr::*;
     match e {
         SAnf(_, a) => Ok(SAnf((), Box::new(typeinference_anf(&STy::SBool, a)?))),
@@ -234,48 +203,83 @@ pub fn typeinference_sexpr(e: &grammar::SExprInferable) -> Result<SExprTyped> {
             Box::new(typeinference_sexpr(t)?),
             Box::new(typeinference_sexpr(f)?),
         )),
-
-        SBern(_, param) => {
-            let param = typeinference_anf(&ignored_stype(), param)?;
-            Ok(SBern((), Box::new(param)))
-        }
-        SUniform(_, lo, hi) => {
-            let lo = typeinference_anf(&ignored_stype(), lo)?;
-            let hi = typeinference_anf(&ignored_stype(), hi)?;
-            Ok(SUniform((), Box::new(lo), Box::new(hi)))
-        }
-        SNormal(_, mean, var) => {
-            let mean = typeinference_anf(&ignored_stype(), mean)?;
-            let var = typeinference_anf(&ignored_stype(), var)?;
-            Ok(SNormal((), Box::new(mean), Box::new(var)))
-        }
-        SBeta(_, a, b) => {
-            let a = typeinference_anf(&ignored_stype(), a)?;
-            let b = typeinference_anf(&ignored_stype(), b)?;
-            Ok(SBeta((), Box::new(a), Box::new(b)))
-        }
-        SDiscrete(_, ps) => {
-            let ps = typeinference_anfs(&ignored_stype(), ps)?;
-            Ok(SDiscrete((), ps))
-        }
-        SDirichlet(_, ps) => {
-            let ps = typeinference_anfs(&ignored_stype(), ps)?;
-            Ok(SDirichlet((), ps))
-        }
-        SObserve(_, a, e) => Ok(SObserve(
+        SMap(_, arg, map, xs) => Ok(SMap(
             (),
-            Box::new(typeinference_anf(&ignored_stype(), a)?),
-            Box::new(typeinference_sexpr(e)?),
+            arg.clone(),
+            Box::new(typeinference_sexpr(map)?),
+            Box::new(typeinference_anf(&ignored_stype(), xs)?),
+        )),
+        SFold(_, init, accum, arg, fold, xs) => Ok(SFold(
+            (),
+            Box::new(typeinference_anf(&ignored_stype(), init)?),
+            accum.clone(),
+            arg.clone(),
+            Box::new(typeinference_sexpr(fold)?),
+            Box::new(typeinference_anf(&ignored_stype(), xs)?),
+        )),
+        SWhile(_, guard, body) => Ok(SWhile(
+            (),
+            Box::new(typeinference_anf(&ignored_stype(), guard)?),
+            Box::new(typeinference_sexpr(body)?),
         )),
 
+        SApp(_, f, args) => Ok(SApp(
+            (),
+            f.clone(),
+            typeinference_anfs(&ignored_stype(), args)?,
+        )),
+        SLambda(_, args, body) => Ok(SLambda(
+            (),
+            args.clone(),
+            Box::new(typeinference_sexpr(body)?),
+        )),
+
+        SSample(_, dist) => Ok(SSample(
+            (),
+            Box::new(typeinference_anf(&ignored_stype(), dist)?),
+        )),
+        SObserve(_, val, dist) => Ok(SObserve(
+            (),
+            Box::new(typeinference_anf(&ignored_stype(), val)?),
+            Box::new(typeinference_anf(&ignored_stype(), dist)?),
+        )),
+
+        // Multi-language boundary
         SExact(_, e) => Ok(SExact((), Box::new(typeinference_eexpr(e)?))),
+
+        // sugar: let x = ~(<sexpr>) in <sexpr>
+        SLetSample(_, var, model, rest) => Ok(SLetSample(
+            (),
+            var.clone(),
+            Box::new(typeinference_sexpr(model)?),
+            Box::new(typeinference_sexpr(rest)?),
+        )),
     }
 }
 
+fn typeinference_sfun(f: &Function<grammar::SExprInferable>) -> Result<Function<SExprTyped>> {
+    Ok(Function {
+        name: f.name.clone(),
+        arguments: typeinference_anfs(&ignored_stype(), &f.arguments)?,
+        body: typeinference_sexpr(&f.body)?,
+        returnty: f.returnty.clone(),
+    })
+}
+fn typeinference_efun(f: &Function<grammar::EExprInferable>) -> Result<Function<EExprTyped>> {
+    Ok(Function {
+        name: f.name.clone(),
+        arguments: typeinference_anfs(&ignored_etype(), &f.arguments)?,
+        body: typeinference_eexpr(&f.body)?,
+        returnty: f.returnty.clone(),
+    })
+}
 pub fn typeinference(p: &grammar::ProgramInferable) -> Result<ProgramTyped> {
+    use Program::*;
     match p {
-        Program::EBody(e) => Ok(Program::EBody(typeinference_eexpr(e)?)),
-        Program::SBody(e) => Ok(Program::SBody(typeinference_sexpr(e)?)),
+        EBody(e) => Ok(EBody(typeinference_eexpr(e)?)),
+        SBody(e) => Ok(SBody(typeinference_sexpr(e)?)),
+        EDefine(f, p) => Ok(EDefine(typeinference_efun(f)?, Box::new(typeinference(p)?))),
+        SDefine(f, p) => Ok(SDefine(typeinference_sfun(f)?, Box::new(typeinference(p)?))),
     }
 }
 
