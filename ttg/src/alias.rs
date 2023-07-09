@@ -74,7 +74,7 @@ fn cons_phase(phase: Ident, seg: PathSegment) -> NewPathSegment {
                 arguments: AngleBracketed(AngleBracketedGenericArguments {
                     colon2_token: Option::None,
                     lt_token: Default::default(),
-                    args: args,
+                    args,
                     gt_token: Default::default(),
                 }),
             };
@@ -86,7 +86,7 @@ fn cons_phase(phase: Ident, seg: PathSegment) -> NewPathSegment {
         AngleBracketed(prev) => {
             let mut args: Punctuated<GenericArgument, token::Comma> = Punctuated::new();
             args.push(phase_arg);
-            for a in prev.args.clone() {
+            for a in prev.args {
                 args.push(a);
             }
             let new_seg = PathSegment {
@@ -94,7 +94,7 @@ fn cons_phase(phase: Ident, seg: PathSegment) -> NewPathSegment {
                 arguments: AngleBracketed(AngleBracketedGenericArguments {
                     colon2_token: Option::None,
                     lt_token: Default::default(),
-                    args: args,
+                    args,
                     gt_token: Default::default(),
                 }),
             };

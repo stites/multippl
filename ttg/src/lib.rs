@@ -75,7 +75,7 @@ fn switch_default_ext(a: Association, ext: Option<Type>) -> Association {
     match ext {
         None => a,
         Some(ext) => {
-            let mut a = a.clone();
+            let mut a = a;
             a.extension = ext;
             a
         }
@@ -184,7 +184,7 @@ fn expand_phase(input: TTGPhase) -> TokenStream2 {
     let remainder = mk_basic_extensions(input.default_ext.clone())
         .expect("this is always correct")
         .into_iter()
-        .filter(|(i, _)| !included.contains(&i))
+        .filter(|(i, _)| !included.contains(i))
         .map(|(_, assoc)| expand_impl(&input.ident, &assoc));
 
     quote! {
