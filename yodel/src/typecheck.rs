@@ -275,7 +275,7 @@ fn typecheck_sexpr(e: &grammar::SExprTyped) -> Result<SExprUD> {
         SLetSample(_, var, model, rest) => Ok(SLetSample(
             (),
             var.clone(),
-            Box::new(typecheck_sexpr(model)?),
+            Box::new(typecheck_anf(model)?),
             Box::new(typecheck_sexpr(rest)?),
         )),
     }

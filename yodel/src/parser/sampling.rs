@@ -299,7 +299,7 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             let ident = String::from_utf8(utf8.into()).unwrap();
 
             let bindee = cs.next().unwrap();
-            let bindee = parse_sexpr(src, c, &bindee);
+            let bindee = parse_sanf(src, c, bindee);
 
             let body = cs.next().unwrap();
             let body = parse_sexpr(src, c, &body);

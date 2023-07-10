@@ -83,8 +83,7 @@ pub fn runner_with_stdrng(
     let orng = if opt.debug { None } else { Some(&mut rng) };
     let mut s = State::new(mgr, orng, opt.opt);
 
-    // env.varmap = Some(varmap);
-
+    // <<< final thing here
     let c = compile(&mut s, &p)?;
     tracing::debug!("hurray!");
     Ok((c, inv, s.rng.cloned(), s.pq))

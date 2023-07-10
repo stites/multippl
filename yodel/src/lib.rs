@@ -1,24 +1,22 @@
-#![allow(dead_code)]
+// #![allow(dead_code)]
 #![allow(unused_imports)]
-#![allow(mixed_script_confusables)] // for Gamma : )
-// temporary as I convert to using types
+// #![allow(mixed_script_confusables)] // for Gamma : )
+// // temporary as I convert to using types
 #![allow(unused_variables)]
-#![allow(unreachable_patterns)]
-#![allow(clippy::all)]
+// #![allow(unreachable_patterns)]
 
-// core types
+// // core types
 pub mod data;
 pub use data::*;
 
 pub mod grammar;
 pub use grammar::*;
 
-// Entry points
+// // Entry points
 pub mod parser;
+
 pub mod typeinf;
 
-// intermediate stages
-mod annotate;
 mod typecheck;
 mod uniquify;
 

@@ -168,11 +168,11 @@ TTG!(
         // Multi-language boundary
         SExact(<SExactExt as ξ<X>>::Ext, Box<EExpr<X>>),
 
-        // sugar: let x = ~(<sexpr>) in <sexpr>
+        // sugar: let x = ~(<dist anf>) in <sexpr>
         SLetSample(
             <SLetSampleExt as ξ<X>>::Ext,
             String,
-            Box<SExpr<X>>,
+            Box<Anf<X, SVal>>,
             Box<SExpr<X>>,
         ),
     }

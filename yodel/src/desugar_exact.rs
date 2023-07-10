@@ -1,5 +1,6 @@
 #![allow(non_camel_case_types)]
 
+use crate::data::errors;
 use crate::typeinf::grammar::{EExprInferable, Inferable};
 /// Trees-that-grow style grammar to unify type-checking, analysis, and
 /// compilation. going to be honest it's pretty atrocious in rust.
@@ -16,149 +17,197 @@ use std::marker::PhantomData;
 use std::string::String;
 
 pub mod sampling {
-    fn desugar_sanf_binop(l: &AnfUD<SVal>, r: &AnfUD<SVal>, op: impl Fn(Box<AnfUD<SVal>>, Box<AnfUD<SVal>>) -> AnfUD<SVal>,) -> Result<AnfUD<SVal>>
-    {
-        Ok(op(Box::new(desugar_sanf(l)?), Box::new(desugar_sanf(r)?)))
-    }
-    fn desugar_sanf_vec(
-        xs: &[AnfUD<SVal>],
-        op: impl Fn(Vec<AnfUD<SVal>>) -> AnfUD<SVal>,
-    ) -> Result<AnfUD<SVal>>
-    {
-        Ok(op(xs
-            .iter()
-            .map(|a| desugar_sanf(a))
-            .collect::<Result<Vec<AnfUD<SVal>>>>()?))
-    }
+    use super::*;
+    // fn desugar_sanf_binop(l: &AnfUD<SVal>, r: &AnfUD<SVal>, op: impl Fn(Box<AnfUD<SVal>>, Box<AnfUD<SVal>>) -> AnfUD<SVal>,) -> Result<AnfUD<SVal>>
+    // {
+    //     Ok(op(Box::new(desugar_sanf(l)?), Box::new(desugar_sanf(r)?)))
+    // }
+    // fn desugar_sanf_vec(
+    //     xs: &[AnfUD<SVal>],
+    //     op: impl Fn(Vec<AnfUD<SVal>>) -> AnfUD<SVal>,
+    // ) -> Result<AnfUD<SVal>>
+    // {
+    //     Ok(op(xs
+    //         .iter()
+    //         .map(|a| desugar_sanf(a))
+    //         .collect::<Result<Vec<AnfUD<SVal>>>>()?))
+    // }
 
     pub fn desugar_sanf(a: &AnfUD<SVal>) -> Result<AnfUD<SVal>> {
-        use crate::Anf::*;
-        match a {
-            AVar(_, s) => Ok(AVar((), s.clone())),
-            AVal(_, v) => Ok(AVal((), v.clone())),
+        Ok(a.clone())
+        // use crate::Anf::*;
+        // match a {
+        //     AVar(_, s) => Ok(AVar((), s.clone())),
+        //     AVal(_, v) => Ok(AVal((), v.clone())),
 
-            // Booleans
-            And(l, r) => desugar_sanf_binop(l, r, And),
-            Or(l, r) => desugar_sanf_binop(l, r, Or),
-            Neg(bl) => Ok(Neg(Box::new(desugar_sanf(bl)?))),
+        //     // Booleans
+        //     And(l, r) => desugar_sanf_binop(l, r, And),
+        //     Or(l, r) => desugar_sanf_binop(l, r, Or),
+        //     Neg(bl) => Ok(Neg(Box::new(desugar_sanf(bl)?))),
 
-            // Numerics
-            Plus(l, r) => desugar_sanf_binop(l, r, Plus),
-            Minus(l, r) => desugar_sanf_binop(l, r, Minus),
-            Mult(l, r) => desugar_sanf_binop(l, r, Mult),
-            Div(l, r) => desugar_sanf_binop(l, r, Div),
+        //     // Numerics
+        //     Plus(l, r) => desugar_sanf_binop(l, r, Plus),
+        //     Minus(l, r) => desugar_sanf_binop(l, r, Minus),
+        //     Mult(l, r) => desugar_sanf_binop(l, r, Mult),
+        //     Div(l, r) => desugar_sanf_binop(l, r, Div),
 
-            // Ord
-            GT(l, r) => desugar_sanf_binop(l, r, GT),
-            LT(l, r) => desugar_sanf_binop(l, r, LT),
-            GTE(l, r) => desugar_sanf_binop(l, r, GTE),
-            LTE(l, r) => desugar_sanf_binop(l, r, LTE),
-            EQ(l, r) => desugar_sanf_binop(l, r, EQ),
+        //     // Ord
+        //     GT(l, r) => desugar_sanf_binop(l, r, GT),
+        //     LT(l, r) => desugar_sanf_binop(l, r, LT),
+        //     GTE(l, r) => desugar_sanf_binop(l, r, GTE),
+        //     LTE(l, r) => desugar_sanf_binop(l, r, LTE),
+        //     EQ(l, r) => desugar_sanf_binop(l, r, EQ),
 
-            // [x]; (l,r); x[0]
-            AnfVec(xs) => desugar_sanf_vec(xs, AnfVec),
-            AnfProd(xs) => desugar_sanf_vec(xs, AnfProd),
-            AnfPrj(var, ix) => Ok(AnfPrj(var.clone(), Box::new(desugar_sanf(ix)?))),
+        //     // [x]; (l,r); x[0]
+        //     AnfVec(xs) => desugar_sanf_vec(xs, AnfVec),
+        //     AnfProd(xs) => desugar_sanf_vec(xs, AnfProd),
+        //     AnfPrj(var, ix) => Ok(AnfPrj(var.clone(), Box::new(desugar_sanf(ix)?))),
 
-            // Distributions
-            AnfBernoulli(x) => Ok(AnfBernoulli(Box::new(desugar_sanf(x)?))),
-            AnfPoisson(x) => Ok(AnfPoisson(Box::new(desugar_sanf(x)?))),
-            AnfUniform(l, r) => desugar_sanf_binop(l, r, AnfUniform),
-            AnfNormal(l, r) => desugar_sanf_binop(l, r, AnfNormal),
-            AnfBeta(l, r) => desugar_sanf_binop(l, r, AnfBeta),
-            AnfDiscrete(xs) => desugar_sanf_vec(xs, AnfDiscrete),
-            AnfDirichlet(xs) => desugar_sanf_vec(xs, AnfDirichlet),
-        }
+        //     // Distributions
+        //     AnfBernoulli(x) => Ok(AnfBernoulli(Box::new(desugar_sanf(x)?))),
+        //     AnfPoisson(x) => Ok(AnfPoisson(Box::new(desugar_sanf(x)?))),
+        //     AnfUniform(l, r) => desugar_sanf_binop(l, r, AnfUniform),
+        //     AnfNormal(l, r) => desugar_sanf_binop(l, r, AnfNormal),
+        //     AnfBeta(l, r) => desugar_sanf_binop(l, r, AnfBeta),
+        //     AnfDiscrete(xs) => desugar_sanf_vec(xs, AnfDiscrete),
+        //     AnfDirichlet(xs) => desugar_sanf_vec(xs, AnfDirichlet),
+        // }
     }
 }
 pub mod exact {
-    fn desugar_eanf_binop(l: &AnfUD<EVal>, r: &AnfUD<EVal>, op: impl Fn(Box<AnfUD<EVal>>, Box<AnfUD<EVal>>) -> AnfUD<EVal>,) -> Result<AnfUD<EVal>>
-    {
+    use super::*;
+    fn desugar_eanf_binop(
+        l: &AnfUD<EVal>,
+        r: &AnfUD<EVal>,
+        op: impl Fn(Box<AnfUD<EVal>>, Box<AnfUD<EVal>>) -> AnfUD<EVal>,
+    ) -> Result<AnfUD<EVal>> {
         Ok(op(Box::new(desugar_eanf(l)?), Box::new(desugar_eanf(r)?)))
     }
     fn desugar_eanf_vec(
         xs: &[AnfUD<EVal>],
         op: impl Fn(Vec<AnfUD<EVal>>) -> AnfUD<EVal>,
-    ) -> Result<AnfUD<EVal>>
-    {
+    ) -> Result<AnfUD<EVal>> {
         Ok(op(xs
             .iter()
             .map(|a| desugar_eanf(a))
             .collect::<Result<Vec<AnfUD<EVal>>>>()?))
     }
 
+    pub fn desugar_eval(v: &EVal) -> Result<EVal> {
+        use EVal::*;
+match v {
+    EBool(_) => Ok(v.clone()),
+    EFloat(_) => Ok(v.clone()),
+    EProd(vs) => Ok(EProd(vs.iter().map(desugar_eval).collect())),
+    EInteger(i) => Ok(integers::as_prod(i)),
+    }
+    }
     pub fn desugar_eanf(a: &AnfUD<EVal>) -> Result<AnfUD<EVal>> {
         use crate::Anf::*;
         match a {
             AVar(_, s) => Ok(AVar((), s.clone())),
-            AVal(_, v) => Ok(AVal((), v.clone())),
-
+            AVal(_, v) => Ok(AVal((), desugar_eval(v)?)),
+            ESugar::IntAnf(a) => match *a.clone() {
+                EAnfPrim(anf) => EExpr::EAnf((), anf.clone()),
+                EInteger(i) => EExpr::EAnf((), Box::new()),
+            },
             // Booleans
             And(l, r) => desugar_eanf_binop(l, r, And),
             Or(l, r) => desugar_eanf_binop(l, r, Or),
             Neg(p) => Ok(Neg(Box::new(desugar_eanf(p)?))),
 
             // Numerics
-            // Plus(l, r) => panic!("FIXME"),
-            // Minus(l, r) => panic!("FIXME"),
-            Mult(l, r) => todo!(),
-            Div(l, r) => todo!(),
+            Plus(l, r) => ,
+            Minus(l, r) => panic!("FIXME"),
+            Mult(l, r) => errors::TODO(),
+            Div(l, r) => errors::TODO(),
 
             // Ord
-            GT(l, r) => todo!(),
-            LT(l, r) => todo!(),
-            GTE(l, r) => todo!(),
-            LTE(l, r) => todo!(),
-            // EQ(l, r) => panic!("FIXME"),
+            GT(l, r) => errors::TODO(),
+            LT(l, r) => errors::TODO(),
+            GTE(l, r) => errors::TODO(),
+            LTE(l, r) => errors::TODO(),
+            EQ(l, r) => panic!("FIXME"),
 
             // [x]; (l,r); x[0]
             AnfProd(xs) => desugar_eanf_vec(xs, AnfProd),
             AnfPrj(var, ix) => Ok(AnfPrj(var.clone(), Box::new(desugar_eanf(ix)?))),
 
-            AnfVec(xs) => Err(SemanticsError("impossible statement in exact language")),
-            AnfBernoulli(x) => Err(SemanticsError("impossible statement in exact language")),
-            AnfPoisson(x) => Err(SemanticsError("impossible statement in exact language")),
-            AnfUniform(l, r) => Err(SemanticsError("impossible statement in exact language")),
-            AnfNormal(l, r) => Err(SemanticsError("impossible statement in exact language")),
-            AnfBeta(l, r) => Err(SemanticsError("impossible statement in exact language")),
-            AnfDiscrete(xs) => Err(SemanticsError("impossible statement in exact language")),
-            AnfDirichlet(xs) => Err(SemanticsError("impossible statement in exact language")),
+            AnfVec(xs) => errors::notInExact(),
+            AnfBernoulli(x) => errors::notInExact(),
+            AnfPoisson(x) => errors::notInExact(),
+            AnfUniform(l, r) => errors::notInExact(),
+            AnfNormal(l, r) => errors::notInExact(),
+            AnfBeta(l, r) => errors::notInExact(),
+            AnfDiscrete(xs) => errors::notInExact(),
+            AnfDirichlet(xs) => errors::notInExact(),
+        }
+    }
+    fn desugar_eexpr(e: &grammar::EExprUD) -> Result<EExprUD> {
+        use crate::grammar::EExpr::*;
+        match e {
+            EAnf(_, a) => Ok(EAnf((), Box::new(desugar_eanf(a)?))),
+            EPrj(_, i, a) => Ok(EPrj(
+                (),
+                Box::new(desugar_eanf(i)?),
+                Box::new(desugar_eanf(a)?),
+            )),
+            EProd(_, args) => desugar_eanf_vec(args, |args| Ok(EProd((), args))),
+            ELetIn(_, s, ebound, ebody) => Ok(ELetIn(
+                (),
+                s.clone(),
+                Box::new(desugar_eexpr(ebound)?),
+                Box::new(desugar_eexpr(ebody)?),
+            )),
+            EIte(_, cond, t, f) => Ok(EIte(
+                (),
+                Box::new(desugar_eanf(cond)?),
+                Box::new(desugar_eexpr(t)?),
+                Box::new(desugar_eexpr(f)?),
+            )),
+            EFlip(_, param) => Ok(EFlip((), Box::new(desugar_eanf(param)?))),
+            EObserve(_, a) => Ok(EObserve((), Box::new(desugar_eanf(a)?))),
+            ESample(_, e) => Ok(ESample((), Box::new(desugar_sexpr(e)?))),
+
+            EApp(_, f, args) => desugar_eanf_vec(args, |args| Ok(EApp((), f.clone(), args))),
+            EDiscrete(_, args) => desugar_eanf_vec(args, |args| Ok(EDiscrete((), args))),
+            EIterate(_, f, init, times) => match desugar_eanf(times)? {
+                EInteger(i) => {
+                    Ok(EApp((), f.clone(), vec![desugar_eanf(init)?]))
+                },
+                _ => panic!(),
+                },
+            },
+        }
+    }
+
+
+    fn desugar_eexpr(e: &EExpr<Inferable>) -> EExpr<Inferable> {
+        match self {
+            ESugar::Prim(e) => e.clone(),
+            ESugar::LetIn(v, bind, body) => EExpr::ELetIn(
+                None,
+                v.clone(),
+                Box::new(bind.desugar()),
+                Box::new(body.desugar()),
+            ),
+            ESugar::Ite(p, t, f) => EExpr::EIte(
+                None,
+                p.clone(),
+                Box::new(t.desugar()),
+                Box::new(f.desugar()),
+            ),
+            ESugar::Discrete(params) => discrete::from_params(params),
+            ESugar::Sample(s) => EExpr::ESample((), Box::new(s.desugar())),
+
+            ESugar::IntPrj(ix_anf, prod_anf) => match *ix_anf.clone() {
+                EInteger(i) => EExpr::EPrj(None, i, prod_anf.clone()),
+                EAnfPrim(anf) => todo!("not yet useful"),
+            },
+
         }
     }
 }
-
-
-// fn desugar_eexpr(&e: EExpr<Inferable>) -> EExpr<Inferable> {
-//     match self {
-//         ESugar::Prim(e) => e.clone(),
-//         ESugar::LetIn(v, bind, body) => EExpr::ELetIn(
-//             None,
-//             v.clone(),
-//             Box::new(bind.desugar()),
-//             Box::new(body.desugar()),
-//         ),
-//         ESugar::Ite(p, t, f) => EExpr::EIte(
-//             None,
-//             p.clone(),
-//             Box::new(t.desugar()),
-//             Box::new(f.desugar()),
-//         ),
-//         ESugar::Discrete(params) => discrete::from_params(params),
-//         ESugar::Sample(s) => EExpr::ESample((), Box::new(s.desugar())),
-//         ESugar::IntAnf(a) => match *a.clone() {
-//             EAnfPrim(anf) => EExpr::EAnf((), anf.clone()),
-//             EInteger(i) => EExpr::EAnf((), Box::new(integers::as_prod(i))),
-//         },
-//         ESugar::IntPrj(ix_anf, prod_anf) => match *ix_anf.clone() {
-//             EInteger(i) => EExpr::EPrj(None, i, prod_anf.clone()),
-//             EAnfPrim(anf) => todo!("not yet useful"),
-//         },
-//         ESugar::Iterate(f, init, kanf) => match *kanf.clone() {
-//             EInteger(i) => EExpr::EApp(None, f.clone(), vec![init.desugar()]),
-//             EAnfPrim(anf) => todo!("not yet useful"),
-//         },
-//     }
-// }
 
 // #[derive(PartialEq, Debug, Clone)]
 // pub enum SSugar {
@@ -297,8 +346,8 @@ pub mod integers {
     }
 }
 pub mod discrete {
+    use crate::typeinf::grammar::{EExprInferable, Inferable};
     use crate::{Anf, EExpr, ETy, EVal};
-    use crate::typeinf::{EExprInferable, Inferable};
     use itertools::*;
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};

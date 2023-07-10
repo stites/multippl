@@ -251,7 +251,7 @@ fn typeinference_sexpr(e: &grammar::SExprInferable) -> Result<SExprTyped> {
         SLetSample(_, var, model, rest) => Ok(SLetSample(
             (),
             var.clone(),
-            Box::new(typeinference_sexpr(model)?),
+            Box::new(typeinference_anf(&ignored_stype(), model)?),
             Box::new(typeinference_sexpr(rest)?),
         )),
     }
