@@ -6,8 +6,10 @@ pub enum Anf<X, Val>
 where
     AVarExt<Val>: ξ<X>,
     AValExt<Val>: ξ<X>,
+    ADistExt<Val>: ξ<X>,
     <AVarExt<Val> as ξ<X>>::Ext: Debug + PartialEq + Clone,
     <AValExt<Val> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+    <ADistExt<Val> as ξ<X>>::Ext: Debug + PartialEq + Clone,
     Val: Debug + PartialEq + Clone,
     X: Debug + PartialEq + Clone,
 {
@@ -38,11 +40,11 @@ where
     AnfPrj(String, Box<Anf<X, Val>>),
 
     // Distributions
-    AnfBernoulli(Box<Anf<X, Val>>),
-    AnfDiscrete(Vec<Anf<X, Val>>),
-    AnfUniform(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
-    AnfNormal(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
-    AnfPoisson(Box<Anf<X, Val>>),
-    AnfBeta(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
-    AnfDirichlet(Vec<Anf<X, Val>>),
+    AnfBernoulli(<ADistExt<Val> as ξ<X>>::Ext, Box<Anf<X, Val>>),
+    AnfDiscrete(<ADistExt<Val> as ξ<X>>::Ext, Vec<Anf<X, Val>>),
+    AnfUniform(<ADistExt<Val> as ξ<X>>::Ext, Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    AnfNormal(<ADistExt<Val> as ξ<X>>::Ext, Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    AnfPoisson(<ADistExt<Val> as ξ<X>>::Ext, Box<Anf<X, Val>>),
+    AnfBeta(<ADistExt<Val> as ξ<X>>::Ext, Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    AnfDirichlet(<ADistExt<Val> as ξ<X>>::Ext, Vec<Anf<X, Val>>),
 }

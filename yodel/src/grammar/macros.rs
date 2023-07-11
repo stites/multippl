@@ -312,7 +312,7 @@ macro_rules! bern {
             Box::new($crate::grammar::Anf::<
                 $crate::typeinf::grammar::Inferable,
                 $crate::SVal,
-            >::AnfBernoulli(Box::new(
+            >::AnfBernoulli((), Box::new(
                 $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, $crate::SVal>::Div(
                     Box::new($crate::grammar::Anf::<
                         $crate::typeinf::grammar::Inferable,

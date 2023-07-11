@@ -21,6 +21,9 @@ const EXPRS: &str = r"{
     AVarExt<EVal>: (),
     AValExt<EVal>: (),
     AValExt<SVal>: (),
+    ADistExt<SVal>: (),
+    ADistExt<EVal>: (),
+
     EAnfExt : (),
     EPrjExt : (),
     EProdExt : (),

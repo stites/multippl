@@ -19,7 +19,9 @@ pub struct AVarExt<Val> {
 pub struct AValExt<Val> {
     valtype: PhantomData<Val>,
 }
-
+pub struct ADistExt<Val> {
+    valtype: PhantomData<Val>,
+}
 pub struct SAnfExt;
 pub struct SLetInExt;
 pub struct SSeqExt;
@@ -58,6 +60,8 @@ macro_rules! TTG {
             ESampleExt: ξ<X>,
             AVarExt<EVal>: ξ<X>,
             AVarExt<SVal>: ξ<X>,
+            ADistExt<SVal>: ξ<X>,
+            ADistExt<EVal>: ξ<X>,
             <EAnfExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <EAppExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <EPrjExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
@@ -70,8 +74,10 @@ macro_rules! TTG {
             AValExt<EVal>: ξ<X>,
             AValExt<SVal>: ξ<X>,
             <AVarExt<EVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <ADistExt<EVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <AValExt<EVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <AVarExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <ADistExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <AValExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
 
             SAnfExt: ξ<X>,
@@ -126,7 +132,9 @@ macro_rules! TTG {
             EObserveExt: ξ<X>,
             ESampleExt: ξ<X>,
             AVarExt<EVal>: ξ<X>,
+            ADistExt<EVal>: ξ<X>,
             AVarExt<SVal>: ξ<X>,
+            ADistExt<SVal>: ξ<X>,
             <EAnfExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <EAppExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <EPrjExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
@@ -139,8 +147,10 @@ macro_rules! TTG {
             AValExt<EVal>: ξ<X>,
             AValExt<SVal>: ξ<X>,
             <AVarExt<EVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <ADistExt<EVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <AValExt<EVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <AVarExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <ADistExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <AValExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
 
             SAnfExt: ξ<X>,
@@ -199,7 +209,9 @@ macro_rules! TTG {
             EObserveExt: ξ<X>,
             ESampleExt: ξ<X>,
             AVarExt<EVal>: ξ<X>,
+            ADistExt<EVal>: ξ<X>,
             AVarExt<SVal>: ξ<X>,
+            ADistExt<SVal>: ξ<X>,
             <EAnfExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <EAppExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <EPrjExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
@@ -212,8 +224,10 @@ macro_rules! TTG {
             AValExt<EVal>: ξ<X>,
             AValExt<SVal>: ξ<X>,
             <AVarExt<EVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <ADistExt<EVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <AValExt<EVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <AVarExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <ADistExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <AValExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
 
             SAnfExt: ξ<X>,

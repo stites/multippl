@@ -42,13 +42,13 @@ pub fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVa
                 "identifier" => Anf::AVar(None, parse_str(src, &node)),
                 "svalue" => Anf::AVal((), parse_sval(src, c, &node)),
                 "!" => Anf::Neg(Box::new(parse_sanf(src, c, node))),
-                "sanfbern" => Anf::AnfBernoulli(Box::new(parse_sanf(src, c, node))),
-                "sanfpoisson" => Anf::AnfPoisson(Box::new(parse_sanf(src, c, node))),
+                "sanfbern" => Anf::AnfBernoulli((), Box::new(parse_sanf(src, c, node))),
+                "sanfpoisson" => Anf::AnfPoisson((), Box::new(parse_sanf(src, c, node))),
                 "sanfdirichlet" => {
-                    Anf::AnfDirichlet(parse_vec(src, c, node, |a, b, c| parse_sanf_node(a, b, &c)))
+                    Anf::AnfDirichlet((), parse_vec(src, c, node, |a, b, c| parse_sanf_node(a, b, &c)))
                 }
                 "sanfdiscrete" => {
-                    Anf::AnfDiscrete(parse_vec(src, c, node, |a, b, c| parse_sanf_node(a, b, &c)))
+                    Anf::AnfDiscrete((), parse_vec(src, c, node, |a, b, c| parse_sanf_node(a, b, &c)))
                 }
                 _ => panic!("invalid unary operator found!\nsexp: {}", n.to_sexp()),
             }
@@ -101,9 +101,9 @@ pub fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVa
                 let c2 = cs.next().unwrap();
                 let c2 = parse_sanf(src, c, c2);
                 match prefixop.as_str() {
-                    "sanfuniform" => Anf::AnfUniform(Box::new(c1), Box::new(c2)),
-                    "sanfnormal" => Anf::AnfNormal(Box::new(c1), Box::new(c2)),
-                    "sanfbeta" => Anf::AnfBeta(Box::new(c1), Box::new(c2)),
+                    "sanfuniform" => Anf::AnfUniform((), Box::new(c1), Box::new(c2)),
+                    "sanfnormal" => Anf::AnfNormal((), Box::new(c1), Box::new(c2)),
+                    "sanfbeta" => Anf::AnfBeta((), Box::new(c1), Box::new(c2)),
                     _ => panic!("invalid binary operator found!\nsexp: {}", n.to_sexp()),
                 }
             } else if isprefix_dist == Some(false) {
@@ -484,7 +484,7 @@ mod sampling_parser_tests {
             "p".to_string(),
             Box::new(SAnf(
                 (),
-                Box::new(AnfPoisson(Box::new(AVal((), SVal::SFloat(0.4))))),
+                Box::new(AnfPoisson((), Box::new(AVal((), SVal::SFloat(0.4))))),
             )),
             Box::new(SExact(
                 (),

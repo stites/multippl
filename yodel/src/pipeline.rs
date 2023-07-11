@@ -74,8 +74,14 @@ pub fn runner_with_stdrng(
 ) -> Result<(Compiled, InvMap, Option<StdRng>, PQ)> {
     let p = typeinference(p)?;
     let p = typecheck(&p)?;
+    let p = desugar_sample(&p)?;
+
     let mut senv = SymEnv::default();
-    let p = senv.uniquify(&p)?.0;
+    let p = senv.uniquify(&p)?.0; // is alpha-rewriting (or "name resolution")
+    // ensure that every variable is bound.
+    // check shadowing
+    // using a stack can be nice
+
     let mut lenv = LabelEnv::new();
     let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
 

@@ -37,6 +37,7 @@ fn typeinf_anf_binop<T: Debug + PartialEq + Clone, X: Debug + PartialEq + Clone>
 where
     AVarExt<X>: ξ<Inferable, Ext = Option<T>> + ξ<Typed, Ext = T>,
     AValExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
+    ADistExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
 {
     Ok(op(
         Box::new(typeinference_anf(ty, l)?),
@@ -51,6 +52,7 @@ fn typeinf_anf_vec<T: Debug + PartialEq + Clone, X: Debug + PartialEq + Clone>(
 where
     AVarExt<X>: ξ<Inferable, Ext = Option<T>> + ξ<Typed, Ext = T>,
     AValExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
+    ADistExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
 {
     Ok(op(xs
         .iter()
@@ -63,6 +65,7 @@ fn typeinference_anf<T: Debug + PartialEq + Clone, X: Debug + PartialEq + Clone>
 ) -> Result<AnfTyped<X>>
 where
     AVarExt<X>: ξ<Inferable, Ext = Option<T>> + ξ<Typed, Ext = T>,
+    ADistExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
     AValExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
 {
     use crate::grammar::Anf::*;
@@ -94,13 +97,13 @@ where
         AnfPrj(var, ix) => Ok(AnfPrj(var.clone(), Box::new(typeinference_anf(ty, ix)?))),
 
         // Distributions
-        AnfBernoulli(x) => Ok(AnfBernoulli(Box::new(typeinference_anf(ty, x)?))),
-        AnfPoisson(x) => Ok(AnfPoisson(Box::new(typeinference_anf(ty, x)?))),
-        AnfUniform(l, r) => typeinf_anf_binop(ty, l, r, AnfUniform),
-        AnfNormal(l, r) => typeinf_anf_binop(ty, l, r, AnfNormal),
-        AnfBeta(l, r) => typeinf_anf_binop(ty, l, r, AnfBeta),
-        AnfDiscrete(xs) => typeinf_anf_vec(ty, xs, AnfDiscrete),
-        AnfDirichlet(xs) => typeinf_anf_vec(ty, xs, AnfDirichlet),
+        AnfBernoulli(_, x) => Ok(AnfBernoulli((), Box::new(typeinference_anf(ty, x)?))),
+        AnfPoisson(_, x) => Ok(AnfPoisson((), Box::new(typeinference_anf(ty, x)?))),
+        AnfUniform(_, l, r) => typeinf_anf_binop(ty, l, r, |l, r| AnfUniform((), l, r)),
+        AnfNormal(_, l, r) => typeinf_anf_binop(ty, l, r, |l, r| AnfNormal((), l, r)),
+        AnfBeta(_, l, r) => typeinf_anf_binop(ty, l, r, |l, r| AnfBeta((), l, r)),
+        AnfDiscrete(_, xs) => typeinf_anf_vec(ty, xs, |xs| AnfDiscrete((), xs)),
+        AnfDirichlet(_, xs) => typeinf_anf_vec(ty, xs, |xs| AnfDirichlet((), xs)),
     }
 }
 
@@ -110,6 +113,7 @@ fn typeinference_anfs<T: Debug + PartialEq + Clone, X: Debug + PartialEq + Clone
 ) -> Result<Vec<AnfTyped<X>>>
 where
     AVarExt<X>: ξ<Inferable, Ext = Option<T>> + ξ<Typed, Ext = T>,
+    ADistExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
     AValExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
 {
     anfs.iter().map(|a| typeinference_anf(ty, a)).collect()
@@ -270,6 +274,7 @@ where
     ExprI: PartialEq + Debug + Clone + Lang<Anf = Anf<Inferable, Val>, Ty = T>,
     ExprT: PartialEq + Debug + Clone + Lang<Anf = Anf<Typed, Val>, Ty = T>,
     AVarExt<Val>: ξ<Inferable, Ext = Option<T>> + ξ<Typed, Ext = <ExprT as Lang>::Ty>,
+    ADistExt<Val>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
     AValExt<Val>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
     Val: Debug + PartialEq + Clone,
 {

@@ -16,6 +16,7 @@ pub mod grammar {
         EIteExt: ETy,
 
         AVarExt<SVal>: STy,
+        ADistExt<SVal>: (),
         SLetInExt: LetInTypes<STy>,
         SIteExt: STy,
     });
@@ -95,8 +96,10 @@ fn typecheck_anf_binop<Val>(
 where
     AVarExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     AValExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    ADistExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     <AVarExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     <AValExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    <ADistExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     Val: Debug + PartialEq + Clone,
 {
     Ok(op(Box::new(typecheck_anf(l)?), Box::new(typecheck_anf(r)?)))
@@ -108,8 +111,10 @@ fn typecheck_anf_vec<Val>(
 where
     AVarExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     AValExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    ADistExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     <AVarExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     <AValExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    <ADistExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     Val: Debug + PartialEq + Clone,
 {
     Ok(op(xs
@@ -124,8 +129,10 @@ pub fn typecheck_anf<Val: Debug + PartialEq + Clone>(
 where
     AVarExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     AValExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    ADistExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     <AVarExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     <AValExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    <ADistExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     Val: Debug + PartialEq + Clone,
 {
     use crate::grammar::Anf::*;
@@ -157,13 +164,13 @@ where
         AnfPrj(var, ix) => Ok(AnfPrj(var.clone(), Box::new(typecheck_anf(ix)?))),
 
         // Distributions
-        AnfBernoulli(x) => Ok(AnfBernoulli(Box::new(typecheck_anf(x)?))),
-        AnfPoisson(x) => Ok(AnfPoisson(Box::new(typecheck_anf(x)?))),
-        AnfUniform(l, r) => typecheck_anf_binop(l, r, AnfUniform),
-        AnfNormal(l, r) => typecheck_anf_binop(l, r, AnfNormal),
-        AnfBeta(l, r) => typecheck_anf_binop(l, r, AnfBeta),
-        AnfDiscrete(xs) => typecheck_anf_vec(xs, AnfDiscrete),
-        AnfDirichlet(xs) => typecheck_anf_vec(xs, AnfDirichlet),
+        AnfBernoulli(_, x) => Ok(AnfBernoulli((), Box::new(typecheck_anf(x)?))),
+        AnfPoisson(_, x) => Ok(AnfPoisson((), Box::new(typecheck_anf(x)?))),
+        AnfUniform(_, l, r) => typecheck_anf_binop(l, r, |l, r| AnfUniform((), l, r)),
+        AnfNormal(_, l, r) => typecheck_anf_binop(l, r, |l, r| AnfNormal((), l, r)),
+        AnfBeta(_, l, r) => typecheck_anf_binop(l, r, |l, r| AnfBeta((), l, r)),
+        AnfDiscrete(_, xs) => typecheck_anf_vec(xs, |xs| AnfDiscrete((), xs)),
+        AnfDirichlet(_, xs) => typecheck_anf_vec(xs, |xs| AnfDirichlet((), xs)),
     }
 }
 
@@ -172,8 +179,10 @@ pub fn typecheck_anfs<Val: Debug + PartialEq + Clone>(
 ) -> Result<Vec<AnfUD<Val>>>
 where
     AVarExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    ADistExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     AValExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     <AVarExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    <ADistExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     <AValExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     Val: Debug + PartialEq + Clone,
 {
@@ -294,6 +303,7 @@ where
     ExprOut: PartialEq + Debug + Clone + Lang<Anf = Anf<UD, Val>, Ty = T>,
     AVarExt<Val>: ξ<UD, Ext = ()> + ξ<Typed, Ext = <ExprOut as Lang>::Ty>,
     AValExt<Val>: ξ<UD, Ext = ()> + ξ<Typed, Ext = ()>,
+    ADistExt<Val>: ξ<UD, Ext = ()> + ξ<Typed, Ext = ()>,
     Val: Debug + PartialEq + Clone,
 {
     Ok(Function {
