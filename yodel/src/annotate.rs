@@ -1,4 +1,4 @@
-use crate::data::CompileError;
+use crate::data::{errors, CompileError, Result};
 use crate::grammar::*;
 use crate::typeinf::grammar::ProgramInferable;
 use crate::uniquify::grammar::*;
@@ -6,10 +6,12 @@ use grammar::*;
 use rsdd::repr::var_label::*;
 use rsdd::repr::var_order::VarOrder;
 use rsdd::repr::wmc::WmcParams;
+use std::cmp::Eq;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
+use std::hash::Hash;
 
-pub type InvMap = HashMap<NamedVar, HashSet<BddVar>>;
+pub type InvMap<T> = HashMap<NamedVar, HashSet<T>>;
 
 pub mod grammar {
     use super::*;
@@ -71,54 +73,99 @@ pub mod grammar {
         }
     }
 
-    // FIXME: this should be an enum of BddVar or NamedVar
+    #[derive(PartialEq, Eq, Clone, Hash, Debug)]
+    pub enum SDist {
+        SBernoulli,
+        SUniform,
+        SNormal,
+        SPoisson,
+        SBeta,
+        SDiscrete(usize),
+        SDirichlet(usize),
+    }
+    #[derive(Clone, Hash, Eq, PartialEq)]
+    pub struct SampledVar {
+        pub id: UniqueId,
+        pub dist: SDist, // does this need to get refined later?
+        pub provenance: Option<NamedVar>,
+    }
+    impl Debug for SampledVar {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            match &self.provenance {
+                None => f.write_str(&format!("SampledVar(#{}, {:?})", self.id.0, self.dist)),
+                Some(n) => f.write_str(&format!(
+                    "SampledVar(#{}, {:?}, from:{})",
+                    self.id.0, self.dist, n.name
+                )),
+            }
+        }
+    }
+    impl SampledVar {
+        pub fn id(&self) -> UniqueId {
+            self.id
+        }
+        pub fn new(id: UniqueId, dist: SDist, provenance: Option<NamedVar>) -> Self {
+            SampledVar {
+                id,
+                dist,
+                provenance,
+            }
+        }
+    }
+
     #[derive(Clone, Hash, Eq, PartialEq, Debug)]
     pub enum Var {
         Bdd(BddVar),
         Named(NamedVar),
+        Sampled(SampledVar),
     }
     impl Var {
         pub fn new_bdd(id: UniqueId, label: VarLabel, provenance: Option<NamedVar>) -> Self {
-            Var::Bdd(BddVar {
-                id,
-                label,
-                provenance,
-            })
+            Var::Bdd(BddVar::new(id, label, provenance))
         }
         pub fn new_named(id: UniqueId, name: String) -> Self {
-            Var::Named(NamedVar { id, name })
+            Var::Named(NamedVar::new(id, name))
+        }
+        pub fn new_sampled(id: UniqueId, dist: SDist, provenance: Option<NamedVar>) -> Self {
+            Var::Sampled(SampledVar::new(id, dist, provenance))
         }
         pub fn debug_id(&self) -> String {
             match self {
                 Var::Bdd(v) => format!("{}", v.id),
                 Var::Named(v) => v.name.clone(),
+                Var::Sampled(v) => format!("{}", v.id),
             }
         }
         pub fn unsafe_label(&self) -> VarLabel {
             match self {
                 Var::Bdd(v) => v.label,
-                Var::Named(_) => panic!("shame on you!"),
+                _ => panic!("shame on you!"),
             }
         }
         pub fn id(&self) -> UniqueId {
             match self {
                 Var::Bdd(v) => v.id,
                 Var::Named(v) => v.id,
+                Var::Sampled(v) => v.id,
             }
         }
     }
 
-    ttg::phase!(pub struct Annotated: {
+    ::ttg::phase!(pub struct Annotated: {
         AVarExt<SVal>: NamedVar,
         AVarExt<EVal>: NamedVar,
+        ADistExt<SVal>: SampledVar,
 
         ELetInExt: NamedVar,
         EFlipExt: BddVar,
 
         SLetInExt: NamedVar,
+        SMapExt: NamedVar,
+        SFoldExt: (NamedVar, NamedVar),
+        SLambdaExt: Vec<NamedVar>,
     });
 
-    ttg::alias!(Annotated as Ann + (Program, EExpr, SExpr, Anf<Var>));
+    ::ttg::alias!(Annotated as Ann + (Program, EExpr, SExpr, Anf<Var>));
 }
 
 pub struct LabelEnv {
@@ -127,6 +174,62 @@ pub struct LabelEnv {
     letpos: Option<NamedVar>,
 }
 
+pub fn insert_inv<T: Hash + Eq + Clone>(
+    mut inv: &mut InvMap<T>,
+    v: &T,
+    provenance: &Option<NamedVar>,
+) {
+    match provenance {
+        None => (),
+        Some(prov) => match inv.get_mut(prov) {
+            None => {
+                inv.insert(prov.clone(), HashSet::from([v.clone()]));
+            }
+            Some(vs) => {
+                vs.insert(v.clone());
+            }
+        },
+    }
+}
+fn annotate_anf_binop<VarExt, Val, DExt>(
+    env: &mut LabelEnv,
+    annotate_anf: impl Fn(&mut LabelEnv, &AnfUnq<Val>) -> Result<AnfAnn<Val>>,
+    l: &AnfUnq<Val>,
+    r: &AnfUnq<Val>,
+    op: impl Fn(Box<AnfAnn<Val>>, Box<AnfAnn<Val>>) -> AnfAnn<Val>,
+) -> Result<AnfAnn<Val>>
+where
+    AVarExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = VarExt>,
+    AValExt<Val>: ξ<Uniquify, Ext = ()> + ξ<Annotated, Ext = ()>,
+    ADistExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = DExt>,
+    Val: Debug + PartialEq + Clone,
+    VarExt: Debug + PartialEq + Clone,
+    DExt: Debug + PartialEq + Clone,
+{
+    Ok(op(
+        Box::new(annotate_anf(env, l)?),
+        Box::new(annotate_anf(env, r)?),
+    ))
+}
+fn annotate_anf_vec<VarExt, Val, DExt>(
+    env: &mut LabelEnv,
+    annotate_anf: impl Fn(&mut LabelEnv, &AnfUnq<Val>) -> Result<AnfAnn<Val>>,
+    xs: &[AnfUnq<Val>],
+    op: impl Fn(Vec<AnfAnn<Val>>) -> AnfAnn<Val>,
+) -> Result<AnfAnn<Val>>
+where
+    AVarExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = VarExt>,
+    AValExt<Val>: ξ<Uniquify, Ext = ()> + ξ<Annotated, Ext = ()>,
+    ADistExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = DExt>,
+    Val: Debug + PartialEq + Clone,
+    VarExt: Debug + PartialEq + Clone,
+    DExt: Debug + PartialEq + Clone,
+{
+    Ok(op(xs
+        .iter()
+        .map(|a| annotate_anf(env, a))
+        .collect::<Result<Vec<AnfAnn<Val>>>>()?))
+}
 impl LabelEnv {
     pub fn new() -> Self {
         Self {
@@ -142,22 +245,25 @@ impl LabelEnv {
     pub fn linear_var_order(&self) -> rsdd::repr::var_order::VarOrder {
         rsdd::repr::var_order::VarOrder::linear_order(self.max_varlabel_val() as usize)
     }
-    pub fn get_inv(&self) -> HashMap<NamedVar, HashSet<BddVar>> {
-        let mut inv: HashMap<NamedVar, HashSet<BddVar>> = HashMap::new();
+
+    pub fn get_bdd_inv(&self) -> InvMap<BddVar> {
+        let mut inv: InvMap<BddVar> = HashMap::new();
         for (_, var) in self.subst_var.iter() {
-            match &var {
+            match var {
                 Var::Named(_) => continue,
-                Var::Bdd(v) => match &v.provenance {
-                    None => continue,
-                    Some(prov) => match inv.get_mut(&prov) {
-                        None => {
-                            inv.insert(prov.clone(), HashSet::from([v.clone()]));
-                        }
-                        Some(vs) => {
-                            vs.insert(v.clone());
-                        }
-                    },
-                },
+                Var::Bdd(v) => insert_inv(&mut inv, v, &v.provenance),
+                Var::Sampled(_) => continue,
+            }
+        }
+        inv
+    }
+    pub fn get_sampled_inv(&self) -> InvMap<SampledVar> {
+        let mut inv: InvMap<SampledVar> = HashMap::new();
+        for (_, var) in self.subst_var.iter() {
+            match var {
+                Var::Named(_) => continue,
+                Var::Bdd(_) => continue,
+                Var::Sampled(v) => insert_inv(&mut inv, v, &v.provenance),
             }
         }
         inv
@@ -169,21 +275,25 @@ impl LabelEnv {
         VarLabel::new(sym)
     }
 
-    pub fn get_var(&self, id: &UniqueId) -> Result<Var, CompileError> {
+    pub fn get_var(&self, id: &UniqueId) -> Result<Var> {
         match self.subst_var.get(id) {
             None => Err(CompileError::Generic(format!("symbol {id} not in scope"))),
             Some(x) => Ok(x.clone()),
         }
     }
 
-    pub fn annotate_anf<Val: Debug + Clone + PartialEq>(
+    fn annotate_eanf_binop(
         &mut self,
-        a: &AnfUnq<Val>,
-    ) -> Result<AnfAnn<Val>, CompileError>
-    where
-        AVarExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = NamedVar>,
-        AValExt<Val>: ξ<Uniquify, Ext = ()> + ξ<Annotated, Ext = ()>,
-    {
+        l: &AnfUnq<EVal>,
+        r: &AnfUnq<EVal>,
+        op: impl Fn(Box<AnfAnn<EVal>>, Box<AnfAnn<EVal>>) -> AnfAnn<EVal>,
+    ) -> Result<AnfAnn<EVal>> {
+        Ok(op(
+            Box::new(self.annotate_eanf(l)?),
+            Box::new(self.annotate_eanf(r)?),
+        ))
+    }
+    pub fn annotate_sanf(&mut self, a: &AnfUnq<SVal>) -> Result<AnfAnn<SVal>> {
         use crate::grammar::Anf::*;
         match a {
             AVar(uid, s) => {
@@ -191,38 +301,148 @@ impl LabelEnv {
                 match var {
                     Var::Named(nvar) => Ok(AVar(nvar, s.to_string())),
                     Var::Bdd(_) => panic!("bdd vars are never referenced by source code!"),
+                    Var::Sampled(_) => panic!("sampled vars are never referenced by source code!"),
                 }
             }
             AVal(_, b) => Ok(AVal((), b.clone())),
             And(bl, br) => Ok(And(
-                Box::new(self.annotate_anf(bl)?),
-                Box::new(self.annotate_anf(br)?),
+                Box::new(self.annotate_sanf(bl)?),
+                Box::new(self.annotate_sanf(br)?),
             )),
             Or(bl, br) => Ok(Or(
-                Box::new(self.annotate_anf(bl)?),
-                Box::new(self.annotate_anf(br)?),
+                Box::new(self.annotate_sanf(bl)?),
+                Box::new(self.annotate_sanf(br)?),
             )),
-            Neg(bl) => Ok(Neg(Box::new(self.annotate_anf(bl)?))),
-            _ => todo!(),
+            Neg(bl) => Ok(Neg(Box::new(self.annotate_sanf(bl)?))),
+
+            // Numerics
+            Plus(l, r) => annotate_anf_binop(self, Self::annotate_sanf, l, r, Plus),
+            Minus(l, r) => annotate_anf_binop(self, Self::annotate_sanf, l, r, Minus),
+            Mult(l, r) => annotate_anf_binop(self, Self::annotate_sanf, l, r, Mult),
+            Div(l, r) => annotate_anf_binop(self, Self::annotate_sanf, l, r, Div),
+
+            // Ord
+            GT(l, r) => annotate_anf_binop(self, Self::annotate_sanf, l, r, GT),
+            LT(l, r) => annotate_anf_binop(self, Self::annotate_sanf, l, r, LT),
+            GTE(l, r) => annotate_anf_binop(self, Self::annotate_sanf, l, r, GTE),
+            LTE(l, r) => annotate_anf_binop(self, Self::annotate_sanf, l, r, LTE),
+            EQ(l, r) => annotate_anf_binop(self, Self::annotate_sanf, l, r, EQ),
+
+            // [x]; (l,r); x[0]
+            AnfVec(xs) => annotate_anf_vec(self, Self::annotate_sanf, xs, AnfVec),
+            AnfProd(xs) => annotate_anf_vec(self, Self::annotate_sanf, xs, AnfProd),
+            AnfPrj(var, ix) => Ok(AnfPrj(var.clone(), Box::new(self.annotate_sanf(ix)?))),
+
+            // Distributions
+            AnfBernoulli(id, x) => {
+                let var = SampledVar::new(*id, SDist::SBernoulli, self.letpos.clone());
+                self.subst_var.insert(*id, Var::Sampled(var.clone()));
+                Ok(AnfBernoulli(var, Box::new(self.annotate_sanf(x)?)))
+            }
+            AnfPoisson(id, x) => {
+                let var = SampledVar::new(*id, SDist::SPoisson, self.letpos.clone());
+                self.subst_var.insert(*id, Var::Sampled(var.clone()));
+                Ok(AnfPoisson(var, Box::new(self.annotate_sanf(x)?)))
+            }
+            AnfUniform(id, l, r) => {
+                let var = SampledVar::new(*id, SDist::SUniform, self.letpos.clone());
+                self.subst_var.insert(*id, Var::Sampled(var.clone()));
+                let l = Box::new(self.annotate_sanf(l)?);
+                let r = Box::new(self.annotate_sanf(r)?);
+                Ok(AnfUniform(var, l, r))
+            }
+            AnfNormal(id, l, r) => {
+                let var = SampledVar::new(*id, SDist::SNormal, self.letpos.clone());
+                self.subst_var.insert(*id, Var::Sampled(var.clone()));
+                let l = Box::new(self.annotate_sanf(l)?);
+                let r = Box::new(self.annotate_sanf(r)?);
+                Ok(AnfNormal(var, l, r))
+            }
+            AnfBeta(id, l, r) => {
+                let var = SampledVar::new(*id, SDist::SBeta, self.letpos.clone());
+                self.subst_var.insert(*id, Var::Sampled(var.clone()));
+                let l = Box::new(self.annotate_sanf(l)?);
+                let r = Box::new(self.annotate_sanf(r)?);
+                Ok(AnfBeta(var, l, r))
+            }
+            AnfDiscrete(id, xs) => {
+                let var = SampledVar::new(*id, SDist::SDiscrete(xs.len()), self.letpos.clone());
+                self.subst_var.insert(*id, Var::Sampled(var.clone()));
+                let xs = xs
+                    .iter()
+                    .map(|a| self.annotate_sanf(a))
+                    .collect::<Result<Vec<AnfAnn<SVal>>>>()?;
+                Ok(AnfDiscrete(var, xs))
+            }
+            AnfDirichlet(id, xs) => {
+                let var = SampledVar::new(*id, SDist::SDirichlet(xs.len()), self.letpos.clone());
+                self.subst_var.insert(*id, Var::Sampled(var.clone()));
+                let xs = xs
+                    .iter()
+                    .map(|a| self.annotate_sanf(a))
+                    .collect::<Result<Vec<AnfAnn<SVal>>>>()?;
+                Ok(AnfDirichlet(var, xs))
+            }
         }
     }
-    pub fn annotate_anfs<Val: Clone>(
-        &mut self,
-        anfs: &[AnfUnq<Val>],
-    ) -> Result<Vec<AnfAnn<Val>>, CompileError>
-    where
-        AVarExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = NamedVar>,
-        AValExt<Val>: ξ<Uniquify, Ext = ()> + ξ<Annotated, Ext = ()>,
-        Val: Debug + Clone + PartialEq,
-    {
-        anfs.iter().map(|a| self.annotate_anf(a)).collect()
+    pub fn annotate_eanf(&mut self, a: &AnfUnq<EVal>) -> Result<AnfAnn<EVal>> {
+        use crate::grammar::Anf::*;
+        match a {
+            AVar(uid, s) => {
+                let var = self.get_var(uid)?;
+                match var {
+                    Var::Named(nvar) => Ok(AVar(nvar, s.to_string())),
+                    Var::Bdd(_) => panic!("bdd vars are never referenced by source code!"),
+                    Var::Sampled(_) => panic!("sampled vars are never referenced by source code!"),
+                }
+            }
+            AVal(_, b) => Ok(AVal((), b.clone())),
+            And(bl, br) => Ok(And(
+                Box::new(self.annotate_eanf(bl)?),
+                Box::new(self.annotate_eanf(br)?),
+            )),
+            Or(bl, br) => Ok(Or(
+                Box::new(self.annotate_eanf(bl)?),
+                Box::new(self.annotate_eanf(br)?),
+            )),
+            Neg(bl) => Ok(Neg(Box::new(self.annotate_eanf(bl)?))),
+
+            // Numerics
+            Plus(l, r) => annotate_anf_binop(self, Self::annotate_eanf, l, r, Plus),
+            Minus(l, r) => annotate_anf_binop(self, Self::annotate_eanf, l, r, Minus),
+            Mult(l, r) => annotate_anf_binop(self, Self::annotate_eanf, l, r, Mult),
+            Div(l, r) => annotate_anf_binop(self, Self::annotate_eanf, l, r, Div),
+
+            // Ord
+            GT(l, r) => annotate_anf_binop(self, Self::annotate_eanf, l, r, GT),
+            LT(l, r) => annotate_anf_binop(self, Self::annotate_eanf, l, r, LT),
+            GTE(l, r) => annotate_anf_binop(self, Self::annotate_eanf, l, r, GTE),
+            LTE(l, r) => annotate_anf_binop(self, Self::annotate_eanf, l, r, LTE),
+            EQ(l, r) => annotate_anf_binop(self, Self::annotate_eanf, l, r, EQ),
+
+            AnfProd(xs) => annotate_anf_vec(self, Self::annotate_eanf, xs, AnfProd),
+            AnfPrj(var, ix) => Ok(AnfPrj(var.clone(), Box::new(self.annotate_eanf(ix)?))),
+
+            // Distributions
+            _ => errors::not_in_exact(),
+        }
     }
-    pub fn annotate_eexpr(&mut self, e: &EExprUnq) -> Result<EExprAnn, CompileError> {
+    pub fn annotate_eanfs(&mut self, anfs: &[AnfUnq<EVal>]) -> Result<Vec<AnfAnn<EVal>>> {
+        anfs.iter().map(|a| self.annotate_eanf(a)).collect()
+    }
+    pub fn annotate_sanfs(&mut self, anfs: &[AnfUnq<SVal>]) -> Result<Vec<AnfAnn<SVal>>> {
+        anfs.iter().map(|a| self.annotate_sanf(a)).collect()
+    }
+    pub fn annotate_eexpr(&mut self, e: &EExprUnq) -> Result<EExprAnn> {
         use crate::grammar::EExpr::*;
         match e {
-            EAnf(_, a) => Ok(EAnf((), Box::new(self.annotate_anf(a)?))),
-            EPrj(_, i, a) => Ok(EPrj((), *i, Box::new(self.annotate_anf(a)?))),
-            EProd(_, anfs) => Ok(EProd((), self.annotate_anfs(anfs)?)),
+            EAnf(_, a) => Ok(EAnf((), Box::new(self.annotate_eanf(a)?))),
+            EPrj(_, i, a) => Ok(EPrj(
+                (),
+                Box::new(self.annotate_eanf(i)?),
+                Box::new(self.annotate_eanf(a)?),
+            )),
+            EProd(_, anfs) => Ok(EProd((), self.annotate_eanfs(anfs)?)),
             ELetIn(id, s, ebound, ebody) => {
                 let nvar = NamedVar {
                     id: *id,
@@ -239,9 +459,9 @@ impl LabelEnv {
                     Box::new(self.annotate_eexpr(ebody)?),
                 ))
             }
-            EIte(_ty, cond, t, f) => Ok(EIte(
+            EIte(_, cond, t, f) => Ok(EIte(
                 (),
-                Box::new(self.annotate_anf(cond)?),
+                Box::new(self.annotate_eanf(cond)?),
                 Box::new(self.annotate_eexpr(t)?),
                 Box::new(self.annotate_eexpr(f)?),
             )),
@@ -249,19 +469,39 @@ impl LabelEnv {
                 let lbl = self.fresh();
                 let var = BddVar::new(*id, lbl, self.letpos.clone());
                 self.subst_var.insert(*id, Var::Bdd(var.clone()));
-                Ok(EFlip(var, *param))
+                Ok(EFlip(var, Box::new(self.annotate_eanf(param)?)))
+            }
+            EIterate(_, f, init, k) => {
+                let init = self.annotate_eanf(init)?;
+                let k = self.annotate_eanf(k)?;
+                Ok(EIterate((), f.clone(), Box::new(init), Box::new(k)))
+            }
+
+            EApp(_, f, args) => {
+                let args = args
+                    .iter()
+                    .map(|a| self.annotate_eanf(a))
+                    .collect::<Result<Vec<AnfAnn<EVal>>>>()?;
+                Ok(EApp((), f.clone(), args.clone()))
+            }
+            EDiscrete(_, args) => {
+                let args = args
+                    .iter()
+                    .map(|a| self.annotate_eanf(a))
+                    .collect::<Result<Vec<AnfAnn<EVal>>>>()?;
+                Ok(EDiscrete((), args.clone()))
             }
             EObserve(_, a) => {
-                let anf = self.annotate_anf(a)?;
+                let anf = self.annotate_eanf(a)?;
                 Ok(EObserve((), Box::new(anf)))
             }
             ESample(_, e) => Ok(ESample((), Box::new(self.annotate_sexpr(e)?))),
         }
     }
-    pub fn annotate_sexpr(&mut self, e: &SExprUnq) -> Result<SExprAnn, CompileError> {
+    pub fn annotate_sexpr(&mut self, e: &SExprUnq) -> Result<SExprAnn> {
         use crate::grammar::SExpr::*;
         match e {
-            SAnf(_, a) => Ok(SAnf((), Box::new(self.annotate_anf(a)?))),
+            SAnf(_, a) => Ok(SAnf((), Box::new(self.annotate_sanf(a)?))),
             SSeq(_, e0, e1) => Ok(SSeq(
                 (),
                 Box::new(self.annotate_sexpr(e0)?),
@@ -274,7 +514,6 @@ impl LabelEnv {
                 };
                 let var = Var::Named(nvar.clone());
                 self.letpos = Some(nvar.clone());
-                // self.weights.insert(var.clone(), Weight::constant());
                 self.subst_var.insert(*id, var.clone());
                 Ok(SLetIn(
                     nvar,
@@ -283,95 +522,127 @@ impl LabelEnv {
                     Box::new(self.annotate_sexpr(ebody)?),
                 ))
             }
-            SIte(_ty, cond, t, f) => Ok(SIte(
+            SIte(_, cond, t, f) => Ok(SIte(
                 (),
-                Box::new(self.annotate_anf(cond)?),
+                Box::new(self.annotate_sanf(cond)?),
                 Box::new(self.annotate_sexpr(t)?),
                 Box::new(self.annotate_sexpr(f)?),
             )),
-
-            SBern(_, param) => {
-                let param = self.annotate_anf(param)?;
-                Ok(SBern((), Box::new(param)))
-            }
-            SUniform(_, lo, hi) => {
-                let lo = self.annotate_anf(lo)?;
-                let hi = self.annotate_anf(hi)?;
-                Ok(SUniform((), Box::new(lo), Box::new(hi)))
-            }
-            SNormal(_, mean, var) => {
-                let mean = self.annotate_anf(mean)?;
-                let var = self.annotate_anf(var)?;
-                Ok(SNormal((), Box::new(mean), Box::new(var)))
-            }
-            SBeta(_, a, b) => {
-                let a = self.annotate_anf(a)?;
-                let b = self.annotate_anf(b)?;
-                Ok(SBeta((), Box::new(a), Box::new(b)))
-            }
-            SDiscrete(_, ps) => {
-                let ps = self.annotate_anfs(ps)?;
-                Ok(SDiscrete((), ps))
-            }
-            SDirichlet(_, ps) => {
-                let ps = self.annotate_anfs(ps)?;
-                Ok(SDirichlet((), ps))
-            }
             SObserve(_, a, e) => Ok(SObserve(
                 (),
-                Box::new(self.annotate_anf(a)?),
-                Box::new(self.annotate_sexpr(e)?),
+                Box::new(self.annotate_sanf(a)?),
+                Box::new(self.annotate_sanf(e)?),
             )),
+            SMap(arg_id, arg, body, xs) => {
+                let nvar = NamedVar {
+                    id: *arg_id,
+                    name: arg.to_string(),
+                };
+                let var = Var::Named(nvar.clone());
+                self.subst_var.insert(*arg_id, var.clone());
+                Ok(SMap(
+                    nvar,
+                    arg.clone(),
+                    Box::new(self.annotate_sexpr(body)?),
+                    Box::new(self.annotate_sanf(xs)?),
+                ))
+            }
+            SFold((acc_id, arg_id), init, acc, arg, body, xs) => {
+                let acc_nvar = NamedVar {
+                    id: *acc_id,
+                    name: acc.to_string(),
+                };
+                let acc_var = Var::Named(acc_nvar.clone());
+                self.subst_var.insert(*acc_id, acc_var.clone());
+                let arg_nvar = NamedVar {
+                    id: *arg_id,
+                    name: arg.to_string(),
+                };
+                let arg_var = Var::Named(arg_nvar.clone());
+                self.subst_var.insert(*arg_id, arg_var.clone());
+
+                Ok(SFold(
+                    (acc_nvar, arg_nvar),
+                    Box::new(self.annotate_sanf(init)?),
+                    acc.clone(),
+                    arg.clone(),
+                    Box::new(self.annotate_sexpr(body)?),
+                    Box::new(self.annotate_sanf(xs)?),
+                ))
+            }
+            SWhile(_, guard, body) => Ok(SWhile(
+                (),
+                Box::new(self.annotate_sanf(guard)?),
+                Box::new(self.annotate_sexpr(body)?),
+            )),
+            SApp(_, f, args) => Ok(SApp((), f.clone(), self.annotate_sanfs(args)?)),
+            SLambda(ids, args, body) => {
+                let nvars: Vec<NamedVar> = args
+                    .iter()
+                    .zip(ids.iter())
+                    .map(|(a, id)| NamedVar {
+                        id: *id,
+                        name: a.to_string(),
+                    })
+                    .collect();
+                Ok(SLambda(
+                    nvars,
+                    args.clone(),
+                    Box::new(self.annotate_sexpr(body)?),
+                ))
+            }
+            SSample(_, dist) => Ok(SSample((), Box::new(self.annotate_sanf(dist)?))),
 
             SExact(_, e) => Ok(SExact((), Box::new(self.annotate_eexpr(e)?))),
+            SLetSample(_, _, _, _) => errors::erased(),
         }
     }
-    #[allow(clippy::type_complexity)]
-    pub fn annotate(
-        &mut self,
-        p: &ProgramUnq,
-    ) -> Result<
-        (
-            ProgramAnn,
-            VarOrder,
-            HashMap<UniqueId, Var>,
-            HashMap<NamedVar, HashSet<BddVar>>,
-            u64,
-        ),
-        CompileError,
-    > {
-        match p {
-            Program::SBody(e) => {
-                let eann = self.annotate_sexpr(e)?;
-                let order = self.linear_var_order();
-                let inv = self.get_inv();
-                let mx = self.max_varlabel_val();
-                Ok((Program::SBody(eann), order, self.subst_var.clone(), inv, mx))
-            }
-            Program::EBody(e) => {
-                let eann = self.annotate_eexpr(e)?;
-                let order = self.linear_var_order();
-                let inv = self.get_inv();
-                let mx = self.max_varlabel_val();
-                Ok((Program::EBody(eann), order, self.subst_var.clone(), inv, mx))
-            }
-        }
-    }
+    //     #[allow(clippy::type_complexity)]
+    //     pub fn annotate(
+    //         &mut self,
+    //         p: &ProgramUnq,
+    //     ) -> Result<
+    //         (
+    //             ProgramAnn,
+    //             VarOrder,
+    //             HashMap<UniqueId, Var>,
+    //             HashMap<NamedVar, HashSet<BddVar>>,
+    //             u64,
+    //         ),
+    //         CompileError,
+    //     > {
+    //         match p {
+    //             Program::SBody(e) => {
+    //                 let eann = self.annotate_sexpr(e)?;
+    //                 let order = self.linear_var_order();
+    //                 let inv = self.get_inv();
+    //                 let mx = self.max_varlabel_val();
+    //                 Ok((Program::SBody(eann), order, self.subst_var.clone(), inv, mx))
+    //             }
+    //             Program::EBody(e) => {
+    //                 let eann = self.annotate_eexpr(e)?;
+    //                 let order = self.linear_var_order();
+    //                 let inv = self.get_inv();
+    //                 let mx = self.max_varlabel_val();
+    //                 Ok((Program::EBody(eann), order, self.subst_var.clone(), inv, mx))
+    //             }
+    //         }
+    //     }
 }
 
-pub fn pipeline(
-    p: &ProgramInferable,
-) -> Result<
-    (
-        ProgramAnn,
-        VarOrder,
-        HashMap<UniqueId, Var>,
-        HashMap<NamedVar, HashSet<BddVar>>,
-        u64,
-    ),
-    CompileError,
-> {
-    let p = crate::uniquify::pipeline(p)?.0;
-    let mut lenv = LabelEnv::new();
-    lenv.annotate(&p)
-}
+// pub fn pipeline(
+//     p: &ProgramUniquify,
+// ) -> Result<
+//     (
+//         ProgramAnn,
+//         VarOrder,
+//         HashMap<UniqueId, Var>,
+//         HashMap<NamedVar, HashSet<BddVar>>,
+//         u64,
+//     ),
+//     CompileError,
+// > {
+//     let p = crate::uniquify::pipeline(p)?.0;
+//     let mut lenv = LabelEnv::new();
+//     lenv.annotate(&p)
+// }

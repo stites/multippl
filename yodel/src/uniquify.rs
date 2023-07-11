@@ -43,6 +43,10 @@ pub mod grammar {
         // Keep this around as we are not /completely/ migrating away from
         // original semantic
         EFlipExt: UniqueId,
+
+        SMapExt: UniqueId,
+        SFoldExt: (UniqueId, UniqueId),
+        SLambdaExt: Vec<UniqueId>,
     });
 
     ::ttg::alias!(Uniquify as Unq + (Program, EExpr, SExpr, Anf<Var>));
@@ -298,8 +302,12 @@ impl SymEnv {
             SLambda(_, args, body) => {
                 self.scope_push();
                 let body = self.uniquify_sexpr(body)?;
+                let ids = args
+                    .iter()
+                    .map(|a| self.get_or_create(a.to_string()))
+                    .collect::<Result<Vec<UniqueId>>>()?;
                 self.scope_pop();
-                Ok(SLambda((), args.clone(), Box::new(body)))
+                Ok(SLambda(ids, args.clone(), Box::new(body)))
             }
             SSeq(_, e0, e1) => Ok(SSeq(
                 (),
@@ -334,19 +342,22 @@ impl SymEnv {
 
             SMap(_, arg, map, xs) => {
                 self.scope_push();
+                let arg_id = self.get_or_create(arg.to_string())?;
                 let map = self.uniquify_sexpr(map)?;
                 self.scope_pop();
                 let xs = self.uniquify_anf(xs)?;
-                Ok(SMap((), arg.clone(), Box::new(map), Box::new(xs)))
+                Ok(SMap(arg_id, arg.clone(), Box::new(map), Box::new(xs)))
             }
             SFold(_, init, accum, arg, fold, xs) => {
                 let init = self.uniquify_anf(init)?;
                 self.scope_push();
+                let accum_id = self.get_or_create(accum.to_string())?;
+                let arg_id = self.get_or_create(arg.to_string())?;
                 let fold = self.uniquify_sexpr(fold)?;
                 self.scope_pop();
                 let xs = self.uniquify_anf(xs)?;
                 Ok(SFold(
-                    (),
+                    (accum_id, arg_id),
                     Box::new(init),
                     accum.clone(),
                     arg.clone(),

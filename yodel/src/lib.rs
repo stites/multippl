@@ -17,14 +17,15 @@ pub mod parser;
 
 pub mod typeinf;
 
+// intermediate stages
+
 mod typecheck;
 
 mod desugar_sample;
 
 mod uniquify;
 
-// // intermediate stages
-// mod annotate;
+mod annotate;
 
 // // interface
 // pub mod analysis;
