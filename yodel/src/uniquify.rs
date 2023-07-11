@@ -1,4 +1,4 @@
-use crate::data::{CompileError, Result};
+use crate::data::{errors, CompileError, Result};
 use crate::grammar::*;
 use grammar::*;
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -161,12 +161,12 @@ impl SymEnv {
         ADistExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
     {
         let id = self.fresh();
-        Ok(op(id,
+        Ok(op(
+            id,
             Box::new(self.uniquify_anf(l)?),
             Box::new(self.uniquify_anf(r)?),
         ))
     }
-
 
     fn uniquify_anf_vec<X: Debug + PartialEq + Clone>(
         &mut self,
@@ -177,10 +177,7 @@ impl SymEnv {
         AValExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = ()>,
         ADistExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
     {
-        xs
-            .iter()
-            .map(|a| self.uniquify_anf(a))
-            .collect()
+        xs.iter().map(|a| self.uniquify_anf(a)).collect()
     }
 
     fn uniquify_anf<X: Debug + PartialEq + Clone>(&mut self, a: &AnfUD<X>) -> Result<AnfUnq<X>>
@@ -245,7 +242,11 @@ impl SymEnv {
         use crate::grammar::EExpr::*;
         match e {
             EAnf(_, a) => Ok(EAnf((), Box::new(self.uniquify_anf(a)?))),
-            EPrj(_, i, a) => Ok(EPrj((), Box::new(self.uniquify_anf(i)?), Box::new(self.uniquify_anf(a)?))),
+            EPrj(_, i, a) => Ok(EPrj(
+                (),
+                Box::new(self.uniquify_anf(i)?),
+                Box::new(self.uniquify_anf(a)?),
+            )),
             EProd(_, anfs) => Ok(EProd((), self.uniquify_anfs(anfs)?)),
             ELetIn(_, s, ebound, ebody) => {
                 // too lazy to do something smarter
@@ -268,20 +269,20 @@ impl SymEnv {
             EFlip(_, p) => {
                 let p = self.uniquify_anf(p)?;
                 Ok(EFlip(self.fresh(), Box::new(p)))
-            },
+            }
             EApp(_, f, args) => {
                 let args = self.uniquify_anfs(args)?;
                 Ok(EApp((), f.clone(), args))
-            },
+            }
             EDiscrete(_, args) => {
                 let args = self.uniquify_anfs(args)?;
                 Ok(EDiscrete((), args))
-            },
+            }
             EIterate(_, f, init, k) => {
                 let init = self.uniquify_anf(init)?;
                 let k = self.uniquify_anf(k)?;
-                Ok(EIterate((), f.clone(), Box::new(init),  Box::new(k)))
-            },
+                Ok(EIterate((), f.clone(), Box::new(init), Box::new(k)))
+            }
 
             EObserve(_, a) => {
                 let anf = self.uniquify_anf(a)?;
@@ -290,101 +291,162 @@ impl SymEnv {
             ESample(_, e) => Ok(ESample((), Box::new(self.uniquify_sexpr(e)?))),
         }
     }
-        pub fn uniquify_sexpr(&mut self, e: &SExprUD) -> Result<SExprUnq> {
-            use crate::grammar::SExpr::*;
-            match e {
-                SAnf(_, a) => Ok(SAnf((), Box::new(self.uniquify_anf(a)?))),
+    pub fn uniquify_sexpr(&mut self, e: &SExprUD) -> Result<SExprUnq> {
+        use crate::grammar::SExpr::*;
+        match e {
+            SAnf(_, a) => Ok(SAnf((), Box::new(self.uniquify_anf(a)?))),
             SLambda(_, args, body) => {
+                self.scope_push();
                 let body = self.uniquify_sexpr(body)?;
+                self.scope_pop();
                 Ok(SLambda((), args.clone(), Box::new(body)))
-            },
-                SSeq(_, e0, e1) => Ok(SSeq(
-                    (),
-                    Box::new(self.uniquify_sexpr(e0)?),
-                    Box::new(self.uniquify_sexpr(e1)?),
-                )),
-                SLetIn(_, s, ebound, ebody) => {
-                    // too lazy to do something smarter
-                    self.read_only = false;
-                    let v = self.get_or_create(s.to_string())?;
-                    self.read_only = true;
-                    Ok(SLetIn(
-                        v,
-                        s.clone(),
-                        Box::new(self.uniquify_sexpr(ebound)?),
-                        Box::new(self.uniquify_sexpr(ebody)?),
-                    ))
-                }
-                SIte(_, cond, t, f) => Ok(SIte(
-                    (),
-                    Box::new(self.uniquify_anf(cond)?),
-                    Box::new(self.uniquify_sexpr(t)?),
-                    Box::new(self.uniquify_sexpr(f)?),
-                )),
-                SObserve(_, a, e) => Ok(SObserve(
-                    (),
-                    Box::new(self.uniquify_anf(a)?),
-                    Box::new(self.uniquify_anf(e)?),
-                )),
+            }
+            SSeq(_, e0, e1) => Ok(SSeq(
+                (),
+                Box::new(self.uniquify_sexpr(e0)?),
+                Box::new(self.uniquify_sexpr(e1)?),
+            )),
+            SLetIn(_, s, ebound, ebody) => {
+                // too lazy to do something smarter
+                self.read_only = false;
+                let v = self.get_or_create(s.to_string())?;
+                self.read_only = true;
+                Ok(SLetIn(
+                    v,
+                    s.clone(),
+                    Box::new(self.uniquify_sexpr(ebound)?),
+                    Box::new(self.uniquify_sexpr(ebody)?),
+                ))
+            }
+            SIte(_, cond, t, f) => Ok(SIte(
+                (),
+                Box::new(self.uniquify_anf(cond)?),
+                Box::new(self.uniquify_sexpr(t)?),
+                Box::new(self.uniquify_sexpr(f)?),
+            )),
+            SObserve(_, a, e) => Ok(SObserve(
+                (),
+                Box::new(self.uniquify_anf(a)?),
+                Box::new(self.uniquify_anf(e)?),
+            )),
 
-                SExact(_, e) => Ok(SExact((), Box::new(self.uniquify_eexpr(e)?))),
+            SExact(_, e) => Ok(SExact((), Box::new(self.uniquify_eexpr(e)?))),
+
+            SMap(_, arg, map, xs) => {
+                self.scope_push();
+                let map = self.uniquify_sexpr(map)?;
+                self.scope_pop();
+                let xs = self.uniquify_anf(xs)?;
+                Ok(SMap((), arg.clone(), Box::new(map), Box::new(xs)))
+            }
+            SFold(_, init, accum, arg, fold, xs) => {
+                let init = self.uniquify_anf(init)?;
+                self.scope_push();
+                let fold = self.uniquify_sexpr(fold)?;
+                self.scope_pop();
+                let xs = self.uniquify_anf(xs)?;
+                Ok(SFold(
+                    (),
+                    Box::new(init),
+                    accum.clone(),
+                    arg.clone(),
+                    Box::new(fold),
+                    Box::new(xs),
+                ))
+            }
+            SWhile(_, guard, body) => Ok(SWhile(
+                (),
+                Box::new(self.uniquify_anf(guard)?),
+                Box::new(self.uniquify_sexpr(body)?),
+            )),
+            SApp(_, f, args) => Ok(SApp((), f.clone(), self.uniquify_anfs(args)?)),
+            SSample(_, dist) => Ok(SSample((), Box::new(self.uniquify_anf(dist)?))),
+            SLetSample(_, _, _, _) => errors::erased(),
+        }
+    }
+    pub fn uniquify_efun(&mut self, f: &Function<EExprUD>) -> Result<Function<EExprUnq>> {
+        Ok(Function {
+            name: f.name.clone(),
+            arguments: self.uniquify_anfs(&f.arguments)?,
+            body: self.uniquify_eexpr(&f.body)?,
+            returnty: f.returnty.clone(),
+        })
+    }
+    pub fn uniquify_sfun(&mut self, f: &Function<SExprUD>) -> Result<Function<SExprUnq>> {
+        Ok(Function {
+            name: f.name.clone(),
+            arguments: self.uniquify_anfs(&f.arguments)?,
+            body: self.uniquify_sexpr(&f.body)?,
+            returnty: f.returnty.clone(),
+        })
+    }
+
+    pub fn uniquify(&mut self, p: &ProgramUD) -> Result<(ProgramUnq, MaxUniqueId)> {
+        match p {
+            Program::SBody(e) => {
+                let eann = self.uniquify_sexpr(e)?;
+                Ok((Program::SBody(eann), MaxUniqueId(self.gensym)))
+            }
+            Program::EBody(e) => {
+                let eann = self.uniquify_eexpr(e)?;
+                Ok((Program::EBody(eann), MaxUniqueId(self.gensym)))
+            }
+            Program::EDefine(f, e) => {
+                let f = self.uniquify_efun(f)?;
+                let (p, mx) = self.uniquify(p)?;
+                Ok((Program::EDefine(f, Box::new(p)), mx))
+            }
+            Program::SDefine(f, e) => {
+                let f = self.uniquify_sfun(f)?;
+                let (p, mx) = self.uniquify(p)?;
+                Ok((Program::SDefine(f, Box::new(p)), mx))
             }
         }
-
-    //     pub fn uniquify(&mut self, p: &ProgramUD) -> Result<(ProgramUnq, MaxUniqueId), CompileError> {
-    //         let mx = MaxUniqueId(self.gensym);
-    //         match p {
-    //             Program::SBody(e) => {
-    //                 let eann = self.uniquify_sexpr(e)?;
-    //                 Ok((Program::SBody(eann), mx))
-    //             }
-    //             Program::EBody(e) => {
-    //                 let eann = self.uniquify_eexpr(e)?;
-    //                 Ok((Program::EBody(eann), mx))
-    //             }
-    //         }
-    //     }
+    }
 }
 
-// pub fn pipeline(p: &ProgramUD) -> Result<(ProgramUnq, MaxUniqueId), CompileError> {
-//     let p = crate::typecheck::pipeline(p)?;
-//     let mut senv = SymEnv::default();
-//     senv.uniquify(&p)
-// }
+pub fn pipeline(
+    p: &crate::typeinf::grammar::ProgramInferable,
+) -> Result<(ProgramUnq, MaxUniqueId)> {
+    let p = crate::typecheck::pipeline(p)?;
+    let mut senv = SymEnv::default();
+    senv.uniquify(&p)
+}
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-//     use crate::data::*;
-//     use crate::grammar::*;
-//     use crate::typecheck::pipeline;
-//     use crate::uniquify::grammar::{EExprUD, ProgramUD};
-//     use crate::*;
-//     use tracing::*;
-//     use tracing_test::traced_test;
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::data::*;
+    use crate::grammar::*;
+    use crate::typecheck::pipeline;
+    use crate::typeinf::grammar::{EExprInferable, ProgramInferable};
+    use crate::uniquify::grammar::{EExprUnq, ProgramUnq};
+    use crate::*;
+    use tracing::*;
+    use tracing_test::traced_test;
 
-//     #[test]
-//     fn invalid_observe() {
-//         let res = SymEnv::default().uniquify(&pipeline(&program!(observe!(b!("x")))).unwrap());
-//         assert!(res.is_err());
-//         let mk = |ret: EExprUD| {
-//             Program::EBody(lets![
-//                 "x" ; b!() ;= flip!(1/3);
-//                 "y" ; b!() ;= sample!(
-//                     lets![
-//                         "x0" ; b!() ;= flip!(1/5);
-//                         ...? b!("x0" || "x") ; b!()
-//                     ]);
-//                "_" ; b!() ;= observe!(b!("x" || "y")); // is this a problem?
+    #[test]
+    fn invalid_observe() {
+        let res = SymEnv::default().uniquify(&pipeline(&program!(observe!(b!("x")))).unwrap());
+        assert!(res.is_err());
+        let mk = |ret: EExprInferable| {
+            Program::EBody(lets![
+                "x" ; b!() ;= flip!(1/3);
+                "y" ; b!() ;= sample!(
+                    lets![
+                        "x0" ; b!() ;= flip!(1/5);
+                        ...? b!("x0" || "x") ; b!()
+                    ]);
+               "_" ; b!() ;= observe!(b!("x" || "y")); // is this a problem?
 
-//                ...? ret ; b!()
-//             ])
-//         };
-//         let res = SymEnv::default().uniquify(&pipeline(&mk(b!("l"))).unwrap());
-//         assert!(res.is_err());
-//         let mut senv = SymEnv::default();
-//         let res = senv.uniquify(&pipeline(&mk(b!("x"))).unwrap());
-//         assert!(res.is_ok());
-//         assert!(senv.gensym == 6);
-//     }
-// }
+               ...? ret ; b!()
+            ])
+        };
+        let res = SymEnv::default().uniquify(&pipeline(&mk(b!("l"))).unwrap());
+        assert!(res.is_err());
+        let mut senv = SymEnv::default();
+        let res = senv.uniquify(&pipeline(&mk(b!("x"))).unwrap());
+        assert!(res.is_ok());
+        assert!(senv.gensym == 6);
+    }
+}

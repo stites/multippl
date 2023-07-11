@@ -312,8 +312,12 @@ macro_rules! bern {
             Box::new($crate::grammar::Anf::<
                 $crate::typeinf::grammar::Inferable,
                 $crate::SVal,
-            >::AnfBernoulli((), Box::new(
-                $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, $crate::SVal>::Div(
+            >::AnfBernoulli(
+                (),
+                Box::new($crate::grammar::Anf::<
+                    $crate::typeinf::grammar::Inferable,
+                    $crate::SVal,
+                >::Div(
                     Box::new($crate::grammar::Anf::<
                         $crate::typeinf::grammar::Inferable,
                         $crate::SVal,
@@ -322,8 +326,8 @@ macro_rules! bern {
                         $crate::typeinf::grammar::Inferable,
                         $crate::SVal,
                     >::AVal((), $crate::SVal::SInt($denom))),
-                ),
-            ))),
+                )),
+            )),
         )
     }};
     ( $p:expr  ) => {{

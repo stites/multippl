@@ -44,12 +44,14 @@ pub fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVa
                 "!" => Anf::Neg(Box::new(parse_sanf(src, c, node))),
                 "sanfbern" => Anf::AnfBernoulli((), Box::new(parse_sanf(src, c, node))),
                 "sanfpoisson" => Anf::AnfPoisson((), Box::new(parse_sanf(src, c, node))),
-                "sanfdirichlet" => {
-                    Anf::AnfDirichlet((), parse_vec(src, c, node, |a, b, c| parse_sanf_node(a, b, &c)))
-                }
-                "sanfdiscrete" => {
-                    Anf::AnfDiscrete((), parse_vec(src, c, node, |a, b, c| parse_sanf_node(a, b, &c)))
-                }
+                "sanfdirichlet" => Anf::AnfDirichlet(
+                    (),
+                    parse_vec(src, c, node, |a, b, c| parse_sanf_node(a, b, &c)),
+                ),
+                "sanfdiscrete" => Anf::AnfDiscrete(
+                    (),
+                    parse_vec(src, c, node, |a, b, c| parse_sanf_node(a, b, &c)),
+                ),
                 _ => panic!("invalid unary operator found!\nsexp: {}", n.to_sexp()),
             }
         }

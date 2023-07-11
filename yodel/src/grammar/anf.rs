@@ -42,9 +42,21 @@ where
     // Distributions
     AnfBernoulli(<ADistExt<Val> as ξ<X>>::Ext, Box<Anf<X, Val>>),
     AnfDiscrete(<ADistExt<Val> as ξ<X>>::Ext, Vec<Anf<X, Val>>),
-    AnfUniform(<ADistExt<Val> as ξ<X>>::Ext, Box<Anf<X, Val>>, Box<Anf<X, Val>>),
-    AnfNormal(<ADistExt<Val> as ξ<X>>::Ext, Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    AnfUniform(
+        <ADistExt<Val> as ξ<X>>::Ext,
+        Box<Anf<X, Val>>,
+        Box<Anf<X, Val>>,
+    ),
+    AnfNormal(
+        <ADistExt<Val> as ξ<X>>::Ext,
+        Box<Anf<X, Val>>,
+        Box<Anf<X, Val>>,
+    ),
     AnfPoisson(<ADistExt<Val> as ξ<X>>::Ext, Box<Anf<X, Val>>),
-    AnfBeta(<ADistExt<Val> as ξ<X>>::Ext, Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    AnfBeta(
+        <ADistExt<Val> as ξ<X>>::Ext,
+        Box<Anf<X, Val>>,
+        Box<Anf<X, Val>>,
+    ),
     AnfDirichlet(<ADistExt<Val> as ξ<X>>::Ext, Vec<Anf<X, Val>>),
 }
