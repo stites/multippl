@@ -12,6 +12,28 @@ use std::fmt::Debug;
 use std::hash::Hash;
 
 pub type InvMap<T> = HashMap<NamedVar, HashSet<T>>;
+pub struct MaxVarLabel(u64);
+pub struct AnnotateResult {
+    program: ProgramAnn,
+    order: VarOrder,
+    idmap: HashMap<UniqueId, Var>,
+    maxbdd: MaxVarLabel,
+}
+impl AnnotateResult {
+    pub fn new(
+        program: ProgramAnn,
+        order: VarOrder,
+        idmap: HashMap<UniqueId, Var>,
+        maxbdd: MaxVarLabel,
+    ) -> Self {
+        AnnotateResult {
+            program,
+            order,
+            idmap,
+            maxbdd,
+        }
+    }
+}
 
 pub mod grammar {
     use super::*;
@@ -238,12 +260,12 @@ impl LabelEnv {
             letpos: None,
         }
     }
-    pub fn max_varlabel_val(&self) -> u64 {
-        self.lblsym
+    pub fn max_varlabel_val(&self) -> MaxVarLabel {
+        MaxVarLabel(self.lblsym)
     }
 
     pub fn linear_var_order(&self) -> rsdd::repr::var_order::VarOrder {
-        rsdd::repr::var_order::VarOrder::linear_order(self.max_varlabel_val() as usize)
+        rsdd::repr::var_order::VarOrder::linear_order(self.max_varlabel_val().0 as usize)
     }
 
     pub fn get_bdd_inv(&self) -> InvMap<BddVar> {
@@ -597,52 +619,74 @@ impl LabelEnv {
             SLetSample(_, _, _, _) => errors::erased(),
         }
     }
-    //     #[allow(clippy::type_complexity)]
-    //     pub fn annotate(
-    //         &mut self,
-    //         p: &ProgramUnq,
-    //     ) -> Result<
-    //         (
-    //             ProgramAnn,
-    //             VarOrder,
-    //             HashMap<UniqueId, Var>,
-    //             HashMap<NamedVar, HashSet<BddVar>>,
-    //             u64,
-    //         ),
-    //         CompileError,
-    //     > {
-    //         match p {
-    //             Program::SBody(e) => {
-    //                 let eann = self.annotate_sexpr(e)?;
-    //                 let order = self.linear_var_order();
-    //                 let inv = self.get_inv();
-    //                 let mx = self.max_varlabel_val();
-    //                 Ok((Program::SBody(eann), order, self.subst_var.clone(), inv, mx))
-    //             }
-    //             Program::EBody(e) => {
-    //                 let eann = self.annotate_eexpr(e)?;
-    //                 let order = self.linear_var_order();
-    //                 let inv = self.get_inv();
-    //                 let mx = self.max_varlabel_val();
-    //                 Ok((Program::EBody(eann), order, self.subst_var.clone(), inv, mx))
-    //             }
-    //         }
-    //     }
+    pub fn annotate_efun(&mut self, f: &Function<EExprUnq>) -> Result<Function<EExprAnn>> {
+        Ok(Function {
+            name: f.name.clone(),
+            arguments: self.annotate_eanfs(&f.arguments)?,
+            body: self.annotate_eexpr(&f.body)?,
+            returnty: f.returnty.clone(),
+        })
+    }
+    pub fn annotate_sfun(&mut self, f: &Function<SExprUnq>) -> Result<Function<SExprAnn>> {
+        Ok(Function {
+            name: f.name.clone(),
+            arguments: self.annotate_sanfs(&f.arguments)?,
+            body: self.annotate_sexpr(&f.body)?,
+            returnty: f.returnty.clone(),
+        })
+    }
+
+    #[allow(clippy::type_complexity)]
+    pub fn annotate(&mut self, p: &ProgramUnq) -> Result<AnnotateResult> {
+        match p {
+            Program::SBody(e) => {
+                let eann = self.annotate_sexpr(e)?;
+                let order = self.linear_var_order();
+                let mx = self.max_varlabel_val();
+                Ok(AnnotateResult::new(
+                    Program::SBody(eann),
+                    order,
+                    self.subst_var.clone(),
+                    mx,
+                ))
+            }
+            Program::EBody(e) => {
+                let eann = self.annotate_eexpr(e)?;
+                let order = self.linear_var_order();
+                let mx = self.max_varlabel_val();
+                Ok(AnnotateResult::new(
+                    Program::EBody(eann),
+                    order,
+                    self.subst_var.clone(),
+                    mx,
+                ))
+            }
+            Program::EDefine(f, e) => {
+                let f = self.annotate_efun(f)?;
+                let r = self.annotate(p)?;
+                Ok(AnnotateResult::new(
+                    Program::EDefine(f, Box::new(r.program)),
+                    r.order,
+                    r.idmap,
+                    r.maxbdd,
+                ))
+            }
+            Program::SDefine(f, e) => {
+                let f = self.annotate_sfun(f)?;
+                let r = self.annotate(p)?;
+                Ok(AnnotateResult::new(
+                    Program::SDefine(f, Box::new(r.program)),
+                    r.order,
+                    r.idmap,
+                    r.maxbdd,
+                ))
+            }
+        }
+    }
 }
 
-// pub fn pipeline(
-//     p: &ProgramUniquify,
-// ) -> Result<
-//     (
-//         ProgramAnn,
-//         VarOrder,
-//         HashMap<UniqueId, Var>,
-//         HashMap<NamedVar, HashSet<BddVar>>,
-//         u64,
-//     ),
-//     CompileError,
-// > {
-//     let p = crate::uniquify::pipeline(p)?.0;
-//     let mut lenv = LabelEnv::new();
-//     lenv.annotate(&p)
-// }
+pub fn pipeline(p: &ProgramInferable) -> Result<AnnotateResult> {
+    let p = crate::uniquify::pipeline(p)?.0;
+    let mut lenv = LabelEnv::new();
+    lenv.annotate(&p)
+}
