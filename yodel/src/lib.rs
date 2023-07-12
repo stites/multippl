@@ -27,11 +27,15 @@ mod uniquify;
 
 mod annotate;
 
-// // interface
-// pub mod analysis;
+// interface
+// pub mod analysis; // punt to future paper
+
 // pub mod compile;
+
 // pub mod inference;
+
 // pub mod pipeline;
+
 // pub use crate::analysis::sampling::*;
 // pub use crate::typeinf::grammar::ProgramInferable;
 // pub use pipeline::*;
@@ -39,7 +43,7 @@ mod annotate;
 // // extras
 // pub mod bayesian_network;
 // pub mod grids;
-// pub mod utils;
+pub mod utils;
 
 // #[cfg(test)]
 // mod tests;
