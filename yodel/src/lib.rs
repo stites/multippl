@@ -30,7 +30,7 @@ mod annotate;
 // interface
 // pub mod analysis; // punt to future paper
 
-// pub mod compile;
+pub mod compile;
 
 // pub mod inference;
 
