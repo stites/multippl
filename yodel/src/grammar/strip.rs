@@ -4,6 +4,7 @@ use crate::data::errors::{
 };
 use crate::grammar::*;
 use crate::typeinf::grammar::*;
+use rsdd::builder::bdd_plan::BddPlan;
 // use crate::typecheck::grammar::{AnfTyped, EExprTyped, LetInTypes, ProgramTyped, SExprTyped};
 
 impl AnfInferable<SVal> {
@@ -11,7 +12,7 @@ impl AnfInferable<SVal> {
         use Anf::*;
         match self {
             AVar(ext, s) => Ok(AVar(None, s.clone())),
-            AVal(ext, SVal::SBool(b)) => Ok(AVal((), EVal::EBool(*b))),
+            AVal(ext, SVal::SBool(b)) => Ok(AVal((), EVal::EBdd(BddPlan::from_bool(*b)))),
             AVal(_, _) => Err(SemanticsError("not in the natural embedding".to_string())),
             And(l, r) => Ok(And(Box::new(l.strip_anf()?), Box::new(r.strip_anf()?))),
             Or(l, r) => Ok(Or(Box::new(l.strip_anf()?), Box::new(r.strip_anf()?))),

@@ -111,6 +111,7 @@ where
     ExprIn: PartialEq + Debug + Clone + Lang<Anf = Anf<UD, Val>, Ty = T>,
     ExprOut: PartialEq + Debug + Clone + Lang<Anf = Anf<UD, Val>, Ty = T>,
     AVarExt<Val>: ξ<UD, Ext = ()>,
+    APrjExt<Val>: ξ<UD, Ext = ()>,
     ADistExt<Val>: ξ<UD, Ext = ()>,
     AValExt<Val>: ξ<UD, Ext = ()>,
     Val: Debug + PartialEq + Clone,

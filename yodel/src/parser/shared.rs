@@ -1,6 +1,7 @@
 use crate::typeinf::grammar::Inferable;
 use crate::*;
 use std::fmt::Debug;
+use std::str::FromStr;
 use tree_sitter::{Node, Parser, Tree, TreeCursor};
 
 pub fn tree_parser(code: String) -> Option<Tree> {
@@ -53,10 +54,13 @@ pub fn parse_vec<X>(
     xs
 }
 
-pub fn parse_float(src: &[u8], c: &mut TreeCursor, n: &Node) -> f64 {
+pub fn parse_num<T: FromStr>(src: &[u8], n: &Node) -> T
+where
+    <T as FromStr>::Err: Debug,
+{
     let utf8 = n.utf8_text(src).unwrap();
-    let fstr = String::from_utf8(utf8.into()).unwrap();
-    fstr.parse::<f64>().unwrap()
+    let s = String::from_utf8(utf8.into()).unwrap();
+    s.parse::<T>().unwrap()
 }
 
 // generic values
@@ -81,18 +85,8 @@ pub fn parse_gval(src: &[u8], c: &mut TreeCursor, n: &Node) -> Option<GVal> {
             };
             Some(GVal::Bool(b))
         }
-        "int" => {
-            let utf8 = n.utf8_text(src).unwrap();
-            let istr = String::from_utf8(utf8.into()).unwrap();
-            let ix = istr.parse::<u64>().unwrap();
-            Some(GVal::Int(ix))
-        }
-        "float" => {
-            let utf8 = n.utf8_text(src).unwrap();
-            let istr = String::from_utf8(utf8.into()).unwrap();
-            let x = istr.parse::<f64>().unwrap();
-            Some(GVal::Float(x))
-        }
+        "int" => Some(GVal::Int(parse_num(src, n))),
+        "float" => Some(GVal::Float(parse_num(src, n))),
         _ => None,
     }
 }

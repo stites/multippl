@@ -19,8 +19,10 @@ use crate::alias::*;
 const EXPRS: &str = r"{
     AVarExt<SVal>: (),
     AVarExt<EVal>: (),
-    AValExt<EVal>: (),
     AValExt<SVal>: (),
+    AValExt<EVal>: (),
+    APrjExt<SVal>: (),
+    APrjExt<EVal>: (),
     ADistExt<SVal>: (),
     ADistExt<EVal>: (),
 

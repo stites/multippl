@@ -19,6 +19,9 @@ pub struct AVarExt<Val> {
 pub struct AValExt<Val> {
     valtype: PhantomData<Val>,
 }
+pub struct APrjExt<Val> {
+    vartype: PhantomData<Val>,
+}
 pub struct ADistExt<Val> {
     valtype: PhantomData<Val>,
 }
@@ -79,6 +82,11 @@ macro_rules! TTG {
             <AVarExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <ADistExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <AValExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+
+            APrjExt<SVal>: ξ<X>,
+            APrjExt<EVal>: ξ<X>,
+            <APrjExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <APrjExt<EVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
 
             SAnfExt: ξ<X>,
             SLetInExt: ξ<X>,
@@ -152,6 +160,11 @@ macro_rules! TTG {
             <AVarExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <ADistExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <AValExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+
+            APrjExt<SVal>: ξ<X>,
+            APrjExt<EVal>: ξ<X>,
+            <APrjExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <APrjExt<EVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
 
             SAnfExt: ξ<X>,
             SLetInExt: ξ<X>,
@@ -229,6 +242,11 @@ macro_rules! TTG {
             <AVarExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <ADistExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
             <AValExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+
+            APrjExt<SVal>: ξ<X>,
+            APrjExt<EVal>: ξ<X>,
+            <APrjExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <APrjExt<EVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
 
             SAnfExt: ξ<X>,
             SLetInExt: ξ<X>,

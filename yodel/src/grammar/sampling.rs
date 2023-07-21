@@ -22,22 +22,25 @@ TTG!(
 );
 
 #[derive(Debug, Clone, PartialEq)]
+pub enum Dist {
+    Bern(f64),
+    Discrete(Vec<f64>),
+    Uniform(f64, f64),
+    Normal(f64, f64),
+    Poisson(u64),
+    Beta(f64, f64),
+    Dirichlet(Vec<f64>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum SVal {
     SBool(bool),
     SFloat(f64),
     SInt(u64),
     SVec(Vec<SVal>),
     SProd(Vec<SVal>),
-
-    SBern(f64),
-    SDiscrete(Vec<f64>),
-    SUniform(f64, f64),
-    SNormal(f64, f64),
-    SPoisson(f64),
-    SBeta(f64, f64),
-    SDirichlet(Vec<f64>),
+    SDist(Dist),
 }
-
 #[derive(PartialEq, Clone, Debug)]
 pub enum STy {
     SBool,

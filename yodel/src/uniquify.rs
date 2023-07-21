@@ -36,6 +36,10 @@ pub mod grammar {
 
         AVarExt<EVal>: UniqueId,
         AVarExt<SVal>: UniqueId,
+
+        APrjExt<SVal>: UniqueId,
+        APrjExt<EVal>: UniqueId,
+
         // this should actually be (), but just to keep things simple, I'll keep
         // this symmetric with SVal
         ADistExt<EVal>: UniqueId,
@@ -81,7 +85,7 @@ impl SymEnv {
             None => format!("_{sym}"),
             Some(var) => {
                 // push named variables onto the current stack frame
-                let mut cur = self.current_frame();
+                let cur = self.current_frame();
                 cur.insert(var.clone());
                 var
             }
@@ -146,6 +150,7 @@ impl SymEnv {
     where
         AVarExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
         AValExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = ()>,
+        APrjExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
         ADistExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
     {
         Ok(op(
@@ -161,6 +166,7 @@ impl SymEnv {
     ) -> Result<AnfUnq<X>>
     where
         AVarExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
+        APrjExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
         AValExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = ()>,
         ADistExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
     {
@@ -179,6 +185,7 @@ impl SymEnv {
     where
         AVarExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
         AValExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = ()>,
+        APrjExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
         ADistExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
     {
         xs.iter().map(|a| self.uniquify_anf(a)).collect()
@@ -188,6 +195,7 @@ impl SymEnv {
     where
         AVarExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
         AValExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = ()>,
+        APrjExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
         ADistExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
     {
         use crate::grammar::Anf::*;
@@ -219,7 +227,10 @@ impl SymEnv {
             // [x]; (l,r); x[0]
             AnfVec(xs) => Ok(AnfVec(self.uniquify_anf_vec(xs)?)),
             AnfProd(xs) => Ok(AnfProd(self.uniquify_anf_vec(xs)?)),
-            AnfPrj(var, ix) => Ok(AnfPrj(var.clone(), Box::new(self.uniquify_anf(ix)?))),
+            AnfPrj(_, s, ix) => {
+                let uid = self.get_or_create(s.to_string())?;
+                Ok(AnfPrj(uid, s.to_string(), Box::new(self.uniquify_anf(ix)?)))
+            }
 
             // Distributions
             AnfBernoulli(_, x) => Ok(AnfBernoulli(self.fresh(), Box::new(self.uniquify_anf(x)?))),
@@ -234,9 +245,10 @@ impl SymEnv {
 
     pub fn uniquify_anfs<Val: Clone>(&mut self, anfs: &[AnfUD<Val>]) -> Result<Vec<AnfUnq<Val>>>
     where
-        AVarExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<UD, Ext = ()>,
-        ADistExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<UD, Ext = ()>,
-        AValExt<Val>: ξ<Uniquify, Ext = ()> + ξ<UD, Ext = ()>,
+        AVarExt<Val>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
+        AValExt<Val>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = ()>,
+        APrjExt<Val>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
+        ADistExt<Val>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
         Val: Debug + Clone + PartialEq,
     {
         anfs.iter().map(|a| self.uniquify_anf(a)).collect()
@@ -287,7 +299,6 @@ impl SymEnv {
                 let k = self.uniquify_anf(k)?;
                 Ok(EIterate((), f.clone(), Box::new(init), Box::new(k)))
             }
-
             EObserve(_, a) => {
                 let anf = self.uniquify_anf(a)?;
                 Ok(EObserve((), Box::new(anf)))

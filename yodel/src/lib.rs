@@ -1,4 +1,4 @@
-// #![allow(dead_code)]
+#![allow(dead_code)]
 #![allow(unused_imports)]
 // #![allow(mixed_script_confusables)] // for Gamma : )
 // // temporary as I convert to using types
@@ -27,9 +27,9 @@ mod uniquify;
 
 mod annotate;
 
-// interface
-// pub mod analysis; // punt to future paper
+// pub mod analysis; // punt on this
 
+// interface
 pub mod compile;
 
 // pub mod inference;

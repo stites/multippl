@@ -1,6 +1,7 @@
 use crate::grammar::*;
 use crate::typeinf::grammar::{AnfInferable, EExprInferable, Inferable, ProgramInferable};
 use itertools::Itertools;
+use rsdd::builder::bdd_plan::BddPlan;
 use std::collections::VecDeque;
 use tree_sitter::*;
 
@@ -100,7 +101,7 @@ fn parse_eval(src: &[u8], c: &mut TreeCursor, n: Node) -> EVal {
             } else {
                 panic!("impossible")
             };
-            EVal::EBool(b)
+            EVal::EBdd(BddPlan::from_bool(b))
         }
         "int" => {
             let utf8 = n.utf8_text(src).unwrap();

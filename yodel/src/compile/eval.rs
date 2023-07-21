@@ -435,7 +435,7 @@ impl<'a> State<'a> {
             }
             EPrj(_, i, a) => {
                 if i > &1 {
-                    let span = tracing::span!(tracing::Level::DEBUG, "prj", i);
+                    let span = tracing::span!(tracing::Level::DEBUG, "prj");
                     let _enter = span.enter();
                     debug!("{:?}", a);
                 }
@@ -458,10 +458,8 @@ impl<'a> State<'a> {
                 Ok((c.clone(), mk(c, atrs)))
             }
             EFlip(d, param) => {
-                // FIXME: is this... necessary? I think it's just for debugging
-                //o let flip = (param * 100.0).round() / 100.0;
                 let flip = *param;
-                let span = tracing::span!(tracing::Level::DEBUG, "", flip);
+                let span = tracing::span!(tracing::Level::DEBUG, "flip");
                 let _enter = span.enter();
 
                 let (o, f, mk) = eval_eflip(self.mgr, &ctx, d, flip)?;

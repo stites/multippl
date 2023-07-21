@@ -4,7 +4,7 @@ use crate::grammar::*;
 use crate::uniquify::grammar::UniqueId;
 use itertools::*;
 /// helper functions for rendering
-use rsdd::repr::bdd::*;
+use rsdd::builder::bdd_plan::*;
 use rsdd::sample::probability::Probability;
 use std::collections::HashMap;
 use tracing::*;
@@ -17,8 +17,8 @@ pub fn renderfloats(fs: &[f64], high_prec: bool) -> String {
     rendervec(&fs.iter().map(|x| fmt_f64(high_prec)(*x)).collect_vec())
 }
 
-pub fn renderbdds(fs: &[BddPtr]) -> String {
-    rendervec(&fs.iter().map(|b| b.print_bdd()).collect_vec())
+pub fn renderbdds(fs: &[EVal]) -> String {
+    rendervec(&fs.iter().map(|b| format!("{:?}", b)).collect_vec())
 }
 
 pub fn rendervar(var: &Var) -> String {
@@ -29,7 +29,7 @@ pub fn rendervar(var: &Var) -> String {
         //     .map_or_else(|| "L-".to_string(), |l| format!("L{}", l.value())),
     )
 }
-pub fn rendersubs(fs: &HashMap<UniqueId, (Vec<BddPtr>, Var)>) -> String {
+pub fn rendersubs(fs: &HashMap<UniqueId, (Vec<EVal>, Var)>) -> String {
     format!(
         "[{}]",
         &fs.iter()

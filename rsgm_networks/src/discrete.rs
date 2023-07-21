@@ -106,7 +106,7 @@ impl Specification {
         }
     }
     pub fn network(&self) -> BayesianNetwork {
-        BayesianNetwork::from_string(self.json())
+        BayesianNetwork::from_json(self.json())
     }
 
     pub fn nodes(&self) -> usize {

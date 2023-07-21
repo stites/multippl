@@ -117,7 +117,7 @@ pub fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVa
 
                         let c2 = cs.next().unwrap();
                         let c2 = parse_sanf(src, c, c2);
-                        Anf::AnfPrj(arr_str, Box::new(c2))
+                        Anf::AnfPrj((), arr_str, Box::new(c2))
                     }
                     _ => panic!("invalid operator found!\nsexp: {}", n.to_sexp()),
                 }
@@ -134,6 +134,7 @@ pub fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVa
 }
 
 pub fn parse_sval(src: &[u8], c: &mut TreeCursor, n: &Node) -> SVal {
+    use Dist::*;
     match shared::parse_gval(src, c, n) {
         Some(GVal::Bool(x)) => SVal::SBool(x),
         Some(GVal::Float(x)) => SVal::SFloat(x),
@@ -152,58 +153,58 @@ pub fn parse_sval(src: &[u8], c: &mut TreeCursor, n: &Node) -> SVal {
                 let mut cs = n.named_children(&mut _c);
 
                 let p = cs.next().unwrap();
-                let p = parse_float(src, c, &p);
+                let p = parse_num(src, &p);
 
-                SVal::SBern(p)
+                SVal::SDist(Bern(p))
             }
             "spoisson" => {
                 let mut _c = c.clone();
                 let mut cs = n.named_children(&mut _c);
 
                 let p = cs.next().unwrap();
-                let p = parse_float(src, c, &p);
+                let p = parse_num(src, &p);
 
-                SVal::SPoisson(p)
+                SVal::SDist(Poisson(p))
             }
             "suniform" => {
                 let mut _c = c.clone();
                 let mut cs = n.named_children(&mut _c);
 
                 let a0 = cs.next().unwrap();
-                let a0 = parse_float(src, c, &a0);
+                let a0 = parse_num(src, &a0);
 
                 let a1 = cs.next().unwrap();
-                let a1 = parse_float(src, c, &a1);
+                let a1 = parse_num(src, &a1);
 
-                SVal::SUniform(a0, a1)
+                SVal::SDist(Uniform(a0, a1))
             }
             "snormal" => {
                 let mut _c = c.clone();
                 let mut cs = n.named_children(&mut _c);
 
                 let a0 = cs.next().unwrap();
-                let a0 = parse_float(src, c, &a0);
+                let a0 = parse_num(src, &a0);
 
                 let a1 = cs.next().unwrap();
-                let a1 = parse_float(src, c, &a1);
+                let a1 = parse_num(src, &a1);
 
-                SVal::SNormal(a0, a1)
+                SVal::SDist(Normal(a0, a1))
             }
             "sbeta" => {
                 let mut _c = c.clone();
                 let mut cs = n.named_children(&mut _c);
 
                 let a0 = cs.next().unwrap();
-                let a0 = parse_float(src, c, &a0);
+                let a0 = parse_num(src, &a0);
 
                 let a1 = cs.next().unwrap();
-                let a1 = parse_float(src, c, &a1);
+                let a1 = parse_num(src, &a1);
 
-                SVal::SBeta(a0, a1)
+                SVal::SDist(Beta(a0, a1))
             }
-            "sdiscrete" => SVal::SDiscrete(parse_vec(src, c, *n, |a, b, c| parse_float(a, b, &c))),
+            "sdiscrete" => SVal::SDist(Discrete(parse_vec(src, c, *n, |a, b, c| parse_num(a, &c)))),
             "sdirichlet" => {
-                SVal::SDirichlet(parse_vec(src, c, *n, |a, b, c| parse_float(a, b, &c)))
+                SVal::SDist(Dirichlet(parse_vec(src, c, *n, |a, b, c| parse_num(a, &c))))
             }
             _ => panic!("invalid value! found sexp:\n{}", n.to_sexp()),
         },
