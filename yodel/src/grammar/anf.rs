@@ -6,10 +6,10 @@ pub enum Anf<X, Val>
 where
     AVarExt<Val>: ξ<X>,
     AValExt<Val>: ξ<X>,
-    APrjExt<Val>: ξ<X>,
+    // APrjExt<Val>: ξ<X>,
     ADistExt<Val>: ξ<X>,
     <AVarExt<Val> as ξ<X>>::Ext: Debug + PartialEq + Clone,
-    <APrjExt<Val> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+    // <APrjExt<Val> as ξ<X>>::Ext: Debug + PartialEq + Clone,
     <AValExt<Val> as ξ<X>>::Ext: Debug + PartialEq + Clone,
     <ADistExt<Val> as ξ<X>>::Ext: Debug + PartialEq + Clone,
     Val: Debug + PartialEq + Clone,
@@ -39,7 +39,7 @@ where
     // [x] && x [ 0 ]
     AnfVec(Vec<Anf<X, Val>>),
     AnfProd(Vec<Anf<X, Val>>),
-    AnfPrj(<APrjExt<Val> as ξ<X>>::Ext, String, Box<Anf<X, Val>>),
+    AnfPrj(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
 
     // Distributions
     AnfBernoulli(<ADistExt<Val> as ξ<X>>::Ext, Box<Anf<X, Val>>),

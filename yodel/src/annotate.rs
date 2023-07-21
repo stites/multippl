@@ -176,8 +176,8 @@ pub mod grammar {
     ::ttg::phase!(pub struct Annotated: {
         AVarExt<EVal>: NamedVar,
         AVarExt<SVal>: NamedVar,
-        APrjExt<EVal>: NamedVar,
-        APrjExt<SVal>: NamedVar,
+     // APrjExt<EVal>: NamedVar,
+     // APrjExt<SVal>: NamedVar,
         ADistExt<SVal>: SampledVar,
 
         ELetInExt: NamedVar,
@@ -220,7 +220,7 @@ fn annotate_anf_binop<VarExt, Val, DExt>(
 ) -> Result<AnfAnn<Val>>
 where
     AVarExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = VarExt>,
-    APrjExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = VarExt>,
+    // APrjExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = VarExt>,
     AValExt<Val>: ξ<Uniquify, Ext = ()> + ξ<Annotated, Ext = ()>,
     ADistExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = DExt>,
     Val: Debug + PartialEq + Clone,
@@ -240,7 +240,7 @@ fn annotate_anf_vec<VarExt, Val, DExt>(
 ) -> Result<AnfAnn<Val>>
 where
     AVarExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = VarExt>,
-    APrjExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = VarExt>,
+    // APrjExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = VarExt>,
     AValExt<Val>: ξ<Uniquify, Ext = ()> + ξ<Annotated, Ext = ()>,
     ADistExt<Val>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = DExt>,
     Val: Debug + PartialEq + Clone,
@@ -353,18 +353,22 @@ impl LabelEnv {
             // [x]; (l,r); x[0]
             AnfVec(xs) => annotate_anf_vec(self, Self::annotate_sanf, xs, AnfVec),
             AnfProd(xs) => annotate_anf_vec(self, Self::annotate_sanf, xs, AnfProd),
-            AnfPrj(uid, s, ix) => {
-                let var = self.get_var(uid)?;
-                match var {
-                    Var::Named(nvar) => Ok(AnfPrj(
-                        nvar,
-                        s.to_string(),
-                        Box::new(self.annotate_sanf(ix)?),
-                    )),
-                    Var::Bdd(_) => panic!("bdd vars are never referenced by source code!"),
-                    Var::Sampled(_) => panic!("sampled vars are never referenced by source code!"),
-                }
-            }
+            AnfPrj(var, ix) => Ok(AnfPrj(
+                Box::new(self.annotate_sanf(var)?),
+                Box::new(self.annotate_sanf(ix)?),
+            )),
+            // AnfPrj(uid, s, ix) => {
+            //     let var = self.get_var(uid)?;
+            //     match var {
+            //         Var::Named(nvar) => Ok(AnfPrj(
+            //             nvar,
+            //             s.to_string(),
+            //             Box::new(self.annotate_sanf(ix)?),
+            //         )),
+            //         Var::Bdd(_) => panic!("bdd vars are never referenced by source code!"),
+            //         Var::Sampled(_) => panic!("sampled vars are never referenced by source code!"),
+            //     }
+            // }
 
             // Distributions
             AnfBernoulli(id, x) => {
@@ -454,18 +458,23 @@ impl LabelEnv {
             EQ(l, r) => annotate_anf_binop(self, Self::annotate_eanf, l, r, EQ),
 
             AnfProd(xs) => annotate_anf_vec(self, Self::annotate_eanf, xs, AnfProd),
-            AnfPrj(uid, s, ix) => {
-                let var = self.get_var(uid)?;
-                match var {
-                    Var::Named(nvar) => Ok(AnfPrj(
-                        nvar,
-                        s.to_string(),
-                        Box::new(self.annotate_eanf(ix)?),
-                    )),
-                    Var::Bdd(_) => panic!("bdd vars are never referenced by source code!"),
-                    Var::Sampled(_) => panic!("sampled vars are never referenced by source code!"),
-                }
-            }
+            AnfPrj(var, ix) => Ok(AnfPrj(
+                Box::new(self.annotate_eanf(var)?),
+                Box::new(self.annotate_eanf(ix)?),
+            )),
+
+            // AnfPrj(uid, s, ix) => {
+            //     let var = self.get_var(uid)?;
+            //     match var {
+            //         Var::Named(nvar) => Ok(AnfPrj(
+            //             nvar,
+            //             s.to_string(),
+            //             Box::new(self.annotate_eanf(ix)?),
+            //         )),
+            //         Var::Bdd(_) => panic!("bdd vars are never referenced by source code!"),
+            //         Var::Sampled(_) => panic!("sampled vars are never referenced by source code!"),
+            //     }
+            // }
 
             // Distributions
             _ => errors::not_in_exact(),
@@ -481,12 +490,12 @@ impl LabelEnv {
         use crate::grammar::EExpr::*;
         match e {
             EAnf(_, a) => Ok(EAnf((), Box::new(self.annotate_eanf(a)?))),
-            EPrj(_, i, a) => Ok(EPrj(
-                (),
-                Box::new(self.annotate_eanf(i)?),
-                Box::new(self.annotate_eanf(a)?),
-            )),
-            EProd(_, anfs) => Ok(EProd((), self.annotate_eanfs(anfs)?)),
+            // EPrj(_, i, a) => Ok(EPrj(
+            //     (),
+            //     Box::new(self.annotate_eanf(i)?),
+            //     Box::new(self.annotate_eanf(a)?),
+            // )),
+            // EProd(_, anfs) => Ok(EProd((), self.annotate_eanfs(anfs)?)),
             ELetIn(id, s, ebound, ebody) => {
                 let nvar = NamedVar {
                     id: *id,

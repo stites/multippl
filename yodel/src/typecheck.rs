@@ -66,8 +66,8 @@ pub mod grammar {
             use EExpr::*;
             match self {
                 EAnf(_, anf) => anf.as_type(),
-                EPrj(t, _, _) => t.clone(),
-                EProd(t, _) => t.clone(),
+                // EPrj(t, _, _) => t.clone(),
+                // EProd(t, _) => t.clone(),
                 ELetIn(t, _, _, _) => t.body.clone(),
                 EIte(t, _, _, _) => t.clone(),
                 EFlip(_, _) => ETy::EBool,
@@ -95,11 +95,11 @@ fn typecheck_anf_binop<Val>(
 ) -> Result<AnfUD<Val>>
 where
     AVarExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
-    APrjExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    // APrjExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     AValExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     ADistExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     <AVarExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
-    <APrjExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    // <APrjExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     <AValExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     <ADistExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     Val: Debug + PartialEq + Clone,
@@ -112,11 +112,11 @@ fn typecheck_anf_vec<Val>(
 ) -> Result<AnfUD<Val>>
 where
     AVarExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
-    APrjExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    // APrjExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     AValExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     ADistExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     <AVarExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
-    <APrjExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    // <APrjExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     <AValExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     <ADistExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     Val: Debug + PartialEq + Clone,
@@ -133,12 +133,12 @@ pub fn typecheck_anf<Val: Debug + PartialEq + Clone>(
 where
     AVarExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     AValExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
-    APrjExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    // APrjExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     ADistExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     <AVarExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     <AValExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     <ADistExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
-    <APrjExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    // <APrjExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     Val: Debug + PartialEq + Clone,
 {
     use crate::grammar::Anf::*;
@@ -167,7 +167,10 @@ where
         // [x]; (l,r); x[0]
         AnfVec(xs) => typecheck_anf_vec(xs, AnfVec),
         AnfProd(xs) => typecheck_anf_vec(xs, AnfProd),
-        AnfPrj(_, var, ix) => Ok(AnfPrj((), var.clone(), Box::new(typecheck_anf(ix)?))),
+        AnfPrj(var, ix) => Ok(AnfPrj(
+            Box::new(typecheck_anf(var)?),
+            Box::new(typecheck_anf(ix)?),
+        )),
 
         // Distributions
         AnfBernoulli(_, x) => Ok(AnfBernoulli((), Box::new(typecheck_anf(x)?))),
@@ -185,11 +188,11 @@ pub fn typecheck_anfs<Val: Debug + PartialEq + Clone>(
 ) -> Result<Vec<AnfUD<Val>>>
 where
     AVarExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
-    APrjExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    // APrjExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     ADistExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     AValExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
     <AVarExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
-    <APrjExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    // <APrjExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     <ADistExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     <AValExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
     Val: Debug + PartialEq + Clone,
@@ -201,12 +204,12 @@ fn typecheck_eexpr(e: &grammar::EExprTyped) -> Result<EExprUD> {
     use crate::grammar::EExpr::*;
     match e {
         EAnf(_, a) => Ok(EAnf((), Box::new(typecheck_anf(a)?))),
-        EPrj(_ty, i, a) => Ok(EPrj(
-            (),
-            Box::new(typecheck_anf(i)?),
-            Box::new(typecheck_anf(a)?),
-        )),
-        EProd(_ty, anfs) => Ok(EProd((), typecheck_anfs(anfs)?)),
+        // EPrj(_ty, i, a) => Ok(EPrj(
+        //     (),
+        //     Box::new(typecheck_anf(i)?),
+        //     Box::new(typecheck_anf(a)?),
+        // )),
+        // EProd(_ty, anfs) => Ok(EProd((), typecheck_anfs(anfs)?)),
         ELetIn(_ty, s, ebound, ebody) => Ok(ELetIn(
             (),
             s.clone(),
@@ -310,7 +313,7 @@ where
     ExprIn: PartialEq + Debug + Clone + Lang<Anf = Anf<Typed, Val>, Ty = T>,
     ExprOut: PartialEq + Debug + Clone + Lang<Anf = Anf<UD, Val>, Ty = T>,
     AVarExt<Val>: ξ<UD, Ext = ()> + ξ<Typed, Ext = <ExprOut as Lang>::Ty>,
-    APrjExt<Val>: ξ<UD, Ext = ()> + ξ<Typed, Ext = ()>,
+    // APrjExt<Val>: ξ<UD, Ext = ()> + ξ<Typed, Ext = ()>,
     AValExt<Val>: ξ<UD, Ext = ()> + ξ<Typed, Ext = ()>,
     ADistExt<Val>: ξ<UD, Ext = ()> + ξ<Typed, Ext = ()>,
     Val: Debug + PartialEq + Clone,

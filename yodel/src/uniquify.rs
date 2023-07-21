@@ -37,8 +37,8 @@ pub mod grammar {
         AVarExt<EVal>: UniqueId,
         AVarExt<SVal>: UniqueId,
 
-        APrjExt<SVal>: UniqueId,
-        APrjExt<EVal>: UniqueId,
+     // APrjExt<SVal>: UniqueId,
+     // APrjExt<EVal>: UniqueId,
 
         // this should actually be (), but just to keep things simple, I'll keep
         // this symmetric with SVal
@@ -150,7 +150,7 @@ impl SymEnv {
     where
         AVarExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
         AValExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = ()>,
-        APrjExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
+        // APrjExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
         ADistExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
     {
         Ok(op(
@@ -166,7 +166,7 @@ impl SymEnv {
     ) -> Result<AnfUnq<X>>
     where
         AVarExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
-        APrjExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
+        // APrjExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
         AValExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = ()>,
         ADistExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
     {
@@ -185,7 +185,7 @@ impl SymEnv {
     where
         AVarExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
         AValExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = ()>,
-        APrjExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
+        // APrjExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
         ADistExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
     {
         xs.iter().map(|a| self.uniquify_anf(a)).collect()
@@ -195,7 +195,7 @@ impl SymEnv {
     where
         AVarExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
         AValExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = ()>,
-        APrjExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
+        // APrjExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
         ADistExt<X>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
     {
         use crate::grammar::Anf::*;
@@ -227,10 +227,14 @@ impl SymEnv {
             // [x]; (l,r); x[0]
             AnfVec(xs) => Ok(AnfVec(self.uniquify_anf_vec(xs)?)),
             AnfProd(xs) => Ok(AnfProd(self.uniquify_anf_vec(xs)?)),
-            AnfPrj(_, s, ix) => {
-                let uid = self.get_or_create(s.to_string())?;
-                Ok(AnfPrj(uid, s.to_string(), Box::new(self.uniquify_anf(ix)?)))
-            }
+            AnfPrj(var, ix) => Ok(AnfPrj(
+                Box::new(self.uniquify_anf(var)?),
+                Box::new(self.uniquify_anf(ix)?),
+            )),
+            // AnfPrj(_, s, ix) => {
+            //     let uid = self.get_or_create(s.to_string())?;
+            //     Ok(AnfPrj(uid, s.to_string(), Box::new(self.uniquify_anf(ix)?)))
+            // }
 
             // Distributions
             AnfBernoulli(_, x) => Ok(AnfBernoulli(self.fresh(), Box::new(self.uniquify_anf(x)?))),
@@ -247,7 +251,7 @@ impl SymEnv {
     where
         AVarExt<Val>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
         AValExt<Val>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = ()>,
-        APrjExt<Val>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
+        // APrjExt<Val>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
         ADistExt<Val>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
         Val: Debug + Clone + PartialEq,
     {
@@ -258,12 +262,12 @@ impl SymEnv {
         use crate::grammar::EExpr::*;
         match e {
             EAnf(_, a) => Ok(EAnf((), Box::new(self.uniquify_anf(a)?))),
-            EPrj(_, i, a) => Ok(EPrj(
-                (),
-                Box::new(self.uniquify_anf(i)?),
-                Box::new(self.uniquify_anf(a)?),
-            )),
-            EProd(_, anfs) => Ok(EProd((), self.uniquify_anfs(anfs)?)),
+            // EPrj(_, i, a) => Ok(EPrj(
+            //     (),
+            //     Box::new(self.uniquify_anf(i)?),
+            //     Box::new(self.uniquify_anf(a)?),
+            // )),
+            // EProd(_, anfs) => Ok(EProd((), self.uniquify_anfs(anfs)?)),
             ELetIn(_, s, ebound, ebody) => {
                 // too lazy to do something smarter
                 self.read_only = false;

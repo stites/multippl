@@ -1,9 +1,9 @@
 pub mod anf;
-// pub mod eval;
+pub mod eval;
 pub mod grammar;
 
 use crate::annotate::grammar::ProgramAnn;
-// use crate::compile::eval::State;
+use crate::compile::eval::State;
 use crate::compile::grammar::*;
 use crate::data::*;
 use crate::grammar::Program;

@@ -97,9 +97,8 @@ TTG!(
     pub enum EExpr<X> {
         EAnf(<SAnfExt as ξ<X>>::Ext, Box<Anf<X, EVal>>),
 
-        EPrj(<EPrjExt as ξ<X>>::Ext, Box<Anf<X, EVal>>, Box<Anf<X, EVal>>),
-        EProd(<EProdExt as ξ<X>>::Ext, Vec<Anf<X, EVal>>),
-
+        // EPrj(<EPrjExt as ξ<X>>::Ext, Box<Anf<X, EVal>>, Box<Anf<X, EVal>>),
+        // EProd(<EProdExt as ξ<X>>::Ext, Vec<Anf<X, EVal>>),
         EApp(<EAppExt as ξ<X>>::Ext, String, Vec<Anf<X, EVal>>),
         ELetIn(
             <ELetInExt as ξ<X>>::Ext,

@@ -76,10 +76,20 @@ impl EOutput {
         }
     }
     pub fn pkg(&self) -> Box<Output> {
-        Box::new(Output::Exact(self.clone()))
+        Box::new(Output::exact(self.clone()))
     }
 }
-
+impl Default for EOutput {
+    fn default() -> Self {
+        EOutput {
+            out: Default::default(),
+            accept: BddPlan::ConstTrue,
+            samples: Default::default(),
+            weightmap: Default::default(),
+            substitutions: Default::default(),
+        }
+    }
+}
 #[derive(Debug, Clone, PartialEq)]
 pub struct SCtx {
     pub substitutions: HashMap<UniqueId, Vec<SVal>>,
@@ -122,7 +132,7 @@ impl SOutput {
         self.out[0].clone()
     }
     pub fn pkg(&self) -> Box<Output> {
-        Box::new(Output::Sample(self.clone()))
+        Box::new(Output::sample(self.clone()))
     }
 }
 
@@ -137,17 +147,32 @@ pub struct IOutput {
     // /// compiled importance weight
     // pub importance: Importance,
 }
-/// interop context
+
+/// whole-program context
 #[derive(Debug, Clone, PartialEq)]
-pub struct ICtx {
+pub struct Ctx {
     pub exact: ECtx,
     pub sample: SCtx,
 }
-impl Default for ICtx {
+impl Default for Ctx {
     fn default() -> Self {
-        ICtx {
+        Ctx {
             exact: Default::default(),
             sample: Default::default(),
+        }
+    }
+}
+impl Ctx {
+    pub fn from_output(o: &Output) -> Self {
+        Ctx {
+            exact: ECtx::from_output(&o.exact),
+            sample: SCtx::from_output(&o.sample),
+        }
+    }
+    pub fn mk_eoutput(&self, exact: EOutput) -> Output {
+        Output {
+            exact,
+            sample: self.sample.as_output(vec![]),
         }
     }
 }
@@ -155,87 +180,79 @@ impl Default for ICtx {
 /// whole-program output, which can be one of: exact compilation, sampling
 /// compilation, MLS semantics
 #[derive(Debug, Clone, PartialEq)]
-pub enum Output {
-    Exact(EOutput),
-    Sample(SOutput),
-    // Interop(IOutput),
+pub struct Output {
+    pub exact: EOutput,
+    pub sample: SOutput,
 }
-
-/// whole-program context. initialized as empty
-#[derive(Debug, Clone, PartialEq)]
-pub enum Ctx {
-    // Empty,
-    Exact(ECtx),
-    Sample(SCtx),
-    // Interop(ICtx),
+impl Default for Output {
+    fn default() -> Self {
+        Output {
+            exact: Default::default(),
+            sample: Default::default(),
+        }
+    }
 }
-// impl Default for Ctx {
-//     fn default() -> Self {
-//         Ctx::Empty
-//     }
-// }
-// impl Ctx {
-//     pub fn from_output(c: &Output) -> Self {
-//         use Ctx::*;
-//         match c {
-//             Output::Exact(out) => Exact(ECtx::from_output(out)),
-//             Output::Sample(out) => Sample(SCtx::from_output(out)),
-//             Output::Interop(out) => Interop(ICtx {
-//                 sample: SCtx::from_output(&out.sample),
-//                 exact: ECtx::from_output(&out.exact),
-//             }),
-//         }
-//     }
-// }
-// impl Output {
-//     // pub fn for_sample_lang_sample(ctx: &Context, sample: bool, dist: BddPtr) -> Output {
-//     //     let newsample = if sample { dist } else { dist.not() };
-//     //     Output {
-//     //         out: vec![],
-//     //         accept: ctx.accept,
-//     //         samples: ctx.samples,
+impl Output {
+    pub fn exact(exact: EOutput) -> Output {
+        Output {
+            exact,
+            sample: Default::default(),
+        }
+    }
+    pub fn sample(sample: SOutput) -> Output {
+        Output {
+            sample,
+            exact: Default::default(),
+        }
+    }
+    // pub fn for_sample_lang_sample(ctx: &Context, sample: bool, dist: BddPtr) -> Output {
+    //     let newsample = if sample { dist } else { dist.not() };
+    //     Output {
+    //         out: vec![],
+    //         accept: ctx.accept,
+    //         samples: ctx.samples,
 
-//     //         // pass through
-//     //         substitutions: ctx.substitutions.clone(),
-//     //         weightmap: ctx.weightmap.clone(),
+    //         // pass through
+    //         substitutions: ctx.substitutions.clone(),
+    //         weightmap: ctx.weightmap.clone(),
 
-//     //         // unused
-//     //         probabilities: vec![Probability::new(1.0)],
-//     //         importance: I::Weight(1.0),
-//     //     }
-//     // }
+    //         // unused
+    //         probabilities: vec![Probability::new(1.0)],
+    //         importance: I::Weight(1.0),
+    //     }
+    // }
 
-//     // pub fn for_sample_lang(ctx: &Context) -> Output {
-//     //     // let accept = BddPtr::from_bool(sample.unwrap_or_else(|| false));
-//     //     Output {
-//     //         out: vec![BddPtr::PtrTrue],
-//     //         accept: ctx.accept,
-//     //         samples: ctx.samples,
+    // pub fn for_sample_lang(ctx: &Context) -> Output {
+    //     // let accept = BddPtr::from_bool(sample.unwrap_or_else(|| false));
+    //     Output {
+    //         out: vec![BddPtr::PtrTrue],
+    //         accept: ctx.accept,
+    //         samples: ctx.samples,
 
-//     //         // pass through
-//     //         substitutions: ctx.substitutions.clone(),
-//     //         weightmap: ctx.weightmap.clone(),
+    //         // pass through
+    //         substitutions: ctx.substitutions.clone(),
+    //         weightmap: ctx.weightmap.clone(),
 
-//     //         // unused
-//     //         probabilities: vec![Probability::new(1.0)],
-//     //         // importance: I::Weight(1.0),
-//     //         ssubstitutions: ctx.ssubstitutions.clone(),
-//     //         sout: vec![],
-//     //     }
-//     // }
-//     // pub fn sval(&self) -> Vec<SVal> {
-//     //     self.sout.clone()
-//     // }
-//     // pub fn sint(&self) -> u64 {
-//     //     SVal::vec_as(&self.sout, &SVal::as_int)
-//     // }
-//     // pub fn sbool(&self) -> bool {
-//     //     SVal::vec_as(&self.sout, &SVal::as_bool)
-//     // }
-//     // pub fn sfloat(&self) -> f64 {
-//     //     SVal::vec_as(&self.sout, &SVal::as_float)
-//     // }
-//     // pub fn sfloats(&self) -> Vec<f64> {
-//     //     self.sval().iter().map(|v| v.as_float()).collect()
-//     // }
-// }
+    //         // unused
+    //         probabilities: vec![Probability::new(1.0)],
+    //         // importance: I::Weight(1.0),
+    //         ssubstitutions: ctx.ssubstitutions.clone(),
+    //         sout: vec![],
+    //     }
+    // }
+    // pub fn sval(&self) -> Vec<SVal> {
+    //     self.sout.clone()
+    // }
+    // pub fn sint(&self) -> u64 {
+    //     SVal::vec_as(&self.sout, &SVal::as_int)
+    // }
+    // pub fn sbool(&self) -> bool {
+    //     SVal::vec_as(&self.sout, &SVal::as_bool)
+    // }
+    // pub fn sfloat(&self) -> f64 {
+    //     SVal::vec_as(&self.sout, &SVal::as_float)
+    // }
+    // pub fn sfloats(&self) -> Vec<f64> {
+    //     self.sval().iter().map(|v| v.as_float()).collect()
+    // }
+}

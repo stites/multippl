@@ -76,6 +76,9 @@ pub fn renderp(ps: &SubstMap) -> String {
         .map(|(k, (v, _))| format!("{k}: {}", renderbdds(v)))
         .join(", ")
 }
+pub fn renderssubs(ps: &HashMap<UniqueId, Vec<SVal>>) -> String {
+    ps.iter().map(|(k, x)| format!("{k}: {:?}", x)).join(", ")
+}
 
 #[macro_export]
 macro_rules! debug_step {
@@ -89,12 +92,24 @@ macro_rules! debug_step {
         debug_compiled!($comp);
     }};
 }
-
+#[macro_export]
+macro_rules! debug_step_ng {
+    ($s:expr, $ctx:expr, $comp:expr) => {{
+        debug!(
+            "{}, e[{}], e[{}], s[{}]",
+            $s,
+            renderp(&$ctx.exact.substitutions),
+            renderw(&$ctx.exact.weightmap),
+            renderssubs(&$ctx.sample.substitutions),
+        );
+        debug_compiled!($comp);
+    }};
+}
 #[macro_export]
 macro_rules! debug_compiled {
     ($comp:expr) => {{
-        let dists = renderbdds(&$comp.dists);
-        let accepts = format!("{}", $comp.accept.print_bdd());
+        let dists = renderbdds(&$comp.out);
+        let accepts = format!("{:?}", $comp.accept);
         // let weights = $comp
         //     .importance
         //     .clone()
@@ -106,7 +121,6 @@ macro_rules! debug_compiled {
         debug!("      \\||/  {}", accepts);
         debug!("      \\||/  [{}]", renderw(&$comp.weightmap));
         debug!("      \\||/  [{}]", renderp(&$comp.substitutions));
-        debug!("      \\||/  {}", render_probs(&$comp.probabilities, false));
         // debug!("      \\||/  {}", weights);
         debug!("----------------------------------------");
     }};

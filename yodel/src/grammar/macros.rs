@@ -128,7 +128,8 @@ macro_rules! b {
         $(
             prod.push(b!(@anf $xs));
         )+
-        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EProd(None, prod)
+        // $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EProd(None, prod)
+        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EAnf((), Box::new(Anf::AnfProd(prod)))
     }};
     ( $x:expr, $y:expr ) => {{
         $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EProd(None, Box::new(ty))
@@ -174,7 +175,8 @@ macro_rules! b {
 macro_rules! q {
     ( $x:literal x $y:literal ) => {{
         let prod = vec![b!(@anf $x), b!(@anf $y), b!(@anf $x || $y), b!(@anf $x && $y)];
-        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EProd(None, prod)
+        // $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EProd(None, prod)
+        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EAnf((), Box::new($crate::grammar::Anf::AnfProd(prod)))
     }};
 }
 
@@ -186,7 +188,8 @@ macro_rules! snd {
     ( $x:expr ) => {{
         let i = $crate::EVal::EInteger(1);
         let i = $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, $crate::EVal>::AVal((), i);
-        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EPrj(None, Box::new(i), Box::new($x))
+        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EAnf((), Box::new($crate::grammar::Anf::AnfPrj(Box::new(i), Box::new($x))))
+        // $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EPrj(None, Box::new(i), Box::new($x))
     }};
 }
 
@@ -222,7 +225,8 @@ macro_rules! prj {
         let i = $crate::EVal::EInteger($i);
         let i = $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, $crate::EVal>::AVal((), i);
 
-        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EPrj(None, Box::new(i), Box::new($x))
+        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EAnf((), Box::new(Anf::AnfPrj(Box::new(i), Box::new($x))))
+        // $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EPrj(None, Box::new(i), Box::new($x))
     }};
 }
 #[macro_export]
@@ -233,7 +237,8 @@ macro_rules! fst {
     ( $x:expr ) => {{
         let i = $crate::EVal::EInteger(0);
         let i = $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, $crate::EVal>::AVal((), i);
-        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EPrj(None, Box::new(i), Box::new($x))
+        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EAnf((), Box::new(Anf::AnfPrj(Box::new(i), Box::new($x))))
+        // $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EPrj(None, Box::new(i), Box::new($x))
     }};
 }
 #[macro_export]

@@ -182,33 +182,36 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
             let anf = parse_anf(src, c, n);
             EExpr::EAnf((), Box::new(anf))
         }
-        "efst" => {
+        "efst" => {  // sugar for anf projection for now
             let mut c_ = c.clone();
             let mut cs = n.named_children(&mut c_);
             let anf = cs.next().unwrap();
             let anf = parse_anf(src, c, anf);
-            EExpr::EPrj(None, Box::new(Anf::AVal((), EVal::EInteger(0))), Box::new(anf))
+            EExpr::EAnf((), Box::new(Anf::AnfPrj(Box::new(anf), Box::new(Anf::AVal((), EVal::EInteger(0))))))
+            // EExpr::EPrj(None, Box::new(Anf::AVal((), EVal::EInteger(0))), Box::new(anf))
         }
-        "esnd" => {
+        "esnd" => {  // sugar for anf projection for now
             let mut c_ = c.clone();
             let mut cs = n.named_children(&mut c_);
             let anf = cs.next().unwrap();
             let anf = parse_anf(src, c, anf);
-            EExpr::EPrj(None, Box::new(Anf::AVal((), EVal::EInteger(1))), Box::new(anf))
+            EExpr::EAnf((), Box::new(Anf::AnfPrj(Box::new(anf), Box::new(Anf::AVal((), EVal::EInteger(1))))))
+            // EExpr::EPrj(None, Box::new(Anf::AVal((), EVal::EInteger(1))), Box::new(anf))
         }
-        "eprj" => {
+        "eprj" => {  // sugar for anf projection for now
             let mut c_ = c.clone();
             let mut cs = n.named_children(&mut c_);
+
+            let anf = cs.next().unwrap();
+            let anf = parse_anf(src, c, anf);
 
             let ix = cs.next().unwrap();
             let ix = parse_anf(src, c, ix);
 
-            let anf = cs.next().unwrap();
-            let anf = parse_anf(src, c, anf);
-
-            EExpr::EPrj(None, Box::new(ix), Box::new(anf))
+            EExpr::EAnf((), Box::new(Anf::AnfPrj(Box::new(anf), Box::new(ix))))
+            // EExpr::EPrj(None, Box::new(ix), Box::new(anf))
         }
-        "eprod" => {
+        "eprod" => {  // sugar for anf projection for now
             let mut anfs = vec![];
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
@@ -217,7 +220,8 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
                 let a = parse_anf(src, c, a);
                 anfs.push(a);
             }
-            EExpr::EProd(None, anfs)
+            EExpr::EAnf((), Box::new(Anf::AnfProd(anfs)))
+            // EExpr::EProd(None, anfs)
         }
         "eapp" => {
             assert_children!(k, 2, n, c);

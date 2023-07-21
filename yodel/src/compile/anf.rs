@@ -237,7 +237,7 @@ pub fn eval_sanf<'a>(ctx: &'a SCtx, a: &'a AnfAnn<SVal>) -> Result<(SOutput, Anf
     match a {
         AVal(_, v) => {
             let out = ctx.as_output(vec![v.clone()]);
-            Ok((out.clone(), AVal(Box::new(Output::Sample(out)), v.clone())))
+            Ok((out.clone(), AVal(Box::new(Output::sample(out)), v.clone())))
         }
         AVar(d, s) => {
             let v = eval_sanf_var(ctx, d, s)?;
@@ -302,13 +302,17 @@ pub fn eval_sanf<'a>(ctx: &'a SCtx, a: &'a AnfAnn<SVal>) -> Result<(SOutput, Anf
 
         AnfProd(anfs) => eval_sanf_vec(ctx, anfs, AnfProd),
         AnfVec(anfs) => eval_sanf_vec(ctx, anfs, AnfVec),
-        AnfPrj(nvar, s, ix) => {
-            let v = eval_sanf_var(ctx, nvar, s)?;
-            let (o, ix) = eval_sanf(ctx, ix)?;
-            match (&v[..], &o.out[..]) {
+        AnfPrj(var, ix) => {
+            let (ovar, var) = eval_sanf(ctx, var)?;
+            let (oix, ix) = eval_sanf(ctx, ix)?;
+            match (&ovar.out[..], &oix.out[..]) {
+                ([SVal::SProd(vs)], [SVal::SInt(i)]) => {
+                    let out = ctx.as_output(vec![vs[*i as usize].clone()]);
+                    Ok((out.clone(), AnfPrj(Box::new(var), Box::new(ix))))
+                }
                 ([SVal::SVec(vs)], [SVal::SInt(i)]) => {
                     let out = ctx.as_output(vec![vs[*i as usize].clone()]);
-                    Ok((out.clone(), AnfPrj(out.pkg(), s.to_string(), Box::new(ix))))
+                    Ok((out.clone(), AnfPrj(Box::new(var), Box::new(ix))))
                 }
                 _ => return errors::typecheck_failed(),
             }
@@ -359,7 +363,7 @@ pub fn eval_eanf<'a>(ctx: &'a ECtx, a: &'a AnfAnn<EVal>) -> Result<(EOutput, Anf
     match a {
         AVal(_, v) => {
             let out = ctx.as_output(vec![v.clone()]);
-            Ok((out.clone(), AVal(Box::new(Output::Exact(out)), v.clone())))
+            Ok((out.clone(), AVal(Box::new(Output::exact(out)), v.clone())))
         }
         AVar(d, s) => {
             let v = eval_eanf_var(ctx, d, s)?;
@@ -447,13 +451,13 @@ pub fn eval_eanf<'a>(ctx: &'a ECtx, a: &'a AnfAnn<EVal>) -> Result<(EOutput, Anf
                 })?;
             Ok((ctx.as_output(outs), AnfProd(trs)))
         }
-        AnfPrj(nvar, s, ix) => {
-            let v = eval_eanf_var(ctx, nvar, s)?;
-            let (o, ix) = eval_eanf(ctx, ix)?;
-            match (&v[..], &o.out[..]) {
+        AnfPrj(var, ix) => {
+            let (ovar, var) = eval_eanf(ctx, var)?;
+            let (oix, ix) = eval_eanf(ctx, ix)?;
+            match (&ovar.out[..], &oix.out[..]) {
                 ([EVal::EProd(vs)], [EVal::EInteger(i)]) => {
-                    let out = ctx.as_output(vec![vs[*i as usize].clone()]);
-                    Ok((out.clone(), AnfPrj(out.pkg(), s.to_string(), Box::new(ix))))
+                    let out = ctx.as_output(vec![vs[*i].clone()]);
+                    Ok((out.clone(), AnfPrj(Box::new(var), Box::new(ix))))
                 }
                 _ => return errors::typecheck_failed(),
             }

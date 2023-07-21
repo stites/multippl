@@ -36,7 +36,7 @@ fn typeinf_anf_binop<T: Debug + PartialEq + Clone, X: Debug + PartialEq + Clone>
 ) -> Result<AnfTyped<X>>
 where
     AVarExt<X>: ξ<Inferable, Ext = Option<T>> + ξ<Typed, Ext = T>,
-    APrjExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
+    // APrjExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
     AValExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
     ADistExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
 {
@@ -52,7 +52,7 @@ fn typeinf_anf_vec<T: Debug + PartialEq + Clone, X: Debug + PartialEq + Clone>(
 ) -> Result<AnfTyped<X>>
 where
     AVarExt<X>: ξ<Inferable, Ext = Option<T>> + ξ<Typed, Ext = T>,
-    APrjExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
+    // APrjExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
     AValExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
     ADistExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
 {
@@ -67,7 +67,7 @@ fn typeinference_anf<T: Debug + PartialEq + Clone, X: Debug + PartialEq + Clone>
 ) -> Result<AnfTyped<X>>
 where
     AVarExt<X>: ξ<Inferable, Ext = Option<T>> + ξ<Typed, Ext = T>,
-    APrjExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
+    // APrjExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
     ADistExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
     AValExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
 {
@@ -97,9 +97,10 @@ where
         // [x]; (l,r); x[0]
         AnfVec(xs) => typeinf_anf_vec(ty, xs, AnfVec),
         AnfProd(xs) => typeinf_anf_vec(ty, xs, AnfProd),
-        AnfPrj(_, var, ix) => Ok(AnfPrj(
-            (),
-            var.clone(),
+        AnfPrj(var, ix) => Ok(AnfPrj(
+            //     (),
+            Box::new(typeinference_anf(ty, var)?),
+            // var.clone(),
             Box::new(typeinference_anf(ty, ix)?),
         )),
 
@@ -120,7 +121,7 @@ fn typeinference_anfs<T: Debug + PartialEq + Clone, X: Debug + PartialEq + Clone
 ) -> Result<Vec<AnfTyped<X>>>
 where
     AVarExt<X>: ξ<Inferable, Ext = Option<T>> + ξ<Typed, Ext = T>,
-    APrjExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
+    // APrjExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
     ADistExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
     AValExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
 {
@@ -139,18 +140,18 @@ fn typeinference_eexpr(e: &grammar::EExprInferable) -> Result<EExprTyped> {
     use crate::grammar::EExpr::*;
     match e {
         EAnf(_, a) => Ok(EAnf((), Box::new(typeinference_anf(&ETy::EBool, a)?))),
-        EPrj(_ty, i, a) => {
-            // ignore types for now.
-            Ok(EPrj(
-                ignored_etype(),
-                Box::new(typeinference_anf(&ignored_etype(), i)?),
-                Box::new(typeinference_anf(&ignored_etype(), a)?),
-            ))
-        }
-        EProd(_ty, anfs) => Ok(EProd(
-            ignored_etype(),
-            typeinference_anfs(&ignored_etype(), anfs)?,
-        )),
+        // EPrj(_ty, i, a) => {
+        //     // ignore types for now.
+        //     Ok(EPrj(
+        //         ignored_etype(),
+        //         Box::new(typeinference_anf(&ignored_etype(), i)?),
+        //         Box::new(typeinference_anf(&ignored_etype(), a)?),
+        //     ))
+        // }
+        // EProd(_ty, anfs) => Ok(EProd(
+        //     ignored_etype(),
+        //     typeinference_anfs(&ignored_etype(), anfs)?,
+        // )),
         ELetIn(_ty, s, ebound, ebody) => Ok(ELetIn(
             LetInTypes {
                 bindee: ignored_etype(),
@@ -282,7 +283,7 @@ where
     ExprI: PartialEq + Debug + Clone + Lang<Anf = Anf<Inferable, Val>, Ty = T>,
     ExprT: PartialEq + Debug + Clone + Lang<Anf = Anf<Typed, Val>, Ty = T>,
     AVarExt<Val>: ξ<Inferable, Ext = Option<T>> + ξ<Typed, Ext = <ExprT as Lang>::Ty>,
-    APrjExt<Val>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
+    // APrjExt<Val>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
     ADistExt<Val>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
     AValExt<Val>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
     Val: Debug + PartialEq + Clone,

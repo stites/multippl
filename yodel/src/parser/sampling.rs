@@ -111,13 +111,16 @@ pub fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVa
             } else if isprefix_dist == Some(false) {
                 match prefixop.as_str() {
                     "sanfprj" => {
+                        // let c1 = cs.next().unwrap();
+                        // let utf8 = c1.utf8_text(src).unwrap();
+                        // let arr_str = String::from_utf8(utf8.into()).unwrap();
+
                         let c1 = cs.next().unwrap();
-                        let utf8 = c1.utf8_text(src).unwrap();
-                        let arr_str = String::from_utf8(utf8.into()).unwrap();
+                        let c1 = parse_sanf(src, c, c1);
 
                         let c2 = cs.next().unwrap();
                         let c2 = parse_sanf(src, c, c2);
-                        Anf::AnfPrj((), arr_str, Box::new(c2))
+                        Anf::AnfPrj(Box::new(c1), Box::new(c2))
                     }
                     _ => panic!("invalid operator found!\nsexp: {}", n.to_sexp()),
                 }
