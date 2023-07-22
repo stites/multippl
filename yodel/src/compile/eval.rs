@@ -8,7 +8,7 @@ use num_traits::*;
 use rand::distributions::Distribution;
 use rand::rngs::StdRng;
 use rand::SeedableRng;
-use rsdd::builder::bdd_builder::BddManager;
+use rsdd::builder::bdd_plan::BddPlan;
 use rsdd::builder::cache::all_app::AllTable;
 use rsdd::builder::cache::*;
 use rsdd::repr::bdd::*;
@@ -34,77 +34,6 @@ use super::anf::*;
 use super::grammar::*;
 
 pub const SQRT_2PI: f64 = 2.5066282746310005024157652848110452530069867406099;
-
-// pub fn eval_eprj<'a>(
-//     mgr: &'a mut Mgr,
-//     ctx: &'a Ctx,
-//     i: usize,
-//     a: &'a AnfAnn<EVal>,
-// ) -> Result<(
-//     Output,
-//     usize,
-//     AnfTr<EVal>,
-//     &'a dyn Fn(Output, usize, AnfTr<EVal>) -> EExprTr,
-// )> {
-//     let (mut o, a) = eval_eanf(ctx, a)?;
-//     o.dists = vec![o.dists[i]];
-//     Ok((o, i, a, &move |c, i, a| {
-//         EExpr::EPrj(Box::new(c), i, Box::new(a))
-//     }))
-// }
-
-// pub fn eval_eprod<'a>(
-//     mgr: &'a mut Mgr,
-//     ctx: &'a Ctx,
-//     anfs: &'a Vec<Anf<Annotated, EVal>>,
-// ) -> Result<(
-//     Output,
-//     Vec<Anf<Trace, EVal>>,
-//     &'a dyn Fn(Output, Vec<Anf<Trace, EVal>>) -> EExprTr,
-// )> {
-//     let (dists, atrs) = anfs.iter().fold(Ok((vec![], vec![])), |res, a| {
-//         let (distsfin, mut atrs_fin) = res?;
-//         let (o, atr, _) = eval_eanf(mgr, ctx, a)?;
-//         let dists = distsfin.iter().chain(&o.dists).cloned().collect_vec();
-//         atrs_fin.push(atr);
-//         Ok((dists, atrs_fin))
-//     })?;
-//     let flen = dists.len();
-//     let o = Output {
-//         dists,
-//         accept: ctx.accept,
-//         samples: ctx.samples,
-//         weightmap: ctx.weightmap.clone(),
-//         substitutions: ctx.substitutions.clone(),
-//         probabilities: vec![Probability::new(1.0); flen],
-//         ssubstitutions: ctx.ssubstitutions.clone(),
-//         //     importance: I::Weight(1.0),
-//         sout: vec![],
-//     };
-//     Ok((o, atrs, &move |c, atrs| EExpr::EProd(Box::new(c), atrs)))
-// }
-
-// pub fn eval_eflip<'a>(
-//     mgr: &'a mut Mgr,
-//     ctx: &'a Ctx,
-//     d: &'a BddVar,
-//     param: f64,
-// ) -> Result<(Output, f64, &'a dyn Fn(Output, f64) -> EExprTr)> {
-//     let mut weightmap = ctx.weightmap.clone();
-//     weightmap.insert(d.label, param);
-//     let o = Output {
-//         dists: vec![mgr.var(d.label, true)],
-//         accept: ctx.accept,
-//         samples: ctx.samples,
-//         weightmap,
-//         substitutions: ctx.substitutions.clone(),
-//         probabilities: vec![Probability::new(1.0)],
-//         // importance: I::Weight(1.0),
-//         ssubstitutions: ctx.ssubstitutions.clone(),
-//         sout: vec![],
-//     };
-//     Ok((o, param, &move |c, f| EExpr::EFlip(Box::new(c), f)))
-// }
 
 // pub fn eval_eobserve<'a>(
 //     mgr: &'a mut Mgr,
@@ -424,52 +353,38 @@ impl<'a> State<'a> {
     pub fn eval_eexpr(&mut self, ctx: Ctx, e: &EExprAnn) -> Result<(Output, EExprTr)> {
         use EExpr::*;
         match e {
-            // EAnf(_, a) => {
-            //     let span = tracing::span!(tracing::Level::DEBUG, "anf");
-            //     let _enter = span.enter();
-            //     let (o, a) = eval_eanf(&ctx.exact, a)?;
-            //     debug_step_ng!("anf", ctx, &o);
-            //     let out = ctx.mk_eoutput(o);
-            //     Ok((out.clone(), EExpr::EAnf(Box::new(out), Box::new(a))))
-            // }
-            // EPrj(_, i, a) => {
-    //             let span = tracing::span!(tracing::Level::DEBUG, "prj");
-    //             let _enter = span.enter();
-    //             let (o, i, a, mk) = eval_eprj(self.mgr, &ctx, *i, a)?;
-    //             let (mut oi, i) = eval_eanf(ctx, i)?;
-    //             let (mut oa, a) = eval_eanf(ctx, a)?;
-    //             match &oi.out[..] {
-    //             }
-    //             o.out = vec![oa.out[oi]];
-    // Ok((o, i, atr, &move |c, i, atr| {
-    //     EExpr::EPrj(Box::new(c), i, Box::new(atr))
-    // }))
-    //             debug_step_ng!(&format!("prj@{}", i), ctx, o);
-    //             let out = ctx.mk_eoutput(o);
-    //             Ok((out.clone(), EExpr::EPrj(Box::new(out), Box::new(i), Box::new(a))))
-    //         }
-            // EProd(_, anfs) => {
-            //     let span = tracing::span!(tracing::Level::DEBUG, "prod");
-            //     let _enter = span.enter();
-            //     debug!("{:?}", anfs);
+            EAnf(_, a) => {
+                let span = tracing::span!(tracing::Level::DEBUG, "anf");
+                let _enter = span.enter();
+                let (o, a) = eval_eanf(&ctx.exact, a)?;
+                debug_step_ng!("anf", ctx, &o);
+                let out = ctx.mk_eoutput(o);
+                Ok((out.clone(), EExpr::EAnf(out, Box::new(a))))
+            }
+            EFlip(d, param) => {
+                let span = tracing::span!(tracing::Level::DEBUG, "flip");
+                let _enter = span.enter();
 
-            //     let (o, atrs, mk) = eval_eprod(self.mgr, &ctx, anfs)?;
+                let (o, param) = eval_eanf(&ctx.exact, param)?;
+                let o = match &o.out[..] {
+                    [EVal::EFloat(param)] => {
+                        let mut weightmap = ctx.exact.weightmap.clone();
+                        weightmap.insert(d.label, *param);
+                        Ok(EOutput {
+                            out: vec![EVal::EBdd(BddPlan::Literal(d.label, true))],
+                            accept: ctx.exact.accept.clone(),
+                            samples: ctx.exact.samples.clone(),
+                            weightmap,
+                            substitutions: ctx.exact.substitutions.clone(),
+                        })
+                    }
+                    _ => errors::typecheck_failed(),
+                }?;
 
-            //     debug_step!("prod", ctx, o);
-            //     let c = Output::Output(o);
-            //     Ok((c.clone(), mk(c, atrs)))
-            // }
-            // EFlip(d, param) => {
-            //     let flip = *param;
-            //     let span = tracing::span!(tracing::Level::DEBUG, "flip");
-            //     let _enter = span.enter();
-
-            //     let (o, f, mk) = eval_eflip(self.mgr, &ctx, d, flip)?;
-
-            //     debug_step!("flip", ctx, o);
-            //     let c = Output::Output(o);
-            //     Ok((c.clone(), mk(c, f)))
-            // }
+                debug_step_ng!("flip", ctx, o);
+                let out = ctx.mk_eoutput(o);
+                Ok((out.clone(), EExpr::EFlip(out, Box::new(param))))
+            }
             // EObserve(_, a) => {
             //     let span = tracing::span!(tracing::Level::DEBUG, "observe");
             //     let _enter = span.enter();

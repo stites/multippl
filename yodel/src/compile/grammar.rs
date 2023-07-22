@@ -11,7 +11,7 @@ use crate::*;
 
 // use std::fmt::*;
 
-::ttg::phase!(pub struct Trace: Box<Output> {
+::ttg::phase!(pub struct Trace: Output {
     // except for distributions! we need to keep
     // these around to add the info into the trace
     ADistExt<SVal>: (SampledVar, SOutput),

@@ -75,8 +75,8 @@ impl EOutput {
             weightmap: ctx.weightmap.clone(),
         }
     }
-    pub fn pkg(&self) -> Box<Output> {
-        Box::new(Output::exact(self.clone()))
+    pub fn pkg(&self) -> Output {
+        Output::exact(self.clone())
     }
 }
 impl Default for EOutput {
@@ -131,8 +131,8 @@ impl SOutput {
     pub fn head(&self) -> SVal {
         self.out[0].clone()
     }
-    pub fn pkg(&self) -> Box<Output> {
-        Box::new(Output::sample(self.clone()))
+    pub fn pkg(&self) -> Output {
+        Output::sample(self.clone())
     }
 }
 

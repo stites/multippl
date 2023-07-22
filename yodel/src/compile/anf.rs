@@ -237,7 +237,7 @@ pub fn eval_sanf<'a>(ctx: &'a SCtx, a: &'a AnfAnn<SVal>) -> Result<(SOutput, Anf
     match a {
         AVal(_, v) => {
             let out = ctx.as_output(vec![v.clone()]);
-            Ok((out.clone(), AVal(Box::new(Output::sample(out)), v.clone())))
+            Ok((out.clone(), AVal(Output::sample(out), v.clone())))
         }
         AVar(d, s) => {
             let v = eval_sanf_var(ctx, d, s)?;
@@ -363,7 +363,7 @@ pub fn eval_eanf<'a>(ctx: &'a ECtx, a: &'a AnfAnn<EVal>) -> Result<(EOutput, Anf
     match a {
         AVal(_, v) => {
             let out = ctx.as_output(vec![v.clone()]);
-            Ok((out.clone(), AVal(Box::new(Output::exact(out)), v.clone())))
+            Ok((out.clone(), AVal(Output::exact(out), v.clone())))
         }
         AVar(d, s) => {
             let v = eval_eanf_var(ctx, d, s)?;
