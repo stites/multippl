@@ -488,43 +488,48 @@ impl<'a> State<'a> {
                     ELetIn(outs, s.clone(), Box::new(eboundtr), Box::new(bodiestr)),
                 ))
             }
-            EDiscrete(_, _) => errors::erased(),
-            EIterate(d, s, ebound, ebody) => {
-                let span = tracing::span!(Level::DEBUG, "iterate");
-                let _enter = span.enter();
-                todo!()
+            // EIterate(d, s, ebound, ebody) => {
+            //     let span = tracing::span!(Level::DEBUG, "iterate");
+            //     let _enter = span.enter();
+            //     todo!()
 
-                // let (bound, eboundtr) = self.eval_eexpr(ctx.clone(), ebound)?;
+            //     // let (bound, eboundtr) = self.eval_eexpr(ctx.clone(), ebound)?;
 
-                // // let mut newctx = ctx.new_from_eoutput(&bound);
-                // let mut newctx = Ctx::from(&bound);
-                // newctx
-                //     .exact
-                //     .substitutions
-                //     .insert(d.id(), (bound.exact.out.clone(), Var::Named(d.clone())));
-                // let (body, bodiestr) = self.eval_eexpr(newctx, ebody)?;
+            //     // // let mut newctx = ctx.new_from_eoutput(&bound);
+            //     // let mut newctx = Ctx::from(&bound);
+            //     // newctx
+            //     //     .exact
+            //     //     .substitutions
+            //     //     .insert(d.id(), (bound.exact.out.clone(), Var::Named(d.clone())));
+            //     // let (body, bodiestr) = self.eval_eexpr(newctx, ebody)?;
 
-                // let o = eval_elet_output(self.mgr, &ctx, bound.clone(), body, &self.opts)?;
-                // debug_step_ng!(format!("let-in {}", s), ctx, o);
+            //     // let o = eval_elet_output(self.mgr, &ctx, bound.clone(), body, &self.opts)?;
+            //     // debug_step_ng!(format!("let-in {}", s), ctx, o);
 
-                // let outs = ctx.mk_eoutput(o);
-                // Ok((
-                //     outs.clone(),
-                //     ELetIn(outs, s.clone(), Box::new(eboundtr), Box::new(bodiestr)),
-                // ))
-            }
-            // _ => todo!(),
-            // ESample((), sexpr) => {
-            //     let (c, s) = self.eval_sexpr(ctx, sexpr)?;
-            //     // FIXME: finish the natural embedding and return
-            //     Ok((c.clone(), ESample(Box::new(c), Box::new(s))))
+            //     // let outs = ctx.mk_eoutput(o);
+            //     // Ok((
+            //     //     outs.clone(),
+            //     //     ELetIn(outs, s.clone(), Box::new(eboundtr), Box::new(bodiestr)),
+            //     // ))
             // }
-            _ => todo!(),
+            // _ => todo!(),
+            ESample((), sexpr) => {
+                let (mut o, s) = self.eval_sexpr(ctx, sexpr)?;
+                let out = match o.sample.out.iter().map(EExpr::<Trace>::embed).collect::<Option<Vec<_>>>() {
+                    None => errors::semantics("natural embedding failed -- check semantics or types"),
+                    Some(os) => Ok(os),
+                }?;
+                o.exact.out = out;
+                Ok((o.clone(), ESample(o, Box::new(s))))
+            }
+            EDiscrete(_, _) => errors::erased(),
         }
     }
 
-    //     pub fn eval_sexpr(&mut self, ctx: Ctx, e: &SExprAnn) -> Result<(Output, SExprTr)> {
-    //         use SExpr::*;
+    pub fn eval_sexpr(&mut self, ctx: Ctx, e: &SExprAnn) -> Result<(Output, SExprTr)> {
+        use SExpr::*;
+        todo!()
+    }
     //         match e {
     //             SAnf(_, a) => {
     //                 let span = tracing::span!(tracing::Level::DEBUG, "sanf");

@@ -210,8 +210,87 @@ macro_rules! TTG {
             $($body)*
         }
     };
-    (impl<X> $trait:ident for $name:ident<X> { $($body:tt)* }) => {
+(impl<X> $trait:ident for $name:ident<X> { $($body:tt)* }) => {
         impl<X> $trait for $name<X> where
+            EAnfExt: ξ<X>,
+            EAppExt: ξ<X>,
+            EPrjExt: ξ<X>,
+            EProdExt: ξ<X>,
+            ELetInExt: ξ<X>,
+            EIteExt: ξ<X>,
+            EFlipExt: ξ<X>,
+            EObserveExt: ξ<X>,
+            ESampleExt: ξ<X>,
+            AVarExt<EVal>: ξ<X>,
+            ADistExt<EVal>: ξ<X>,
+            AVarExt<SVal>: ξ<X>,
+            ADistExt<SVal>: ξ<X>,
+            <EAnfExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <EAppExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <EPrjExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <EProdExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <ELetInExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <EIteExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <EFlipExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <EObserveExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <ESampleExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            AValExt<EVal>: ξ<X>,
+            AValExt<SVal>: ξ<X>,
+            <AVarExt<EVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <ADistExt<EVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <AValExt<EVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <AVarExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <ADistExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <AValExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+
+         // APrjExt<SVal>: ξ<X>,
+         // APrjExt<EVal>: ξ<X>,
+         // <APrjExt<SVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+         // <APrjExt<EVal> as ξ<X>>::Ext: Debug + PartialEq + Clone,
+
+            SAnfExt: ξ<X>,
+            SLetInExt: ξ<X>,
+            SSeqExt: ξ<X>,
+            SIteExt: ξ<X>,
+
+            SAppExt: ξ<X>,
+            SLambdaExt: ξ<X>,
+            SMapExt: ξ<X>,
+            SWhileExt: ξ<X>,
+            SFoldExt: ξ<X>,
+            SSampleExt: ξ<X>,
+
+            <SAppExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <SLambdaExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <SMapExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <SWhileExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <SFoldExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <SSampleExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+
+            SObserveExt: ξ<X>,
+            SExactExt: ξ<X>,
+            <SObserveExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <SAnfExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <SLetInExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <SSeqExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <SIteExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <SExactExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+
+            // sugar
+            SLetSampleExt: ξ<X>,
+            EDiscreteExt: ξ<X>,
+            EIterateExt: ξ<X>,
+            <SLetSampleExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <EDiscreteExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+            <EIterateExt as ξ<X>>::Ext: Debug + PartialEq + Clone,
+
+            X: Debug + PartialEq + Clone,
+        {
+            $($body)*
+        }
+    };
+    (impl<X> $nembed:ident<$lang1:ident<X>> for $lang2:ident<X> { $($body:tt)* }) => {
+        impl<X> $nembed<$lang1<X>> for $lang2<X> where
             EAnfExt: ξ<X>,
             EAppExt: ξ<X>,
             EPrjExt: ξ<X>,

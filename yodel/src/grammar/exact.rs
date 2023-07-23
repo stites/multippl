@@ -7,9 +7,11 @@ use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::string::String;
+use crate::desugar::exact::integers;
 
 use super::anf::*;
 use super::ttg::*;
+use super::sampling::SExpr;
 
 crate::TTG!(
     impl<X> Lang for EExpr<X> {
@@ -17,6 +19,25 @@ crate::TTG!(
         type Val = EVal;
         type Function = super::function::Function<EExpr<X>>;
         type Anf = super::anf::Anf<X, EVal>;
+    }
+);
+
+crate::TTG!(
+    impl <X>NaturalEmbedding<SExpr<X>> for EExpr<X>
+    {
+        type Val = EVal;
+        fn embed(e: &SVal) -> Option<EVal> {
+            use SVal::*;
+            use EVal::*;
+            match e {
+                SBool(b) => Some(EBdd(BddPlan::from_bool(*b))),
+                SFloat(f) => Some(EFloat(*f)),
+                SInt(i) => Some(integers::as_onehot(*i as usize)),
+                SVec(vs) => Some(EProd(vs.iter().map(Self::embed).collect::<Option<Vec<_>>>()?)),
+                SProd(vs) => Some(EProd(vs.iter().map(Self::embed).collect::<Option<Vec<_>>>()?)),
+                SDist(_) => None,
+            }
+        }
     }
 );
 

@@ -8,6 +8,7 @@ use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::string::String;
+use rsdd::builder::bdd_plan::BddPlan;
 
 use super::classes::*;
 use super::ttg::*;
@@ -20,6 +21,27 @@ TTG!(
         type Anf = super::anf::Anf<X, SVal>;
     }
 );
+
+crate::TTG!(
+    impl <X>NaturalEmbedding<EExpr<X>> for SExpr<X>
+    {
+        type Val = SVal;
+        fn embed(e: &EVal) -> Option<SVal> {
+            use SVal::*;
+            use EVal::*;
+            match e {
+                EBdd(BddPlan::ConstTrue) => Some(SBool(true)),
+                EBdd(BddPlan::ConstFalse) => Some(SBool(false)),
+                EFloat(f) => Some(SFloat(*f)),
+                EProd(vs) => Some(SProd(vs.iter().map(Self::embed).collect::<Option<Vec<_>>>()?)),
+                EInteger(i) => None, // this is sugar and not part of the core language
+                EBdd(_) => None, // sampling lang cannot compile a formula
+            }
+        }
+
+    }
+);
+
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Dist {
