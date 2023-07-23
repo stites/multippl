@@ -21,9 +21,7 @@ pub mod typeinf;
 
 mod typecheck;
 
-mod desugar_exact; // discrete
-
-mod desugar_sample; // let-sample-in
+mod desugar;
 
 mod uniquify;
 

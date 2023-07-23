@@ -6,7 +6,7 @@ use crate::typeinf::grammar::{EExprInferable, Inferable};
 /// compilation. going to be honest it's pretty atrocious in rust.
 use crate::*;
 
-use crate::desugar_sample::*;
+use crate::desugar::sample::*;
 use crate::grammar::program::Program;
 
 use ::core::fmt;
@@ -79,7 +79,7 @@ pub fn desugar_eanf(a: &AnfUD<EVal>) -> Result<AnfUD<EVal>> {
         AnfDirichlet(_, xs) => errors::not_in_exact(),
     }
 }
-fn desugar_eexpr(e: &grammar::EExprUD) -> Result<EExprUD> {
+pub fn desugar_eexpr(e: &grammar::EExprUD) -> Result<EExprUD> {
     use crate::grammar::EExpr::*;
     match e {
         EAnf(_, a) => Ok(EAnf((), Box::new(desugar_eanf(a)?))),
@@ -112,7 +112,7 @@ fn desugar_eexpr(e: &grammar::EExprUD) -> Result<EExprUD> {
             Box::new(desugar_eanf(times)?),
         )),
         EDiscrete(_, args) => from_params(&args),
-        ESample(_, e) => Ok(ESample((), Box::new(desugar_sample_sexpr(e)?))),
+        ESample(_, e) => Ok(ESample((), Box::new(desugar_sexpr(e)?))),
     }
 }
 
