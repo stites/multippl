@@ -279,10 +279,34 @@ pub struct Opts {
     pub order: VarOrder,
 }
 
+pub enum Fn {
+    Exact(Function<EExpr<Annotated>>),
+    Sample(Function<SExpr<Annotated>>),
+}
+impl Fn {
+    fn exact(&self) -> Result<Function<EExpr<Annotated>>> {
+        match self {
+            Self::Exact(f) => Ok(f.clone()),
+            Self::Sample(f) => {
+                errors::generic("tried to extract a sample function in the exact language")
+            }
+        }
+    }
+    fn sample(&self) -> Result<Function<SExpr<Annotated>>> {
+        match self {
+            Self::Exact(f) => {
+                errors::generic("tried to extract an exact function in the sampling language")
+            }
+            Self::Sample(f) => Ok(f.clone()),
+        }
+    }
+}
+
 pub struct State<'a> {
     pub opts: Opts,
     pub mgr: &'a mut Mgr,
     pub rng: Option<&'a mut StdRng>, // None implies "debug mode"
+    pub fns: HashMap<String, Fn>,
     pub pq: PQ,
 }
 
@@ -302,6 +326,7 @@ impl<'a> State<'a> {
             mgr,
             rng,
             pq: Default::default(),
+            fns: Default::default(),
         }
     }
     pub fn new_from<'b>(&self) -> State<'b> {
@@ -320,22 +345,34 @@ impl<'a> State<'a> {
     pub fn q(&self) -> f64 {
         self.pq.q
     }
-
-    //     pub fn eval_program(
-    //         &mut self,
-    //         prog: &Program<Annotated>,
-    //     ) -> Result<(Output, Program<Trace>)> {
-    //         match prog {
-    //             Program::SBody(e) => {
-    //                 let (c, e) = self.eval_sexpr(Ctx::default(), e)?;
-    //                 Ok((c, Program::SBody(e)))
-    //             }
-    //             Program::EBody(e) => {
-    //                 let (c, e) = self.eval_eexpr(Ctx::default(), e)?;
-    //                 Ok((c, Program::EBody(e)))
-    //             }
-    //         }
-    //     }
+    pub fn eval_program(&mut self, prog: &Program<Annotated>) -> Result<(Output, Program<Trace>)> {
+        match prog {
+            Program::SBody(e) => {
+                let (c, e) = self.eval_sexpr(Ctx::default(), e)?;
+                Ok((c, Program::SBody(e)))
+            }
+            Program::EBody(e) => {
+                let (c, e) = self.eval_eexpr(Ctx::default(), e)?;
+                Ok((c, Program::EBody(e)))
+            }
+            Program::SDefine(f, e) => {
+                let name = f
+                    .clone()
+                    .name
+                    .expect("all defined functions must have a name");
+                self.fns.insert(name, Fn::Sample(f.clone()));
+                self.eval_program(e)
+            }
+            Program::EDefine(f, e) => {
+                let name = f
+                    .clone()
+                    .name
+                    .expect("all defined functions must have a name");
+                self.fns.insert(name, Fn::Exact(f.clone()));
+                self.eval_program(e)
+            }
+        }
+    }
 
     pub fn eval_eexpr(&mut self, ctx: Ctx, e: &EExprAnn) -> Result<(Output, EExprTr)> {
         use EExpr::*;
@@ -488,35 +525,71 @@ impl<'a> State<'a> {
                     ELetIn(outs, s.clone(), Box::new(eboundtr), Box::new(bodiestr)),
                 ))
             }
-            // EIterate(d, s, ebound, ebody) => {
-            //     let span = tracing::span!(Level::DEBUG, "iterate");
-            //     let _enter = span.enter();
-            //     todo!()
+            EApp(_, fname, args) => {
+                let f = self.fns.get(fname).expect("function is defined").exact()?;
+                let params = f.args2vars(|v| match v {
+                    Anf::AVar(nv, _) => Ok(nv.clone()),
+                    _ => errors::generic(&format!(
+                        "function {:?} argument definitions malformed",
+                        fname
+                    )),
+                })?;
+                let (argvals, args) = eval_eanfs(&ctx.exact, args)?;
+                let argvals = argvals.out;
+                if params.len() != argvals.len() {
+                    return errors::generic(&format!("function {:?} arguments mismatch", fname));
+                }
+                let mut subs = ctx.exact.substitutions.clone();
+                for (param, val) in params.iter().zip(argvals.iter()) {
+                    subs.insert(param.id(), (vec![val.clone()], Var::Named(param.clone())));
+                }
+                let mut callerctx = ctx.clone();
+                callerctx.exact.substitutions = subs;
 
-            //     // let (bound, eboundtr) = self.eval_eexpr(ctx.clone(), ebound)?;
-
-            //     // // let mut newctx = ctx.new_from_eoutput(&bound);
-            //     // let mut newctx = Ctx::from(&bound);
-            //     // newctx
-            //     //     .exact
-            //     //     .substitutions
-            //     //     .insert(d.id(), (bound.exact.out.clone(), Var::Named(d.clone())));
-            //     // let (body, bodiestr) = self.eval_eexpr(newctx, ebody)?;
-
-            //     // let o = eval_elet_output(self.mgr, &ctx, bound.clone(), body, &self.opts)?;
-            //     // debug_step_ng!(format!("let-in {}", s), ctx, o);
-
-            //     // let outs = ctx.mk_eoutput(o);
-            //     // Ok((
-            //     //     outs.clone(),
-            //     //     ELetIn(outs, s.clone(), Box::new(eboundtr), Box::new(bodiestr)),
-            //     // ))
-            // }
-            // _ => todo!(),
+                let (out, _) = self.eval_eexpr(callerctx, &f.body)?;
+                Ok((out.clone(), EApp(out.clone(), fname.clone(), args)))
+            }
+            EIterate(_, fname, init, k) => {
+                let span = tracing::span!(Level::DEBUG, "iterate");
+                let _enter = span.enter();
+                let (args, init) = eval_eanf(&ctx.exact, init)?;
+                let mut args = args.out;
+                let (niters, k) = eval_eanf(&ctx.exact, k)?;
+                let mut niters: usize = match &niters.out[..] {
+                    [EVal::EInteger(i)] => errors::erased(),
+                    [EVal::EProd(vs)] => crate::desugar::exact::integers::from_prod(vs),
+                    _ => errors::typecheck_failed(),
+                }?;
+                let mut ctx = ctx.clone();
+                let mut out = None;
+                while niters > 0 {
+                    let anfargs = args.iter().map(|i| Anf::AVal((), i.clone())).collect();
+                    let o = self
+                        .eval_eexpr(ctx.clone(), &EApp((), fname.clone(), anfargs))?
+                        .0;
+                    out = Some(o.clone());
+                    ctx = ctx.new_from_eoutput(&o.exact);
+                    args = o.exact.out;
+                    niters -= 1;
+                }
+                let out = out.expect("k > 0");
+                Ok((
+                    out.clone(),
+                    EIterate(out, fname.clone(), Box::new(init), Box::new(k)),
+                ))
+            }
             ESample((), sexpr) => {
                 let (mut o, s) = self.eval_sexpr(ctx, sexpr)?;
-                let out = match o.sample.out.iter().map(EExpr::<Trace>::embed).collect::<Option<Vec<_>>>() {
-                    None => errors::semantics("natural embedding failed -- check semantics or types"),
+                let out = match o
+                    .sample
+                    .out
+                    .iter()
+                    .map(EExpr::<Trace>::embed)
+                    .collect::<Option<Vec<_>>>()
+                {
+                    None => {
+                        errors::semantics("natural embedding failed -- check semantics or types")
+                    }
                     Some(os) => Ok(os),
                 }?;
                 o.exact.out = out;

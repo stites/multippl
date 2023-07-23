@@ -1,3 +1,4 @@
+use crate::desugar::exact::integers;
 use crate::*;
 use ::core::fmt;
 use ::core::fmt::Debug;
@@ -7,11 +8,16 @@ use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::string::String;
-use crate::desugar::exact::integers;
 
 use super::anf::*;
-use super::ttg::*;
 use super::sampling::SExpr;
+use super::ttg::*;
+
+// pub trait NaturalEmbedding<Fr: Lang, To: Lang> {
+//     fn is_embedable(_: <Fr as Lang>::Val) -> bool;
+//     fn embed(_: <Fr as Lang>::Val) -> Option<<To as Lang>::Val>;
+//     fn embed_type(_: <Fr as Lang>::Ty) -> Option<<Fr as Lang>::Ty>;
+// }
 
 crate::TTG!(
     impl<X> Lang for EExpr<X> {
@@ -23,18 +29,21 @@ crate::TTG!(
 );
 
 crate::TTG!(
-    impl <X>NaturalEmbedding<SExpr<X>> for EExpr<X>
-    {
+    impl<X> NaturalEmbedding<SExpr<X>> for EExpr<X> {
         type Val = EVal;
         fn embed(e: &SVal) -> Option<EVal> {
-            use SVal::*;
             use EVal::*;
+            use SVal::*;
             match e {
                 SBool(b) => Some(EBdd(BddPlan::from_bool(*b))),
                 SFloat(f) => Some(EFloat(*f)),
                 SInt(i) => Some(integers::as_onehot(*i as usize)),
-                SVec(vs) => Some(EProd(vs.iter().map(Self::embed).collect::<Option<Vec<_>>>()?)),
-                SProd(vs) => Some(EProd(vs.iter().map(Self::embed).collect::<Option<Vec<_>>>()?)),
+                SVec(vs) => Some(EProd(
+                    vs.iter().map(Self::embed).collect::<Option<Vec<_>>>()?,
+                )),
+                SProd(vs) => Some(EProd(
+                    vs.iter().map(Self::embed).collect::<Option<Vec<_>>>()?,
+                )),
                 SDist(_) => None,
             }
         }
