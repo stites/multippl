@@ -52,10 +52,11 @@ impl ETy {
 #[derive(Debug, Clone, PartialEq)]
 pub enum EVal {
     // EBool(bool),
+    EBdd(BddPlan),
     EFloat(f64),
     EProd(Vec<EVal>),
-    EInteger(usize), // not part of the core IR, just included in the maximal values as part of TTG
-    EBdd(BddPlan),
+    // extensions: not part of the core IR, just included in the maximal values as part of TTG
+    EInteger(usize),
 }
 impl EVal {
     pub fn as_bool(&self) -> Option<bool> {
@@ -84,10 +85,10 @@ impl super::classes::IsTyped<ETy> for EVal {
             // EBool(_) => ETy::EBool,
             EFloat(_) => ETy::EFloat,
             EProd(vs) => ETy::EProd(vs.iter().map(|x| x.as_type()).collect_vec()),
-            EInteger(i) => ETy::EProd(vec![ETy::EBool; *i]),
             EBdd(BddPlan::ConstTrue) => ETy::EBool,
             EBdd(BddPlan::ConstFalse) => ETy::EBool,
             EBdd(_) => ETy::EFormula,
+            EInteger(i) => ETy::EProd(vec![ETy::EBool; *i]),
         }
     }
 }

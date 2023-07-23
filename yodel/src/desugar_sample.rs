@@ -36,7 +36,7 @@ fn desugar_sample_eexpr(e: &grammar::EExprUD) -> Result<EExprUD> {
     }
 }
 
-fn desugar_sample_sexpr(e: &grammar::SExprUD) -> Result<SExprUD> {
+pub fn desugar_sample_sexpr(e: &grammar::SExprUD) -> Result<SExprUD> {
     use crate::grammar::SExpr::*;
     match e {
         SAnf(_, _) => Ok(e.clone()),

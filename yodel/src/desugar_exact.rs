@@ -6,208 +6,141 @@ use crate::typeinf::grammar::{EExprInferable, Inferable};
 /// compilation. going to be honest it's pretty atrocious in rust.
 use crate::*;
 
+use crate::desugar_sample::*;
 use crate::grammar::program::Program;
 
 use ::core::fmt;
 use ::core::fmt::Debug;
+use discrete::from_params;
 use itertools::Itertools;
+use rsdd::builder::bdd_plan::BddPlan;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::string::String;
 
-pub mod sampling {
-    use super::*;
-    // fn desugar_sanf_binop(l: &AnfUD<SVal>, r: &AnfUD<SVal>, op: impl Fn(Box<AnfUD<SVal>>, Box<AnfUD<SVal>>) -> AnfUD<SVal>,) -> Result<AnfUD<SVal>>
-    // {
-    //     Ok(op(Box::new(desugar_sanf(l)?), Box::new(desugar_sanf(r)?)))
-    // }
-    // fn desugar_sanf_vec(
-    //     xs: &[AnfUD<SVal>],
-    //     op: impl Fn(Vec<AnfUD<SVal>>) -> AnfUD<SVal>,
-    // ) -> Result<AnfUD<SVal>>
-    // {
-    //     Ok(op(xs
-    //         .iter()
-    //         .map(|a| desugar_sanf(a))
-    //         .collect::<Result<Vec<AnfUD<SVal>>>>()?))
-    // }
-
-    pub fn desugar_sanf(a: &AnfUD<SVal>) -> Result<AnfUD<SVal>> {
-        Ok(a.clone())
-        // use crate::Anf::*;
-        // match a {
-        //     AVar(_, s) => Ok(AVar((), s.clone())),
-        //     AVal(_, v) => Ok(AVal((), v.clone())),
-
-        //     // Booleans
-        //     And(l, r) => desugar_sanf_binop(l, r, And),
-        //     Or(l, r) => desugar_sanf_binop(l, r, Or),
-        //     Neg(bl) => Ok(Neg(Box::new(desugar_sanf(bl)?))),
-
-        //     // Numerics
-        //     Plus(l, r) => desugar_sanf_binop(l, r, Plus),
-        //     Minus(l, r) => desugar_sanf_binop(l, r, Minus),
-        //     Mult(l, r) => desugar_sanf_binop(l, r, Mult),
-        //     Div(l, r) => desugar_sanf_binop(l, r, Div),
-
-        //     // Ord
-        //     GT(l, r) => desugar_sanf_binop(l, r, GT),
-        //     LT(l, r) => desugar_sanf_binop(l, r, LT),
-        //     GTE(l, r) => desugar_sanf_binop(l, r, GTE),
-        //     LTE(l, r) => desugar_sanf_binop(l, r, LTE),
-        //     EQ(l, r) => desugar_sanf_binop(l, r, EQ),
-
-        //     // [x]; (l,r); x[0]
-        //     AnfVec(xs) => desugar_sanf_vec(xs, AnfVec),
-        //     AnfProd(xs) => desugar_sanf_vec(xs, AnfProd),
-        //     AnfPrj(var, ix) => Ok(AnfPrj(var.clone(), Box::new(desugar_sanf(ix)?))),
-
-        //     // Distributions
-        //     AnfBernoulli(x) => Ok(AnfBernoulli(Box::new(desugar_sanf(x)?))),
-        //     AnfPoisson(x) => Ok(AnfPoisson(Box::new(desugar_sanf(x)?))),
-        //     AnfUniform(l, r) => desugar_sanf_binop(l, r, AnfUniform),
-        //     AnfNormal(l, r) => desugar_sanf_binop(l, r, AnfNormal),
-        //     AnfBeta(l, r) => desugar_sanf_binop(l, r, AnfBeta),
-        //     AnfDiscrete(xs) => desugar_sanf_vec(xs, AnfDiscrete),
-        //     AnfDirichlet(xs) => desugar_sanf_vec(xs, AnfDirichlet),
-        // }
+pub fn desugar_eval(v: &EVal) -> Result<EVal> {
+    use EVal::*;
+    match v {
+        EProd(vs) => Ok(EProd(
+            vs.iter().map(desugar_eval).collect::<Result<Vec<EVal>>>()?,
+        )),
+        EInteger(i) => Ok(integers::as_onehot(*i)),
+        _ => Ok(v.clone()),
     }
 }
-pub mod exact {
-    use super::*;
-    fn desugar_eanf_binop(
-        l: &AnfUD<EVal>,
-        r: &AnfUD<EVal>,
-        op: impl Fn(Box<AnfUD<EVal>>, Box<AnfUD<EVal>>) -> AnfUD<EVal>,
-    ) -> Result<AnfUD<EVal>> {
-        Ok(op(Box::new(desugar_eanf(l)?), Box::new(desugar_eanf(r)?)))
-    }
-    fn desugar_eanf_vec(
-        xs: &[AnfUD<EVal>],
-        op: impl Fn(Vec<AnfUD<EVal>>) -> AnfUD<EVal>,
-    ) -> Result<AnfUD<EVal>> {
-        Ok(op(xs
-            .iter()
-            .map(|a| desugar_eanf(a))
-            .collect::<Result<Vec<AnfUD<EVal>>>>()?))
-    }
+fn desugar_eanf_binop(
+    l: &AnfUD<EVal>,
+    r: &AnfUD<EVal>,
+    op: impl Fn(Box<AnfUD<EVal>>, Box<AnfUD<EVal>>) -> AnfUD<EVal>,
+) -> Result<AnfUD<EVal>> {
+    Ok(op(Box::new(desugar_eanf(l)?), Box::new(desugar_eanf(r)?)))
+}
+fn desugar_eanf_vec(xs: &[AnfUD<EVal>]) -> Result<Vec<AnfUD<EVal>>> {
+    xs.iter().map(desugar_eanf).collect()
+}
+pub fn desugar_eanf(a: &AnfUD<EVal>) -> Result<AnfUD<EVal>> {
+    use crate::Anf::*;
+    match a {
+        AVar(_, s) => Ok(AVar((), s.clone())),
+        AVal(_, v) => Ok(AVal((), desugar_eval(v)?)),
+        // Booleans
+        And(l, r) => desugar_eanf_binop(l, r, And),
+        Or(l, r) => desugar_eanf_binop(l, r, Or),
+        Neg(p) => Ok(Neg(Box::new(desugar_eanf(p)?))),
 
-    pub fn desugar_eval(v: &EVal) -> Result<EVal> {
-        use EVal::*;
-match v {
-    EBool(_) => Ok(v.clone()),
-    EFloat(_) => Ok(v.clone()),
-    EProd(vs) => Ok(EProd(vs.iter().map(desugar_eval).collect())),
-    EInteger(i) => Ok(integers::as_prod(i)),
-    }
-    }
-    pub fn desugar_eanf(a: &AnfUD<EVal>) -> Result<AnfUD<EVal>> {
-        use crate::Anf::*;
-        match a {
-            AVar(_, s) => Ok(AVar((), s.clone())),
-            AVal(_, v) => Ok(AVal((), desugar_eval(v)?)),
-            ESugar::IntAnf(a) => match *a.clone() {
-                EAnfPrim(anf) => EExpr::EAnf((), anf.clone()),
-                EInteger(i) => EExpr::EAnf((), Box::new()),
-            },
-            // Booleans
-            And(l, r) => desugar_eanf_binop(l, r, And),
-            Or(l, r) => desugar_eanf_binop(l, r, Or),
-            Neg(p) => Ok(Neg(Box::new(desugar_eanf(p)?))),
+        // Numerics
+        Plus(l, r) => desugar_eanf_binop(l, r, Plus),
+        Minus(l, r) => desugar_eanf_binop(l, r, Minus),
+        Mult(l, r) => desugar_eanf_binop(l, r, Minus),
+        Div(l, r) => desugar_eanf_binop(l, r, Minus),
 
-            // Numerics
-            Plus(l, r) => ,
-            Minus(l, r) => panic!("FIXME"),
-            Mult(l, r) => errors::TODO(),
-            Div(l, r) => errors::TODO(),
+        // Ord
+        GT(l, r) => desugar_eanf_binop(l, r, GT),
+        LT(l, r) => desugar_eanf_binop(l, r, LT),
+        GTE(l, r) => desugar_eanf_binop(l, r, GTE),
+        LTE(l, r) => desugar_eanf_binop(l, r, LTE),
+        EQ(l, r) => desugar_eanf_binop(l, r, EQ),
 
-            // Ord
-            GT(l, r) => errors::TODO(),
-            LT(l, r) => errors::TODO(),
-            GTE(l, r) => errors::TODO(),
-            LTE(l, r) => errors::TODO(),
-            EQ(l, r) => panic!("FIXME"),
+        // [x]; (l,r); x[0]
+        AnfVec(xs) => errors::not_in_exact(),
+        AnfProd(xs) => Ok(AnfProd(desugar_eanf_vec(xs)?)),
+        AnfPrj(var, ix) => Ok(AnfPrj(
+            Box::new(desugar_eanf(var)?),
+            Box::new(desugar_eanf(ix)?),
+        )),
 
-            // [x]; (l,r); x[0]
-            AnfProd(xs) => desugar_eanf_vec(xs, AnfProd),
-            AnfPrj(var, ix) => Ok(AnfPrj(var.clone(), Box::new(desugar_eanf(ix)?))),
-
-            AnfVec(xs) => errors::notInExact(),
-            AnfBernoulli(x) => errors::notInExact(),
-            AnfPoisson(x) => errors::notInExact(),
-            AnfUniform(l, r) => errors::notInExact(),
-            AnfNormal(l, r) => errors::notInExact(),
-            AnfBeta(l, r) => errors::notInExact(),
-            AnfDiscrete(xs) => errors::notInExact(),
-            AnfDirichlet(xs) => errors::notInExact(),
-        }
-    }
-    fn desugar_eexpr(e: &grammar::EExprUD) -> Result<EExprUD> {
-        use crate::grammar::EExpr::*;
-        match e {
-            EAnf(_, a) => Ok(EAnf((), Box::new(desugar_eanf(a)?))),
-            EPrj(_, i, a) => Ok(EPrj(
-                (),
-                Box::new(desugar_eanf(i)?),
-                Box::new(desugar_eanf(a)?),
-            )),
-            EProd(_, args) => desugar_eanf_vec(args, |args| Ok(EProd((), args))),
-            ELetIn(_, s, ebound, ebody) => Ok(ELetIn(
-                (),
-                s.clone(),
-                Box::new(desugar_eexpr(ebound)?),
-                Box::new(desugar_eexpr(ebody)?),
-            )),
-            EIte(_, cond, t, f) => Ok(EIte(
-                (),
-                Box::new(desugar_eanf(cond)?),
-                Box::new(desugar_eexpr(t)?),
-                Box::new(desugar_eexpr(f)?),
-            )),
-            EFlip(_, param) => Ok(EFlip((), Box::new(desugar_eanf(param)?))),
-            EObserve(_, a) => Ok(EObserve((), Box::new(desugar_eanf(a)?))),
-            ESample(_, e) => Ok(ESample((), Box::new(desugar_sexpr(e)?))),
-
-            EApp(_, f, args) => desugar_eanf_vec(args, |args| Ok(EApp((), f.clone(), args))),
-            EDiscrete(_, args) => desugar_eanf_vec(args, |args| Ok(EDiscrete((), args))),
-            EIterate(_, f, init, times) => match desugar_eanf(times)? {
-                EInteger(i) => {
-                    Ok(EApp((), f.clone(), vec![desugar_eanf(init)?]))
-                },
-                _ => panic!(),
-                },
-            },
-        }
-    }
-
-
-    fn desugar_eexpr(e: &EExpr<Inferable>) -> EExpr<Inferable> {
-        match self {
-            ESugar::Prim(e) => e.clone(),
-            ESugar::LetIn(v, bind, body) => EExpr::ELetIn(
-                None,
-                v.clone(),
-                Box::new(bind.desugar()),
-                Box::new(body.desugar()),
-            ),
-            ESugar::Ite(p, t, f) => EExpr::EIte(
-                None,
-                p.clone(),
-                Box::new(t.desugar()),
-                Box::new(f.desugar()),
-            ),
-            ESugar::Discrete(params) => discrete::from_params(params),
-            ESugar::Sample(s) => EExpr::ESample((), Box::new(s.desugar())),
-
-            ESugar::IntPrj(ix_anf, prod_anf) => match *ix_anf.clone() {
-                EInteger(i) => EExpr::EPrj(None, i, prod_anf.clone()),
-                EAnfPrim(anf) => todo!("not yet useful"),
-            },
-
-        }
+        AnfBernoulli(_, x) => errors::not_in_exact(),
+        AnfPoisson(_, x) => errors::not_in_exact(),
+        AnfUniform(_, l, r) => errors::not_in_exact(),
+        AnfNormal(_, l, r) => errors::not_in_exact(),
+        AnfBeta(_, l, r) => errors::not_in_exact(),
+        AnfDiscrete(_, xs) => errors::not_in_exact(),
+        AnfDirichlet(_, xs) => errors::not_in_exact(),
     }
 }
+fn desugar_eexpr(e: &grammar::EExprUD) -> Result<EExprUD> {
+    use crate::grammar::EExpr::*;
+    match e {
+        EAnf(_, a) => Ok(EAnf((), Box::new(desugar_eanf(a)?))),
+        // EPrj(_, i, a) => Ok(EPrj(
+        //     (),
+        //     Box::new(desugar_eanf(i)?),
+        //     Box::new(desugar_eanf(a)?),
+        // )),
+        // EProd(_, args) => Ok(EProd((), desugar_eanf_vec(args, |args| Ok(EProd((), args)))?)),
+        ELetIn(_, s, ebound, ebody) => Ok(ELetIn(
+            (),
+            s.clone(),
+            Box::new(desugar_eexpr(ebound)?),
+            Box::new(desugar_eexpr(ebody)?),
+        )),
+        EIte(_, cond, t, f) => Ok(EIte(
+            (),
+            Box::new(desugar_eanf(cond)?),
+            Box::new(desugar_eexpr(t)?),
+            Box::new(desugar_eexpr(f)?),
+        )),
+        EFlip(_, param) => Ok(EFlip((), Box::new(desugar_eanf(param)?))),
+        EObserve(_, a) => Ok(EObserve((), Box::new(desugar_eanf(a)?))),
+
+        EApp(_, f, args) => Ok(EApp((), f.clone(), desugar_eanf_vec(args)?)),
+        EIterate(_, f, init, times) => Ok(EIterate(
+            (),
+            f.clone(),
+            Box::new(desugar_eanf(init)?),
+            Box::new(desugar_eanf(times)?),
+        )),
+        EDiscrete(_, args) => from_params(&args),
+        ESample(_, e) => Ok(ESample((), Box::new(desugar_sample_sexpr(e)?))),
+    }
+}
+
+// fn desugar_eexpr(e: &EExpr<Inferable>) -> EExpr<Inferable> {
+//     match self {
+//         ESugar::Prim(e) => e.clone(),
+//         ESugar::LetIn(v, bind, body) => EExpr::ELetIn(
+//             None,
+//             v.clone(),
+//             Box::new(bind.desugar()),
+//             Box::new(body.desugar()),
+//         ),
+//         ESugar::Ite(p, t, f) => EExpr::EIte(
+//             None,
+//             p.clone(),
+//             Box::new(t.desugar()),
+//             Box::new(f.desugar()),
+//         ),
+//         ESugar::Discrete(params) => discrete::from_params(params),
+//         ESugar::Sample(s) => EExpr::ESample((), Box::new(s.desugar())),
+
+//         ESugar::IntPrj(ix_anf, prod_anf) => match *ix_anf.clone() {
+//             EInteger(i) => EExpr::EPrj(None, i, prod_anf.clone()),
+//             EAnfPrim(anf) => todo!("not yet useful"),
+//         },
+
+//     }
+// }
 
 // #[derive(PartialEq, Debug, Clone)]
 // pub enum SSugar {
@@ -298,11 +231,11 @@ match v {
 // }
 pub mod integers {
     use super::*;
-    pub fn as_prod(i: usize) -> Anf<Inferable, EVal> {
+    pub fn as_onehot(i: usize) -> EVal {
         let ty = vec![ETy::EBool; i];
-        let mut val = vec![EVal::EBool(false); i - 1];
-        val.push(EVal::EBool(true));
-        Anf::AVal((), EVal::EProd(val))
+        let mut val = vec![EVal::EBdd(BddPlan::ConstFalse); i - 1];
+        val.push(EVal::EBdd(BddPlan::ConstTrue));
+        EVal::EProd(val)
     }
     // pub fn from_prod(e: &Anf<Inferable, EVal>) -> usize {
     //     match e {
@@ -319,79 +252,88 @@ pub mod integers {
     //         _ => panic!("api misuse"),
     //     }
     // }
-    pub fn integer_op(e: &Anf<Inferable, EVal>) {
-        todo!()
-    }
-    pub fn prod2usize(p: Anf<Inferable, EVal>) -> Option<usize> {
-        match p {
-            Anf::AVal(_, EVal::EProd(prod)) => {
-                let (ix, sum) =
-                    prod.iter()
-                        .enumerate()
-                        .fold(Some((0, 0)), |memo, (ix, x)| match (memo, x) {
-                            (Some((one_ix, tot)), EVal::EBool(b)) => {
-                                Some(if *b { (ix, tot + 1) } else { (one_ix, tot) })
-                            }
-                            _ => None,
-                        })?;
+    // pub fn integer_op(e: &Anf<Inferable, EVal>) {
+    //     todo!()
+    // }
+    // pub fn prod2usize(p: Anf<Inferable, EVal>) -> Option<usize> {
+    //     match p {
+    //         Anf::AVal(_, EVal::EProd(prod)) => {
+    //             let (ix, sum) =
+    //                 prod.iter()
+    //                     .enumerate()
+    //                     .fold(Some((0, 0)), |memo, (ix, x)| match (memo, x) {
+    //                         (Some((one_ix, tot)), EVal::EBdd(bdd)) => match bdd {
+    //                             BddPlan::ConstTrue => Some((ix, tot + 1)),
+    //                             BddPlan::ConstFalse => Some((one_ix, tot)),
+    //                             _ => None,
 
-                if sum != 1 {
-                    None
-                } else {
-                    Some(ix)
-                }
-            }
-            _ => None,
-        }
-    }
+    //                         }
+    //                         _ => None,
+    //                     })?;
+
+    //             if sum != 1 {
+    //                 None
+    //             } else {
+    //                 Some(ix)
+    //             }
+    //         }
+    //         _ => None,
+    //     }
+    // }
 }
+
 pub mod discrete {
     use crate::typeinf::grammar::{EExprInferable, Inferable};
-    use crate::{Anf, EExpr, ETy, EVal};
+    use crate::*;
     use itertools::*;
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
 
-    fn params2partitions(params: &Vec<f64>) -> Vec<f64> {
-        // assumes normalized probs, just to keep this subroutine simple
-        params.iter().fold(vec![1.0], |mut zs, p| {
-            let z = zs.last().unwrap() - p;
-            if z > 0.0 {
+    /// assumes normalized probs
+    fn params2partitions(params: &Vec<AnfUD<EVal>>) -> Vec<AnfUD<EVal>> {
+        let mut parts = params
+            .iter()
+            .fold(vec![Anf::AVal((), EVal::EFloat(1.0))], |mut zs, p| {
+                let z = Anf::Minus(Box::new(zs.last().unwrap().clone()), Box::new(p.clone()));
                 zs.push(z);
-            }
-            zs
-        })
+                zs
+            });
+        parts.pop(); // last element is always 0.
+        parts
     }
-    fn normalize(params: &Vec<f64>) -> Vec<f64> {
-        let z = params.iter().sum::<f64>();
-        if z == 1.0 {
-            params.clone()
-        } else {
-            params.iter().map(|p| p / z).collect()
-        }
+    fn normalize(params: &Vec<AnfUD<EVal>>) -> Vec<AnfUD<EVal>> {
+        let z = params
+            .iter()
+            .fold(Anf::AVal((), EVal::EFloat(0.0)), |tot, p| {
+                Anf::Plus(Box::new(tot.clone()), Box::new(p.clone()))
+            });
+        params
+            .iter()
+            .map(|p| Anf::Div(Box::new(p.clone()), Box::new(z.clone())))
+            .collect()
     }
-    fn params2probs(params: &Vec<f64>) -> Vec<f64> {
+    fn params2probs(params: &Vec<AnfUD<EVal>>) -> Vec<AnfUD<EVal>> {
         // put this somewhere else
         let params = normalize(params);
         let partitions = params2partitions(&params);
         params
             .into_iter()
             .zip(partitions.into_iter())
-            .map(|(phat, z)| phat / z)
+            .map(|(phat, z)| Anf::Div(Box::new(phat.clone()), Box::new(z.clone())))
             .collect()
     }
-    fn hash_discrete(params: &Vec<f64>) -> String {
+    fn hash_discrete(params: &Vec<AnfUD<EVal>>) -> String {
         let mut hasher = DefaultHasher::new();
-        let s = params.iter().map(|p| format!("{}", p)).join("-");
+        let s = params.iter().map(|p| format!("{:?}", p)).join("-");
         s.hash(&mut hasher);
         (&format!("{:x}", hasher.finish())[..6]).to_string()
     }
 
-    fn mkvar(v: String) -> Anf<Inferable, EVal> {
-        Anf::AVar(Some(ETy::EBool), v)
+    fn mkvar(v: String) -> Anf<UD, EVal> {
+        Anf::AVar((), v)
     }
 
-    fn mkguard(ids: Vec<String>) -> Anf<Inferable, EVal> {
+    fn mkguard(ids: Vec<String>) -> Anf<UD, EVal> {
         let mut var = None;
         for id in ids {
             let nxt = match var {
@@ -403,7 +345,7 @@ pub mod discrete {
         var.unwrap()
     }
 
-    fn mkdiscrete_var(flip_id: String, seen_ids: Vec<String>) -> Anf<Inferable, EVal> {
+    fn mkdiscrete_var(flip_id: String, seen_ids: Vec<String>) -> Anf<UD, EVal> {
         let flip = mkvar(flip_id);
         if seen_ids.len() == 0 {
             flip
@@ -413,7 +355,7 @@ pub mod discrete {
         }
     }
 
-    pub fn params2statements(params: &Vec<f64>) -> Vec<(String, EExprInferable)> {
+    pub fn params2statements(params: &Vec<AnfUD<EVal>>) -> (Vec<(String, EExprUD)>, EExprUD) {
         let discrete_id = hash_discrete(params);
         let names = params
             .iter()
@@ -423,49 +365,61 @@ pub mod discrete {
         params2named_statements(&discrete_id, &names, params)
     }
 
-    pub fn float2eanf(f: f64) -> Anf<Inferable, EVal> {
-        Anf::AVal((), EVal::EFloat(f))
-    }
+    // pub fn last_conj2vec(f: Anf<UD, EVal>) -> Anf<UD, EVal> {
+    //     Anf::AVal((), EVal::EFloat(f))
+    // }
 
     pub fn params2named_statements(
         namespace: &String,
         names: &Vec<String>,
-        params: &Vec<f64>,
-    ) -> Vec<(String, EExprInferable)> {
+        params: &Vec<AnfUD<EVal>>,
+    ) -> (Vec<(String, EExprUD)>, EExprUD) {
         let n = params.len();
         assert_eq!(names.len(), n);
         let probs = params2probs(params);
 
-        let mut flips: Vec<(String, EExprInferable)> = names
+        let mut flips: Vec<(String, EExprUD)> = names
             .iter()
             .zip(probs.iter())
             .map(|(n, p)| {
                 (
                     format!("{}_{}_flip", namespace, n),
-                    EExpr::EFlip((), Box::new(float2eanf(*p))),
+                    EExpr::EFlip((), Box::new(p.clone())),
                 )
             })
             .collect_vec();
         flips.pop();
 
-        let mut vars: Vec<(String, EExprInferable)> = vec![];
+        let mut vars: Vec<(String, EExprUD)> = vec![];
         let mut seen: Vec<String> = vec![];
+        let mut finvec: Vec<String> = vec![];
 
         for (name, (flip_lbl, flip)) in names.iter().zip(flips.into_iter()) {
             let var_lbl = format!("{}_{}", namespace, name);
             let var_exp = mkdiscrete_var(flip_lbl.clone(), seen.clone());
             vars.push((flip_lbl.clone(), flip));
             vars.push((var_lbl.clone(), EExpr::EAnf((), Box::new(var_exp))));
+            finvec.push(var_lbl.clone());
             seen.push(var_lbl);
         }
-        vars.push((
-            format!("{}_{}", namespace, names.last().unwrap()),
-            EExpr::EAnf((), Box::new(mkguard(seen))),
-        ));
-        vars
+        let lastlbl = format!("{}_{}", namespace, names.last().unwrap());
+        vars.push((lastlbl.clone(), EExpr::EAnf((), Box::new(mkguard(seen)))));
+        finvec.push(lastlbl.clone());
+        (
+            vars,
+            EExpr::EAnf(
+                (),
+                Box::new(Anf::AnfProd(
+                    finvec
+                        .into_iter()
+                        .map(|s| Anf::AVar((), s.clone()))
+                        .collect_vec(),
+                )),
+            ),
+        )
     }
 
-    pub fn from_params(params: &Vec<f64>) -> EExprInferable {
+    pub fn from_params(params: &Vec<AnfUD<EVal>>) -> Result<EExprUD> {
         let discrete_id = hash_discrete(params);
         let names = params
             .iter()
@@ -478,76 +432,92 @@ pub mod discrete {
     pub fn from_named_params(
         namespace: &String,
         names: &Vec<String>,
-        params: &Vec<f64>,
-    ) -> EExprInferable {
-        // assert!(
-        //     params.len() > 1,
-        //     "parameters must be normalized with cardinality of >1"
-        // );
-        // if params.len() == 2 {
-        //     assert!(
-        //         (params.iter().sum::<f64>() - 1.0).abs() < 1e-30,
-        //         "Bernoulli must be normalized"
-        //     );
-        //     EExpr::EFlip((), Box::new(float2eanf(params[0])))
-        // } else {
-        //     let mut statements = params2named_statements(namespace, names, params);
-        //     let mut binding = statements.last().unwrap().1.clone();
-        //     statements.pop();
-        //     let thetype = Some(crate::typecheck::LetInTypes {
-        //         bindee: ETy::EBool,
-        //         body: ETy::EProd(vec![ETy::EBool; params.len()]),
-        //     });
-        //     for (label, bindee) in statements.into_iter().rev() {
-        //         binding =
-        //             EExpr::ELetIn(thetype.clone(), label, Box::new(bindee), Box::new(binding));
-        //     }
-        //     binding
-        // }
-        todo!()
+        params: &Vec<AnfUD<EVal>>,
+    ) -> Result<EExprUD> {
+        println!("{:?}", names);
+        if params.len() < 2 {
+            errors::generic("parameters must be normalized with cardinality of >1")
+        } else if params.len() == 2 {
+            Ok(EExpr::EFlip((), Box::new(normalize(params)[0].clone())))
+        } else {
+            let (statements, ret) = params2named_statements(namespace, names, params);
+            let mut binding = ret.clone();
+            for (label, bindee) in statements.into_iter().rev() {
+                binding = EExpr::ELetIn((), label, Box::new(bindee), Box::new(binding));
+            }
+            Ok(binding)
+        }
     }
 
     #[cfg(test)]
     mod tests {
         use super::*;
+        fn floats2eanf(params: Vec<f64>) -> Vec<AnfUD<EVal>> {
+            params
+                .into_iter()
+                .map(EVal::EFloat)
+                .map(|v| Anf::AVal((), v))
+                .collect()
+        }
+        fn eval(a: &AnfUD<EVal>) -> Result<f64> {
+            use Anf::*;
+            match a {
+                AVal((), EVal::EFloat(f)) => Ok(*f),
+                Plus(l, r) => Ok(eval(l)? + eval(r)?),
+                Minus(l, r) => Ok(eval(l)? - eval(r)?),
+                Mult(l, r) => Ok(eval(l)? * eval(r)?),
+                Div(l, r) => Ok(eval(l)? / eval(r)?),
+                _ => errors::generic("you definitely messed that one up"),
+            }
+        }
+        fn eanf2floats(params: Vec<AnfUD<EVal>>) -> Result<Vec<f64>> {
+            params.iter().map(eval).collect()
+        }
         #[test]
         pub fn test_params2partitions() {
-            let params = vec![0.1, 0.4, 0.5];
+            let params = floats2eanf(vec![0.1, 0.4, 0.5]);
             let partitions = params2partitions(&params);
-            assert_eq!(partitions, vec![1.0, 0.9, 0.5]);
-            let params = vec![0.1, 0.4, 0.2, 0.3];
+            assert_eq!(eanf2floats(partitions).unwrap(), vec![1.0, 0.9, 0.5]);
+            let params = floats2eanf(vec![0.1, 0.4, 0.2, 0.3]);
             let partitions = params2partitions(&params);
-            assert_eq!(partitions, vec![1.0, 0.9, 0.5, 0.3]);
+            assert_eq!(eanf2floats(partitions).unwrap(), vec![1.0, 0.9, 0.5, 0.3]);
         }
         #[test]
         pub fn test_params2probs() {
-            let params = vec![0.1, 0.4, 0.5];
+            let params = floats2eanf(vec![0.1, 0.4, 0.5]);
             let probs = params2probs(&params);
-            assert_eq!(probs, vec![0.1, 0.4 / 0.9, 1.0]);
-            let params = vec![0.1, 0.4, 0.2, 0.3];
+            assert_eq!(eanf2floats(probs).unwrap(), vec![0.1, 0.4 / 0.9, 1.0]);
+            let params = floats2eanf(vec![0.1, 0.4, 0.2, 0.3]);
             let probs = params2probs(&params);
-            assert_eq!(probs, vec![0.1, 0.4 / 0.9, 0.2 / 0.5, 1.0]);
-            let params = vec![1.0, 4.0, 2.0, 3.0];
+            assert_eq!(
+                eanf2floats(probs).unwrap(),
+                vec![0.1, 0.4 / 0.9, 0.2 / 0.5, 1.0]
+            );
+            let params = floats2eanf(vec![1.0, 4.0, 2.0, 3.0]);
             let probs = params2probs(&params);
-            assert_eq!(probs, vec![0.1, 0.4 / 0.9, 0.2 / 0.5, 1.0]);
+            assert_eq!(
+                eanf2floats(probs).unwrap(),
+                vec![0.1, 0.4 / 0.9, 0.2 / 0.5, 1.0]
+            );
         }
         #[test]
         pub fn test_params2hash() {
-            let params = vec![0.1, 0.4, 0.5];
-            let probs = hash_discrete(&params);
-            assert_eq!(probs, "22f7f9");
-            let params = vec![0.1, 0.4, 0.2, 0.3];
-            let probs = hash_discrete(&params);
-            assert_eq!(probs, "1501f9");
-            let params = vec![1.0, 4.0, 2.0, 3.0];
-            let probs = hash_discrete(&params);
-            assert_eq!(probs, "4b912b");
+            // more of a gold test
+            let params = floats2eanf(vec![0.1, 0.4, 0.5]);
+            let hash = hash_discrete(&params);
+            assert_eq!(hash, "212e08");
+            let params = floats2eanf(vec![0.1, 0.4, 0.2, 0.3]);
+            let hash = hash_discrete(&params);
+            assert_eq!(hash, "13bd45");
+            let params = floats2eanf(vec![1.0, 4.0, 2.0, 3.0]);
+            let hash = hash_discrete(&params);
+            assert_eq!(hash, "a21a4f");
         }
         #[test]
         pub fn test_mkguard_for_discrete_var() {
             let bindee = mkguard(vec![String::from("seen1"), String::from("seen2")]);
-            let seen1 = Anf::Neg(Box::new(Anf::AVar(Some(ETy::EBool), String::from("seen1"))));
-            let seen2 = Anf::Neg(Box::new(Anf::AVar(Some(ETy::EBool), String::from("seen2"))));
+            let seen1 = Anf::Neg(Box::new(Anf::AVar((), String::from("seen1"))));
+            let seen2 = Anf::Neg(Box::new(Anf::AVar((), String::from("seen2"))));
             assert_eq!(
                 bindee,
                 Anf::And(Box::new(seen1.clone()), Box::new(seen2.clone()),)
@@ -557,7 +527,7 @@ pub mod discrete {
                 String::from("seen2"),
                 String::from("seen3"),
             ]);
-            let seen3 = Anf::Neg(Box::new(Anf::AVar(Some(ETy::EBool), String::from("seen3"))));
+            let seen3 = Anf::Neg(Box::new(Anf::AVar((), String::from("seen3"))));
             assert_eq!(
                 bindee,
                 Anf::And(
@@ -568,18 +538,19 @@ pub mod discrete {
         }
         #[test]
         pub fn test_params2statements() {
-            let params = vec![0.1, 0.4, 0.5];
-            let mut statements = params2statements(&params);
+            let params = floats2eanf(vec![0.1, 0.4, 0.5]);
+            let (statements, fin) = params2statements(&params);
+            let mut ls = vec![];
             for (s, e) in statements.iter() {
+                ls.push(s);
                 println!("let {} := {:?}", s, e);
             }
-            statements.pop();
-            let last_flip = statements.last().unwrap();
+            println!("in {:?}", fin);
             // assert!(false);
         }
         #[test]
         pub fn test_params2bindings() {
-            let params = vec![0.1, 0.4, 0.5];
+            let params = floats2eanf(vec![0.1, 0.4, 0.5]);
             let bindings = from_params(&params);
             println!("{:?}", bindings);
             // assert!(false);

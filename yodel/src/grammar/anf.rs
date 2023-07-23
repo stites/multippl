@@ -37,7 +37,7 @@ where
     EQ(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
 
     // [x] && x [ 0 ]
-    AnfVec(Vec<Anf<X, Val>>),
+    AnfVec(Vec<Anf<X, Val>>), // in the exact language, this denotes a one-hot encoded integer
     AnfProd(Vec<Anf<X, Val>>),
     AnfPrj(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
 

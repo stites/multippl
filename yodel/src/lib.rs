@@ -21,7 +21,9 @@ pub mod typeinf;
 
 mod typecheck;
 
-mod desugar_sample;
+mod desugar_exact; // discrete
+
+mod desugar_sample; // let-sample-in
 
 mod uniquify;
 
@@ -32,7 +34,7 @@ mod annotate;
 // interface
 pub mod compile;
 
-// pub mod inference;
+pub mod inference;
 
 // pub mod pipeline;
 

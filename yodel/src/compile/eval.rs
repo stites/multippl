@@ -99,140 +99,127 @@ pub const SQRT_2PI: f64 = 2.5066282746310005024157652848110452530069867406099;
 //     }))
 // }
 
-// pub fn eval_eite_predicate<'a>(
-//     mgr: &'a mut Mgr,
-//     ctx: &'a Ctx,
-//     cond: &'a AnfAnn<EVal>,
-//     opts: &'a Opts,
-// ) -> Result<(BddPtr, AnfTr<EVal>, (Probability, Probability))> {
-//     let (pred, atr, _) = eval_eanf(mgr, ctx, cond)?;
-//     if !pred.dists.len() == 1 {
-//         return Err(TypeError(format!(
-//             "Expected EBool for ITE condition\nGot: {cond:?}\n{ctx:?}",
-//         )));
-//     }
+pub fn eval_eite_predicate(
+    mgr: &mut Mgr,
+    ctx: &Ctx,
+    cond: &AnfAnn<EVal>,
+    opts: &Opts,
+) -> Result<(BddPlan, AnfTr<EVal>, (Probability, Probability))> {
+    let (pred, atr) = eval_eanf(&ctx.exact, cond)?;
+    let pred_dist = pred.dists();
+    if !pred_dist.len() == 1 {
+        return Err(TypeError(format!(
+            "Expected EBool for ITE condition\nGot: {cond:?}\n{ctx:?}",
+        )));
+    }
+    let pred_dist = pred_dist[0].clone();
+    let var_order = opts.order.clone();
+    let wmc_params = ctx.exact.weightmap.as_params(opts.max_label);
 
-//     let pred_dist = pred.dists[0];
-//     let var_order = opts.order.clone();
-//     let wmc_params = ctx.weightmap.as_params(opts.max_label);
+    // FIXME : should be adding stats somewhere
+    let mut wmc_opt_h = |pred_dist| {
+        Probability::new(
+            crate::inference::calculate_wmc_prob(
+                mgr,
+                &wmc_params,
+                &var_order,
+                pred_dist,
+                ctx.exact.accept.clone(),
+                // TODO if switching to samples_opt, no need to use ctx.
+                ctx.exact.samples(opts.sample_pruning),
+            )
+            .0,
+        )
+    };
+    let wmc_true = wmc_opt_h(pred_dist.clone());
+    let wmc_false = wmc_opt_h(BddPlan::neg(pred_dist.clone()));
+    Ok((pred_dist, atr, (wmc_true, wmc_false)))
+}
+pub fn eval_eite_output<'a>(
+    mgr: &'a mut Mgr,
+    ctx: &'a Ctx,
+    pred: (BddPlan, AnfTr<EVal>),
+    truthy_branch: (Probability, Output),
+    falsey_branch: (Probability, Output),
+    opts: &'a Opts,
+) -> Result<EOutput> {
+    let (pred_dist, pred_anf) = pred;
+    let (wmc_true, truthy) = truthy_branch;
+    let (wmc_false, falsey) = falsey_branch;
+    let dists = izip!(&truthy.exact.dists(), &falsey.exact.dists())
+        .map(|(tdist, fdist)| {
+            let dist_l = pred_dist._and(tdist);
+            let dist_r = pred_dist._neg()._and(fdist);
+            EVal::EBdd(dist_l._or(&dist_r))
+        })
+        .collect_vec();
 
-//     // FIXME : should be adding stats somewhere
-//     let mut wmc_opt_h = |pred_dist| {
-//         Probability::new(
-//             crate::inference::calculate_wmc_prob(
-//                 mgr,
-//                 &wmc_params,
-//                 &var_order,
-//                 pred_dist,
-//                 ctx.accept,
-//                 // TODO if switching to samples_opt, no need to use ctx.
-//                 if opts.sample_pruning {
-//                     BddPtr::PtrTrue
-//                 } else {
-//                     ctx.samples
-//                 },
-//             )
-//             .0,
-//         )
-//     };
-//     let wmc_true = wmc_opt_h(pred_dist);
-//     let wmc_false = wmc_opt_h(pred_dist.neg());
-//     Ok((pred_dist, atr, (wmc_true, wmc_false)))
-// }
-// pub fn eval_eite_output<'a>(
-//     mgr: &'a mut Mgr,
-//     ctx: &'a Ctx,
-//     pred: (BddPtr, AnfTr<EVal>),
-//     truthy_branch: (Probability, Output),
-//     falsey_branch: (Probability, Output),
-//     opts: &'a Opts,
-// ) -> Result<Output> {
-//     let (pred_dist, pred_anf) = pred;
-//     let (wmc_true, truthy) = truthy_branch;
-//     let (wmc_false, falsey) = falsey_branch;
-//     let dists = izip!(&truthy.dists, &falsey.dists)
-//         .map(|(tdist, fdist)| {
-//             let dist_l = mgr.and(pred_dist, *tdist);
-//             let dist_r = mgr.and(pred_dist.neg(), *fdist);
-//             mgr.or(dist_l, dist_r)
-//         })
-//         .collect_vec();
+    let tsamples = GetSamples::samples(&truthy.exact, opts.sample_pruning);
+    let mut samples = vec![];
+    if !opts.sample_pruning {
+        samples.extend(truthy.exact.samples);
+        samples.extend(falsey.exact.samples);
+    };
 
-//     let samples = if opts.sample_pruning {
-//         truthy.samples
-//     } else {
-//         mgr.and(truthy.samples, falsey.samples)
-//     };
+    let accept_l = pred_dist._and(&truthy.exact.accept);
+    let accept_r = pred_dist._neg()._and(&falsey.exact.accept);
+    let accept = accept_l._or(&accept_r);
+    let accept = accept._and(&ctx.exact.accept);
 
-//     let accept_l = mgr.and(pred_dist, truthy.accept);
-//     let accept_r = mgr.and(pred_dist.neg(), falsey.accept);
-//     let accept = mgr.or(accept_l, accept_r);
-//     let accept = mgr.and(accept, ctx.accept);
+    let mut substitutions = truthy.exact.substitutions.clone();
+    substitutions.extend(falsey.exact.substitutions.clone());
+    let mut weightmap = truthy.exact.weightmap.clone();
+    weightmap.weights.extend(falsey.exact.weightmap.clone());
 
-//     let mut substitutions = truthy.substitutions.clone();
-//     substitutions.extend(falsey.substitutions.clone());
-//     let mut weightmap = truthy.weightmap.clone();
-//     weightmap.weights.extend(falsey.weightmap.clone());
+    // let probabilities = izip!(&truthy.probabilities, &falsey.probabilities)
+    //     .map(|(t, f)| (*t * wmc_true + *f * wmc_false))
+    //     .collect_vec();
 
-//     let probabilities = izip!(&truthy.probabilities, &falsey.probabilities)
-//         .map(|(t, f)| (*t * wmc_true + *f * wmc_false))
-//         .collect_vec();
+    // debug!("=============================");
+    // let importance_true = truthy.importance.pr_mul(wmc_true);
+    // let importance_false = falsey.importance.pr_mul(wmc_false);
+    // debug!(
+    //     "importance_true {:?}, importance_false {:?}",
+    //     importance_true, importance_false
+    // );
+    // let importance = importance_true + importance_false;
+    // debug!("importance {:?}", importance);
+    // debug!("=============================");
 
-//     // debug!("=============================");
-//     // let importance_true = truthy.importance.pr_mul(wmc_true);
-//     // let importance_false = falsey.importance.pr_mul(wmc_false);
-//     // debug!(
-//     //     "importance_true {:?}, importance_false {:?}",
-//     //     importance_true, importance_false
-//     // );
-//     // let importance = importance_true + importance_false;
-//     // debug!("importance {:?}", importance);
-//     // debug!("=============================");
+    Ok(EOutput {
+        out: dists,
+        accept,
+        samples,
+        weightmap,
+        substitutions,
+    })
+}
 
-//     let o = Output {
-//         dists,
-//         accept,
-//         samples,
-//         weightmap,
-//         substitutions,
-//         probabilities,
-//         // importance,
-//         ssubstitutions: ctx.ssubstitutions.clone(),
-//         sout: vec![],
-//     };
-//     Ok(o)
-// }
-// pub fn eval_elet_output<'a>(
-//     mgr: &'a mut Mgr,
-//     ctx: &'a Ctx,
-//     bound: Output,
-//     body: Output,
-//     opts: &'a Opts,
-// ) -> Result<Output> {
-//     let accept = mgr.and(body.accept, ctx.accept);
-//     let samples = if opts.sample_pruning {
-//         ctx.samples
-//     } else {
-//         mgr.and(body.samples, ctx.samples)
-//     };
-//     let probabilities = izip!(bound.probabilities.clone(), body.probabilities)
-//         .map(|(p1, p2)| p1 * p2)
-//         .collect_vec();
-//     // let importance = I::Weight(bound.importance.weight() * body.importance.weight());
+pub fn eval_elet_output(
+    mgr: &mut Mgr,
+    ctx: &Ctx,
+    bound: Output,
+    body: Output,
+    opts: &Opts,
+) -> Result<EOutput> {
+    let accept = body.exact.accept._and(&ctx.exact.accept);
+    let mut samples = ctx.exact.samples.clone();
+    samples.extend(body.exact.samples);
 
-//     let c = Output {
-//         dists: body.dists,
-//         accept,
-//         samples,
-//         substitutions: body.substitutions.clone(),
-//         weightmap: body.weightmap,
-//         probabilities,
-//         // importance,
-//         ssubstitutions: ctx.ssubstitutions.clone(),
-//         sout: vec![],
-//     };
-//     Ok(c)
-// }
+    // let probabilities = izip!(bound.probabilities.clone(), body.probabilities)
+    //     .map(|(p1, p2)| p1 * p2)
+    //     .collect_vec();
+    // // let importance = I::Weight(bound.importance.weight() * body.importance.weight());
+
+    let c = EOutput {
+        out: body.exact.out,
+        accept,
+        samples,
+        substitutions: body.exact.substitutions.clone(),
+        weightmap: body.exact.weightmap,
+    };
+    Ok(c)
+}
 
 // fn sbern(ctx: &Ctx, param: &AnfAnn<SVal>) -> Result<(Bernoulli, AnfTr<SVal>)> {
 //     let (cparam, param, _) = crate::compile::anf::eval_sanf(ctx, param)?;
@@ -385,94 +372,154 @@ impl<'a> State<'a> {
                 let out = ctx.mk_eoutput(o);
                 Ok((out.clone(), EExpr::EFlip(out, Box::new(param))))
             }
-            // EObserve(_, a) => {
-            //     let span = tracing::span!(tracing::Level::DEBUG, "observe");
-            //     let _enter = span.enter();
-            //     let (o, atr, wmc, mk) = eval_eobserve(self.mgr, &ctx, a, &self.opts)?;
+            EObserve(_, a) => {
+                let span = tracing::span!(tracing::Level::DEBUG, "observe");
+                let _enter = span.enter();
 
-            //     // let Importance::Weight(theta) = o.importance;
-            //     self.pq.p *= wmc; // <<<<<<<<<<<<<<<<<<<<
+                let (comp, a) = eval_eanf(&ctx.exact, a)?;
 
-            //     debug_step!("observe", ctx, o);
-            //     let c = Output::Output(o);
-            //     Ok((c.clone(), mk(c, atr)))
-            // }
-            // EIte(_, cond, t, f) => {
-            //     let span = tracing::span!(tracing::Level::DEBUG, "ite");
-            //     let _enter = span.enter();
-            //     let (pred_dist, pred_anf, (wmc_true, wmc_false)) =
-            //         eval_eite_predicate(self.mgr, &ctx, cond, &self.opts)?;
+                // debug!("In. Accept {}", &ctx.accept.print_bdd());
+                // debug!("Comp. dist {}", renderbdds(&comp.dists));
+                // debug!("weightmap  {:?}", ctx.weightmap);
+                let dist = comp
+                    .dists()
+                    .into_iter()
+                    .fold(ctx.exact.accept.clone(), |global, cur| {
+                        BddPlan::and(global, cur)
+                    });
 
-            //     debug!("=============================");
-            //     debug!("wmc_true {}, wmc_false {}", wmc_true, wmc_false);
-            //     debug!("=============================");
+                let var_order = self.opts.order.clone();
+                let wmc_params = ctx.exact.weightmap.as_params(self.opts.max_label);
+                let avars = crate::utils::plan_variables(&dist);
+                for (i, var) in avars.iter().enumerate() {
+                    debug!("{}@{:?}: {:?}", i, var, wmc_params.get_var_weight(*var));
+                }
+                debug!("WMCParams  {:?}", wmc_params);
+                debug!("VarOrder   {:?}", var_order);
+                debug!("Accept     {:?}", &dist);
+                // FIXME: should be aggregating these stats somewhere
+                debug!("using optimizations: {}", self.opts.sample_pruning);
 
-            //     let _enter = span.enter();
-            //     let (ct, ttr) = self.eval_eexpr(ctx.clone(), t)?;
-            //     drop(_enter);
+                let (wmc, _) = crate::inference::calculate_wmc_prob(
+                    self.mgr,
+                    &wmc_params,
+                    &var_order,
+                    dist.clone(),
+                    ctx.exact.accept.clone(),
+                    ctx.exact.samples(self.opts.sample_pruning),
+                );
 
-            //     let truthy = ct.unsafe_output();
-            //     let (cf, ftr) = self.eval_eexpr(ctx.clone(), f)?;
+                // let importance = I::Weight(wmc);
+                // debug!("IWeight    {}", importance.weight());
 
-            //     let falsey = cf.unsafe_output();
-            //     let _enter = span.enter();
-            //     if truthy.dists.len() != falsey.dists.len() {
-            //         return Err(TypeError(format!("Expected both branches of ITE to return same len tuple\nGot (left): {:?}\nGot (right):{:?}", truthy.dists.len(), falsey.dists.len(),)));
-            //     }
-            //     let c: Output = eval_eite_output(
-            //         self.mgr,
-            //         &ctx,
-            //         (pred_dist, pred_anf.clone()),
-            //         (wmc_true, truthy.clone()),
-            //         (wmc_false, falsey),
-            //         &self.opts,
-            //     )?;
-            //     debug_step!("ite", ctx, c);
+                let o = EOutput {
+                    out: vec![EVal::EBdd(BddPlan::ConstTrue)],
+                    accept: dist.clone(),
+                    samples: ctx.exact.samples.clone(),
+                    weightmap: ctx.exact.weightmap.clone(),
+                    substitutions: ctx.exact.substitutions.clone(),
+                };
 
-            //     let outs = Output::from_output(c);
-            //     Ok((
-            //         outs.clone(),
-            //         EIte(
-            //             Box::new(outs),
-            //             Box::new(pred_anf),
-            //             Box::new(ttr),
-            //             Box::new(ftr),
-            //         ),
-            //     ))
-            // }
-            // ELetIn(d, s, ebound, ebody) => {
-            //     let let_in_span = tracing::span!(Level::DEBUG, "let", var = s);
-            //     let _enter = let_in_span.enter();
+                // let Importance::Weight(theta) = o.importance;
+                self.pq.p *= wmc; // <<<<<<<<<<<<<<<<<<<<
 
-            //     let (cbound, eboundtr) = self.eval_eexpr(ctx.clone(), ebound)?;
+                debug_step_ng!("observe", ctx, o);
+                let out = ctx.mk_eoutput(o);
+                Ok((out.clone(), EExpr::EObserve(out, Box::new(a))))
+            }
+            EIte(_, cond, t, f) => {
+                let span = tracing::span!(tracing::Level::DEBUG, "ite");
+                let _enter = span.enter();
+                let (pred_dist, pred_anf, (wmc_true, wmc_false)) =
+                    eval_eite_predicate(self.mgr, &ctx, cond, &self.opts)?;
 
-            //     let bound: Output = cbound.unsafe_output();
-            //     let mut newctx = Ctx::from_compiled(&bound);
-            //     newctx
-            //         .substitutions
-            //         .insert(d.id(), (bound.dists.clone(), Var::Named(d.clone())));
-            //     let (bodies, bodiestr) = self.eval_eexpr(newctx, ebody)?;
+                debug!("=============================");
+                debug!("wmc_true {}, wmc_false {}", wmc_true, wmc_false);
+                debug!("=============================");
 
-            //     let body: Output = bodies.unsafe_output();
-            //     let c = eval_elet_output(self.mgr, &ctx, bound.clone(), body, &self.opts)?;
-            //     debug_step!(format!("let-in {}", s), ctx, c);
+                let tspan = tracing::span!(tracing::Level::DEBUG, "tru");
+                let _tenter = tspan.enter();
+                let (truthy, ttr) = self.eval_eexpr(ctx.clone(), t)?;
+                drop(_tenter);
 
-            //     let outs: Output = Output::from_output(c);
-            //     Ok((
-            //         outs.clone(),
-            //         ELetIn(
-            //             Box::new(outs),
-            //             s.clone(),
-            //             Box::new(eboundtr),
-            //             Box::new(bodiestr),
-            //         ),
-            //     ))
-            // }
+                let fspan = tracing::span!(tracing::Level::DEBUG, "fls");
+                let _fenter = fspan.enter();
+                let (falsey, ftr) = self.eval_eexpr(ctx.clone(), f)?;
+                drop(_fenter);
+
+                if truthy.exact.out.len() != falsey.exact.out.len() {
+                    return Err(TypeError(format!("Expected both branches of ITE to return same len tuple\nGot (left): {:?}\nGot (right):{:?}", truthy.exact.out.len(), falsey.exact.out.len(),)));
+                }
+                let o: EOutput = eval_eite_output(
+                    self.mgr,
+                    &ctx,
+                    (pred_dist, pred_anf.clone()),
+                    (wmc_true, truthy.clone()),
+                    (wmc_false, falsey),
+                    &self.opts,
+                )?;
+                debug_step_ng!("ite", ctx, &o);
+                let out = ctx.mk_eoutput(o);
+                Ok((
+                    out.clone(),
+                    EIte(out, Box::new(pred_anf), Box::new(ttr), Box::new(ftr)),
+                ))
+            }
+            ELetIn(d, s, ebound, ebody) => {
+                let span = tracing::span!(Level::DEBUG, "let", var = s);
+                let _enter = span.enter();
+
+                let (bound, eboundtr) = self.eval_eexpr(ctx.clone(), ebound)?;
+
+                // let mut newctx = ctx.new_from_eoutput(&bound);
+                let mut newctx = Ctx::from(&bound);
+                newctx
+                    .exact
+                    .substitutions
+                    .insert(d.id(), (bound.exact.out.clone(), Var::Named(d.clone())));
+                let (body, bodiestr) = self.eval_eexpr(newctx, ebody)?;
+
+                let o = eval_elet_output(self.mgr, &ctx, bound.clone(), body, &self.opts)?;
+                debug_step_ng!(format!("let-in {}", s), ctx, o);
+
+                let outs = ctx.mk_eoutput(o);
+                Ok((
+                    outs.clone(),
+                    ELetIn(outs, s.clone(), Box::new(eboundtr), Box::new(bodiestr)),
+                ))
+            }
+            EDiscrete(_, _) => errors::erased(),
+            EIterate(d, s, ebound, ebody) => {
+                let span = tracing::span!(Level::DEBUG, "iterate");
+                let _enter = span.enter();
+                todo!()
+
+                // let (bound, eboundtr) = self.eval_eexpr(ctx.clone(), ebound)?;
+
+                // // let mut newctx = ctx.new_from_eoutput(&bound);
+                // let mut newctx = Ctx::from(&bound);
+                // newctx
+                //     .exact
+                //     .substitutions
+                //     .insert(d.id(), (bound.exact.out.clone(), Var::Named(d.clone())));
+                // let (body, bodiestr) = self.eval_eexpr(newctx, ebody)?;
+
+                // let o = eval_elet_output(self.mgr, &ctx, bound.clone(), body, &self.opts)?;
+                // debug_step_ng!(format!("let-in {}", s), ctx, o);
+
+                // let outs = ctx.mk_eoutput(o);
+                // Ok((
+                //     outs.clone(),
+                //     ELetIn(outs, s.clone(), Box::new(eboundtr), Box::new(bodiestr)),
+                // ))
+            }
+            // _ => todo!(),
             // ESample((), sexpr) => {
             //     let (c, s) = self.eval_sexpr(ctx, sexpr)?;
             //     // FIXME: finish the natural embedding and return
             //     Ok((c.clone(), ESample(Box::new(c), Box::new(s))))
             // }
+            _ => todo!(),
         }
     }
 

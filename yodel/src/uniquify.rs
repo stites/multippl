@@ -294,10 +294,6 @@ impl SymEnv {
                 let args = self.uniquify_anfs(args)?;
                 Ok(EApp((), f.clone(), args))
             }
-            EDiscrete(_, args) => {
-                let args = self.uniquify_anfs(args)?;
-                Ok(EDiscrete((), args))
-            }
             EIterate(_, f, init, k) => {
                 let init = self.uniquify_anf(init)?;
                 let k = self.uniquify_anf(k)?;
@@ -308,6 +304,7 @@ impl SymEnv {
                 Ok(EObserve((), Box::new(anf)))
             }
             ESample(_, e) => Ok(ESample((), Box::new(self.uniquify_sexpr(e)?))),
+            EDiscrete(_, _) => errors::erased(),
         }
     }
     pub fn uniquify_sexpr(&mut self, e: &SExprUD) -> Result<SExprUnq> {

@@ -1,7 +1,8 @@
 use crate::annotate::grammar::Var;
 // use crate::data::context::Context;
 // use crate::data::importance::{Importance, I};
-use crate::data::{Weight, WeightMap};
+use crate::data::errors;
+use crate::data::{Result, Weight, WeightMap};
 use crate::grammar::{EVal, SVal};
 use crate::uniquify::grammar::UniqueId;
 use crate::Dist;
@@ -21,6 +22,34 @@ pub struct ECtx {
     pub substitutions: SubstMap,
     pub weightmap: WeightMap,
 }
+pub trait GetSamples {
+    /// optionally prune these samples.
+    fn compile_samples(&self) -> BddPlan;
+    fn samples(&self, prune: bool) -> BddPlan {
+        if prune {
+            BddPlan::ConstTrue
+        } else {
+            Self::compile_samples(self)
+        }
+    }
+}
+
+fn _all_samples(samples: &[(BddPlan, bool)]) -> BddPlan {
+    samples.iter().fold(BddPlan::ConstTrue, |ss, (dist, s)| {
+        BddPlan::and(ss, BddPlan::iff(dist.clone(), BddPlan::from_bool(*s)))
+    })
+}
+impl GetSamples for ECtx {
+    fn compile_samples(&self) -> BddPlan {
+        _all_samples(&self.samples)
+    }
+}
+impl GetSamples for Ctx {
+    fn compile_samples(&self) -> BddPlan {
+        GetSamples::compile_samples(&self.exact)
+    }
+}
+
 impl Default for ECtx {
     fn default() -> Self {
         ECtx {
@@ -31,8 +60,8 @@ impl Default for ECtx {
         }
     }
 }
-impl ECtx {
-    pub fn from_output(out: &EOutput) -> Self {
+impl From<&EOutput> for ECtx {
+    fn from(out: &EOutput) -> Self {
         ECtx {
             accept: out.accept.clone(),
             samples: out.samples.clone(),
@@ -40,6 +69,20 @@ impl ECtx {
             weightmap: out.weightmap.clone(),
         }
     }
+}
+// impl From<&EOutput> for Ctx {
+//     fn from(out: &EOutput) -> Self {
+
+//         ECtx {
+//             accept: out.accept.clone(),
+//             samples: out.samples.clone(),
+//             substitutions: out.substitutions.clone(),
+//             weightmap: out.weightmap.clone(),
+//         }
+//     }
+// }
+
+impl ECtx {
     pub fn as_output(&self, out: Vec<EVal>) -> EOutput {
         EOutput {
             out,
@@ -65,6 +108,11 @@ pub struct EOutput {
     /// substitution environment
     pub substitutions: SubstMap,
 }
+impl GetSamples for EOutput {
+    fn compile_samples(&self) -> BddPlan {
+        _all_samples(&self.samples)
+    }
+}
 impl EOutput {
     pub fn from_anf_out(ctx: &ECtx, out: Vec<EVal>) -> Self {
         EOutput {
@@ -77,6 +125,27 @@ impl EOutput {
     }
     pub fn pkg(&self) -> Output {
         Output::exact(self.clone())
+    }
+    pub fn samples(&self) -> BddPlan {
+        self.samples
+            .iter()
+            .fold(BddPlan::ConstTrue, |acc, (dist, sample)| {
+                BddPlan::and(
+                    acc,
+                    BddPlan::iff(dist.clone(), BddPlan::from_bool(sample.clone())),
+                )
+            })
+    }
+    pub fn dists(&self) -> Vec<BddPlan> {
+        self.out
+            .iter()
+            .cloned()
+            .map(|v| match v {
+                EVal::EBdd(b) => Ok(b),
+                _ => errors::typecheck_failed(),
+            })
+            .collect::<Result<Vec<BddPlan>>>()
+            .unwrap()
     }
 }
 impl Default for EOutput {
@@ -104,12 +173,6 @@ impl Default for SCtx {
     }
 }
 impl SCtx {
-    pub fn from_output(out: &SOutput) -> Self {
-        SCtx {
-            substitutions: out.substitutions.clone(),
-            trace: out.trace.clone(),
-        }
-    }
     pub fn as_output(&self, out: Vec<SVal>) -> SOutput {
         SOutput {
             out,
@@ -118,6 +181,7 @@ impl SCtx {
         }
     }
 }
+
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct SOutput {
     /// compiled output
@@ -135,19 +199,14 @@ impl SOutput {
         Output::sample(self.clone())
     }
 }
-
-/// interop output
-#[derive(Debug, Clone, PartialEq)]
-pub struct IOutput {
-    pub exact: EOutput,
-    pub sample: SOutput,
-    // /// compiled importance weight
-    // pub importance: Importance,
-    // pub interop: (),
-    // /// compiled importance weight
-    // pub importance: Importance,
+impl From<&SOutput> for SCtx {
+    fn from(o: &SOutput) -> Self {
+        SCtx {
+            substitutions: o.substitutions.clone(),
+            trace: o.trace.clone(),
+        }
+    }
 }
-
 /// whole-program context
 #[derive(Debug, Clone, PartialEq)]
 pub struct Ctx {
@@ -163,16 +222,28 @@ impl Default for Ctx {
     }
 }
 impl Ctx {
-    pub fn from_output(o: &Output) -> Self {
-        Ctx {
-            exact: ECtx::from_output(&o.exact),
-            sample: SCtx::from_output(&o.sample),
-        }
-    }
     pub fn mk_eoutput(&self, exact: EOutput) -> Output {
         Output {
             exact,
             sample: self.sample.as_output(vec![]),
+        }
+    }
+    pub fn new_from_eoutput(&self, exact: &EOutput) -> Self {
+        let mut ctx = self.clone();
+        ctx.exact = ECtx::from(exact);
+        ctx
+    }
+    pub fn new_from_soutput(&self, sample: &SOutput) -> Self {
+        let mut ctx = self.clone();
+        ctx.sample = SCtx::from(sample);
+        ctx
+    }
+}
+impl From<&Output> for Ctx {
+    fn from(o: &Output) -> Self {
+        Ctx {
+            exact: ECtx::from(&o.exact),
+            sample: SCtx::from(&o.sample),
         }
     }
 }
@@ -193,6 +264,16 @@ impl Default for Output {
     }
 }
 impl Output {
+    // pub fn new_from_eoutput(ctx: &Ctx, exact: &EOutput) -> Output {
+    //     let mut ctx = ctx.clone();
+    //     ctx.exact = ECtx::from(exact);
+    //     ctx
+    // }
+    // pub fn new_from_soutput(&self, sample: &SOutput) -> Self {
+    //     let mut ctx = self.clone();
+    //     ctx.sample = SCtx::from(sample);
+    //     ctx
+    // }
     pub fn exact(exact: EOutput) -> Output {
         Output {
             exact,

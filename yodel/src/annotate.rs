@@ -537,18 +537,12 @@ impl LabelEnv {
                     .collect::<Result<Vec<AnfAnn<EVal>>>>()?;
                 Ok(EApp((), f.clone(), args.clone()))
             }
-            EDiscrete(_, args) => {
-                let args = args
-                    .iter()
-                    .map(|a| self.annotate_eanf(a))
-                    .collect::<Result<Vec<AnfAnn<EVal>>>>()?;
-                Ok(EDiscrete((), args.clone()))
-            }
             EObserve(_, a) => {
                 let anf = self.annotate_eanf(a)?;
                 Ok(EObserve((), Box::new(anf)))
             }
             ESample(_, e) => Ok(ESample((), Box::new(self.annotate_sexpr(e)?))),
+            EDiscrete(_, _) => errors::erased(),
         }
     }
     pub fn annotate_sexpr(&mut self, e: &SExprUnq) -> Result<SExprAnn> {

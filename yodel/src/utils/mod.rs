@@ -2,10 +2,12 @@ pub mod render;
 
 use itertools::izip;
 use rsdd::builder::bdd_builder::*;
+use rsdd::builder::bdd_plan::BddPlan;
 use rsdd::builder::cache::all_app::*;
 use rsdd::repr::bdd::*;
 use rsdd::repr::var_label::*;
 use rsdd::repr::var_order::*;
+use std::collections::HashSet;
 
 #[inline]
 pub fn l1_distance(x0: &[f64], x1: &[f64]) -> f64 {
@@ -67,6 +69,52 @@ pub fn variables(bdd: BddPtr) -> Vec<VarLabel> {
     .into_iter()
     .flatten()
     .collect()
+}
+
+pub fn plan_variables_h(bdd: &BddPlan, mut vs: HashSet<VarLabel>) -> HashSet<VarLabel> {
+    match bdd {
+        BddPlan::And(a0, a1) => {
+            let a0s = plan_variables_h(a0, HashSet::new());
+            let a1s = plan_variables_h(a1, HashSet::new());
+            vs.extend(a0s);
+            vs.extend(a1s);
+            vs
+        }
+        BddPlan::Or(a0, a1) => {
+            let a0s = plan_variables_h(a0, HashSet::new());
+            let a1s = plan_variables_h(a1, HashSet::new());
+            vs.extend(a0s);
+            vs.extend(a1s);
+            vs
+        }
+        BddPlan::Iff(a0, a1) => {
+            let a0s = plan_variables_h(a0, HashSet::new());
+            let a1s = plan_variables_h(a1, HashSet::new());
+            vs.extend(a0s);
+            vs.extend(a1s);
+            vs
+        }
+        BddPlan::Ite(a0, a1, a2) => {
+            let a0s = plan_variables_h(a0, HashSet::new());
+            let a1s = plan_variables_h(a1, HashSet::new());
+            let a2s = plan_variables_h(a2, HashSet::new());
+            vs.extend(a0s);
+            vs.extend(a1s);
+            vs.extend(a2s);
+            vs
+        }
+        BddPlan::Not(a) => plan_variables_h(a, vs),
+        BddPlan::ConstTrue => vs,
+        BddPlan::ConstFalse => vs,
+        BddPlan::Literal(a, b) => {
+            vs.insert(a.clone());
+            vs
+        }
+    }
+}
+
+pub fn plan_variables(bdd: &BddPlan) -> Vec<VarLabel> {
+    plan_variables_h(bdd, HashSet::new()).into_iter().collect()
 }
 
 #[cfg(test)]
