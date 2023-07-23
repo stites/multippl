@@ -237,21 +237,21 @@ pub mod integers {
         val.push(EVal::EBdd(BddPlan::ConstTrue));
         EVal::EProd(val)
     }
-    // pub fn from_prod(e: &Anf<Inferable, EVal>) -> usize {
-    //     match e {
-    //         Anf::AVal((), EVal::EProd(vs)) => {
-    //             assert_eq!(
-    //                 vs.iter()
-    //                     .map(|v| v.as_bool().expect("value should be one-hot encoding") as usize)
-    //                     .sum::<usize>(),
-    //                 1,
-    //                 "attempting to convert prod which is not one-hot encoded, should be a type-checking error"
-    //             );
-    //             vs.iter().enumerate().find(|(ix, x)| x.is_true()).unwrap().0
-    //         }
-    //         _ => panic!("api misuse"),
-    //     }
-    // }
+    pub fn from_prod(vs: &[EVal]) -> Result<usize> {
+        let (tot, int) = vs.iter().enumerate().fold(Ok((0, 0)), |acc, (ix, v)| {
+            let (tot, int) = acc?;
+            match v {
+                EVal::EBdd(BddPlan::ConstTrue) => Ok((tot + 1, ix)),
+                EVal::EBdd(BddPlan::ConstFalse) => Ok((tot, int)),
+                _ => errors::generic("prod is not one-hot encoded"),
+            }
+        })?;
+        if tot > 1 {
+            errors::generic("(type-error) attempting to convert prod which is not one-hot encoded")
+        } else {
+            Ok(int)
+        }
+    }
     // pub fn integer_op(e: &Anf<Inferable, EVal>) {
     //     todo!()
     // }

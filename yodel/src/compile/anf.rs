@@ -1,6 +1,7 @@
 use super::grammar::*;
 use crate::annotate::grammar::*;
 use crate::data::*;
+use crate::desugar::exact::integers;
 use crate::grammar::*;
 use itertools::Itertools;
 use itertools::*;
@@ -63,10 +64,14 @@ pub fn eval_eanf_numop<'a>(
             let out = ctx.as_output(vec![EVal::EFloat(fop(*l, *r))]);
             Ok((out.clone(), op(Box::new(bl), Box::new(br))))
         }
-        ([EVal::EInteger(l)], [EVal::EInteger(r)]) => {
-            let out = ctx.as_output(vec![EVal::EInteger(iop(*l, *r))]);
+        ([EVal::EProd(l)], [EVal::EProd(r)]) => {
+            let l = integers::from_prod(l)?;
+            let r = integers::from_prod(r)?;
+            let out = ctx.as_output(vec![integers::as_onehot(iop(l, r))]);
             Ok((out.clone(), op(Box::new(bl), Box::new(br))))
         }
+        ([EVal::EInteger(l)], _) => return errors::erased(),
+        (_, [EVal::EInteger(r)]) => return errors::erased(),
         _ => return errors::typecheck_failed(),
     }
 }
