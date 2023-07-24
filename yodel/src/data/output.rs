@@ -13,6 +13,7 @@ use rsdd::sample::probability::Probability;
 use std::collections::HashMap;
 
 pub type SubstMap = HashMap<UniqueId, (Vec<EVal>, Var)>;
+pub type Tr = Vec<(SVal, Dist, Probability, Option<UniqueId>)>;
 
 /// exact compilation context
 #[derive(Debug, Clone, PartialEq)]
@@ -162,7 +163,7 @@ impl Default for EOutput {
 #[derive(Debug, Clone, PartialEq)]
 pub struct SCtx {
     pub substitutions: HashMap<UniqueId, Vec<SVal>>,
-    pub trace: HashMap<UniqueId, (SVal, Dist, Probability)>,
+    pub trace: Tr,
 }
 impl Default for SCtx {
     fn default() -> Self {
@@ -189,7 +190,7 @@ pub struct SOutput {
     /// sampling substitutions
     pub substitutions: HashMap<UniqueId, Vec<SVal>>,
     // sampled values traces (and ids)
-    pub trace: HashMap<UniqueId, (SVal, Dist, Probability)>,
+    pub trace: Tr,
 }
 impl SOutput {
     pub fn head(&self) -> SVal {
