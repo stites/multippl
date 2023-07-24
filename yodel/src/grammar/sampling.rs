@@ -185,8 +185,8 @@ TTG!(
         SSample(<SSampleExt as ξ<X>>::Ext, Box<Anf<X, SVal>>),
         SObserve(
             <SObserveExt as ξ<X>>::Ext,
-            Box<Anf<X, SVal>>,
-            Box<Anf<X, SVal>>,
+            Box<Anf<X, SVal>>, // value
+            Box<Anf<X, SVal>>, // in distribution (also a value)
         ),
 
         // Multi-language boundary

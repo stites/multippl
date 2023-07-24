@@ -228,6 +228,12 @@ impl Ctx {
             sample: self.sample.as_output(vec![]),
         }
     }
+    pub fn mk_soutput(&self, sample: SOutput) -> Output {
+        Output {
+            exact: self.exact.as_output(vec![]),
+            sample,
+        }
+    }
     pub fn new_from_eoutput(&self, exact: &EOutput) -> Self {
         let mut ctx = self.clone();
         ctx.exact = ECtx::from(exact);

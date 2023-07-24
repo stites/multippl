@@ -104,6 +104,22 @@ macro_rules! debug_step_ng {
         );
         debug_compiled!($comp);
     }};
+    ($s:expr, $ctx:expr, $comp:expr ; $type:literal) => {{
+        debug!(
+            "{}, e[{}], e[{}], s[{}]",
+            $s,
+            renderp(&$ctx.exact.substitutions),
+            renderw(&$ctx.exact.weightmap),
+            renderssubs(&$ctx.sample.substitutions),
+        );
+        if $type == "sample" {
+            debug_compiled!(@ $comp.sample);
+        } else if $type == "exact" {
+            debug_compiled!($comp.exact);
+        } else {
+            panic!("debug_step_ng with @ \"exact\" or \"sample\", got: {}", $type);
+        }
+    }};
 }
 #[macro_export]
 macro_rules! debug_compiled {
@@ -122,6 +138,12 @@ macro_rules! debug_compiled {
         debug!("      \\||/  [{}]", renderw(&$comp.weightmap));
         debug!("      \\||/  [{}]", renderp(&$comp.substitutions));
         // debug!("      \\||/  {}", weights);
+        debug!("----------------------------------------");
+    }};
+    (@ $comp:expr) => {{
+        debug!("      \\||/  {:?}", &$comp.out);
+        debug!("      \\||/  {:?}", &$comp.trace);
+        debug!("      \\||/  {:?}", &$comp.substitutions);
         debug!("----------------------------------------");
     }};
 }
