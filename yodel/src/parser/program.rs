@@ -63,8 +63,9 @@ pub fn parse_tree(src: &[u8], t: Tree) -> Program<Inferable> {
     parse_program(src, &mut c, &root)
 }
 
-pub fn parse(code: &str) -> Option<Program<Inferable>> {
-    let tree = tree_parser(code.to_string())?;
+pub fn parse(code: &str) -> Result<Program<Inferable>> {
+    let tree =
+        tree_parser(code.to_string()).ok_or(CompileError::Generic("parse failed".to_string()))?;
     let p = parse_tree(code.as_bytes(), tree);
-    Some(p)
+    Ok(p)
 }

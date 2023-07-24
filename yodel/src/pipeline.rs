@@ -1,5 +1,5 @@
 use crate::annotate::{InvMap, LabelEnv};
-use crate::compile::{compile, eval::State};
+use crate::compile::eval::State;
 use crate::data::*;
 use crate::typecheck::{
     grammar::{EExprTyped, ProgramTyped},
@@ -56,59 +56,45 @@ impl Options {
     }
 }
 
-pub fn run(p: &ProgramInferable) -> Result<(Mgr, Output)> {
-    let (m, c) = runner(p, &Default::default())?;
-    Ok((m, c.as_output().unwrap()))
+pub fn run(code: &str) -> Result<(Output, PQ)> {
+    let mgr = make_mgr_h(code)?;
+    let (o, _, pq) = runner(code, mgr, &Options::stoch())?;
+    Ok((o, pq))
 }
 
-pub fn runner(p: &ProgramInferable, opt: &Options) -> Result<(Mgr, Compiled)> {
-    let mut mgr = make_mgr(p);
-    let (c, _, _, _) = runner_with_stdrng(p, &mut mgr, opt)?;
-    Ok((mgr, c))
+pub fn run_with_seed(code: &str, seed: u64) -> Result<(Output, Option<StdRng>, PQ)> {
+    let mgr = make_mgr_h(code)?;
+    runner(code, mgr, &Options::seed(seed))
 }
 
-pub fn runner_with_stdrng(
-    p: &ProgramInferable,
-    mgr: &mut Mgr,
-    opt: &Options,
-) -> Result<(Compiled, InvMap, Option<StdRng>, PQ)> {
-    let p = typeinference(p)?;
-    let p = typecheck(&p)?;
-    let p = desugar_sample(&p)?;
+pub fn runner(code: &str, mut mgr: Mgr, opt: &Options) -> Result<(Output, Option<StdRng>, PQ)> {
+    let p = crate::parser::program::parse(code)?;
+    let p = crate::typeinf::typeinference(&p)?;
+    let p = crate::typecheck::typecheck(&p)?;
+    let p = crate::desugar::desugar(&p)?;
+    let p = SymEnv::default().uniquify(&p)?.0;
+    let ar = LabelEnv::new().annotate(&p)?;
+    let p = ar.program;
+    let maxlbl = ar.maxbdd.0;
 
-    let mut senv = SymEnv::default();
-    let p = senv.uniquify(&p)?.0; // is alpha-rewriting (or "name resolution")
-    // ensure that every variable is bound.
-    // check shadowing
-    // using a stack can be nice
-
-    let mut lenv = LabelEnv::new();
-    let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
-
+    // let mut mgr = Mgr::new_default_order(mxlbl as usize);
     let mut rng = opt.rng();
-    let orng = if opt.debug { None } else { Some(&mut rng) };
-    let mut s = State::new(mgr, orng, opt.opt);
+    let sample_pruning = opt.opt;
 
-    // <<< final thing here
-    let c = compile(&mut s, &p)?;
-    tracing::debug!("hurray!");
-    Ok((c, inv, s.rng.cloned(), s.pq))
+    let mut state = State::new(&mut mgr, Some(&mut rng), sample_pruning);
+    let (out, ptrace) = state.eval_program(&p)?;
+
+    Ok((out, state.rng.cloned(), state.pq))
 }
 
-pub fn make_mgr_h(p: &ProgramInferable) -> Result<Mgr> {
-    let p = typeinference(p)?;
-    let p = typecheck(&p)?;
-    let mut senv = SymEnv::default();
-    let p = senv.uniquify(&p)?.0;
-    let mut lenv = LabelEnv::new();
-    let (p, vo, varmap, inv, mxlbl) = lenv.annotate(&p)?;
+pub fn make_mgr_h(code: &str) -> Result<Mgr> {
+    let p = crate::parser::program::parse(code)?;
+    let p = crate::typeinf::typeinference(&p)?;
+    let p = crate::typecheck::typecheck(&p)?;
+    let p = crate::desugar::desugar(&p)?;
+    let p = SymEnv::default().uniquify(&p)?.0;
+    let ar = LabelEnv::new().annotate(&p)?;
+    let maxlbl = ar.maxbdd.0;
 
-    Ok(Mgr::new_default_order(mxlbl as usize))
-}
-
-pub fn make_mgr(p: &ProgramInferable) -> Mgr {
-    match make_mgr_h(p) {
-        Ok(m) => m,
-        Err(e) => panic!("{}", e),
-    }
+    Ok(Mgr::new_default_order(maxlbl as usize))
 }

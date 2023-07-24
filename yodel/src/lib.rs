@@ -34,7 +34,7 @@ pub mod compile;
 
 pub mod inference;
 
-// pub mod pipeline;
+pub mod pipeline;
 
 // pub use crate::analysis::sampling::*;
 // pub use crate::typeinf::grammar::ProgramInferable;

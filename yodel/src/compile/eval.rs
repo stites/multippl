@@ -253,7 +253,7 @@ impl Fn {
 pub struct State<'a> {
     pub opts: Opts,
     pub mgr: &'a mut Mgr,
-    pub rng: Option<&'a mut StdRng>, // None implies "debug mode"
+    pub rng: Option<&'a mut StdRng>, // None will use the thread rng
     pub fns: HashMap<String, Fn>,
     pub pq: PQ,
 }
@@ -261,7 +261,7 @@ pub struct State<'a> {
 impl<'a> State<'a> {
     pub fn new(
         mgr: &'a mut Mgr,
-        rng: Option<&'a mut StdRng>, // None implies "debug mode"
+        rng: Option<&'a mut StdRng>, // None will use the thread rng
         sample_pruning: bool,
     ) -> State<'a> {
         let opts = Opts {

@@ -12,12 +12,12 @@ use std::fmt::Debug;
 use std::hash::Hash;
 
 pub type InvMap<T> = HashMap<NamedVar, HashSet<T>>;
-pub struct MaxVarLabel(u64);
+pub struct MaxVarLabel(pub u64);
 pub struct AnnotateResult {
-    program: ProgramAnn,
-    order: VarOrder,
-    idmap: HashMap<UniqueId, Var>,
-    maxbdd: MaxVarLabel,
+    pub program: ProgramAnn,
+    pub order: VarOrder,
+    pub idmap: HashMap<UniqueId, Var>,
+    pub maxbdd: MaxVarLabel,
 }
 impl AnnotateResult {
     pub fn new(
