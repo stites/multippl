@@ -16,6 +16,7 @@ pub use grammar::*;
 pub mod parser;
 
 pub mod typeinf;
+pub use crate::typeinf::grammar::ProgramInferable;
 
 // intermediate stages
 
@@ -28,22 +29,20 @@ mod uniquify;
 mod annotate;
 
 // pub mod analysis; // punt on this
+// pub use crate::analysis::sampling::*;
 
 // interface
 pub mod compile;
 
-pub mod inference;
-
 pub mod pipeline;
+pub use pipeline::*;
 
-// pub use crate::analysis::sampling::*;
-// pub use crate::typeinf::grammar::ProgramInferable;
-// pub use pipeline::*;
+pub mod inference;
 
 // // extras
 // pub mod bayesian_network;
 // pub mod grids;
 pub mod utils;
 
-// #[cfg(test)]
-// mod tests;
+#[cfg(test)]
+mod tests;

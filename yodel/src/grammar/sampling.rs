@@ -88,21 +88,34 @@ impl super::classes::IsTyped<STy> for SVal {
         }
     }
 }
+impl From<&SVal> for Vec<f64> {
+    fn from(s: &SVal) -> Vec<f64> {
+        use SVal::*;
+        match s {
+            SBool(x) => {
+                if *x {
+                    vec![1.0]
+                } else {
+                    vec![0.0]
+                }
+            }
+            SInt(x) => vec![*x as f64],
+            SFloat(x) => vec![*x],
+            SProd(xs) => xs.iter().fold(vec![], |mut acc, x| {
+                let xs: Vec<f64> = From::from(x);
+                acc.extend(xs);
+                acc
+            }),
+            SVec(xs) => xs.iter().fold(vec![], |mut acc, x| {
+                let xs: Vec<f64> = From::from(x);
+                acc.extend(xs);
+                acc
+            }),
+            SDist(_) => vec![],
+        }
+    }
+}
 impl SVal {
-    // pub fn as_query(&self) -> f64 {
-    //     use SVal::*;
-    //     match self {
-    //         SBool(x) => {
-    //             if *x {
-    //                 1.0
-    //             } else {
-    //                 0.0
-    //             }
-    //         }
-    //         SInt(x) => *x as f64,
-    //         SFloat(x) => *x,
-    //     }
-    // }
     pub fn from_bools(bs: &Vec<bool>) -> Vec<Self> {
         bs.iter().cloned().map(SVal::SBool).collect()
     }

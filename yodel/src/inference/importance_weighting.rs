@@ -7,12 +7,12 @@ use itertools::*;
 use std::collections::HashMap;
 use tracing::debug;
 
-pub fn importance_weighting(steps: usize, p: &ProgramInferable) -> Vec<f64> {
+pub fn importance_weighting(steps: usize, p: &str) -> Vec<f64> {
     importance_weighting_h(
         steps,
         p,
         &crate::Options {
-            opt: true,
+            opt: false,
             ..Default::default()
         },
     )
@@ -21,28 +21,32 @@ pub fn importance_weighting(steps: usize, p: &ProgramInferable) -> Vec<f64> {
 
 pub fn importance_weighting_h(
     steps: usize,
-    p: &ProgramInferable,
+    code: &str,
     opt: &crate::Options,
 ) -> (Vec<f64>, Option<WmcStats>) {
-    let mut mgr = crate::make_mgr(p);
+    let mut mgr = crate::make_mgr(code).unwrap();
+    let mut rng = opt.rng();
     let mut e = Expectations::empty();
     let mut stats_max = None;
     debug!("running with options: {:#?}", opt);
     for _step in 1..=steps {
-        match crate::runner_with_stdrng(p, &mut mgr, opt) {
-            Ok((cs, _, _, pq)) => {
-                let c = cs.as_output().unwrap();
-                let (ps, stats) = wmc_prob(&mut mgr, &c);
+        match crate::runner(code, &mut mgr, &mut rng, opt) {
+            Ok(o) => {
+                let (out, p, pq) = (o.out, o.prg, o.pq);
+                let (ps, stats) = wmc_prob(&mut mgr, &out.exact);
                 let w = pq.weight();
-                debug!("distribution  : {}", renderbdds(&c.dists));
-                debug!("accepting     : {}", c.accept.print_bdd());
+                debug!("distribution  : {}", renderbdds(&out.exact.out));
+                debug!("accepting     : {:?}", out.exact.accept);
                 debug!("computed probs: {:?}", ps);
                 debug!("weight        : {} = {}", pq.render(), pq.weight());
-                let query: Vec<f64> = match p {
-                    Program::EBody(_) => ps.clone(),
-                    Program::SBody(_) => c.sout.iter().map(SVal::as_query).collect_vec(),
+                let query: Vec<f64> = match p.query() {
+                    Query::EQuery(_) => ps.clone(),
+                    Query::SQuery(_) => out.sample.out.iter().fold(vec![], |mut acc, v| {
+                        let vs: Vec<f64> = From::<&SVal>::from(v);
+                        acc.extend(vs);
+                        acc
+                    }),
                 };
-
                 let exp_cur = Expectations::new(pq, query);
                 e = Expectations::add(e.clone(), exp_cur);
                 stats_max = stats_max
@@ -70,148 +74,3 @@ pub fn importance_weighting_h(
         .collect_vec();
     (x, stats_max)
 }
-
-// #[allow(unused_mut)]
-// pub fn importance_weighting_h_old(
-//     steps: usize,
-//     p: &ProgramInferable,
-//     opt: &crate::Options,
-// ) -> (Vec<f64>, Option<WmcStats>) {
-//     let mut e = Expectations::empty();
-//     let mut ws: Vec<f64> = vec![];
-//     // let mut qss: Vec<Vec<f64>> = vec![];
-//     let mut prs: Vec<Vec<f64>> = vec![];
-//     let mut sss: Vec<HashMap<UniqueId, Vec<bool>>> = vec![];
-//     let mut mgr = crate::make_mgr(p);
-//     let mut is_debug: bool = false;
-
-//     // let mut compilations = vec![];
-//     let mut compilations_ws = vec![];
-//     let mut compilations_prs = vec![];
-//     // let mut compilations_qs = vec![];
-//     let mut stats_max = None;
-//     debug!("running with options: {:#?}", opt);
-//     // let mut debug_inv = None;
-
-//     for _step in 1..=steps {
-//         match crate::runner_with_stdrng(p, &mut mgr, opt) {
-//             Ok((cs, inv, _, pq)) => {
-//                 is_debug = match cs {
-//                     Compiled::Output(_) => false,
-//                     // Compiled::Debug(_) => {
-//                     //     compilations = cs.clone().into_iter().collect();
-//                     //     // debug_inv = Some(inv.clone());
-//                     //     true
-//                     // }
-//                 };
-//                 cs.into_iter().for_each(|c| {
-//                     let ps;
-//                     let stats;
-//                     (ps, stats) = wmc_prob(&mut mgr, &c);
-
-//                     // let w = c.importance;
-//                     // if !is_debug {
-//                     //     let wnew = pq.weight();
-//                     //     let wold = w.weight();
-//                     //     assert!(
-//                     //         (wnew - wold).abs() < 0.00000000001,
-//                     //         "!!!!!!!!!!! {} = {wnew}; but {wold}",
-//                     //         pq.render()
-//                     //     );
-//                     // }
-//                     let w = pq.weight();
-//                     debug!("{}", c.accept.print_bdd());
-//                     debug!("{}", renderbdds(&c.dists));
-//                     debug!(
-//                         "{}, {}, {}",
-//                         pq.weight(),
-//                         renderfloats(&ps, false),
-//                         prs.len()
-//                     );
-//                     let exp_cur = Expectations::new(pq, ps.clone());
-//                     e = Expectations::add(e.clone(), exp_cur);
-//                     ws.push(pq.weight());
-//                     // qss.push(_qs);
-//                     prs.push(ps);
-//                     // sss.push(env.samples.clone());
-//                     // qss.push(c.probabilities);
-//                     stats_max = stats_max
-//                         .as_ref()
-//                         .map(|prv: &WmcStats| {
-//                             prv.largest_of(&stats.expect("some exact compilation should occur"))
-//                         })
-//                         .or_else(|| stats);
-
-//                     if is_debug {
-//                         compilations_ws.push(ws.clone());
-//                         compilations_prs.push(prs.clone());
-//                         // compilations_qs.push(qss.clone());
-//                     }
-//                 });
-//                 if is_debug {
-//                     break;
-//                 }
-//             }
-//             Err(e) => panic!("{:?}", e),
-//         }
-//     }
-
-//     let exp = e.exp.clone();
-//     let expw = e.expw.clone();
-//     // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
-//     // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
-//     debug!(
-//         exp = renderfloats(&exp, false),
-//         expw = renderfloats(&expw, false)
-//     );
-
-//     if is_debug {
-//         todo!()
-//         // let final_ws: Vec<f64> = compilations_ws.last().unwrap().to_vec();
-//         // debug!("weights: {:?}", final_ws);
-//         // for (i, w) in final_ws.iter().enumerate() {
-//         //     debug!("{}: {:?}", i, w);
-//         // }
-//         // let final_ps: Vec<Vec<f64>> = (compilations_prs.last().unwrap()).to_vec();
-//         // debug!("probabilities: {:?}", final_ps);
-//         // for (i, p) in final_ps.iter().enumerate() {
-//         //     debug!("{}: {:?}", i, p);
-//         // }
-//         // // let final_qs: Vec<Vec<f64>> = (compilations_qs.last().unwrap()).to_vec();
-//         // // debug!("proposed probs: {:?}", final_qs);
-//         // // for (i, p) in final_qs.iter().enumerate() {
-//         // //     debug!("{}: {:?}", i, p);
-//         // // }
-//         // debug!("expectations:");
-//         // debug!("{:#?}", e);
-
-//         // debug!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-//         // debug!("compilations:");
-//         // for (i, c) in compilations.iter().enumerate() {
-//         //     debug_compiled!(c);
-//         // }
-//         // debug!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-//         // debug!("~ WARNING! DEBUG WILL NOT PRUNE UNNECESSARY SAMPLES!!! ~");
-//         // debug!("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~");
-
-//         // let x =
-//         //     compilations
-//         //         .iter()
-//         //         .fold(vec![0.0; compilations[0].probabilities.len()], |agg, c| {
-//         //             let azs;
-//         //             (azs, _) = wmc_prob(&mut mgr, &c);
-
-//         //             izip!(agg, c.probabilities.clone(), azs)
-//         //                 .map(|(fin, q, wmc)| fin + q.as_f64() * c.importance.weight() * wmc)
-//         //                 .collect_vec()
-//         //         });
-//         // (x, stats_max)
-//     } else {
-//         debug_importance_weighting(true, steps, &ws, &[], &prs, &sss, &exp, &expw);
-//         // let var := (ws.zip qs).foldl (fun s (w,q) => s + q * (w - ew) ^ 2) 0
-//         let x = izip!(exp, expw)
-//             .map(|(exp, expw)| if exp == 0.0 { 0.0 } else { exp / expw })
-//             .collect_vec();
-//         (x, stats_max)
-//     }
-// }
