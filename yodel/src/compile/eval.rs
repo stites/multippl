@@ -294,6 +294,7 @@ impl<'a> State<'a> {
         self.pq.q
     }
     pub fn eval_program(&mut self, prog: &Program<Annotated>) -> Result<(Output, Program<Trace>)> {
+        tracing::debug!("compiling...");
         match prog {
             Program::SBody(e) => {
                 let (c, e) = self.eval_sexpr(Ctx::default(), e)?;
@@ -330,6 +331,8 @@ impl<'a> State<'a> {
             EAnf(_, a) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "anf");
                 let _enter = span.enter();
+                tracing::debug!("anf");
+
                 let (o, a) = eval_eanf(&ctx.exact, a)?;
                 debug_step_ng!("anf", ctx, &o);
                 let out = ctx.mk_eoutput(o);
@@ -338,8 +341,9 @@ impl<'a> State<'a> {
             EFlip(d, param) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "flip");
                 let _enter = span.enter();
-
+                tracing::debug!("flip: {:?}", e);
                 let (o, param) = eval_eanf(&ctx.exact, param)?;
+                tracing::debug!("flip done");
                 let o = match &o.out[..] {
                     [EVal::EFloat(param)] => {
                         let mut weightmap = ctx.exact.weightmap.clone();
@@ -362,6 +366,7 @@ impl<'a> State<'a> {
             EObserve(_, a) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "observe");
                 let _enter = span.enter();
+                tracing::debug!("observe");
 
                 let (comp, a) = eval_eanf(&ctx.exact, a)?;
 
@@ -417,6 +422,8 @@ impl<'a> State<'a> {
             EIte(_, cond, t, f) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "ite");
                 let _enter = span.enter();
+                tracing::debug!("ite");
+
                 let (pred_dist, pred_anf, (wmc_true, wmc_false)) =
                     eval_eite_predicate(self.mgr, &ctx, cond, &self.opts)?;
 
@@ -455,6 +462,7 @@ impl<'a> State<'a> {
             ELetIn(d, s, ebound, ebody) => {
                 let span = tracing::span!(Level::DEBUG, "let", var = s);
                 let _enter = span.enter();
+                tracing::debug!("let");
 
                 let (bound, eboundtr) = self.eval_eexpr(ctx.clone(), ebound)?;
 
@@ -476,6 +484,10 @@ impl<'a> State<'a> {
                 ))
             }
             EApp(_, fname, args) => {
+                let span = tracing::span!(Level::DEBUG, "app", f = fname);
+                let _enter = span.enter();
+                tracing::debug!("app");
+
                 let f = self.fns.get(fname).expect("function is defined").exact()?;
                 let params = f.args2vars(|v| match v {
                     Anf::AVar(nv, _) => Ok(nv.clone()),
@@ -500,8 +512,10 @@ impl<'a> State<'a> {
                 Ok((out.clone(), EApp(out.clone(), fname.clone(), args)))
             }
             EIterate(_, fname, init, k) => {
-                let span = tracing::span!(Level::DEBUG, "iterate");
+                let span = tracing::span!(Level::DEBUG, "iterate", f = fname);
                 let _enter = span.enter();
+                tracing::debug!("iterate");
+
                 let (args, init) = eval_eanf(&ctx.exact, init)?;
                 let mut args = args.out;
                 let (niters, k) = eval_eanf(&ctx.exact, k)?;
@@ -529,19 +543,14 @@ impl<'a> State<'a> {
                 ))
             }
             ESample((), sexpr) => {
+                let span = tracing::span!(Level::DEBUG, "sample");
+                let _enter = span.enter();
+                tracing::debug!("sample");
+
                 let (mut o, s) = self.eval_sexpr(ctx, sexpr)?;
-                let out = match o
-                    .sample
-                    .out
-                    .iter()
-                    .map(EExpr::<Trace>::embed)
-                    .collect::<Option<Vec<_>>>()
-                {
-                    None => {
-                        errors::semantics("natural embedding failed -- check semantics or types")
-                    }
-                    Some(os) => Ok(os),
-                }?;
+                let sout = o.sample.out.clone();
+
+                let out = sout.iter().map(EExpr::<Trace>::embed).collect::<Result<Vec<_>>>()?;
                 o.exact.out = out;
                 Ok((o.clone(), ESample(o, Box::new(s))))
             }
@@ -738,6 +747,7 @@ impl<'a> State<'a> {
             SLambda(_, _, _) => errors::TODO(),
 
             SSample(_, dist) => {
+
                 let (mut out, dist) = crate::compile::anf::eval_sanf(&ctx.sample, dist)?;
 
                 let (q, v, d) = match &out.out[..] {
@@ -746,7 +756,7 @@ impl<'a> State<'a> {
                             let dist = statrs::distribution::Bernoulli::new(*param).unwrap();
                             let v = self.sample(&dist);
                             let q = statrs::distribution::Discrete::pmf(&dist, v as u64);
-                            let v = SVal::SFloat(v);
+                            let v = SVal::SBool(v == 1.0);
                             (q, v, d)
                         }
                         Dist::Discrete(ps) => {
@@ -795,6 +805,7 @@ impl<'a> State<'a> {
 
                 out.trace
                     .push((v.clone(), d.clone(), Probability::new(q), None));
+                out.out = vec![v];
                 let o = ctx.mk_soutput(out);
                 Ok((o.clone(), SSample(o, Box::new(dist))))
             }
@@ -862,10 +873,10 @@ impl<'a> State<'a> {
 
                 for eval in out.exact.out.iter() {
                     match (eval, SExpr::<Trace>::embed(eval)) {
-                        (_, Some(sv)) => {
+                        (_, Ok(sv)) => {
                             out.sample.out.push(sv);
                         }
-                        (EVal::EBdd(dist), None) => {
+                        (EVal::EBdd(dist), Err(_)) => {
                             let theta_q = crate::inference::calculate_wmc_prob(
                                 self.mgr,
                                 &wmc_params,

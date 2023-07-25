@@ -353,7 +353,11 @@
       "required": true,
       "types": [
         {
-          "type": "eanf",
+          "type": "identifier",
+          "named": true
+        },
+        {
+          "type": "sanf",
           "named": true
         }
       ]
@@ -1554,10 +1558,6 @@
   },
   {
     "type": "poisson",
-    "named": false
-  },
-  {
-    "type": "prj",
     "named": false
   },
   {

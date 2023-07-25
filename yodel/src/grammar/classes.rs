@@ -1,3 +1,5 @@
+use crate::data::errors::Result;
+
 pub trait Lang {
     type Ty;
     type Val;
@@ -7,7 +9,7 @@ pub trait Lang {
 
 pub trait NaturalEmbedding<Fr: Lang> {
     type Val;
-    fn embed(_: &<Fr as Lang>::Val) -> Option<Self::Val>;
+    fn embed(_: &<Fr as Lang>::Val) -> Result<Self::Val>;
     // fn embed_type(_: &<Fr as Lang>::Ty) -> Option<<Fr as Lang>::Ty>;
 }
 

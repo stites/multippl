@@ -31,20 +31,20 @@ crate::TTG!(
 crate::TTG!(
     impl<X> NaturalEmbedding<SExpr<X>> for EExpr<X> {
         type Val = EVal;
-        fn embed(e: &SVal) -> Option<EVal> {
+        fn embed(e: &SVal) -> Result<EVal> {
             use EVal::*;
             use SVal::*;
             match e {
-                SBool(b) => Some(EBdd(BddPlan::from_bool(*b))),
-                SFloat(f) => Some(EFloat(*f)),
-                SInt(i) => Some(integers::as_onehot(*i as usize)),
-                SVec(vs) => Some(EProd(
-                    vs.iter().map(Self::embed).collect::<Option<Vec<_>>>()?,
+                SBool(b) => Ok(EBdd(BddPlan::from_bool(*b))),
+                SFloat(f) => Ok(EFloat(*f)),
+                SInt(i) => Ok(integers::as_onehot(*i as usize)),
+                SVec(vs) => Ok(EProd(
+                    vs.iter().map(Self::embed).collect::<Result<Vec<_>>>()?,
                 )),
-                SProd(vs) => Some(EProd(
-                    vs.iter().map(Self::embed).collect::<Option<Vec<_>>>()?,
+                SProd(vs) => Ok(EProd(
+                    vs.iter().map(Self::embed).collect::<Result<Vec<_>>>()?,
                 )),
-                SDist(_) => None,
+                SDist(_) => errors::generic("dist in the MLS boundary: did you forget to sample using `~`?"),
             }
         }
     }

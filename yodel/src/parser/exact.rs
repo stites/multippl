@@ -42,24 +42,36 @@ fn parse_anf_child_h(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, 
 
 fn parse_anf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EVal> {
     match n.named_child_count() {
-        0 => parse_anf_enode(src, c, n),
-        1 => parse_anf_child_h(src, c, n),
+        0 => {
+            parse_anf_enode(src, c, n)},
+        1 => {
+            parse_anf_child_h(src, c, n)},
         2 => {
-            // unary operation
+            // // unary operation
+            // let mut _c = c.clone();
+            // let mut cs = n.named_children(&mut _c);
+            // let op = cs.next().unwrap();
+            // let utf8 = op.utf8_text(src).unwrap();
+            // let op = String::from_utf8(utf8.into()).unwrap();
+
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
-            let op = cs.next().unwrap();
-            let utf8 = op.utf8_text(src).unwrap();
-            let op = String::from_utf8(utf8.into()).unwrap();
-            assert_eq!(
-                op,
-                "!".to_string(),
-                "invalid program found!\nsexp: {}",
-                n.to_sexp()
-            );
-            let a = cs.next().unwrap(); // will be "anf"
-            let anf = parse_anf(src, c, a);
-            Anf::Neg(Box::new(anf))
+            let node = cs.next().unwrap();
+            match node.kind() {
+                "eanf" => {
+                    parse_anf(src, c, node)
+                },
+                "identifier" => Anf::AVar(None, parse_str(src, &node)),
+                "evalue" => Anf::AVal((), parse_eval(src, c, node)),
+                "eanfprod" => Anf::AnfProd(
+                    parse_vec(src, c, node, |a, b, c| parse_anf(a, b, c)),
+                ),
+                "bool_unop" => {
+                    let node = cs.next().unwrap();
+                    Anf::Neg(Box::new(parse_anf(src, c, node)))
+                },
+                _ => panic!("invalid unary operator found!\nsexp: {}", n.to_sexp()),
+            }
         }
         3 => {
             // binary operation
@@ -91,6 +103,13 @@ fn parse_anf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EVal> {
 
 fn parse_eval(src: &[u8], c: &mut TreeCursor, n: Node) -> EVal {
     match n.kind() {
+        "evalue" => {
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let n = cs.next().unwrap();
+            parse_eval(src, c, n)
+        },
         "bool" => {
             let utf8 = n.utf8_text(src).unwrap();
             let var = String::from_utf8(utf8.into()).unwrap();
@@ -178,7 +197,7 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
             parse_eexpr(src, c, &n)
         }
         "eanf" => {
-            println!("{}", n.to_sexp());
+            // println!("{}", n.to_sexp());
             let anf = parse_anf(src, c, n);
             EExpr::EAnf((), Box::new(anf))
         }
@@ -247,7 +266,7 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
             EExpr::EDiscrete((), params)
         }
         "elet" => {
-            println!("{}", n.to_sexp());
+            //println!("{}", n.to_sexp());
             assert_children!(k, 3, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
@@ -264,7 +283,7 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
             EExpr::ELetIn(None, ident, Box::new(bindee), Box::new(body))
         }
         "eite" => {
-            println!("{}", n.to_sexp());
+            //println!("{}", n.to_sexp());
             assert_children!(k, 3, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
@@ -280,7 +299,7 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
             EExpr::EIte(None, Box::new(pred), Box::new(tbranch), Box::new(fbranch))
         }
         "eflip" => {
-            println!("{}", n.to_sexp());
+            //println!("{}", n.to_sexp());
             let f = parse_anf(src, c, n);
             EExpr::EFlip((), Box::new(f))
         }
@@ -289,7 +308,7 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
             EExpr::EObserve((), Box::new(anf))
         }
         "esample" => {
-            println!("{}", n.to_sexp());
+            //println!("{}", n.to_sexp());
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
             let subp = cs.next().unwrap();
@@ -297,7 +316,7 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
             EExpr::ESample((), Box::new(sexpr))
         }
         "eiterate" => {
-            println!("{}", n.to_sexp());
+            //println!("{}", n.to_sexp());
             assert_children!(k, 3, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
@@ -348,23 +367,24 @@ mod tests {
 
     #[test]
     fn prods() {
+        println!("prods0");
         assert_eq!(
             parse(r#"exact { (a, b, c) }"#).unwrap(),
             program!(b!("a", "b", "c"))
         );
-        assert_eq!(
-            parse(r#"exact { let x = (a, b) in fst x }"#).unwrap(),
-            program!(lets!["x" ;= b!("a", "b"); ...? fst!("x")])
-        );
-        assert_eq!(
-            parse(r#"exact { let x = (a, b) in snd x }"#).unwrap(),
-            program!(lets!["x" ;= b!("a", "b"); ...? snd!("x")])
-        );
-        let p = parse(r#"exact { let x = (a, b) in (prj 0 x) }"#).unwrap();
+        println!("prods1");
+        let p = parse(r#"exact { let x = (a, b) in fst x }"#).unwrap();
+        assert_eq!(p, program!(lets!["x" ;= b!("a", "b"); ...? fst!("x")]));
+        println!("prods2");
+        let p = parse(r#"exact { let x = (a, b) in snd x }"#).unwrap();
+        println!("{:?}", p);
+        assert_eq!(p, program!(lets!["x" ;= b!("a", "b"); ...? snd!("x")]));
+        println!("prods3");
+        let p = parse(r#"exact { let x = (a, b) in x[0] }"#).unwrap();
         println!("{:?}", p);
         assert_eq!(
-            parse(r#"exact { let x = (a, b) in (prj 0 x) }"#).unwrap(),
-            program!(lets!["x" ;= b!("a", "b"); ...? prj!(0, "x")])
+            parse(r#"exact { let x = (a, b) in x[0] }"#).unwrap(),
+            program!(lets!["x" ;= b!("a", "b"); ...? prj!("x", 0)])
         );
     }
 

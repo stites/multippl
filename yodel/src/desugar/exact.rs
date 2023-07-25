@@ -52,8 +52,8 @@ pub fn desugar_eanf(a: &AnfUD<EVal>) -> Result<AnfUD<EVal>> {
         // Numerics
         Plus(l, r) => desugar_eanf_binop(l, r, Plus),
         Minus(l, r) => desugar_eanf_binop(l, r, Minus),
-        Mult(l, r) => desugar_eanf_binop(l, r, Minus),
-        Div(l, r) => desugar_eanf_binop(l, r, Minus),
+        Mult(l, r) => desugar_eanf_binop(l, r, Mult),
+        Div(l, r) => desugar_eanf_binop(l, r, Div),
 
         // Ord
         GT(l, r) => desugar_eanf_binop(l, r, GT),
@@ -233,9 +233,15 @@ pub mod integers {
     use super::*;
     pub fn as_onehot(i: usize) -> EVal {
         let ty = vec![ETy::EBool; i];
-        let mut val = vec![EVal::EBdd(BddPlan::ConstFalse); i - 1];
-        val.push(EVal::EBdd(BddPlan::ConstTrue));
-        EVal::EProd(val)
+        match i {
+            0 => EVal::EProd(vec![EVal::EBdd(BddPlan::ConstFalse); 8]),
+            _ => {
+                let mut val = vec![EVal::EBdd(BddPlan::ConstFalse); i - 1];
+                val.push(EVal::EBdd(BddPlan::ConstTrue));
+                EVal::EProd(val)
+            }
+
+        }
     }
     pub fn from_prod(vs: &[EVal]) -> Result<usize> {
         let (tot, int) = vs.iter().enumerate().fold(Ok((0, 0)), |acc, (ix, v)| {
@@ -248,8 +254,29 @@ pub mod integers {
         })?;
         if tot > 1 {
             errors::generic("(type-error) attempting to convert prod which is not one-hot encoded")
+        } else if tot == 0 {
+            Ok(0)
         } else {
-            Ok(int)
+            println!("tot: {tot}, int: {int}");
+            Ok(int + 1)
+        }
+    }
+    pub fn from_prod_val(p: &EVal) -> Result<usize> {
+        match p {
+            EVal::EProd(vs) => from_prod(vs),
+            _ => errors::generic("(type-error) attempting to convert prod which is not one-hot encoded")
+        }
+    }
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        #[test]
+        fn test_prop() {
+            for x in [0,1,5,10] {
+                let oh = as_onehot(x);
+                println!("{oh:?}");
+                assert_eq!(from_prod_val(&oh).unwrap(), x);
+            }
         }
     }
     // pub fn integer_op(e: &Anf<Inferable, EVal>) {

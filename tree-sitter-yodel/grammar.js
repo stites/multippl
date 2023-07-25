@@ -61,9 +61,10 @@ module.exports = grammar({
     efst: $ => seq('fst', $.eanf),
     esnd: $ => seq('snd', $.eanf),
 
+    // sanfprj: $ => seq($.identifier, '[', $.sanf, ']'), // vector access
     eprj: $ => choice(
-        seq('prj',  $.eanf, $.eanf ),
-        seq('prj', '(', $.eanf, ',', $.eanf, ')'),
+        seq($.identifier, '[', $.sanf, ']'),
+        // seq('prj', '(', $.eanf, ',', $.eanf, ')'),
     ),
 
     eprod: $ => choice(
@@ -110,11 +111,11 @@ module.exports = grammar({
     compare_op: $ => choice('==', '<', '<=', '>', '>='),
 
     evalue: $ => choice(
+      prec(10, seq('(', $.evalue, ',', $.evalue, ')')),
+      prec(10, seq('(', $.evalue, ',', repeat(seq($.evalue, ',')), $.evalue, ')')),
       $.bool,
       $.int,
       $.float,
-      prec(10, seq('(', $.evalue, ',', $.evalue, ')')),
-      prec(10, seq('(', $.evalue, ',', repeat(seq($.evalue, ',')), $.evalue, ')')),
     ),
 
     eann: $ => prec.right(5, seq($.eexpr, ':', $.ety)),

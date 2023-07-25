@@ -10,7 +10,7 @@ pub fn parse_program(src: &[u8], c: &mut TreeCursor, n: &Node) -> Program<Infera
     let mut c_ = c.clone();
     let mut cs = n.named_children(&mut c_);
     let n = cs.next().unwrap();
-    println!("parsing program: {}", n.kind());
+    // println!("parsing program: {}", n.kind());
     match n.kind() {
         "eexpr" => {
             let e = parse_eexpr(src, c, &n);
@@ -23,7 +23,7 @@ pub fn parse_program(src: &[u8], c: &mut TreeCursor, n: &Node) -> Program<Infera
         "efun" => {
             let f = parse_efunction(src, c, &n);
             let n = cs.next().unwrap();
-            println!("parsed function: {:?}", f);
+            // println!("parsed function: {:?}", f);
             let rest = parse_program(src, c, &n);
 
             Program::EDefine(f, Box::new(rest))
@@ -31,7 +31,7 @@ pub fn parse_program(src: &[u8], c: &mut TreeCursor, n: &Node) -> Program<Infera
         "sfun" => {
             let f = parse_sfunction(src, c, &n);
             let n = cs.next().unwrap();
-            println!("parsed function: {:?}", f);
+            // println!("parsed function: {:?}", f);
             let rest = parse_program(src, c, &n);
             Program::SDefine(f, Box::new(rest))
         }

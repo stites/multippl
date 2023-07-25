@@ -587,45 +587,20 @@
           "type": "SEQ",
           "members": [
             {
+              "type": "SYMBOL",
+              "name": "identifier"
+            },
+            {
               "type": "STRING",
-              "value": "prj"
+              "value": "["
             },
             {
               "type": "SYMBOL",
-              "name": "eanf"
-            },
-            {
-              "type": "SYMBOL",
-              "name": "eanf"
-            }
-          ]
-        },
-        {
-          "type": "SEQ",
-          "members": [
-            {
-              "type": "STRING",
-              "value": "prj"
+              "name": "sanf"
             },
             {
               "type": "STRING",
-              "value": "("
-            },
-            {
-              "type": "SYMBOL",
-              "name": "eanf"
-            },
-            {
-              "type": "STRING",
-              "value": ","
-            },
-            {
-              "type": "SYMBOL",
-              "name": "eanf"
-            },
-            {
-              "type": "STRING",
-              "value": ")"
+              "value": "]"
             }
           ]
         }
@@ -1050,18 +1025,6 @@
       "type": "CHOICE",
       "members": [
         {
-          "type": "SYMBOL",
-          "name": "bool"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "int"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "float"
-        },
-        {
           "type": "PREC",
           "value": 10,
           "content": {
@@ -1134,6 +1097,18 @@
               }
             ]
           }
+        },
+        {
+          "type": "SYMBOL",
+          "name": "bool"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "int"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "float"
         }
       ]
     },

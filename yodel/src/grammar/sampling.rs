@@ -25,18 +25,18 @@ TTG!(
 crate::TTG!(
     impl<X> NaturalEmbedding<EExpr<X>> for SExpr<X> {
         type Val = SVal;
-        fn embed(e: &EVal) -> Option<SVal> {
+        fn embed(e: &EVal) -> Result<SVal> {
             use EVal::*;
             use SVal::*;
             match e {
-                EBdd(BddPlan::ConstTrue) => Some(SBool(true)),
-                EBdd(BddPlan::ConstFalse) => Some(SBool(false)),
-                EFloat(f) => Some(SFloat(*f)),
-                EProd(vs) => Some(SProd(
-                    vs.iter().map(Self::embed).collect::<Option<Vec<_>>>()?,
+                EBdd(BddPlan::ConstTrue) => Ok(SBool(true)),
+                EBdd(BddPlan::ConstFalse) => Ok(SBool(false)),
+                EFloat(f) => Ok(SFloat(*f)),
+                EProd(vs) => Ok(SProd(
+                    vs.iter().map(Self::embed).collect::<Result<Vec<_>>>()?,
                 )),
-                EInteger(i) => None, // this is sugar and not part of the core language
-                EBdd(_) => None,     // sampling lang cannot compile a formula
+                EInteger(i) => errors::semantics("integers in the exact lang is sugar and not part of the boundary"),
+                EBdd(_) => errors::semantics("sampling lang cannot compile a formula"),
             }
         }
     }

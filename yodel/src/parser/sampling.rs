@@ -41,6 +41,9 @@ pub fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVa
                 "sanf" => parse_sanf(src, c, node),
                 "identifier" => Anf::AVar(None, parse_str(src, &node)),
                 "svalue" => Anf::AVal((), parse_sval(src, c, &node)),
+                "sanfprod" => Anf::AnfProd(
+                    parse_vec(src, c, node, |a, b, c| parse_sanf(a, b, c)),
+                ),
                 "!" => Anf::Neg(Box::new(parse_sanf(src, c, node))),
                 "sanfbern" => Anf::AnfBernoulli((), Box::new(parse_sanf(src, c, node))),
                 "sanfpoisson" => Anf::AnfPoisson((), Box::new(parse_sanf(src, c, node))),

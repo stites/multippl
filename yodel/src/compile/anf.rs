@@ -7,6 +7,7 @@ use itertools::Itertools;
 use itertools::*;
 use rsdd::builder::bdd_builder::DDNNFPtr;
 use rsdd::builder::bdd_plan::BddPlan;
+use tracing::*;
 
 pub fn eval_sanf_var(ctx: &SCtx, d: &NamedVar, s: &str) -> Result<Vec<SVal>> {
     match ctx.substitutions.get(&d.id()) {
@@ -57,17 +58,24 @@ pub fn eval_eanf_numop<'a>(
     iop: impl Fn(usize, usize) -> usize,
     op: impl Fn(Box<AnfTr<EVal>>, Box<AnfTr<EVal>>) -> AnfTr<EVal>,
 ) -> Result<(EOutput, AnfTr<EVal>)> {
+    let span = tracing::span!(Level::DEBUG, "numop");
+    let _enter = span.enter();
+
     let (ol, bl) = eval_eanf(ctx, &bl)?;
     let (or, br) = eval_eanf(ctx, &br)?;
     match (&ol.out[..], &or.out[..]) {
         ([EVal::EFloat(l)], [EVal::EFloat(r)]) => {
-            let out = ctx.as_output(vec![EVal::EFloat(fop(*l, *r))]);
+            let x = fop(*l, *r);
+            tracing::debug!("{l} <fop> {r} = {x}");
+            let out = ctx.as_output(vec![EVal::EFloat(x)]);
             Ok((out.clone(), op(Box::new(bl), Box::new(br))))
         }
         ([EVal::EProd(l)], [EVal::EProd(r)]) => {
             let l = integers::from_prod(l)?;
             let r = integers::from_prod(r)?;
-            let out = ctx.as_output(vec![integers::as_onehot(iop(l, r))]);
+            let x = iop(l, r);
+            tracing::debug!("{l} <iop> {r} = {x}");
+            let out = ctx.as_output(vec![integers::as_onehot(x)]);
             Ok((out.clone(), op(Box::new(bl), Box::new(br))))
         }
         ([EVal::EInteger(l)], _) => return errors::erased(),
@@ -99,6 +107,10 @@ pub fn eval_eanf_bop<'a>(
     bop: impl Fn(Box<BddPlan>, Box<BddPlan>) -> BddPlan,
     op: impl Fn(Box<AnfTr<EVal>>, Box<AnfTr<EVal>>) -> AnfTr<EVal>,
 ) -> Result<(EOutput, AnfTr<EVal>)> {
+    let span = tracing::span!(Level::DEBUG, "binop");
+    let _enter = span.enter();
+    tracing::debug!("binop");
+
     let (ol, bl) = eval_eanf(ctx, &bl)?;
     let (or, br) = eval_eanf(ctx, &br)?;
     match (&ol.out[..], &or.out[..]) {
@@ -367,15 +379,27 @@ pub fn eval_eanf<'a>(ctx: &'a ECtx, a: &'a AnfAnn<EVal>) -> Result<(EOutput, Anf
     use Anf::*;
     match a {
         AVal(_, v) => {
+            let span = tracing::span!(Level::DEBUG, "val");
+            let _enter = span.enter();
+            tracing::debug!("val");
+
             let out = ctx.as_output(vec![v.clone()]);
             Ok((out.clone(), AVal(Output::exact(out), v.clone())))
         }
         AVar(d, s) => {
+            let span = tracing::span!(Level::DEBUG, "var");
+            let _enter = span.enter();
+            tracing::debug!("var");
+
             let v = eval_eanf_var(ctx, d, s)?;
             let out = ctx.as_output(v);
             Ok((out.clone(), AVar(out.pkg(), s.to_string())))
         }
         Neg(bl) => {
+            let span = tracing::span!(Level::DEBUG, "neg");
+            let _enter = span.enter();
+            tracing::debug!("neg");
+
             let (ol, bl) = eval_eanf(ctx, &bl)?;
             match &ol.out[..] {
                 [EVal::EBdd(bdd)] => {
@@ -388,10 +412,29 @@ pub fn eval_eanf<'a>(ctx: &'a ECtx, a: &'a AnfAnn<EVal>) -> Result<(EOutput, Anf
         Or(bl, br) => eval_eanf_bop(ctx, bl, br, BddPlan::Or, Or),
         And(bl, br) => eval_eanf_bop(ctx, bl, br, BddPlan::And, Or),
 
-        Plus(bl, br) => eval_eanf_numop(ctx, bl, br, |a, b| a + b, |a, b| a + b, Plus),
-        Minus(bl, br) => eval_eanf_numop(ctx, bl, br, |a, b| a - b, |a, b| a - b, Minus),
-        Mult(bl, br) => eval_eanf_numop(ctx, bl, br, |a, b| a * b, |a, b| a * b, Mult),
-        Div(bl, br) => eval_eanf_numop(ctx, bl, br, |a, b| a / b, |a, b| a / b, Div),
+        Plus(bl, br) => {
+            let span = tracing::span!(Level::DEBUG, "+");
+            let _enter = span.enter();
+            eval_eanf_numop(ctx, bl, br, |a, b| a + b, |a, b| a + b, Plus)
+        }
+        Minus(bl, br) => {
+            let span = tracing::span!(Level::DEBUG, "-");
+            let _enter = span.enter();
+
+            eval_eanf_numop(ctx, bl, br, |a, b| a - b, |a, b| a - b, Minus)
+        }
+        Mult(bl, br) => {
+            let span = tracing::span!(Level::DEBUG, "*");
+            let _enter = span.enter();
+
+            eval_eanf_numop(ctx, bl, br, |a, b| a * b, |a, b| a * b, Mult)
+        }
+        Div(bl, br) => {
+            let span = tracing::span!(Level::DEBUG, "/");
+            let _enter = span.enter();
+
+            eval_eanf_numop(ctx, bl, br, |a, b| a / b, |a, b| a / b, Div)
+        }
 
         GT(bl, br) => eval_eanf_cop(
             ctx,

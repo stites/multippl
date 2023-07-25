@@ -11,14 +11,27 @@ use crate::typeinf::grammar::ProgramInferable;
 use crate::typeinf::typeinference;
 use crate::uniquify::SymEnv;
 use rand::rngs::StdRng;
+use tracing::debug;
 
-#[derive(Default, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct Options {
     // pub seed: Option<u64>,
     pub seed: Option<StdRng>,
+    pub exact_only: bool, // strip all sample statements from a program.
     pub debug: bool, // overrides seed
     pub opt: bool,   // use optimizations
-    pub stats_window: u64,
+    pub stats_window: u64, // remove this?
+}
+impl Default for Options {
+    fn default() -> Self {
+        Options {
+            seed: None,
+            exact_only: false,
+            debug: false,
+            opt: false,
+            stats_window: 0,
+        }
+    }
 }
 impl Options {
     pub fn rng(&self) -> StdRng {
@@ -45,6 +58,7 @@ impl Options {
     }
     pub fn new(
         seed: Option<u64>,
+        exact_only: bool,
         debug: bool,       // overrides seed
         opt: bool,         // use optimizations
         stats_window: u64, // use optimizations
@@ -54,6 +68,7 @@ impl Options {
             debug,
             opt,
             stats_window,
+            exact_only,
         }
     }
 }
@@ -73,7 +88,7 @@ pub struct PartialROut {
     pub prg: ProgramTr,
 }
 impl PartialROut {
-    fn to_rout(&self, mgr: Mgr) -> ROut {
+    pub fn to_rout(&self, mgr: Mgr) -> ROut {
         ROut {
             mgr,
             out: self.out.clone(),
@@ -83,26 +98,50 @@ impl PartialROut {
         }
     }
 }
-pub fn run(code: &str) -> Result<ROut> {
-    let mut mgr = make_mgr(code)?;
-    let opt = Options::stoch();
-    let r = runner(code, &mut mgr, &mut opt.rng(), &opt)?;
-    Ok(r.to_rout(mgr))
+#[macro_export]
+macro_rules! run {
+    ($code:expr) => {{
+        let opt = $crate::pipeline::Options::stoch();
+        run!($code, opt)
+    }};
+    ($code:expr; --split exact) => {{
+        let mut opt = $crate::pipeline::Options::stoch();
+        opt.exact_only = true;
+        run!($code, opt)
+    }};
+    ($code:expr, $opt:expr) => {{
+        match $crate::pipeline::run($code, &$opt) {
+            Ok(o) => o,
+            Err(e) => panic!(
+                "\nCompiler Error!!!\n==============\n{}\n==============\n",
+                e
+            ),
+        }
+    }};
+
 }
 
-pub fn run_with(code: &str, opt: &Options) -> Result<ROut> {
+pub fn run (code:&str, opt:&Options) -> Result<ROut> {
     let mut mgr = make_mgr(code)?;
-    let r = runner(code, &mut mgr, &mut opt.rng(), opt)?;
+    let r = runner(code, &mut mgr, &mut opt.rng(), &opt)?;
     Ok(r.to_rout(mgr))
 }
 
 pub fn runner(code: &str, mgr: &mut Mgr, rng: &mut StdRng, opt: &Options) -> Result<PartialROut> {
     let p = crate::parser::program::parse(code)?;
+    tracing::debug!("\n{:?}", p);
+    tracing::debug!("program... parsed!");
+    let p = if opt.exact_only { p.strip_samples()? } else {p };
     let p = crate::typeinf::typeinference(&p)?;
+    tracing::debug!("types... inferred!");
     let p = crate::typecheck::typecheck(&p)?;
+    tracing::debug!("types... checked!");
     let p = crate::desugar::desugar(&p)?;
+    tracing::debug!("code... desugared!");
     let p = SymEnv::default().uniquify(&p)?.0;
+    tracing::debug!("symbols... uniquified!");
     let ar = LabelEnv::new().annotate(&p)?;
+    tracing::debug!("variables... annotated!");
     let p = ar.program;
     let maxlbl = ar.maxbdd.0;
 
@@ -110,6 +149,7 @@ pub fn runner(code: &str, mgr: &mut Mgr, rng: &mut StdRng, opt: &Options) -> Res
 
     let mut state = State::new(mgr, Some(rng), sample_pruning);
     let (out, ptrace) = state.eval_program(&p)?;
+    tracing::debug!("program... compiled!");
 
     Ok(PartialROut {
         out,

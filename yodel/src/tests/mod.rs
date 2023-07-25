@@ -1,259 +1,68 @@
-// use crate::compile::*;
-// use crate::grammar::*;
-// use crate::inference::*;
-// use crate::typeinf::grammar::*;
-// use crate::utils::render::*;
-// use crate::*;
+use crate::compile::*;
+use crate::grammar::*;
+use crate::inference::*;
+use crate::typeinf::grammar::*;
+use crate::utils::render::*;
+use crate::*;
 
-// use itertools::*;
-// use rsdd::sample::probability::*;
-// use std::any::{Any, TypeId};
-// use std::collections::HashMap;
-// use std::ops::Range;
-// use tracing::*;
-// use tracing_test::*;
+use itertools::*;
+use rsdd::sample::probability::*;
+use std::any::{Any, TypeId};
+use std::collections::HashMap;
+use std::ops::Range;
+use tracing::*;
+use tracing_test::*;
 
-// mod mls;
+mod mls;
 
-// const USE_OPT: bool = false;
-// const USE_DEBUG: bool = false;
+const USE_OPT: bool = false;
+const USE_DEBUG: bool = false;
 
-// pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &ProgramInferable) {
-//     let precision = precision.unwrap_or_else(|| 0.01);
-//     let n = n.unwrap_or_else(|| 10000);
-//     let exact = inference::exact(&p.strip_samples().unwrap());
-//     let (approx, _) = importance_weighting_h(
-//         n,
-//         p,
-//         &Options {
-//             opt: USE_OPT,
-//             debug: USE_DEBUG,
-//             // seed: Some(9),
-//             ..Default::default()
-//         },
-//     );
-//     debug!("exact:  {:?}", exact);
-//     debug!("approx: {:?}", approx);
+pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &str) {
+    let precision = precision.unwrap_or_else(|| 0.01);
+    let n = n.unwrap_or_else(|| 10000);
+    let exact = inference::exact(&p);
+    let (approx, _) = importance_weighting_h(
+        n,
+        p,
+        &Options {
+            opt: USE_OPT,
+            debug: USE_DEBUG,
+            // seed: Some(9),
+            ..Default::default()
+        },
+    );
+    debug!("exact:  {:?}", exact);
+    debug!("approx: {:?}", approx);
 
-//     assert_eq!(
-//         exact.len(),
-//         approx.len(),
-//         "[check_inv][{s}][mismatch shape] compiled exact queries {}, but approx returned results {}",
-//         renderfloats(&exact, false),
-//         renderfloats(&approx, false),
-//     );
-//     izip!(exact, approx)
-//         .enumerate()
-//         .for_each(|(i, (ext, apx))| {
-//             let ret = (ext - apx).abs() < precision;
-//             let i = i + 1;
-//             assert!(
-//                 ret,
-//                 "[check_inv][{s}#{i}][err]((exact: {ext}) - (approx: {apx})).abs < {precision}"
-//             );
-//         });
-// }
-
-// // #[test]
-// // #[ignore]
-// // #[traced_test]
-// // fn optimization_eliminates_variables() {
-// //     let opt = Options {
-// //         opt: true,
-// //         debug: false,
-// //         seed: Some(3),
-// //     };
-// //     let mk = |ret: EExprInferable| {
-// //         Program::EBody(lets![
-// //             "x" ;= flip!(1/3);
-// //             "y" ;= sample!(
-// //                 lets![
-// //                     "x0" ;= flip!(1/5);
-// //                     ...? b!("x0" || "x")
-// //                 ]);
-// //            "_" ;= observe!(b!("x" || "y")); // is this a problem?
-// //            ...? ret
-
-// //         ])
-// //     };
-// //     // (|p| check_invariant("free2/x*y ", None, None, &p))(mk(q!("x" x "y")));
-// //     // (|p| debug_approx("free2/x*y", vec![0.714285714], &p, 5))(mk(b!("x")));
-// //     let px = mk(var!("x"));
-// //     let py = mk(var!("y"));
-
-// //     let mut mgr = crate::make_mgr(&py);
-
-// //     // let (approx, _) = importance_weighting_h(
-// //     //     1,
-// //     //     &py,
-// //     //     &opt,
-// //     // );
-// //     let (cs, inv, sis) = crate::runner_h(&px, &mut mgr, &opt).unwrap();
-// //     cs.into_iter().for_each(|c| {
-// //         assert_eq!(c.samples_opt.len(), 1);
-// //         let (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
-// //         debug!("{:?}", ps);
-// //         debug!("{:#?}", stats);
-// //     });
-// //     let mk = Program::EBody(lets![
-// //         "x" ;= flip!(1/3);
-// //         "y" ;= sample!(flip!(1/5));
-// //        ...? var!("y")
-
-// //     ]);
-// //     let mut mgr = crate::make_mgr(&mk);
-// //     let (cs, inv, sis) = crate::runner_h(&mk, &mut mgr, &opt).unwrap();
-// //     cs.into_iter().for_each(|c| {
-// //         assert_eq!(c.samples_opt.len(), 1);
-// //         let (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
-// //         debug!("{:?}", ps);
-// //         debug!("{:#?}", stats);
-// //     });
-
-// //     // =======================  above is correct ================== //
-// //     let mk = Program::EBody(lets![
-// //         "x" ;= flip!(1/3);
-// //         "tpl" ;= sample!(
-// //                 lets![
-// //                     "t0" ;= flip!(1/2);
-// //                     "t1" ;= flip!(1/2);
-// //                     ...? b!("t0", "t1")
-// //                 ]);
-// //         "fin" ;= fst!("tpl");
-// //        ...? var!("fin")
-
-// //     ]);
-// //     let mut mgr = crate::make_mgr(&mk);
-// //     let (cs, inv) = crate::runner_h(&mk, &mut mgr, &opt).unwrap();
-// //     cs.into_iter().for_each(|c| {
-// //         assert_eq!(c.samples_opt.len(), 2);
-// //         let (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
-// //         debug!("{:?}", ps);
-// //         debug!("{:#?}", stats);
-// //     });
-// //     // ===================  below is incorrect ================== //
-// //     use crate::grids::*;
-// //     let mk_probability = |_ix, _p| Probability::new(0.5);
-// //     let schema = GridSchema::new_from_fn(
-// //         2,
-// //         true,
-// //         None,
-// //         None,
-// //         Default::default(),
-// //         None,
-// //         &mk_probability,
-// //     );
-// //     let grid = make::grid(schema);
-// //     let mut mgr = crate::make_mgr(&grid);
-// //     let (cs, inv, sis) = crate::runner_h(&grid, &mut mgr, &opt).unwrap();
-// //     cs.into_iter().for_each(|c| {
-// //         let (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
-// //         debug!("{:?}", ps);
-// //         debug!("{:#?}", stats);
-// //         todo!();
-// //     });
-// // }
+    assert_eq!(
+        exact.len(),
+        approx.len(),
+        "[check_inv][{s}][mismatch shape] compiled exact queries {}, but approx returned results {}",
+        renderfloats(&exact, false),
+        renderfloats(&approx, false),
+    );
+    izip!(exact, approx)
+        .enumerate()
+        .for_each(|(i, (ext, apx))| {
+            let ret = (ext - apx).abs() < precision;
+            let i = i + 1;
+            assert!(
+                ret,
+                "[check_inv][{s}#{i}][err]((exact: {ext}) - (approx: {apx})).abs < {precision}"
+            );
+        });
+}
 
 // #[test]
-// // #[traced_test]
-// fn free_variables_0() {
-//     let mk = |ret: EExprInferable| {
-//         program!(lets![
-//            "x" ;= flip!(1/3);
-//            "y" ;= sample!(var!("x"));
-//            ...? ret
-//         ])
+// #[ignore]
+// #[traced_test]
+// fn optimization_eliminates_variables() {
+//     let opt = Options {
+//         opt: true,
+//         debug: false,
+//         seed: Some(3),
 //     };
-//     let n = 40000;
-
-//     check_approx("free/x,y", vec![1.0 / 3.0, 1.0 / 3.0], &mk(b!("x", "y")), n);
-//     // check_approx1("free/y ", 1.0 / 3.0, &mk(var!("y")), n);
-
-//     check_invariant("free/y,x", None, None, &mk(b!("y", "x")));
-//     // check_invariant("free/x ", None, None, &mk(var!("x")));
-// }
-
-// pub fn check_inference(
-//     infname: &str,
-//     inf: &dyn Fn(&ProgramInferable) -> (Vec<f64>, Option<WmcStats>),
-//     precision: f64,
-//     s: &str,
-//     fs: Vec<f64>,
-//     p: &ProgramInferable,
-// ) {
-//     check_inference_h(infname, inf, precision, s, fs, p, true)
-// }
-
-// pub fn check_inference_h(
-//     infname: &str,
-//     inf: &dyn Fn(&ProgramInferable) -> (Vec<f64>, Option<WmcStats>),
-//     precision: f64,
-//     s: &str,
-//     fs: Vec<f64>,
-//     p: &ProgramInferable,
-//     do_assert: bool,
-// ) {
-//     let prs = inf(p).0;
-//     assert_eq!(
-//         prs.len(),
-//         fs.len(),
-//         "[check_{infname}][{s}] check_inference compiled queries {}, tests expect results {}",
-//         renderfloats(&prs, false),
-//         renderfloats(&fs, false),
-//     );
-//     println!("query: {:?}", p.query());
-//     println!("expecting: {}", renderfloats(&fs, false));
-//     println!("computed:  {}", renderfloats(&prs, false));
-//     izip!(prs, fs).enumerate().for_each(|(i, (pr, f))| {
-//         let ret = (f - pr).abs() < precision;
-//         let i = i + 1;
-//         if do_assert {
-//             assert!(
-//                 ret,
-//                 "[check_{infname}][{s}#{i}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"
-//             );
-//         } else {
-//             debug!("[check_{infname}][{s}#{i}][{ret}]((expected: {f}) - (actual: {pr})).abs < {precision}: {ret}");
-//         }
-//     });
-// }
-
-// pub fn check_exact(s: &str, f: Vec<f64>, p: &ProgramInferable) {
-//     let p = p.strip_samples().unwrap();
-//     debug!("program: {:#?}", &p);
-//     check_inference("exact", &inference::exact_with_h, 0.000001, s, f, &p);
-// }
-// pub fn check_exact1(s: &str, f: f64, p: &ProgramInferable) {
-//     check_exact(s, vec![f], p)
-// }
-// pub fn check_approx(s: &str, f: Vec<f64>, p: &ProgramInferable, n: usize) {
-//     check_inference(
-//         "approx",
-//         &|p| {
-//             importance_weighting_h(
-//                 n,
-//                 p,
-//                 &Options {
-//                     opt: USE_OPT,
-//                     debug: USE_DEBUG,
-//                     // seed: Some(9),
-//                     ..Default::default()
-//                 },
-//             )
-//         },
-//         0.01,
-//         s,
-//         f,
-//         p,
-//     );
-// }
-// pub fn check_approx1(s: &str, f: f64, p: &ProgramInferable, n: usize) {
-//     check_approx(s, vec![f], p, n)
-// }
-
-// #[test]
-// // #[traced_test]
-// fn free_variable_2_inv() {
 //     let mk = |ret: EExprInferable| {
 //         Program::EBody(lets![
 //             "x" ;= flip!(1/3);
@@ -267,15 +76,202 @@
 
 //         ])
 //     };
-//     (|p| check_invariant("free2/x*y ", None, None, &p))(mk(q!("x" x "y")));
-//     (|p| check_approx("free2/x*y", vec![0.714285714], &p, 50000))(mk(b!("x")));
-//     (|p| check_approx("---------", vec![1.000000000], &p, 50000))(mk(b!("y")));
-//     // (|p| debug_approx("free2/x*y", vec![0.714285714, 1.0, 1.0, 0.714285714], &p, 5))(mk(
-//     //     q!("x" x "y"),
-//     // ));
+//     // (|p| check_invariant("free2/x*y ", None, None, &p))(mk(q!("x" x "y")));
+//     // (|p| debug_approx("free2/x*y", vec![0.714285714], &p, 5))(mk(b!("x")));
+//     let px = mk(var!("x"));
+//     let py = mk(var!("y"));
+//     let mut mgr = crate::make_mgr(&py);
+
+//     // let (approx, _) = importance_weighting_h(
+//     //     1,
+//     //     &py,
+//     //     &opt,
+//     // );
+//     let (cs, inv, sis) = crate::runner_h(&px, &mut mgr, &opt).unwrap();
+//     cs.into_iter().for_each(|c| {
+//         assert_eq!(c.samples_opt.len(), 1);
+//         let (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
+//         debug!("{:?}", ps);
+//         debug!("{:#?}", stats);
+//     });
+//     let mk = Program::EBody(lets![
+//         "x" ;= flip!(1/3);
+//         "y" ;= sample!(flip!(1/5));
+//        ...? var!("y")
+
+//     ]);
+//     let mut mgr = crate::make_mgr(&mk);
+//     let (cs, inv, sis) = crate::runner_h(&mk, &mut mgr, &opt).unwrap();
+//     cs.into_iter().for_each(|c| {
+//         assert_eq!(c.samples_opt.len(), 1);
+//         let (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
+//         debug!("{:?}", ps);
+//         debug!("{:#?}", stats);
+//     });
+
+//     // =======================  above is correct ================== //
+//     let mk = Program::EBody(lets![
+//         "x" ;= flip!(1/3);
+//         "tpl" ;= sample!(
+//                 lets![
+//                     "t0" ;= flip!(1/2);
+//                     "t1" ;= flip!(1/2);
+//                     ...? b!("t0", "t1")
+//                 ]);
+//         "fin" ;= fst!("tpl");
+//        ...? var!("fin")
+
+//     ]);
+//     let mut mgr = crate::make_mgr(&mk);
+//     let (cs, inv) = crate::runner_h(&mk, &mut mgr, &opt).unwrap();
+//     cs.into_iter().for_each(|c| {
+//         assert_eq!(c.samples_opt.len(), 2);
+//         let (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
+//         debug!("{:?}", ps);
+//         debug!("{:#?}", stats);
+//     });
+//     // ===================  below is incorrect ================== //
+//     use crate::grids::*;
+//     let mk_probability = |_ix, _p| Probability::new(0.5);
+//     let schema = GridSchema::new_from_fn(
+//         2,
+//         true,
+//         None,
+//         None,
+//         Default::default(),
+//         None,
+//         &mk_probability,
+//     );
+//     let grid = make::grid(schema);
+//     let mut mgr = crate::make_mgr(&grid);
+//     let (cs, inv, sis) = crate::runner_h(&grid, &mut mgr, &opt).unwrap();
+//     cs.into_iter().for_each(|c| {
+//         let (ps, stats) = wmc_prob_opt(&mut mgr, &c, &inv, &sis);
+//         debug!("{:?}", ps);
+//         debug!("{:#?}", stats);
+//         todo!();
+//     });
 // }
 
-// pub fn debug_approx(s: &str, f: Vec<f64>, p: &ProgramInferable, n: usize) {
+#[test]
+#[traced_test]
+fn free_variables_0() {
+    let mk = |ret: &str| {
+        r#"exact {
+  let x = flip (1.0/3.0) in
+  let y = x in
+  "#.to_owned() + ret + "\n}"
+    };
+    let n = 1000;
+
+    check_approx("free/x,y", vec![1.0 / 3.0, 1.0 / 3.0], &mk("(x, y)"), n);
+    check_approx1("free/y ", 1.0 / 3.0, &mk("y"), n);
+
+    // check_invariant("free/y,x", None, None, &mk(b!("y", "x")));
+    // check_invariant("free/x ", None, None, &mk(var!("x")));
+}
+
+pub fn check_inference(
+    infname: &str,
+    inf: &dyn Fn(&str) -> (Vec<f64>, Option<WmcStats>),
+    precision: f64,
+    s: &str,
+    fs: Vec<f64>,
+    p: &str,
+) {
+    check_inference_h(infname, inf, precision, s, fs, p, true)
+}
+
+pub fn check_inference_h(
+    infname: &str,
+    inf: &dyn Fn(&str) -> (Vec<f64>, Option<WmcStats>),
+    precision: f64,
+    s: &str,
+    fs: Vec<f64>,
+    p: &str,
+    do_assert: bool,
+) {
+    println!("program:\n{}", p);
+    let prs = inf(p).0;
+    assert_eq!(
+        prs.len(),
+        fs.len(),
+        "[check_{infname}][{s}] check_inference compiled queries {}, tests expect results {}",
+        renderfloats(&prs, false),
+        renderfloats(&fs, false),
+    );
+    // println!("query: {:?}", p.query());
+    println!("expecting: {}", renderfloats(&fs, false));
+    println!("computed:  {}", renderfloats(&prs, false));
+    izip!(prs, fs).enumerate().for_each(|(i, (pr, f))| {
+        let ret = (f - pr).abs() < precision;
+        let i = i + 1;
+        if do_assert {
+            assert!(
+                ret,
+                "[check_{infname}][{s}#{i}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"
+            );
+        } else {
+            debug!("[check_{infname}][{s}#{i}][{ret}]((expected: {f}) - (actual: {pr})).abs < {precision}: {ret}");
+        }
+    });
+}
+
+pub fn check_exact(s: &str, f: Vec<f64>, p: &str) {
+    debug!("program:\n{}", &p);
+    check_inference("exact", &inference::exact_with_h, 0.000001, s, f, &p);
+}
+pub fn check_exact1(s: &str, f: f64, p: &str) {
+    check_exact(s, vec![f], p)
+}
+pub fn check_approx(s: &str, f: Vec<f64>, p: &str, n: usize) {
+    check_inference(
+        "approx",
+        &|p| {
+            importance_weighting_h(
+                n,
+                p,
+                &Options {
+                    opt: USE_OPT,
+                    debug: USE_DEBUG,
+                    // seed: Some(9),
+                    ..Default::default()
+                },
+            )
+        },
+        0.01,
+        s,
+        f,
+        p,
+    );
+}
+pub fn check_approx1(s: &str, f: f64, p: &str, n: usize) {
+    check_approx(s, vec![f], p, n)
+}
+pub fn allmarg(x: &str, y:&str) -> String {
+    format!("({x}, {y}, {x} || {y}, {x} && {y})")
+}
+#[test]
+// #[traced_test]
+fn free_variable_2_inv() {
+    let mk = |ret: &str| {
+(r#"exact {
+  let x = flip (1.0/3.0) in
+  let y = (let x0 = flip 1.0 / 5.0 in x0 || x) in
+  let _ = observe (x || y) in
+  "#.to_owned() + ret + "\n}").to_string()
+    };
+    let n = 500;
+    (|p: String| check_invariant("free2/x*y ", None, None, &p))(mk(&allmarg("x", "y")));
+    (|p: String| check_approx("free2/x*y", vec![0.714285714], &p, n))(mk(&"x"));
+    (|p: String| check_approx("---------", vec![1.000000000], &p, n))(mk(&"y"));
+    (|p: String| check_approx("---------", vec![0.714285714, 1.0, 1.0, 0.714285714], &p, n))(mk(&allmarg("x", "y")));
+    // (|p| debug_approx("free2/x*y", vec![0.714285714, 1.0, 1.0, 0.714285714], &p, 5))(mk(
+    //     q!("x" x "y"),
+    // ));
+}
+
+// pub fn debug_approx(s: &str, f: Vec<f64>, p: &str, n: usize) {
 //     check_inference(
 //         "debug",
 //         &|p| {
@@ -296,7 +292,7 @@
 //         p,
 //     );
 // }
-// pub fn debug_approx1(s: &str, f: f64, p: &ProgramInferable, n: usize) {
+// pub fn debug_approx1(s: &str, f: f64, p: &str, n: usize) {
 //     debug_approx(s, vec![f], p, n)
 // }
 // pub fn nfail_approx(s: &str, f: Vec<f64>, p: &ProgramInferable, n: usize) {
@@ -349,176 +345,141 @@
 // // pub fn check_approx1_conc(s: &str, f: f64, p: &ProgramInferable, n: usize) {
 // //     check_approx_conc(s, vec![f], p, n)
 // // }
-// // pub fn check_approx_seeded(s: &str, f: Vec<f64>, p: &ProgramInferable, n: usize, seeds: &Vec<u64>) {
-// //     check_inference(
-// //         "approx",
-// //         &|env, p| importance_weighting_seeded(seeds.clone(), n, p),
-// //         0.01,
-// //         s,
-// //         f,
-// //         p,
-// //     );
-// // }
-// // pub fn check_approx_seeded1(s: &str, f: f64, p: &ProgramInferable, n: usize, seeds: &Vec<u64>) {
-// //     check_approx_seeded(s, vec![f], p, n, seeds)
-// // }
 
-// #[test]
-// fn program00() {
-//     let p00 = lets!["x" ;= val!(true); in var!("x")];
-//     check_exact("p00", vec![1.0], &program!(p00));
+// pub fn check_approx_seeded(s: &str, f: Vec<f64>, p: &str, n: usize, seeds: &Vec<u64>) {
+//     check_inference(
+//         "approx",
+//         &|env, p| importance_weighting_h(seeds.clone(), n, p),
+//         0.01,
+//         s,
+//         f,
+//         p,
+//     );
 // }
-// #[test]
-// fn program01() {
-//     let p01 = lets![
-//         "x" ;= flip!(1.0/3.0);
-//         ...? var!("x")
-//     ];
-//     check_exact1("p01", 1.0 / 3.0, &program!(p01));
-// }
-// #[test]
-// fn program02() {
-//     let mk02 = |ret: EExprInferable| {
-//         Program::EBody(lets![
-//             "x" ;= flip!(1.0/3.0);
-//             "y" ;= flip!(1.0/4.0);
-//             ...? ret
-//         ])
-//     };
-//     check_exact1("p02/y  ", 3.0 / 12.0, &mk02(b!("y")));
-//     check_exact1("p02/x  ", 4.0 / 12.0, &mk02(b!("x")));
-//     check_exact1("p02/x|y", 6.0 / 12.0, &mk02(b!("x" || "y")));
-//     check_exact1("p02/x&y", 1.0 / 12.0, &mk02(b!("x" && "y")));
+// pub fn check_approx_seeded1(s: &str, f: f64, p: &str, n: usize, seeds: &Vec<u64>) {
+//     check_approx_seeded(s, vec![f], p, n, seeds)
 // }
 
-// #[test]
-// fn program03() {
-//     let mk03 = |ret: EExprInferable| {
-//         Program::EBody(lets![
-//             "x"  ;= flip!(1.0/3.0);
-//             "y"  ;= flip!(1.0/4.0);
-//             "_"  ;= observe!(b!("x" || "y"));
-//             ...? ret
-//         ])
-//     };
-//     check_exact1("p03/y  ", 3.0 / 6.0, &mk03(b!("y")));
-//     check_exact1("p03/x  ", 4.0 / 6.0, &mk03(b!("x")));
-//     check_exact1("p03/x|y", 6.0 / 6.0, &mk03(b!("x" || "y")));
-//     check_exact1("p03/x&y", 1.0 / 6.0, &mk03(b!("x" && "y")));
-// }
+#[test]
+fn program00() {
+    check_exact("p00", vec![1.0], "exact { let x = true in x }");
+}
+#[test]
+fn program01() {
+    check_exact1("p01", 1.0 / 3.0, "exact {let x = flip 1.0 / 3.0 in x}");
+}
+#[test]
+fn program02() {
+    let mk02 = |ret: &str| r#" exact {
+    let x = flip 1.0 / 3.0 in
+    let y = flip 1.0 / 4.0 in
+    "#.to_owned() + ret + "\n}";
 
-// // #[test]
-// // // #[traced_test]
-// // fn program04_seeded() {
-// //     let mk04 = |ret: EExprInferable| {
-// //         Program::EBody(lets![
-// //             "x"  ;= sample!(flip!(1/3));
-// //             "y"  ;= flip!(1/4);
-// //             "_"  ;= observe!(b!("x" || "y"));
-// //             ...? ret
-// //         ])
-// //     };
-// //     // perfect seeds of [F F T]
-// //     let s = vec![1, 1, 7];
-// //     let n = 1000;
-// //     check_approx_seeded1("p04s/y  ", 3.0 / 6.0, &mk04(b!("y")), n, &s);
-// //     check_approx_seeded1("p04s/x  ", 4.0 / 6.0, &mk04(b!("x")), n, &s);
-// //     check_approx_seeded1("p04s/x|y", 6.0 / 6.0, &mk04(b!("x" || "y")), n, &s);
-// //     check_approx_seeded1("p04s/x&y", 1.0 / 6.0, &mk04(b!("x" && "y")), n, &s);
-// // }
+    check_exact1("p02/y  ", 3.0 / 12.0, &mk02("y"));
+    check_exact1("p02/x  ", 4.0 / 12.0, &mk02("x"));
+    check_exact1("p02/x|y", 6.0 / 12.0, &mk02("x || y"));
+    check_exact1("p02/x&y", 1.0 / 12.0, &mk02("x && y"));
+}
 
-// #[test]
-// fn program04_approx() {
-//     let mk04 = |ret: EExprInferable| {
-//         program!(lets![
-//             "x"  ;= sample!(flip!(1/3));
-//             "y"  ;= flip!(1/4);
-//             "_"  ;= observe!(b!("x" || "y"));
-//             ...? ret
-//         ])
-//     };
-//     // check_approx(
-//     //     "p04",
-//     //     vec![3.0 / 6.0, 4.0 / 6.0, 6.0 / 6.0, 1.0 / 6.0],
-//     //     &mk04(q!("y" x "x")),
-//     //     10000,
-//     // );
-//     // check_approx1("p04/x", 3.0 / 6.0, &mk04(b!("x")), 100);
-//     // check_approx1("p04/x|y", 6.0 / 6.0, &mk04(b!("x" || "y")), 10000);
-//     // check_approx1("p04/x&y", 1.0 / 6.0, &mk04(b!("x" && "y")), 10000);
-
-//     check_invariant("p04", None, None, &mk04(q!("y" x "x")));
-//     // check_invariant("p04/x  ", None, None, &mk04(b!("x")));
-//     // check_invariant("p04/x|y", None, None, &mk04(b!("x" || "y")));
-//     // check_invariant("p04/x&y", None, None, &mk04(b!("x" && "y")));
-// }
+#[test]
+fn program03() {
+    let mk = |ret: &str| r#" exact {
+    let x = flip 1.0 / 3.0 in
+    let y = flip 1.0 / 4.0 in
+    let _ = observe x || y in
+    "#.to_owned() + ret + "\n}";
+    check_exact1("p03/y  ", 3.0 / 6.0, &mk("y"));
+    check_exact1("p03/x  ", 4.0 / 6.0, &mk("x"));
+    check_exact1("p03/x|y", 6.0 / 6.0, &mk("x || y"));
+    check_exact1("p03/x&y", 1.0 / 6.0, &mk("x && y"));
+}
 
 // #[test]
 // // #[traced_test]
-// fn tuple0() {
-//     let p = {
-//         program!(lets![
-//             "y"  ;= b!(false, true);
-//             ...? fst!(b!(@anf "y"))
-//         ])
-//     };
-//     check_exact("tuples0/F, ", vec![0.0], &p);
-//     let p = {
-//         program!(lets![
-//             "y"  ;= b!(true);
-//             ...? b!("y", true)
-//         ])
-//     };
-//     check_exact("tuples0/T,T", vec![1.0, 1.0], &p);
-//     let p = {
-//         program!(lets![
-//             "y" ;= b!(true);
-//             "z" ;= b!("y", true);
-//             ...? b!("z")
-//         ])
-//     };
-//     check_exact("tuples0/T,T", vec![1.0, 1.0], &p);
-//     let mk = |ret: EExprInferable| {
-//         program!(lets![
-//             "y" ;= b!(true);
-//             "z" ;= b!("y", true);
-//             ...? ret
-//         ])
-//     };
-//     check_exact("tuples0/T, ", vec![1.0], &mk(fst!(b!(@anf "z"))));
-//     check_exact("tuples0/ ,T", vec![1.0], &mk(snd!(b!(@anf "z"))));
+// fn program04_seeded() {
+//     let mk = |ret: &str| r#" exact {
+//     let x = sample { bern(1.0 / 3.0) } in
+//     let y = flip 1.0 / 4.0 in
+//     let _ = observe x || y in
+//     "#.to_owned() + ret + "\n}";
+
+//     // perfect seeds of [F F T]
+//     let s = vec![1, 1, 7];
+//     let n = 1000;
+//     check_approx_seeded1("p04s/y  ", 3.0 / 6.0, &mk("y"), n, &s);
+//     check_approx_seeded1("p04s/x  ", 4.0 / 6.0, &mk("x"), n, &s);
+//     check_approx_seeded1("p04s/x|y", 6.0 / 6.0, &mk("x || y"), n, &s);
+//     check_approx_seeded1("p04s/x&y", 1.0 / 6.0, &mk("x && y"), n, &s);
 // }
 
-// #[test]
-// // #[traced_test]
-// fn tuple1() {
-//     let mk = |ret: EExprInferable| {
-//         Program::EBody(lets![
-//             "x"     ;= flip!(1.0/3.0);
-//             "y"     ;= flip!(1.0/4.0);
-//             "z" ;= b!("x", "y");
-//             ...? ret
-//         ])
-//     };
-//     check_exact("tuple1/x,y", vec![1.0 / 3.0, 1.0 / 4.0], &mk(b!("x", "y")));
-//     check_exact("tuple1/y,x", vec![1.0 / 4.0, 1.0 / 3.0], &mk(b!("y", "x")));
+#[test]
+// #[traced_test]
+fn program04_approx() {
+    let mk = |ret: &str| r#"exact {
+    let x = sample { ~bern(1.0 / 3.0) } in
+    let y = flip 1.0 / 4.0 in
+    let _ = observe x || y in
+    "#.to_owned() + ret + "\n}";
 
-//     check_exact("tuple1/x, ", vec![1.0 / 3.0], &mk(fst!(b!(@anf "z"))));
-//     check_exact("tuple1/ ,y", vec![1.0 / 4.0], &mk(snd!(b!(@anf "z"))));
-// }
-// #[test]
-// fn sample_tuple() {
-//     let p = Program::EBody(lets![
-//         "z" ;= sample!(lets![
-//               "l" ;= flip!(1/3);
-//               "r" ;= flip!(1/4);
-//               ...? b!("l", "r")
-//         ]);
-//        ...? b!("z")
-//     ]);
-//     check_approx("sharedtuple", vec![1.0 / 3.0, 1.0 / 4.0], &p, 20000);
-//     check_invariant("sharedtuple ", None, None, &p);
-// }
+    let n = 10_000;
+    check_approx1("p04s/y  ", 3.0 / 6.0, &mk("y"), n);
+    check_approx1("p04s/x  ", 4.0 / 6.0, &mk("x"), n);
+    check_approx1("p04s/x|y", 6.0 / 6.0, &mk("x || y"), n);
+    check_approx1("p04s/x&y", 1.0 / 6.0, &mk("x && y"), n);
+    // check_invariant("p04", None, None, &mk(&allmarg("y", "x")));
+}
+
+// FIXME
+#[test]
+#[traced_test]
+fn tuple0() {
+    let p = r#"exact { let x = (false, true) in fst x }"#;
+    check_exact("tuples0/F, ", vec![0.0], &p);
+
+    let p = r#"exact { let y = true in (y, true) }"#;
+    check_exact("tuples0/T,T", vec![1.0, 1.0], &p);
+
+    let p = r#"exact {
+    let y = true in
+    let z = (y, true) in
+    z"#.to_owned() + "" + "\n}";
+    check_exact("tuples0/T,T", vec![1.0, 1.0], &p);
+
+    let mk = |ret: &str| r#"exact {
+    let y = true in
+    let z = (y, true) in
+    "#.to_owned() + ret + "\n}";
+    check_exact("tuples0/T, ", vec![1.0], &mk("fst z"));
+    check_exact("tuples0/ ,T", vec![1.0], &mk("snd z"));
+}
+
+// FIXME
+#[test]
+// #[traced_test]
+fn tuple1() {
+    let mk = |ret: &str| r#"exact {
+    let x = flip (1.0/3.0) in
+    let y = flip (1.0/4.0) in
+    let z = (x, y) in
+    "#.to_owned() + ret + "\n}";
+
+    check_exact("tuple1/x,y", vec![1.0 / 3.0, 1.0 / 4.0], &mk("(x, y)"));
+    check_exact("tuple1/y,x", vec![1.0 / 4.0, 1.0 / 3.0], &mk("(y, x)"));
+
+    check_exact("tuple1/x, ", vec![1.0 / 3.0], &mk("fst z"));
+    check_exact("tuple1/ ,y", vec![1.0 / 4.0], &mk("snd z"));
+}
+#[test]
+fn sample_tuple() {
+    let p = r#"exact {
+    let z = sample {
+        l ~ bern(1.0/3.0);
+        r ~ bern(1.0/4.0);
+        (l, r)
+    } in z"#.to_owned() + "\n}";
+    check_approx("sharedtuple", vec![1.0 / 3.0, 1.0 / 4.0], &p, 20000);
+    // check_invariant("sharedtuple ", None, None, &p);
+}
 
 // #[test]
 // fn test_big_tuple() {
@@ -549,9 +510,9 @@
 //     check_exact("3-tuple", vec![0.5, 0.5, 0.5, 0.5, 0.5], &p);
 // }
 
-// // ===================================================================== //
-// //                          free variable tests                          //
-// // ===================================================================== //
+// ===================================================================== //
+//                          free variable tests                          //
+// ===================================================================== //
 
 // #[test]
 // // #[traced_test]

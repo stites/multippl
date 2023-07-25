@@ -75,6 +75,12 @@ impl Default for SymEnv {
 
 impl SymEnv {
     fn current_frame(&mut self) -> &mut HashSet<String> {
+        match self.scope.iter().last() {
+            Some(_) => (),
+            None => {
+                self.scope.push_back(HashSet::new());
+            }
+        }
         self.scope.iter_mut().last().unwrap()
     }
     fn _fresh(&mut self, ovar: Option<String>) -> UniqueId {
@@ -85,6 +91,7 @@ impl SymEnv {
             None => format!("_{sym}"),
             Some(var) => {
                 // push named variables onto the current stack frame
+                // println!("var {var:?}");
                 let cur = self.current_frame();
                 cur.insert(var.clone());
                 var
@@ -449,9 +456,12 @@ mod tests {
     use tracing_test::traced_test;
 
     #[test]
+    #[traced_test]
     fn invalid_observe() {
+        println!("----------------------------------------------------");
         let res = SymEnv::default().uniquify(&pipeline(&program!(observe!(b!("x")))).unwrap());
         assert!(res.is_err());
+        println!("----------------------------------------------------");
         let mk = |ret: EExprInferable| {
             Program::EBody(lets![
                 "x" ; b!() ;= flip!(1/3);
@@ -467,6 +477,7 @@ mod tests {
         };
         let res = SymEnv::default().uniquify(&pipeline(&mk(b!("l"))).unwrap());
         assert!(res.is_err());
+        println!("----------------------------------------------------");
         let mut senv = SymEnv::default();
         let res = senv.uniquify(&pipeline(&mk(b!("x"))).unwrap());
         assert!(res.is_ok());

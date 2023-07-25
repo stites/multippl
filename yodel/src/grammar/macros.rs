@@ -188,7 +188,7 @@ macro_rules! snd {
     ( $x:expr ) => {{
         let i = $crate::EVal::EInteger(1);
         let i = $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, $crate::EVal>::AVal((), i);
-        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EAnf((), Box::new($crate::grammar::Anf::AnfPrj(Box::new(i), Box::new($x))))
+        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EAnf((), Box::new($crate::grammar::Anf::AnfPrj(Box::new($x), Box::new(i))))
         // $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EPrj(None, Box::new(i), Box::new($x))
     }};
 }
@@ -218,14 +218,14 @@ macro_rules! not {
 
 #[macro_export]
 macro_rules! prj {
-    ( $i:literal, $x:literal ) => {{
-        prj!($i, b!(@anf $x))
+    ( $x:literal, $i:literal ) => {{
+        prj!(b!(@anf $x), $i)
     }};
-    ( $i:literal, $x:expr ) => {{
+    ( $x:expr, $i:literal ) => {{
         let i = $crate::EVal::EInteger($i);
         let i = $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, $crate::EVal>::AVal((), i);
 
-        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EAnf((), Box::new(Anf::AnfPrj(Box::new(i), Box::new($x))))
+        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EAnf((), Box::new(Anf::AnfPrj(Box::new($x), Box::new(i))))
         // $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EPrj(None, Box::new(i), Box::new($x))
     }};
 }
@@ -237,7 +237,7 @@ macro_rules! fst {
     ( $x:expr ) => {{
         let i = $crate::EVal::EInteger(0);
         let i = $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, $crate::EVal>::AVal((), i);
-        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EAnf((), Box::new(Anf::AnfPrj(Box::new(i), Box::new($x))))
+        $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EAnf((), Box::new(Anf::AnfPrj(Box::new($x), Box::new(i))))
         // $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EPrj(None, Box::new(i), Box::new($x))
     }};
 }
