@@ -816,7 +816,13 @@ impl<'a> State<'a> {
                             let v = SVal::SFloat(v);
                             (q, v, d)
                         }
-                        Dist::Poisson(ps) => todo!(),
+                        Dist::Poisson(p) => {
+                            let dist = statrs::distribution::Poisson::new(*p).unwrap();
+                            let v = self.sample(dist) as u64;
+                            let q = statrs::distribution::Discrete::pmf(&dist, v);
+                            let v = SVal::SInt(v);
+                            (q, v, d)
+                        }
                     },
                     _ => panic!("semantic error, see note on SObserve in SExpr enum"),
                 };
@@ -838,41 +844,43 @@ impl<'a> State<'a> {
                 let (a_out, a) = crate::compile::anf::eval_sanf(&ctx, a)?;
                 let (d_out, dist) = crate::compile::anf::eval_sanf(&ctx, dist)?;
                 let q = match (&d_out.out[..], &a_out.out[..]) {
-                    ([SVal::SDist(Dist::Bern(param))], [SVal::SBool(b)]) => {
-                        let dist = statrs::distribution::Bernoulli::new(*param).unwrap();
-                        statrs::distribution::Discrete::pmf(&dist, *b as u64)
-                    }
-                    ([SVal::SDist(Dist::Discrete(ps))], [SVal::SInt(i)]) => {
-                        let dist = statrs::distribution::Categorical::new(&ps).unwrap();
-                        statrs::distribution::Discrete::pmf(&dist, *i as u64)
-                    }
-                    ([SVal::SDist(Dist::Dirichlet(ps))], [SVal::SVec(vs)]) => {
-                        let dist = statrs::distribution::Dirichlet::new(ps.to_vec()).unwrap();
+                    ([SVal::SDist(d)], [v]) => match (d, v) {
+                        (Dist::Bern(param), SVal::SBool(b)) => {
+                            let dist = statrs::distribution::Bernoulli::new(*param).unwrap();
+                            statrs::distribution::Discrete::pmf(&dist, *b as u64)
+                        }
+                        (Dist::Discrete(ps), SVal::SInt(i)) => {
+                            let dist = statrs::distribution::Categorical::new(&ps).unwrap();
+                            statrs::distribution::Discrete::pmf(&dist, *i as u64)
+                        }
+                        (Dist::Dirichlet(ps), SVal::SVec(vs)) => {
+                            let dist = statrs::distribution::Dirichlet::new(ps.to_vec()).unwrap();
 
-                        let vs = vs
-                            .iter()
-                            .map(|v| match v {
-                                SVal::SFloat(f) => Ok(*f),
-                                _ => errors::typecheck_failed("observe dirichlet"),
-                            })
-                            .collect::<Result<Vec<f64>>>()?;
-                        let vs = <nalgebra::base::DVector<f64> as From<Vec<f64>>>::from(vs);
+                            let vs = vs
+                                .iter()
+                                .map(|v| match v {
+                                    SVal::SFloat(f) => Ok(*f),
+                                    _ => errors::typecheck_failed("observe dirichlet"),
+                                })
+                                .collect::<Result<Vec<f64>>>()?;
+                            let vs = <nalgebra::base::DVector<f64> as From<Vec<f64>>>::from(vs);
 
-                        statrs::distribution::Continuous::pdf(&dist, &vs)
-                    }
-                    ([SVal::SDist(Dist::Uniform(lo, hi))], [SVal::SFloat(f)]) => {
-                        let dist = statrs::distribution::Uniform::new(*lo, *hi).unwrap();
-                        statrs::distribution::Continuous::pdf(&dist, *f)
-                    }
-                    ([SVal::SDist(Dist::Normal(mn, sd))], [SVal::SFloat(f)]) => {
-                        let dist = statrs::distribution::Normal::new(*mn, *sd).unwrap();
-                        statrs::distribution::Continuous::pdf(&dist, *f)
-                    }
-                    ([SVal::SDist(Dist::Beta(a, b))], [SVal::SFloat(f)]) => {
-                        let dist = statrs::distribution::Beta::new(*a, *b).unwrap();
-                        statrs::distribution::Continuous::pdf(&dist, *f)
-                    }
-                    ([SVal::SDist(_)], _) => panic!("new distribution encountered"),
+                            statrs::distribution::Continuous::pdf(&dist, &vs)
+                        }
+                        (Dist::Uniform(lo, hi), SVal::SFloat(f)) => {
+                            let dist = statrs::distribution::Uniform::new(*lo, *hi).unwrap();
+                            statrs::distribution::Continuous::pdf(&dist, *f)
+                        }
+                        (Dist::Normal(mn, sd), SVal::SFloat(f)) => {
+                            let dist = statrs::distribution::Normal::new(*mn, *sd).unwrap();
+                            statrs::distribution::Continuous::pdf(&dist, *f)
+                        }
+                        (Dist::Beta(a, b), SVal::SFloat(f)) => {
+                            let dist = statrs::distribution::Beta::new(*a, *b).unwrap();
+                            statrs::distribution::Continuous::pdf(&dist, *f)
+                        }
+                        (_, _) => panic!("new distribution encountered"),
+                    },
                     _ => panic!("semantic error, see note on SObserve in SExpr enum"),
                 };
 

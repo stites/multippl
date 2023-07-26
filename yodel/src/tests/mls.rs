@@ -143,7 +143,7 @@ mod tests {
       s2 || (s3 && !drop)
     }
     sample {
-      p <- poisson(0.4);
+      p ~ poisson(0.4);
       exact (iterate(diamond, true, p))
     }"#
         };
