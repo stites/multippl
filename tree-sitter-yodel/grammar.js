@@ -38,8 +38,8 @@ module.exports = grammar({
       $.eann,
       $.efst,
       $.esnd,
-      $.eprj,
-      $.eprod,
+//      $.eprj,
+//      $.eprod,
       $.eapp,
       prec(6, $.eanf),
       prec(5, seq('(', $.eexpr, ')'))
@@ -62,16 +62,20 @@ module.exports = grammar({
     esnd: $ => seq('snd', $.eanf),
 
     // sanfprj: $ => seq($.identifier, '[', $.sanf, ']'), // vector access
-    eprj: $ => choice(
-        seq($.identifier, '[', $.sanf, ']'),
+    eanfprj: $ => choice(
+        seq($.identifier, '[', $.eanf, ']'),
         // seq('prj', '(', $.eanf, ',', $.eanf, ')'),
     ),
 
-    eprod: $ => choice(
+    // eprod: $ => choice(
+    //   seq('(', $.eanf, ',', $.eanf, ')'),
+    //   seq('(', $.eanf, ',', repeat(seq($.eanf, ',')), $.eanf, ')'),
+    // ),
+
+    eanfprod: $ => choice(
       seq('(', $.eanf, ',', $.eanf, ')'),
       seq('(', $.eanf, ',', repeat(seq($.eanf, ',')), $.eanf, ')'),
     ),
-
 
     elet: $ => choice(
       seq('let', $.identifier, '=', $.eexpr, 'in', $.eexpr),
@@ -111,18 +115,26 @@ module.exports = grammar({
     compare_op: $ => choice('==', '<', '<=', '>', '>='),
 
     evalue: $ => choice(
-      prec(10, seq('(', $.evalue, ',', $.evalue, ')')),
-      prec(10, seq('(', $.evalue, ',', repeat(seq($.evalue, ',')), $.evalue, ')')),
+      $.evalueprod,
       $.bool,
       $.int,
       $.float,
     ),
+
+    evalueprod: $ => choice(
+      // must have highest precedence when composing with eexpr
+      prec(10, seq('(', $.evalue, ',', $.evalue, ')')),
+      prec(10, seq('(', $.evalue, ',', repeat(seq($.evalue, ',')), $.evalue, ')')),
+    ),
+
 
     eann: $ => prec.right(5, seq($.eexpr, ':', $.ety)),
 
     eanf: $ => choice(
       $.identifier,
       $.evalue,
+      $.eanfprod,
+      $.eanfprj,
       prec.left(2, seq($.eanf, $.numeric_op, $.eanf)),
       prec.left(3, seq($.eanf, $.bool_biop, $.eanf)),
       prec.left(4, seq($.eanf, $.compare_op, $.eanf)),

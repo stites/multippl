@@ -165,95 +165,6 @@ fn free_variable_2_inv() {
     // ));
 }
 
-// pub fn debug_approx(s: &str, f: Vec<f64>, p: &str, n: usize) {
-//     check_inference(
-//         "debug",
-//         &|p| {
-//             importance_weighting_h(
-//                 n,
-//                 p,
-//                 &Options {
-//                     opt: USE_OPT,
-//                     debug: USE_DEBUG,
-//                     // seed: Some(9),
-//                     ..Default::default()
-//                 },
-//             )
-//         },
-//         0.01,
-//         s,
-//         f,
-//         p,
-//     );
-// }
-// pub fn debug_approx1(s: &str, f: f64, p: &str, n: usize) {
-//     debug_approx(s, vec![f], p, n)
-// }
-// pub fn nfail_approx(s: &str, f: Vec<f64>, p: &ProgramInferable, n: usize) {
-//     check_inference_h(
-//         "debug",
-//         &|p| {
-//             importance_weighting_h(
-//                 n,
-//                 p,
-//                 &Options {
-//                     opt: USE_OPT,
-//                     debug: USE_DEBUG,
-//                     // seed: Some(9),
-//                     ..Default::default()
-//                 },
-//             )
-//         },
-//         0.01,
-//         s,
-//         f,
-//         p,
-//         false,
-//     );
-// }
-// pub fn nfail_approx1(s: &str, f: f64, p: &ProgramInferable, n: usize) {
-//     nfail_approx(s, vec![f], p, n)
-// }
-// // pub fn check_approx_conc(s: &str, f: Vec<f64>, p: &ProgramInferable, n: usize) {
-// //     let env_args = EnvArgs::default_args(None);
-// //     // let mut env = Env::from_args(&mut env_args);
-// //     let precision = 0.01;
-// //     let fs = f;
-// //     let i = "approx";
-// //     let prs = importance_weighting_conc(&env_args, n, p);
-// //     assert_eq!(
-// //         prs.len(),
-// //         fs.len(),
-// //         "check_inference compiled {} queries, tests expect {} results",
-// //         prs.len(),
-// //         fs.len(),
-// //     );
-// //     izip!(prs, fs).for_each(|(pr, f)| {
-// //         let ret = (f - pr).abs() < precision;
-// //         assert!(
-// //             ret,
-// //             "[check_{i}][{s}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"
-// //         );
-// //     });
-// // }
-// // pub fn check_approx1_conc(s: &str, f: f64, p: &ProgramInferable, n: usize) {
-// //     check_approx_conc(s, vec![f], p, n)
-// // }
-
-// pub fn check_approx_seeded(s: &str, f: Vec<f64>, p: &str, n: usize, seeds: &Vec<u64>) {
-//     check_inference(
-//         "approx",
-//         &|env, p| importance_weighting_h(seeds.clone(), n, p),
-//         0.01,
-//         s,
-//         f,
-//         p,
-//     );
-// }
-// pub fn check_approx_seeded1(s: &str, f: f64, p: &str, n: usize, seeds: &Vec<u64>) {
-//     check_approx_seeded(s, vec![f], p, n, seeds)
-// }
-
 #[test]
 fn program00() {
     check_exact("p00", vec![1.0], "exact { let x = true in x }");
@@ -342,11 +253,14 @@ fn program04_approx() {
 #[test]
 #[traced_test]
 fn tuple0() {
+    debug!("tuple0-0");
     let p = r#"exact { let x = (false, true) in fst x }"#;
     check_exact("tuples0/F, ", vec![0.0], &p);
 
+    debug!("tuple0-1");
     let p = r#"exact { let y = true in (y, true) }"#;
     check_exact("tuples0/T,T", vec![1.0, 1.0], &p);
+    debug!("tuple0-2");
 
     let p = r#"exact {
     let y = true in
@@ -356,6 +270,7 @@ fn tuple0() {
         + ""
         + "\n}";
     check_exact("tuples0/T,T", vec![1.0, 1.0], &p);
+    debug!("tuple0-3");
 
     let mk = |ret: &str| {
         r#"exact {
@@ -367,6 +282,7 @@ fn tuple0() {
             + "\n}"
     };
     check_exact("tuples0/T, ", vec![1.0], &mk("fst z"));
+    debug!("tuple0-4");
     check_exact("tuples0/ ,T", vec![1.0], &mk("snd z"));
 }
 
@@ -393,8 +309,9 @@ fn tuple1() {
 }
 #[test]
 fn sample_tuple() {
-    let p = r#"exact {
-    let z = sample {
+    let p = r#"
+    exact {
+      let z = sample {
         l ~ bern(1.0/3.0);
         r ~ bern(1.0/4.0);
         (l, r)

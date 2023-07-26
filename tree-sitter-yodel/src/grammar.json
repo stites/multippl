@@ -350,14 +350,6 @@
         },
         {
           "type": "SYMBOL",
-          "name": "eprj"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "eprod"
-        },
-        {
-          "type": "SYMBOL",
           "name": "eapp"
         },
         {
@@ -580,7 +572,7 @@
         }
       ]
     },
-    "eprj": {
+    "eanfprj": {
       "type": "CHOICE",
       "members": [
         {
@@ -596,7 +588,7 @@
             },
             {
               "type": "SYMBOL",
-              "name": "sanf"
+              "name": "eanf"
             },
             {
               "type": "STRING",
@@ -606,7 +598,7 @@
         }
       ]
     },
-    "eprod": {
+    "eanfprod": {
       "type": "CHOICE",
       "members": [
         {
@@ -1025,6 +1017,27 @@
       "type": "CHOICE",
       "members": [
         {
+          "type": "SYMBOL",
+          "name": "evalueprod"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "bool"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "int"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "float"
+        }
+      ]
+    },
+    "evalueprod": {
+      "type": "CHOICE",
+      "members": [
+        {
           "type": "PREC",
           "value": 10,
           "content": {
@@ -1097,18 +1110,6 @@
               }
             ]
           }
-        },
-        {
-          "type": "SYMBOL",
-          "name": "bool"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "int"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "float"
         }
       ]
     },
@@ -1143,6 +1144,14 @@
         {
           "type": "SYMBOL",
           "name": "evalue"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "eanfprod"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "eanfprj"
         },
         {
           "type": "PREC_LEFT",

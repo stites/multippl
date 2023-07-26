@@ -144,11 +144,11 @@ mod tests {
     }
     sample {
       p ~ poisson(0.4);
-      exact (iterate(diamond, true, p))
+      exact (iterate(diamond, true, p + 1))
     }"#
         };
 
-        let n = 1;
+        let n = 100;
 
         let _ = crate::inference::importance_weighting_h(1, &mk(), &Default::default());
         // crate::tests::check_approx("proto_arrival", vec![1.0 / 3.0, 1.0 / 3.0], &mk(), n);

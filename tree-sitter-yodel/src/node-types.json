@@ -39,6 +39,14 @@
           "named": true
         },
         {
+          "type": "eanfprj",
+          "named": true
+        },
+        {
+          "type": "eanfprod",
+          "named": true
+        },
+        {
           "type": "evalue",
           "named": true
         },
@@ -48,6 +56,40 @@
         },
         {
           "type": "numeric_op",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "eanfprj",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "eanf",
+          "named": true
+        },
+        {
+          "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "eanfprod",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "eanf",
           "named": true
         }
       ]
@@ -190,14 +232,6 @@
         },
         {
           "type": "eobserve",
-          "named": true
-        },
-        {
-          "type": "eprj",
-          "named": true
-        },
-        {
-          "type": "eprod",
           "named": true
         },
         {
@@ -345,40 +379,6 @@
     }
   },
   {
-    "type": "eprj",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "identifier",
-          "named": true
-        },
-        {
-          "type": "sanf",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
-    "type": "eprod",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "eanf",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
     "type": "esample",
     "named": true,
     "fields": {},
@@ -455,7 +455,7 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": true,
+      "multiple": false,
       "required": true,
       "types": [
         {
@@ -463,7 +463,7 @@
           "named": true
         },
         {
-          "type": "evalue",
+          "type": "evalueprod",
           "named": true
         },
         {
@@ -472,6 +472,21 @@
         },
         {
           "type": "int",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "evalueprod",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "evalue",
           "named": true
         }
       ]

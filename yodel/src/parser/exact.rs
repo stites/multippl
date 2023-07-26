@@ -41,57 +41,129 @@ fn parse_anf_child_h(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, 
 }
 
 fn parse_anf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EVal> {
-    match n.named_child_count() {
-        0 => parse_anf_enode(src, c, n),
-        1 => parse_anf_child_h(src, c, n),
-        2 => {
-            // // unary operation
-            // let mut _c = c.clone();
-            // let mut cs = n.named_children(&mut _c);
-            // let op = cs.next().unwrap();
-            // let utf8 = op.utf8_text(src).unwrap();
-            // let op = String::from_utf8(utf8.into()).unwrap();
+    // top level forms:
+    match n.kind() {
+        "eanfprod" => Anf::AnfProd(parse_vec(src, c, n, |a, b, c| parse_anf(a, b, c))),
+        "eanfprj" => {
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
 
+            let ident = cs.next().unwrap();
+            let ident = Anf::AVar(None, parse_str(src, &ident));
+
+            let prj = cs.next().unwrap();
+            let prj = parse_anf(src, c, prj);
+            Anf::AnfPrj(Box::new(ident), Box::new(prj))
+        }
+        "evalue" => {
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
             let node = cs.next().unwrap();
-            match node.kind() {
-                "eanf" => parse_anf(src, c, node),
-                "identifier" => Anf::AVar(None, parse_str(src, &node)),
-                "evalue" => Anf::AVal((), parse_eval(src, c, node)),
-                "eanfprod" => Anf::AnfProd(parse_vec(src, c, node, |a, b, c| parse_anf(a, b, c))),
-                "bool_unop" => {
-                    let node = cs.next().unwrap();
-                    Anf::Neg(Box::new(parse_anf(src, c, node)))
+
+            Anf::AVal((), parse_eval(src, c, node))
+        }
+        kind => {
+            tracing::debug!("kind: {kind}, #children: {}", n.named_child_count());
+            match n.named_child_count() {
+                0 => {
+                    tracing::debug!("parsing anf 0: {} >>> {}", n.to_sexp(), parse_str(src, &n));
+                    parse_anf_enode(src, c, n)
                 }
-                _ => panic!("invalid unary operator found!\nsexp: {}", n.to_sexp()),
+                1 => {
+                    tracing::debug!("parsing anf 1: {} >>> {}", n.to_sexp(), parse_str(src, &n));
+                    parse_anf_child_h(src, c, n)
+                }
+                2 => {
+                    // // unary operation
+                    // let mut _c = c.clone();
+                    // let mut cs = n.named_children(&mut _c);
+                    // let op = cs.next().unwrap();
+                    // let utf8 = op.utf8_text(src).unwrap();
+                    // let op = String::from_utf8(utf8.into()).unwrap();
+
+                    let mut _c = c.clone();
+                    let mut cs = n.named_children(&mut _c);
+                    let node = cs.next().unwrap();
+                    tracing::debug!(
+                        "parsing anf 2: (kind {}) {} {}",
+                        node.kind(),
+                        n.to_sexp(),
+                        parse_str(src, &n)
+                    );
+                    match node.kind() {
+                        "eanf" => parse_anf(src, c, node),
+                        "identifier" => Anf::AVar(None, parse_str(src, &node)),
+                        "bool_unop" => {
+                            let node = cs.next().unwrap();
+                            Anf::Neg(Box::new(parse_anf(src, c, node)))
+                        }
+                        _ => panic!("invalid unary operator found!\nsexp: {}", n.to_sexp()),
+                    }
+                }
+                3 => {
+                    tracing::debug!("parsing anf 3: {} {}", n.to_sexp(), parse_str(src, &n));
+                    // binary operations
+                    let mut _c = c.clone();
+                    let mut cs = n.named_children(&mut _c);
+
+                    let l = cs.next().unwrap();
+                    tracing::debug!("parsing anf 3, first node kind: {}", l.kind());
+                    let l = parse_anf(src, c, l);
+
+                    let op = cs.next().unwrap();
+                    let op = parse_str(src, &op);
+
+                    let r = cs.next().unwrap();
+                    let r = parse_anf(src, c, r);
+                    let binop = match op.as_str() {
+                        "&&" => Some(Anf::And(Box::new(l), Box::new(r))),
+                        "||" => Some(Anf::Or(Box::new(l), Box::new(r))),
+                        "/" => Some(Anf::Div(Box::new(l), Box::new(r))),
+                        "*" => Some(Anf::Mult(Box::new(l), Box::new(r))),
+                        "+" => Some(Anf::Plus(Box::new(l), Box::new(r))),
+                        "-" => Some(Anf::Minus(Box::new(l), Box::new(r))),
+                        _ => None,
+                    };
+                    match binop {
+                        Some(b) => b,
+                        None => {
+                            // try again
+                            let mut _c = c.clone();
+                            let mut cs = n.named_children(&mut _c);
+                            let node = cs.next().unwrap();
+                            match node.kind() {
+                                "eanfprod" => {
+                                    tracing::debug!("caught a prod");
+                                    Anf::AnfProd(parse_vec(src, c, node, |a, b, c| {
+                                        parse_anf(a, b, c)
+                                    }))
+                                }
+                                k => panic!(
+                                    "invalid binary operator {k} found!\nsexp: {}",
+                                    n.to_sexp()
+                                ),
+                            }
+                        }
+                    }
+                }
+                k => {
+                    // try again
+                    let mut _c = c.clone();
+                    let mut cs = n.named_children(&mut _c);
+                    let node = cs.next().unwrap();
+                    match node.kind() {
+                        // "eanfprod" => {
+                        //     tracing::debug!("caught a prod");
+                        //     Anf::AnfProd(parse_vec(src, c, node, |a, b, c| parse_anf(a, b, c)))
+                        // }
+                        _ => panic!(
+                            "invalid program found with {k} children!\nsexp: {}",
+                            n.to_sexp()
+                        ),
+                    }
+                }
             }
         }
-        3 => {
-            // binary operation
-            let mut _c = c.clone();
-            let mut cs = n.named_children(&mut _c);
-
-            let l = cs.next().unwrap();
-            let l = parse_anf(src, c, l);
-
-            let op = cs.next().unwrap();
-            let utf8 = op.utf8_text(src).unwrap();
-            let op = String::from_utf8(utf8.into()).unwrap();
-
-            let r = cs.next().unwrap();
-            let r = parse_anf(src, c, r);
-            match op.as_str() {
-                "&&" => Anf::And(Box::new(l), Box::new(r)),
-                "||" => Anf::Or(Box::new(l), Box::new(r)),
-                "/" => Anf::Div(Box::new(l), Box::new(r)),
-                "*" => Anf::Mult(Box::new(l), Box::new(r)),
-                "+" => Anf::Plus(Box::new(l), Box::new(r)),
-                "-" => Anf::Minus(Box::new(l), Box::new(r)),
-                _ => panic!("invalid program found!\nsexp: {}", n.to_sexp()),
-            }
-        }
-        _ => panic!("invalid program found!\nsexp: {}", n.to_sexp()),
     }
 }
 
@@ -100,9 +172,17 @@ fn parse_eval(src: &[u8], c: &mut TreeCursor, n: Node) -> EVal {
         "evalue" => {
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
-
             let n = cs.next().unwrap();
             parse_eval(src, c, n)
+        }
+        "evalueprod" => {
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+            let mut vs = vec![];
+            while let Some(n) = cs.next() {
+                vs.push(parse_eval(src, c, n));
+            }
+            EVal::EProd(vs)
         }
         "bool" => {
             let utf8 = n.utf8_text(src).unwrap();
@@ -338,6 +418,7 @@ mod tests {
     use crate::parser::program::parse;
     use crate::*;
     use std::any::TypeId;
+    use tracing_test::*;
 
     #[test]
     fn parse_anf() {
@@ -360,6 +441,7 @@ mod tests {
     }
 
     #[test]
+    #[traced_test]
     fn prods() {
         println!("prods0");
         assert_eq!(
@@ -379,6 +461,14 @@ mod tests {
         assert_eq!(
             parse(r#"exact { let x = (a, b) in x[0] }"#).unwrap(),
             program!(lets!["x" ;= b!("a", "b"); ...? prj!("x", 0)])
+        );
+        println!("prods4");
+        let f = EVal::EBdd(BddPlan::ConstFalse);
+        let t = EVal::EBdd(BddPlan::ConstTrue);
+        let prd = EExpr::EAnf((), Box::new(Anf::AVal((), EVal::EProd(vec![f, t]))));
+        assert_eq!(
+            parse(r#"exact { let x = (false, true) in fst x }"#).unwrap(),
+            program!(lets!["x" ;= prd; ...? prj!("x", 0)])
         );
     }
 
