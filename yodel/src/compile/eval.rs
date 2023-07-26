@@ -468,10 +468,10 @@ impl<'a> State<'a> {
 
                 // let mut newctx = ctx.new_from_eoutput(&bound);
                 let mut newctx = Ctx::from(&bound);
-                newctx
-                    .exact
-                    .substitutions
-                    .insert(d.id(), (bound.exact.out.clone(), Var::Named(d.clone())));
+                newctx.exact.substitutions.insert(
+                    d.id(),
+                    Subst::mk(bound.exact.out.clone(), Some(Var::Named(d.clone()))),
+                );
                 let (body, bodiestr) = self.eval_eexpr(newctx, ebody)?;
 
                 let o = eval_elet_output(self.mgr, &ctx, bound.clone(), body, &self.opts)?;
@@ -503,7 +503,10 @@ impl<'a> State<'a> {
                 }
                 let mut subs = ctx.exact.substitutions.clone();
                 for (param, val) in params.iter().zip(argvals.iter()) {
-                    subs.insert(param.id(), (vec![val.clone()], Var::Named(param.clone())));
+                    subs.insert(
+                        param.id(),
+                        Subst::mk(vec![val.clone()], Some(Var::Named(param.clone()))),
+                    );
                 }
                 let mut callerctx = ctx.clone();
                 callerctx.exact.substitutions = subs;
@@ -590,7 +593,7 @@ impl<'a> State<'a> {
                 newctx
                     .sample
                     .substitutions
-                    .insert(d.id(), bound.sample.out.clone());
+                    .insert(d.id(), Subst::mk(bound.sample.out.clone(), None));
                 let (out, body) = self.eval_sexpr(newctx, body)?;
 
                 debug_step_ng!(format!("let-in {}", name), ctx, out; "sample");
@@ -640,7 +643,10 @@ impl<'a> State<'a> {
                         .iter()
                         .map(|v| {
                             let mut newctx = Ctx::from(&ctx.mk_soutput(argval.clone()));
-                            newctx.sample.substitutions.insert(d.id(), vec![v.clone()]);
+                            newctx
+                                .sample
+                                .substitutions
+                                .insert(d.id(), Subst::mk(vec![v.clone()], None));
                             let (o, b) = self.eval_sexpr(newctx, body)?;
                             bodytr = Some(b);
                             if o.sample.out.len() != 1 {
@@ -748,7 +754,7 @@ impl<'a> State<'a> {
                 }
                 let mut subs = ctx.sample.substitutions.clone();
                 for (param, val) in params.iter().zip(argvals.iter()) {
-                    subs.insert(param.id(), vec![val.clone()]);
+                    subs.insert(param.id(), Subst::mk(vec![val.clone()], None));
                 }
                 let mut callerctx = ctx.clone();
                 callerctx.sample.substitutions = subs;

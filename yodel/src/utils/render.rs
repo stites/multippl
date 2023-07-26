@@ -17,7 +17,7 @@ pub fn renderfloats(fs: &[f64], high_prec: bool) -> String {
     rendervec(&fs.iter().map(|x| fmt_f64(high_prec)(*x)).collect_vec())
 }
 
-pub fn renderbdds(fs: &[EVal]) -> String {
+pub fn renderbdds<V: std::fmt::Debug>(fs: &[V]) -> String {
     rendervec(&fs.iter().map(|b| format!("{:?}", b)).collect_vec())
 }
 
@@ -71,12 +71,12 @@ pub fn renderw(ws: &WeightMap) -> String {
         .map(|(k, w)| format!("L{}: ({:.4}, {:.4})", k.value(), w.lo, w.hi))
         .join(", ")
 }
-pub fn renderp(ps: &SubstMap) -> String {
+pub fn renderp<V: std::fmt::Debug + Clone + PartialEq>(ps: &SubstMap<V>) -> String {
     ps.iter()
-        .map(|(k, (v, _))| format!("{k}: {}", renderbdds(v)))
+        .map(|(k, v)| format!("{k}: {}", renderbdds(&v.val())))
         .join(", ")
 }
-pub fn renderssubs(ps: &HashMap<UniqueId, Vec<SVal>>) -> String {
+pub fn renderssubs(ps: &SubstMap<SVal>) -> String {
     ps.iter().map(|(k, x)| format!("{k}: {:?}", x)).join(", ")
 }
 

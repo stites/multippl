@@ -3,31 +3,52 @@ use crate::annotate::grammar::*;
 use crate::data::*;
 use crate::desugar::exact::integers;
 use crate::grammar::*;
+use crate::uniquify::grammar::*;
 use itertools::Itertools;
 use itertools::*;
 use rsdd::builder::bdd_builder::DDNNFPtr;
 use rsdd::builder::bdd_plan::BddPlan;
 use tracing::*;
 
-pub fn eval_sanf_var(ctx: &Ctx, d: &NamedVar, s: &str) -> Result<Vec<SVal>> {
-    match ctx.sample.substitutions.get(&d.id()) {
-        None => Err(Generic(format!(
-            "variable {} does not reference known substitution in: {:?}",
-            s, ctx.sample.substitutions
-        ))),
-        Some(v) => Ok(v.clone()),
+pub fn eval_anf_var<V1, V2>(
+    ctx: &Ctx,
+    nv: &NamedVar,
+    lookup1: impl Fn(&UniqueId) -> Option<Vec<V1>>,
+    lookup2: impl Fn(&UniqueId) -> Option<Vec<V2>>,
+    embed: impl FnMut(&V2) -> Result<V1>,
+) -> Result<Vec<V1>> {
+    match lookup1(&nv.id()) {
+        None => match lookup2(&nv.id()) {
+            None => Err(Generic(format!(
+                "variable {} does not reference known substitution in: s{:?}, e{:?}",
+                nv.name, ctx.sample.substitutions, ctx.exact.substitutions
+            ))),
+            Some(v) => v.iter().map(embed).collect::<Result<Vec<V1>>>(),
+        },
+        Some(v) => Ok(v),
     }
 }
 
-pub fn eval_eanf_var(ctx: &Ctx, d: &NamedVar, s: &str) -> Result<Vec<EVal>> {
-    match ctx.exact.substitutions.get(&d.id()) {
-        None => Err(Generic(format!(
-            "variable {} does not reference known substitution in: {:?}",
-            s, ctx.exact.substitutions
-        ))),
-        Some((v, _)) => Ok(v.clone()),
-    }
+pub fn eval_sanf_var(ctx: &Ctx, nv: &NamedVar, s: &str) -> Result<Vec<SVal>> {
+    eval_anf_var(
+        ctx,
+        nv,
+        |i| ctx.sample.substitutions.get(i).map(Subst::val),
+        |i| ctx.exact.substitutions.get(i).map(Subst::val),
+        SExpr::<Trace>::embed,
+    )
 }
+
+pub fn eval_eanf_var(ctx: &Ctx, nv: &NamedVar, s: &str) -> Result<Vec<EVal>> {
+    eval_anf_var(
+        ctx,
+        nv,
+        |i| ctx.exact.substitutions.get(i).map(Subst::val),
+        |i| ctx.sample.substitutions.get(i).map(Subst::val),
+        EExpr::<Trace>::embed,
+    )
+}
+
 pub fn eval_sanf_numop<'a>(
     ctx: &'a Ctx,
     bl: &'a AnfAnn<SVal>,

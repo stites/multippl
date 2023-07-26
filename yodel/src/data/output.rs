@@ -12,7 +12,31 @@ use rsdd::builder::bdd_plan::BddPlan;
 use rsdd::sample::probability::Probability;
 use std::collections::HashMap;
 
-pub type SubstMap = HashMap<UniqueId, (Vec<EVal>, Var)>;
+#[derive(Debug, Clone, PartialEq)]
+pub enum Subst<V> {
+    Value(Vec<V>),
+    ValueWithVar(Vec<V>, Var),
+}
+
+impl<V> Subst<V>
+where
+    V: std::fmt::Debug + Clone + PartialEq,
+{
+    pub fn val(&self) -> Vec<V> {
+        match self {
+            Subst::Value(v) => v.to_vec(),
+            Subst::ValueWithVar(v, _) => v.to_vec(),
+        }
+    }
+    pub fn mk(val: Vec<V>, var: Option<Var>) -> Self {
+        match var {
+            None => Subst::Value(val),
+            Some(var) => Subst::ValueWithVar(val, var),
+        }
+    }
+}
+
+pub type SubstMap<V> = HashMap<UniqueId, Subst<V>>;
 pub type Tr = Vec<(SVal, Dist, Probability, Option<UniqueId>)>;
 
 /// exact compilation context
@@ -20,7 +44,7 @@ pub type Tr = Vec<(SVal, Dist, Probability, Option<UniqueId>)>;
 pub struct ECtx {
     pub accept: BddPlan,
     pub samples: Vec<(BddPlan, bool)>,
-    pub substitutions: SubstMap,
+    pub substitutions: SubstMap<EVal>,
     pub weightmap: WeightMap,
 }
 pub trait GetSamples {
@@ -107,7 +131,7 @@ pub struct EOutput {
     /// compiled weightmap
     pub weightmap: WeightMap,
     /// substitution environment
-    pub substitutions: SubstMap,
+    pub substitutions: SubstMap<EVal>,
 }
 impl GetSamples for EOutput {
     fn compile_samples(&self) -> BddPlan {
@@ -162,7 +186,7 @@ impl Default for EOutput {
 }
 #[derive(Debug, Clone, PartialEq)]
 pub struct SCtx {
-    pub substitutions: HashMap<UniqueId, Vec<SVal>>,
+    pub substitutions: SubstMap<SVal>,
     pub trace: Tr,
 }
 impl Default for SCtx {
@@ -188,7 +212,7 @@ pub struct SOutput {
     /// compiled output
     pub out: Vec<SVal>,
     /// sampling substitutions
-    pub substitutions: HashMap<UniqueId, Vec<SVal>>,
+    pub substitutions: SubstMap<SVal>,
     // sampled values traces (and ids)
     pub trace: Tr,
 }
