@@ -240,7 +240,6 @@ pub mod integers {
                 val.push(EVal::EBdd(BddPlan::ConstTrue));
                 EVal::EProd(val)
             }
-
         }
     }
     pub fn from_prod(vs: &[EVal]) -> Result<usize> {
@@ -264,7 +263,9 @@ pub mod integers {
     pub fn from_prod_val(p: &EVal) -> Result<usize> {
         match p {
             EVal::EProd(vs) => from_prod(vs),
-            _ => errors::generic("(type-error) attempting to convert prod which is not one-hot encoded")
+            _ => errors::generic(
+                "(type-error) attempting to convert prod which is not one-hot encoded",
+            ),
         }
     }
     #[cfg(test)]
@@ -272,7 +273,7 @@ pub mod integers {
         use super::*;
         #[test]
         fn test_prop() {
-            for x in [0,1,5,10] {
+            for x in [0, 1, 5, 10] {
                 let oh = as_onehot(x);
                 println!("{oh:?}");
                 assert_eq!(from_prod_val(&oh).unwrap(), x);

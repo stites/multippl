@@ -35,7 +35,9 @@ crate::TTG!(
                 EProd(vs) => Ok(SProd(
                     vs.iter().map(Self::embed).collect::<Result<Vec<_>>>()?,
                 )),
-                EInteger(i) => errors::semantics("integers in the exact lang is sugar and not part of the boundary"),
+                EInteger(i) => errors::semantics(
+                    "integers in the exact lang is sugar and not part of the boundary",
+                ),
                 EBdd(_) => errors::semantics("sampling lang cannot compile a formula"),
             }
         }
@@ -48,7 +50,7 @@ pub enum Dist {
     Discrete(Vec<f64>),
     Uniform(f64, f64),
     Normal(f64, f64),
-    Poisson(u64),
+    Poisson(f64),
     Beta(f64, f64),
     Dirichlet(Vec<f64>),
 }

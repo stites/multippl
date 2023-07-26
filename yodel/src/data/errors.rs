@@ -39,10 +39,10 @@ pub fn non_zero<T>(s: &str) -> Result<T> {
 pub fn generic<T>(s: &str) -> Result<T> {
     Err(CompileError::Generic(s.to_string()))
 }
-pub fn typecheck_failed<T>() -> Result<T> {
-    Err(CompileError::TypeError(
-        "impossible: typechecking failed in earlier stage of pipeline".to_string(),
-    ))
+pub fn typecheck_failed<T>(ctx: &str) -> Result<T> {
+    Err(CompileError::TypeError(format!(
+        "impossible: typechecking failed in earlier stage of pipeline. Context: {ctx}"
+    )))
 }
 #[allow(non_snake_case)]
 pub fn TODO<T>() -> Result<T> {

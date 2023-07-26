@@ -42,10 +42,8 @@ fn parse_anf_child_h(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, 
 
 fn parse_anf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EVal> {
     match n.named_child_count() {
-        0 => {
-            parse_anf_enode(src, c, n)},
-        1 => {
-            parse_anf_child_h(src, c, n)},
+        0 => parse_anf_enode(src, c, n),
+        1 => parse_anf_child_h(src, c, n),
         2 => {
             // // unary operation
             // let mut _c = c.clone();
@@ -58,18 +56,14 @@ fn parse_anf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EVal> {
             let mut cs = n.named_children(&mut _c);
             let node = cs.next().unwrap();
             match node.kind() {
-                "eanf" => {
-                    parse_anf(src, c, node)
-                },
+                "eanf" => parse_anf(src, c, node),
                 "identifier" => Anf::AVar(None, parse_str(src, &node)),
                 "evalue" => Anf::AVal((), parse_eval(src, c, node)),
-                "eanfprod" => Anf::AnfProd(
-                    parse_vec(src, c, node, |a, b, c| parse_anf(a, b, c)),
-                ),
+                "eanfprod" => Anf::AnfProd(parse_vec(src, c, node, |a, b, c| parse_anf(a, b, c))),
                 "bool_unop" => {
                     let node = cs.next().unwrap();
                     Anf::Neg(Box::new(parse_anf(src, c, node)))
-                },
+                }
                 _ => panic!("invalid unary operator found!\nsexp: {}", n.to_sexp()),
             }
         }
@@ -109,7 +103,7 @@ fn parse_eval(src: &[u8], c: &mut TreeCursor, n: Node) -> EVal {
 
             let n = cs.next().unwrap();
             parse_eval(src, c, n)
-        },
+        }
         "bool" => {
             let utf8 = n.utf8_text(src).unwrap();
             let var = String::from_utf8(utf8.into()).unwrap();

@@ -143,7 +143,7 @@ impl EOutput {
             .cloned()
             .map(|v| match v {
                 EVal::EBdd(b) => Ok(b),
-                _ => errors::typecheck_failed(),
+                a => errors::typecheck_failed(&format!("eoutput projection into bdds got {a:?}")),
             })
             .collect::<Result<Vec<BddPlan>>>()
             .unwrap()

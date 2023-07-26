@@ -1,8 +1,8 @@
 use crate::compile::*;
 use crate::grammar::*;
 use crate::inference::*;
+use crate::tests::checks::*;
 use crate::typeinf::grammar::*;
-use crate::utils::render::*;
 use crate::*;
 
 use itertools::*;
@@ -13,46 +13,8 @@ use std::ops::Range;
 use tracing::*;
 use tracing_test::*;
 
+mod checks;
 mod mls;
-
-const USE_OPT: bool = false;
-const USE_DEBUG: bool = false;
-
-pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &str) {
-    let precision = precision.unwrap_or_else(|| 0.01);
-    let n = n.unwrap_or_else(|| 10000);
-    let exact = inference::exact(&p);
-    let (approx, _) = importance_weighting_h(
-        n,
-        p,
-        &Options {
-            opt: USE_OPT,
-            debug: USE_DEBUG,
-            // seed: Some(9),
-            ..Default::default()
-        },
-    );
-    debug!("exact:  {:?}", exact);
-    debug!("approx: {:?}", approx);
-
-    assert_eq!(
-        exact.len(),
-        approx.len(),
-        "[check_inv][{s}][mismatch shape] compiled exact queries {}, but approx returned results {}",
-        renderfloats(&exact, false),
-        renderfloats(&approx, false),
-    );
-    izip!(exact, approx)
-        .enumerate()
-        .for_each(|(i, (ext, apx))| {
-            let ret = (ext - apx).abs() < precision;
-            let i = i + 1;
-            assert!(
-                ret,
-                "[check_inv][{s}#{i}][err]((exact: {ext}) - (approx: {apx})).abs < {precision}"
-            );
-        });
-}
 
 // #[test]
 // #[ignore]
@@ -160,7 +122,10 @@ fn free_variables_0() {
         r#"exact {
   let x = flip (1.0/3.0) in
   let y = x in
-  "#.to_owned() + ret + "\n}"
+  "#
+        .to_owned()
+            + ret
+            + "\n}"
     };
     let n = 1000;
 
@@ -171,101 +136,30 @@ fn free_variables_0() {
     // check_invariant("free/x ", None, None, &mk(var!("x")));
 }
 
-pub fn check_inference(
-    infname: &str,
-    inf: &dyn Fn(&str) -> (Vec<f64>, Option<WmcStats>),
-    precision: f64,
-    s: &str,
-    fs: Vec<f64>,
-    p: &str,
-) {
-    check_inference_h(infname, inf, precision, s, fs, p, true)
-}
-
-pub fn check_inference_h(
-    infname: &str,
-    inf: &dyn Fn(&str) -> (Vec<f64>, Option<WmcStats>),
-    precision: f64,
-    s: &str,
-    fs: Vec<f64>,
-    p: &str,
-    do_assert: bool,
-) {
-    println!("program:\n{}", p);
-    let prs = inf(p).0;
-    assert_eq!(
-        prs.len(),
-        fs.len(),
-        "[check_{infname}][{s}] check_inference compiled queries {}, tests expect results {}",
-        renderfloats(&prs, false),
-        renderfloats(&fs, false),
-    );
-    // println!("query: {:?}", p.query());
-    println!("expecting: {}", renderfloats(&fs, false));
-    println!("computed:  {}", renderfloats(&prs, false));
-    izip!(prs, fs).enumerate().for_each(|(i, (pr, f))| {
-        let ret = (f - pr).abs() < precision;
-        let i = i + 1;
-        if do_assert {
-            assert!(
-                ret,
-                "[check_{infname}][{s}#{i}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"
-            );
-        } else {
-            debug!("[check_{infname}][{s}#{i}][{ret}]((expected: {f}) - (actual: {pr})).abs < {precision}: {ret}");
-        }
-    });
-}
-
-pub fn check_exact(s: &str, f: Vec<f64>, p: &str) {
-    debug!("program:\n{}", &p);
-    check_inference("exact", &inference::exact_with_h, 0.000001, s, f, &p);
-}
-pub fn check_exact1(s: &str, f: f64, p: &str) {
-    check_exact(s, vec![f], p)
-}
-pub fn check_approx(s: &str, f: Vec<f64>, p: &str, n: usize) {
-    check_inference(
-        "approx",
-        &|p| {
-            importance_weighting_h(
-                n,
-                p,
-                &Options {
-                    opt: USE_OPT,
-                    debug: USE_DEBUG,
-                    // seed: Some(9),
-                    ..Default::default()
-                },
-            )
-        },
-        0.01,
-        s,
-        f,
-        p,
-    );
-}
-pub fn check_approx1(s: &str, f: f64, p: &str, n: usize) {
-    check_approx(s, vec![f], p, n)
-}
-pub fn allmarg(x: &str, y:&str) -> String {
+pub fn allmarg(x: &str, y: &str) -> String {
     format!("({x}, {y}, {x} || {y}, {x} && {y})")
 }
 #[test]
 // #[traced_test]
 fn free_variable_2_inv() {
     let mk = |ret: &str| {
-(r#"exact {
+        (r#"exact {
   let x = flip (1.0/3.0) in
   let y = (let x0 = flip 1.0 / 5.0 in x0 || x) in
   let _ = observe (x || y) in
-  "#.to_owned() + ret + "\n}").to_string()
+  "#
+        .to_owned()
+            + ret
+            + "\n}")
+            .to_string()
     };
     let n = 500;
     (|p: String| check_invariant("free2/x*y ", None, None, &p))(mk(&allmarg("x", "y")));
     (|p: String| check_approx("free2/x*y", vec![0.714285714], &p, n))(mk(&"x"));
     (|p: String| check_approx("---------", vec![1.000000000], &p, n))(mk(&"y"));
-    (|p: String| check_approx("---------", vec![0.714285714, 1.0, 1.0, 0.714285714], &p, n))(mk(&allmarg("x", "y")));
+    (|p: String| check_approx("---------", vec![0.714285714, 1.0, 1.0, 0.714285714], &p, n))(mk(
+        &allmarg("x", "y"),
+    ));
     // (|p| debug_approx("free2/x*y", vec![0.714285714, 1.0, 1.0, 0.714285714], &p, 5))(mk(
     //     q!("x" x "y"),
     // ));
@@ -370,10 +264,15 @@ fn program01() {
 }
 #[test]
 fn program02() {
-    let mk02 = |ret: &str| r#" exact {
+    let mk02 = |ret: &str| {
+        r#" exact {
     let x = flip 1.0 / 3.0 in
     let y = flip 1.0 / 4.0 in
-    "#.to_owned() + ret + "\n}";
+    "#
+        .to_owned()
+            + ret
+            + "\n}"
+    };
 
     check_exact1("p02/y  ", 3.0 / 12.0, &mk02("y"));
     check_exact1("p02/x  ", 4.0 / 12.0, &mk02("x"));
@@ -383,11 +282,16 @@ fn program02() {
 
 #[test]
 fn program03() {
-    let mk = |ret: &str| r#" exact {
+    let mk = |ret: &str| {
+        r#" exact {
     let x = flip 1.0 / 3.0 in
     let y = flip 1.0 / 4.0 in
     let _ = observe x || y in
-    "#.to_owned() + ret + "\n}";
+    "#
+        .to_owned()
+            + ret
+            + "\n}"
+    };
     check_exact1("p03/y  ", 3.0 / 6.0, &mk("y"));
     check_exact1("p03/x  ", 4.0 / 6.0, &mk("x"));
     check_exact1("p03/x|y", 6.0 / 6.0, &mk("x || y"));
@@ -415,11 +319,16 @@ fn program03() {
 #[test]
 // #[traced_test]
 fn program04_approx() {
-    let mk = |ret: &str| r#"exact {
+    let mk = |ret: &str| {
+        r#"exact {
     let x = sample { ~bern(1.0 / 3.0) } in
     let y = flip 1.0 / 4.0 in
     let _ = observe x || y in
-    "#.to_owned() + ret + "\n}";
+    "#
+        .to_owned()
+            + ret
+            + "\n}"
+    };
 
     let n = 10_000;
     check_approx1("p04s/y  ", 3.0 / 6.0, &mk("y"), n);
@@ -442,13 +351,21 @@ fn tuple0() {
     let p = r#"exact {
     let y = true in
     let z = (y, true) in
-    z"#.to_owned() + "" + "\n}";
+    z"#
+    .to_owned()
+        + ""
+        + "\n}";
     check_exact("tuples0/T,T", vec![1.0, 1.0], &p);
 
-    let mk = |ret: &str| r#"exact {
+    let mk = |ret: &str| {
+        r#"exact {
     let y = true in
     let z = (y, true) in
-    "#.to_owned() + ret + "\n}";
+    "#
+        .to_owned()
+            + ret
+            + "\n}"
+    };
     check_exact("tuples0/T, ", vec![1.0], &mk("fst z"));
     check_exact("tuples0/ ,T", vec![1.0], &mk("snd z"));
 }
@@ -457,11 +374,16 @@ fn tuple0() {
 #[test]
 // #[traced_test]
 fn tuple1() {
-    let mk = |ret: &str| r#"exact {
+    let mk = |ret: &str| {
+        r#"exact {
     let x = flip (1.0/3.0) in
     let y = flip (1.0/4.0) in
     let z = (x, y) in
-    "#.to_owned() + ret + "\n}";
+    "#
+        .to_owned()
+            + ret
+            + "\n}"
+    };
 
     check_exact("tuple1/x,y", vec![1.0 / 3.0, 1.0 / 4.0], &mk("(x, y)"));
     check_exact("tuple1/y,x", vec![1.0 / 4.0, 1.0 / 3.0], &mk("(y, x)"));
@@ -476,7 +398,9 @@ fn sample_tuple() {
         l ~ bern(1.0/3.0);
         r ~ bern(1.0/4.0);
         (l, r)
-    } in z"#.to_owned() + "\n}";
+    } in z"#
+        .to_owned()
+        + "\n}";
     check_approx("sharedtuple", vec![1.0 / 3.0, 1.0 / 4.0], &p, 20000);
     // check_invariant("sharedtuple ", None, None, &p);
 }

@@ -3,6 +3,7 @@ use crate::grammar::*;
 use grammar::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
+use tracing::*;
 
 pub mod grammar {
     use super::*;
@@ -253,7 +254,6 @@ impl SymEnv {
             AnfDirichlet(_, xs) => Ok(AnfDirichlet(self.fresh(), self.uniquify_anf_vec(xs)?)),
         }
     }
-
     pub fn uniquify_anfs<Val: Clone>(&mut self, anfs: &[AnfUD<Val>]) -> Result<Vec<AnfUnq<Val>>>
     where
         AVarExt<Val>: ξ<UD, Ext = ()> + ξ<Uniquify, Ext = UniqueId>,
@@ -395,23 +395,38 @@ impl SymEnv {
         }
     }
     pub fn uniquify_efun(&mut self, f: &Function<EExprUD>) -> Result<Function<EExprUnq>> {
+        let name = f.name.clone();
+        self.read_only = false;
+        let arguments = self.uniquify_anfs(&f.arguments)?;
+        self.read_only = true;
+        let body = self.uniquify_eexpr(&f.body)?;
+        let returnty = f.returnty.clone();
+
         Ok(Function {
-            name: f.name.clone(),
-            arguments: self.uniquify_anfs(&f.arguments)?,
-            body: self.uniquify_eexpr(&f.body)?,
-            returnty: f.returnty.clone(),
+            name,
+            arguments,
+            body,
+            returnty,
         })
     }
     pub fn uniquify_sfun(&mut self, f: &Function<SExprUD>) -> Result<Function<SExprUnq>> {
+        let name = f.name.clone();
+        self.read_only = false;
+        let arguments = self.uniquify_anfs(&f.arguments)?;
+        self.read_only = true;
+        let body = self.uniquify_sexpr(&f.body)?;
+        let returnty = f.returnty.clone();
+
         Ok(Function {
-            name: f.name.clone(),
-            arguments: self.uniquify_anfs(&f.arguments)?,
-            body: self.uniquify_sexpr(&f.body)?,
-            returnty: f.returnty.clone(),
+            name,
+            arguments,
+            body,
+            returnty,
         })
     }
 
     pub fn uniquify(&mut self, p: &ProgramUD) -> Result<(ProgramUnq, MaxUniqueId)> {
+        // tracing::debug!("uniquify-ing");
         match p {
             Program::SBody(e) => {
                 let eann = self.uniquify_sexpr(e)?;
@@ -421,12 +436,12 @@ impl SymEnv {
                 let eann = self.uniquify_eexpr(e)?;
                 Ok((Program::EBody(eann), MaxUniqueId(self.gensym)))
             }
-            Program::EDefine(f, e) => {
+            Program::EDefine(f, p) => {
                 let f = self.uniquify_efun(f)?;
                 let (p, mx) = self.uniquify(p)?;
                 Ok((Program::EDefine(f, Box::new(p)), mx))
             }
-            Program::SDefine(f, e) => {
+            Program::SDefine(f, p) => {
                 let f = self.uniquify_sfun(f)?;
                 let (p, mx) = self.uniquify(p)?;
                 Ok((Program::SDefine(f, Box::new(p)), mx))

@@ -10,6 +10,7 @@ use std::cmp::Eq;
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
+use tracing::*;
 
 pub type InvMap<T> = HashMap<NamedVar, HashSet<T>>;
 pub struct MaxVarLabel(pub u64);
@@ -304,6 +305,13 @@ impl LabelEnv {
         }
     }
 
+    pub fn get_function_arg(&self, id: &UniqueId) -> Result<Var> {
+        match self.subst_var.get(id) {
+            None => Err(CompileError::Generic(format!("symbol {id} not in scope"))),
+            Some(x) => Ok(x.clone()),
+        }
+    }
+
     fn annotate_eanf_binop(
         &mut self,
         l: &AnfUnq<EVal>,
@@ -480,6 +488,43 @@ impl LabelEnv {
             _ => errors::not_in_exact(),
         }
     }
+    // we need to seed arguments as valid variables.
+    pub fn annotate_arg<X: Debug + PartialEq + Clone, DExt: Debug + PartialEq + Clone>(
+        &mut self,
+        a: &AnfUnq<X>,
+    ) -> Result<AnfAnn<X>>
+    where
+        AVarExt<X>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = NamedVar>,
+        AValExt<X>: ξ<Uniquify, Ext = ()> + ξ<Annotated, Ext = ()>,
+        // APrjExt<X>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = ()>,
+        ADistExt<X>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = DExt>,
+    {
+        use crate::grammar::Anf::*;
+        match a {
+            AVar(id, s) => {
+                let nvar = NamedVar {
+                    id: *id,
+                    name: s.to_string(),
+                };
+                let var = Var::Named(nvar.clone());
+                self.subst_var.insert(*id, var.clone());
+                Ok(AVar(nvar, s.to_string()))
+            }
+            _ => errors::generic("only run annotate_args on variables"),
+        }
+    }
+    pub fn annotate_args<X: Debug + PartialEq + Clone, DExt: Debug + PartialEq + Clone>(
+        &mut self,
+        anfs: &[AnfUnq<X>],
+    ) -> Result<Vec<AnfAnn<X>>>
+    where
+        AVarExt<X>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = NamedVar>,
+        AValExt<X>: ξ<Uniquify, Ext = ()> + ξ<Annotated, Ext = ()>,
+        // APrjExt<X>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = ()>,
+        ADistExt<X>: ξ<Uniquify, Ext = UniqueId> + ξ<Annotated, Ext = DExt>,
+    {
+        anfs.iter().map(|a| self.annotate_arg(a)).collect()
+    }
     pub fn annotate_eanfs(&mut self, anfs: &[AnfUnq<EVal>]) -> Result<Vec<AnfAnn<EVal>>> {
         anfs.iter().map(|a| self.annotate_eanf(a)).collect()
     }
@@ -645,19 +690,35 @@ impl LabelEnv {
         }
     }
     pub fn annotate_efun(&mut self, f: &Function<EExprUnq>) -> Result<Function<EExprAnn>> {
+        let name = f.name.clone();
+        let arguments = f
+            .arguments
+            .iter()
+            .map(|a| self.annotate_arg(a))
+            .collect::<Result<Vec<_>>>()?;
+        let body = self.annotate_eexpr(&f.body)?;
+        let returnty = f.returnty.clone();
         Ok(Function {
-            name: f.name.clone(),
-            arguments: self.annotate_eanfs(&f.arguments)?,
-            body: self.annotate_eexpr(&f.body)?,
-            returnty: f.returnty.clone(),
+            name,
+            arguments,
+            body,
+            returnty,
         })
     }
     pub fn annotate_sfun(&mut self, f: &Function<SExprUnq>) -> Result<Function<SExprAnn>> {
+        let name = f.name.clone();
+        let arguments = f
+            .arguments
+            .iter()
+            .map(|a| self.annotate_arg(a))
+            .collect::<Result<Vec<_>>>()?;
+        let body = self.annotate_sexpr(&f.body)?;
+        let returnty = f.returnty.clone();
         Ok(Function {
-            name: f.name.clone(),
-            arguments: self.annotate_sanfs(&f.arguments)?,
-            body: self.annotate_sexpr(&f.body)?,
-            returnty: f.returnty.clone(),
+            name,
+            arguments,
+            body,
+            returnty,
         })
     }
 
@@ -686,7 +747,7 @@ impl LabelEnv {
                     mx,
                 ))
             }
-            Program::EDefine(f, e) => {
+            Program::EDefine(f, p) => {
                 let f = self.annotate_efun(f)?;
                 let r = self.annotate(p)?;
                 Ok(AnnotateResult::new(
@@ -696,7 +757,7 @@ impl LabelEnv {
                     r.maxbdd,
                 ))
             }
-            Program::SDefine(f, e) => {
+            Program::SDefine(f, p) => {
                 let f = self.annotate_sfun(f)?;
                 let r = self.annotate(p)?;
                 Ok(AnnotateResult::new(

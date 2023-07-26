@@ -6,26 +6,26 @@ use crate::*;
 use tree_sitter::{Node, Tree, TreeCursor};
 
 pub fn parse_earg(src: &[u8], c: &mut TreeCursor, n: &Node) -> Anf<Inferable, EVal> {
-    println!("{}: {}", n.kind(), n.to_sexp());
+    // println!("{}: {}", n.kind(), n.to_sexp());
     let mut c_ = c.clone();
     let mut cs = n.named_children(&mut c_);
 
     let argname = cs.next().unwrap();
-    println!("argname: {}", argname.to_sexp());
+    // println!("argname: {}", argname.to_sexp());
     let argname = parse_str(src, &argname);
-    println!("argname: {}", argname);
+    // println!("argname: {}", argname);
 
     let ty = cs.next().unwrap();
     let ty = parse_etype(src, c, &ty);
     Anf::AVar(Some(ty), argname)
 }
 pub fn parse_eargs(src: &[u8], c: &mut TreeCursor, n: &Node) -> Vec<Anf<Inferable, EVal>> {
-    println!("eargs: {}", n.to_sexp());
+    // println!("eargs: {}", n.to_sexp());
     parse_vec(src, c, *n, |src, c, node| parse_earg(src, c, &node))
 }
 
 pub fn parse_efunction(src: &[u8], c: &mut TreeCursor, n: &Node) -> Function<EExpr<Inferable>> {
-    println!("efun: {}", n.to_sexp());
+    // println!("efun: {}", n.to_sexp());
     let mut c_ = c.clone();
     let mut cs = n.named_children(&mut c_);
 

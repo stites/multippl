@@ -44,7 +44,9 @@ crate::TTG!(
                 SProd(vs) => Ok(EProd(
                     vs.iter().map(Self::embed).collect::<Result<Vec<_>>>()?,
                 )),
-                SDist(_) => errors::generic("dist in the MLS boundary: did you forget to sample using `~`?"),
+                SDist(_) => {
+                    errors::generic("dist in the MLS boundary: did you forget to sample using `~`?")
+                }
             }
         }
     }

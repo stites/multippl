@@ -46,6 +46,8 @@ statrs = "0.16.0"
 nalgebra = "0.29.0"
 paste = "1.0.12"
 
+test-log = { version = "0.2.12", features = ["trace"] }
+
 [dev-dependencies]
 formula = { path = "../formula" }
 quickcheck = "1"
