@@ -249,19 +249,21 @@ fn program04_approx() {
     // check_invariant("p04", None, None, &mk(&allmarg("y", "x")));
 }
 
-// FIXME
 #[test]
 #[traced_test]
 fn tuple0() {
-    debug!("tuple0-0");
     let p = r#"exact { let x = (false, true) in fst x }"#;
     check_exact("tuples0/F, ", vec![0.0], &p);
-
-    debug!("tuple0-1");
+}
+#[test]
+#[traced_test]
+fn tuple1() {
     let p = r#"exact { let y = true in (y, true) }"#;
     check_exact("tuples0/T,T", vec![1.0, 1.0], &p);
-    debug!("tuple0-2");
-
+}
+#[test]
+#[traced_test]
+fn tuple2() {
     let p = r#"exact {
     let y = true in
     let z = (y, true) in
@@ -270,26 +272,37 @@ fn tuple0() {
         + ""
         + "\n}";
     check_exact("tuples0/T,T", vec![1.0, 1.0], &p);
-    debug!("tuple0-3");
-
-    let mk = |ret: &str| {
-        r#"exact {
-    let y = true in
-    let z = (y, true) in
-    "#
-        .to_owned()
-            + ret
-            + "\n}"
-    };
-    check_exact("tuples0/T, ", vec![1.0], &mk("fst z"));
-    debug!("tuple0-4");
-    check_exact("tuples0/ ,T", vec![1.0], &mk("snd z"));
 }
 
-// FIXME
+macro_rules! tuple_34_tests {
+    ($($name:ident ($query:expr): $value:expr,)*) => {
+    $(
+        #[test]
+        #[traced_test]
+        fn $name() {
+            let mk = |ret: &str| {
+                r#"exact {
+            let y = true in
+            let z = (y, true) in
+            "#
+                .to_owned()
+                    + ret
+                    + "\n}"
+            };
+            // check_exact("tuples0/T, ", vec![1.0], &mk("fst z"));
+            ($value)(mk($query));
+        }
+    )*
+    }
+}
+tuple_34_tests! {
+    tuple3 ("fst z"): (|p: String| check_exact("tuples0/T, ", vec![1.0], &p)),
+    tuple4 ("snd z"): (|p: String| check_exact("tuples0/ ,T", vec![1.0], &p)),
+}
+
 #[test]
 // #[traced_test]
-fn tuple1() {
+fn tuple5() {
     let mk = |ret: &str| {
         r#"exact {
     let x = flip (1.0/3.0) in
@@ -307,6 +320,7 @@ fn tuple1() {
     check_exact("tuple1/x, ", vec![1.0 / 3.0], &mk("fst z"));
     check_exact("tuple1/ ,y", vec![1.0 / 4.0], &mk("snd z"));
 }
+
 #[test]
 fn sample_tuple() {
     let p = r#"

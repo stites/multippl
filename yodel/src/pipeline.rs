@@ -122,6 +122,9 @@ macro_rules! run {
 
 pub fn run(code: &str, opt: &Options) -> Result<ROut> {
     let mut mgr = make_mgr(code)?;
+    tracing::debug!(",====================================.");
+    tracing::debug!("| manager compiled! building program |");
+    tracing::debug!("`===================================='");
     let r = runner(code, &mut mgr, &mut opt.rng(), &opt)?;
     Ok(r.to_rout(mgr))
 }

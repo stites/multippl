@@ -538,6 +538,7 @@ pub fn eval_eanf<'a>(ctx: &'a Ctx, a: &'a AnfAnn<EVal>) -> Result<(EOutput, AnfT
         AnfPrj(var, ix) => {
             let (ovar, var) = eval_eanf(ctx, var)?;
             let (oix, ix) = eval_eanf(ctx, ix)?;
+            panic!("{var:?}[{ix:?}]");
             match (&ovar.out[..], &oix.out[..]) {
                 ([EVal::EProd(vs)], [EVal::EInteger(i)]) => {
                     let out = ctx.exact.as_output(vec![vs[*i].clone()]);
