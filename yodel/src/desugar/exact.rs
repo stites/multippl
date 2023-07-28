@@ -396,6 +396,47 @@ pub mod discrete {
     // pub fn last_conj2vec(f: Anf<UD, EVal>) -> Anf<UD, EVal> {
     //     Anf::AVal((), EVal::EFloat(f))
     // }
+    pub fn mk_final_result(finvars: &Vec<String>) -> EExprUD {
+        mk_final_tuple(finvars)
+    }
+    pub fn mk_final_tuple(finvars: &Vec<String>) -> EExprUD {
+        EExpr::EAnf(
+            (),
+            Box::new(Anf::AnfProd(
+                finvars
+                    .into_iter()
+                    .map(|s| Anf::AVar((), s.clone()))
+                    .collect_vec(),
+            )),
+        )
+    }
+    use crate::grammar::undecorated::*;
+    use crate::*;
+
+    pub fn mk_cond(var: String, t: AnfUD<EVal>, f: EExprUD) -> EExprUD {
+        use Anf::*;
+        use EExpr::*;
+        EIte(
+            (),
+            Box::new(mkvar(var)),
+            Box::new(EAnf((), Box::new(t))),
+            Box::new(f),
+        )
+    }
+    pub fn mk_final_conditional_int(finvars: &Vec<String>) -> EExprUD {
+        let n = finvars.len();
+        let mut last = mk_cond(
+            finvars.clone().pop().unwrap(),
+            Anf::AVal((), EVal::EInteger(n - 1)),
+            EExpr::EAnf((), Box::new(Anf::AVal((), EVal::EInteger(n)))),
+        );
+        finvars
+            .into_iter()
+            .enumerate()
+            .fold(last, |rest, (i, var)| {
+                mk_cond(var.to_string(), Anf::AVal((), EVal::EInteger(i)), rest)
+            })
+    }
 
     pub fn params2named_statements(
         namespace: &String,
@@ -433,18 +474,7 @@ pub mod discrete {
         let lastlbl = format!("{}_{}", namespace, names.last().unwrap());
         vars.push((lastlbl.clone(), EExpr::EAnf((), Box::new(mkguard(seen)))));
         finvec.push(lastlbl.clone());
-        (
-            vars,
-            EExpr::EAnf(
-                (),
-                Box::new(Anf::AnfProd(
-                    finvec
-                        .into_iter()
-                        .map(|s| Anf::AVar((), s.clone()))
-                        .collect_vec(),
-                )),
-            ),
-        )
+        (vars, mk_final_result(&finvec))
     }
 
     pub fn from_params(params: &Vec<AnfUD<EVal>>) -> Result<EExprUD> {
