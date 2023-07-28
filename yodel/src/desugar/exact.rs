@@ -311,11 +311,14 @@ pub mod integers {
 }
 
 pub mod discrete {
+    use crate::grammar::undecorated::*;
     use crate::typeinf::grammar::{EExprInferable, Inferable};
+    use crate::*;
     use crate::*;
     use itertools::*;
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};
+    use tracing::*;
 
     /// assumes normalized probs
     fn params2partitions(params: &Vec<AnfUD<EVal>>) -> Vec<AnfUD<EVal>> {
@@ -410,8 +413,6 @@ pub mod discrete {
             )),
         )
     }
-    use crate::grammar::undecorated::*;
-    use crate::*;
 
     pub fn mk_cond(var: String, t: AnfUD<EVal>, f: EExprUD) -> EExprUD {
         use Anf::*;
@@ -423,18 +424,25 @@ pub mod discrete {
             Box::new(f),
         )
     }
+
     pub fn mk_final_conditional_int(finvars: &Vec<String>) -> EExprUD {
-        let n = finvars.len();
+        debug!("{finvars:?}");
+        let mut vars = finvars.clone();
+        let n = vars.len();
+        let _last_var_is_unused = vars.pop();
+        debug!("len: {n}");
+        debug!("last: {:?}", _last_var_is_unused);
+
         let mut last = mk_cond(
-            finvars.clone().pop().unwrap(),
+            vars.pop().unwrap(),
             Anf::AVal((), EVal::EInteger(n - 1)),
             EExpr::EAnf((), Box::new(Anf::AVal((), EVal::EInteger(n)))),
         );
-        finvars
-            .into_iter()
+        vars.into_iter()
             .enumerate()
+            .rev()
             .fold(last, |rest, (i, var)| {
-                mk_cond(var.to_string(), Anf::AVal((), EVal::EInteger(i)), rest)
+                mk_cond(var.to_string(), Anf::AVal((), EVal::EInteger(i + 1)), rest)
             })
     }
 
@@ -510,6 +518,8 @@ pub mod discrete {
     #[cfg(test)]
     mod tests {
         use super::*;
+        use tracing_test::*;
+
         fn floats2eanf(params: Vec<f64>) -> Vec<AnfUD<EVal>> {
             params
                 .into_iter()
@@ -612,6 +622,68 @@ pub mod discrete {
             let bindings = from_params(&params);
             println!("{:?}", bindings);
             // assert!(false);
+        }
+
+        #[test]
+        #[traced_test]
+        pub fn test_desugared_int1() {
+            let finvars = vec!["a".to_string(), "b".to_string()];
+            let ret = mk_final_conditional_int(&finvars);
+            assert_eq!(
+                ret,
+                mk_cond(
+                    "a".to_string(),
+                    Anf::AVal((), EVal::EInteger(1)),
+                    EExpr::EAnf((), Box::new(Anf::AVal((), EVal::EInteger(2))))
+                )
+            );
+        }
+
+        #[test]
+        #[traced_test]
+        pub fn test_desugared_int2() {
+            let finvars = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+            let ret = mk_final_conditional_int(&finvars);
+            assert_eq!(
+                ret,
+                mk_cond(
+                    "a".to_string(),
+                    Anf::AVal((), EVal::EInteger(1)),
+                    mk_cond(
+                        "b".to_string(),
+                        Anf::AVal((), EVal::EInteger(2)),
+                        EExpr::EAnf((), Box::new(Anf::AVal((), EVal::EInteger(3))))
+                    )
+                )
+            );
+        }
+
+        #[test]
+        #[traced_test]
+        pub fn test_desugared_int3() {
+            let finvars = vec![
+                "a".to_string(),
+                "b".to_string(),
+                "c".to_string(),
+                "d".to_string(),
+            ];
+            let ret = mk_final_conditional_int(&finvars);
+            assert_eq!(
+                ret,
+                mk_cond(
+                    "a".to_string(),
+                    Anf::AVal((), EVal::EInteger(1)),
+                    mk_cond(
+                        "b".to_string(),
+                        Anf::AVal((), EVal::EInteger(2)),
+                        mk_cond(
+                            "c".to_string(),
+                            Anf::AVal((), EVal::EInteger(3)),
+                            EExpr::EAnf((), Box::new(Anf::AVal((), EVal::EInteger(4))))
+                        )
+                    )
+                )
+            );
         }
     }
 }
