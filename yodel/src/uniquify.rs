@@ -311,7 +311,7 @@ impl SymEnv {
                 Ok(EObserve((), Box::new(anf)))
             }
             ESample(_, e) => Ok(ESample((), Box::new(self.uniquify_sexpr(e)?))),
-            EDiscrete(_, _) => errors::erased(),
+            EDiscrete(_, _) => errors::erased(Uniquify, "discrete"),
         }
     }
     pub fn uniquify_sexpr(&mut self, e: &SExprUD) -> Result<SExprUnq> {
@@ -391,7 +391,7 @@ impl SymEnv {
             )),
             SApp(_, f, args) => Ok(SApp((), f.clone(), self.uniquify_anfs(args)?)),
             SSample(_, dist) => Ok(SSample((), Box::new(self.uniquify_anf(dist)?))),
-            SLetSample(_, _, _, _) => errors::erased(),
+            SLetSample(_, _, _, _) => errors::erased(Uniquify, "let-sample"),
         }
     }
     pub fn uniquify_efun(&mut self, f: &Function<EExprUD>) -> Result<Function<EExprUnq>> {

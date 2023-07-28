@@ -56,7 +56,13 @@ pub fn importance_weighting_h(
                     })
                     .or_else(|| stats);
             }
-            Err(e) => panic!("{:?}", e),
+            Err(e) => panic!(
+                "Error type: {}{}",
+                e.errtype(),
+                e.msg()
+                    .map(|x| format!("\nMessage: {}", x))
+                    .unwrap_or_else(|| "".to_string())
+            ),
         }
     }
 

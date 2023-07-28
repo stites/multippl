@@ -192,7 +192,7 @@ fn expand_phase(input: TTGPhase) -> TokenStream2 {
 
     quote! {
         #[automatically_derived]
-        #[derive(Clone, Debug, PartialEq)]
+        #[derive(Copy, Clone, std::fmt::Debug, PartialEq)]
         #vis struct #phase_name;
 
         #(#assocs)*

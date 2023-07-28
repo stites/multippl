@@ -587,7 +587,7 @@ impl LabelEnv {
                 Ok(EObserve((), Box::new(anf)))
             }
             ESample(_, e) => Ok(ESample((), Box::new(self.annotate_sexpr(e)?))),
-            EDiscrete(_, _) => errors::erased(),
+            EDiscrete(_, _) => errors::erased(Annotated, "discrete"),
         }
     }
     pub fn annotate_sexpr(&mut self, e: &SExprUnq) -> Result<SExprAnn> {
@@ -686,7 +686,7 @@ impl LabelEnv {
             SSample(_, dist) => Ok(SSample((), Box::new(self.annotate_sanf(dist)?))),
 
             SExact(_, e) => Ok(SExact((), Box::new(self.annotate_eexpr(e)?))),
-            SLetSample(_, _, _, _) => errors::erased(),
+            SLetSample(_, _, _, _) => errors::erased(Annotated, "let-sample"),
         }
     }
     pub fn annotate_efun(&mut self, f: &Function<EExprUnq>) -> Result<Function<EExprAnn>> {

@@ -560,7 +560,7 @@ impl<'a> State<'a> {
                 o.exact.out = out;
                 Ok((o.clone(), ESample(o, Box::new(s))))
             }
-            EDiscrete(_, _) => errors::erased(),
+            EDiscrete(_, _) => errors::erased(Trace, "discrete"),
         }
     }
     fn sample<D: Distribution<V>, V>(&mut self, dist: D) -> V {
@@ -942,7 +942,7 @@ impl<'a> State<'a> {
                 }
                 Ok((out.clone(), SExact(out, Box::new(etr))))
             }
-            SLetSample(_, _, _, _) => errors::erased(),
+            SLetSample(_, _, _, _) => errors::erased(Trace, "let-sample"),
         }
     }
 }

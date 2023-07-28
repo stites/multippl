@@ -7,7 +7,7 @@ pub enum CompileError {
     TypeError(String),
     Generic(String),
     SemanticsError(String),
-    ErasedInAbovePass(),
+    ErasedInAbovePass(String, String),
     InexpressibleExactExpr(),
     InexpressibleSampleExpr(),
 }
@@ -20,13 +20,44 @@ impl fmt::Display for CompileError {
             TypeError(s) => write!(f, "{}", s),
             Generic(s) => write!(f, "{}", s),
             SemanticsError(s) => write!(f, "{}", s),
-            ErasedInAbovePass() => write!(f, "erased in above pass"),
+            ErasedInAbovePass(phase, s) => write!(f, "erased in above pass: {}", s),
             InexpressibleExactExpr() => {
                 write!(f, "expression is not expressible in the exact language")
             }
             InexpressibleSampleExpr() => {
                 write!(f, "expression is not expressible in the sample language")
             }
+        }
+    }
+}
+impl CompileError {
+    pub fn errtype(&self) -> String {
+        use CompileError::*;
+        (match self {
+            AcceptingNonZeroError(_) => "AcceptingNonZeroError",
+            Todo() => "Todo",
+            TypeError(_) => "TypeError",
+            Generic(_) => "Generic",
+            SemanticsError(_) => "SemanticsError",
+            ErasedInAbovePass(_, _) => "ErasedInAbovePass",
+            InexpressibleExactExpr() => "InexpressibleExactExpr",
+            InexpressibleSampleExpr() => "InexpressibleSampleExpr",
+        })
+        .to_string()
+    }
+    pub fn msg(&self) -> Option<String> {
+        use CompileError::*;
+        match self {
+            AcceptingNonZeroError(m) => Some(m.clone()),
+            Todo() => None,
+            TypeError(m) => Some(m.clone()),
+            Generic(m) => Some(m.clone()),
+            SemanticsError(m) => Some(m.clone()),
+            ErasedInAbovePass(phase, statement) => {
+                Some(format!("Phase: {:?}, Statement: {:?}", phase, statement))
+            }
+            InexpressibleExactExpr() => None,
+            InexpressibleSampleExpr() => None,
         }
     }
 }
@@ -51,8 +82,11 @@ pub fn TODO<T>() -> Result<T> {
 pub fn semantics<T>(s: &str) -> Result<T> {
     Err(CompileError::SemanticsError(s.to_string()))
 }
-pub fn erased<T>() -> Result<T> {
-    Err(CompileError::ErasedInAbovePass())
+pub fn erased<X: Copy + std::fmt::Debug, T>(phase: X, ctx: &str) -> Result<T> {
+    Err(CompileError::ErasedInAbovePass(
+        format!("{:?}", phase),
+        ctx.to_string(),
+    ))
 }
 pub fn not_in_exact<T>() -> Result<T> {
     Err(CompileError::InexpressibleExactExpr())
