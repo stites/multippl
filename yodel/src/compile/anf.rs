@@ -91,17 +91,23 @@ pub fn eval_eanf_numop<'a>(
             let out = ctx.exact.as_output(vec![EVal::EFloat(x)]);
             Ok((out.clone(), op(Box::new(bl), Box::new(br))))
         }
-        ([EVal::EProd(l)], [EVal::EProd(r)]) => {
-            let l = integers::from_prod(l)?;
-            let r = integers::from_prod(r)?;
-            let x = iop(l, r);
+        ([EVal::EInteger(l)], [EVal::EInteger(r)]) => {
+            // let l = integers::from_prod(l)?;
+            // let r = integers::from_prod(r)?;
+            let x = iop(*l, *r);
             tracing::debug!("{l} <iop> {r} = {x}");
-            let out = ctx.exact.as_output(vec![integers::as_onehot(x)]);
+            // let out = ctx.exact.as_output(vec![integers::as_onehot(x)]);
+            let out = ctx.exact.as_output(vec![EVal::EInteger(x)]);
             Ok((out.clone(), op(Box::new(bl), Box::new(br))))
         }
-        ([EVal::EInteger(l)], _) => return errors::erased(),
-        (_, [EVal::EInteger(r)]) => return errors::erased(),
-        _ => return errors::typecheck_failed("eanf numop"),
+        // ([EVal::EInteger(l)], _) => return errors::erased(),
+        // (_, [EVal::EInteger(r)]) => return errors::erased(),
+        (l, r) => {
+            return errors::typecheck_failed(&format!(
+                "eanf numop. Arguments:\nleft: {:?}\nright: {:?}",
+                l, r
+            ))
+        }
     }
 }
 pub fn eval_sanf_bop<'a>(
@@ -538,13 +544,23 @@ pub fn eval_eanf<'a>(ctx: &'a Ctx, a: &'a AnfAnn<EVal>) -> Result<(EOutput, AnfT
         AnfPrj(var, ix) => {
             let (ovar, var) = eval_eanf(ctx, var)?;
             let (oix, ix) = eval_eanf(ctx, ix)?;
-            panic!("{var:?}[{ix:?}]");
+
             match (&ovar.out[..], &oix.out[..]) {
                 ([EVal::EProd(vs)], [EVal::EInteger(i)]) => {
                     let out = ctx.exact.as_output(vec![vs[*i].clone()]);
                     Ok((out.clone(), AnfPrj(Box::new(var), Box::new(ix))))
                 }
-                _ => return errors::typecheck_failed("anf projection"),
+                (vs, [EVal::EInteger(i)]) => {
+                    let out = ctx.exact.as_output(vec![vs[*i].clone()]);
+                    Ok((out.clone(), AnfPrj(Box::new(var), Box::new(ix))))
+                }
+
+                (l, r) => {
+                    return errors::typecheck_failed(&format!(
+                        "anf projection:\nprod: {:?}\nindex: {:?}",
+                        l, r
+                    ))
+                }
             }
         }
         AnfVec(anfs) => errors::not_in_exact(),

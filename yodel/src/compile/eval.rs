@@ -523,8 +523,7 @@ impl<'a> State<'a> {
                 let mut args = args.out;
                 let (niters, k) = eval_eanf(&ctx, k)?;
                 let mut niters: usize = match &niters.out[..] {
-                    [EVal::EInteger(i)] => errors::erased(),
-                    [EVal::EProd(vs)] => crate::desugar::exact::integers::from_prod(vs),
+                    [EVal::EInteger(i)] => Ok(*i),
                     _ => errors::typecheck_failed("iterate k"),
                 }?;
                 let mut ctx = ctx.clone();

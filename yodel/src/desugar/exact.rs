@@ -25,7 +25,7 @@ pub fn desugar_eval(v: &EVal) -> Result<EVal> {
         EProd(vs) => Ok(EProd(
             vs.iter().map(desugar_eval).collect::<Result<Vec<EVal>>>()?,
         )),
-        EInteger(i) => Ok(integers::as_onehot(*i)),
+        // EInteger(i) => Ok(integers::as_onehot(*i)),
         _ => Ok(v.clone()),
     }
 }
@@ -400,8 +400,9 @@ pub mod discrete {
     //     Anf::AVal((), EVal::EFloat(f))
     // }
     pub fn mk_final_result(finvars: &Vec<String>) -> EExprUD {
-        mk_final_tuple(finvars)
+        mk_final_conditional_int(finvars)
     }
+
     pub fn mk_final_tuple(finvars: &Vec<String>) -> EExprUD {
         EExpr::EAnf(
             (),
@@ -433,7 +434,7 @@ pub mod discrete {
         debug!("len: {n}");
         debug!("last: {:?}", _last_var_is_unused);
 
-        let mut last = mk_cond(
+        let last = mk_cond(
             vars.pop().unwrap(),
             Anf::AVal((), EVal::EInteger(n - 1)),
             EExpr::EAnf((), Box::new(Anf::AVal((), EVal::EInteger(n)))),

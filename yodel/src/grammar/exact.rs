@@ -37,7 +37,8 @@ crate::TTG!(
             match e {
                 SBool(b) => Ok(EBdd(BddPlan::from_bool(*b))),
                 SFloat(f) => Ok(EFloat(*f)),
-                SInt(i) => Ok(integers::as_onehot(*i as usize)),
+                // SInt(i) => Ok(integers::as_onehot(*i as usize)),
+                SInt(i) => Ok(EInteger(*i as usize)),
                 SVec(vs) => Ok(EProd(
                     vs.iter().map(Self::embed).collect::<Result<Vec<_>>>()?,
                 )),
