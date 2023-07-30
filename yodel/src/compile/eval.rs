@@ -895,54 +895,59 @@ impl<'a> State<'a> {
                 tracing::debug!("exact");
 
                 let (mut out, etr) = self.eval_eexpr(ctx.clone(), eexpr)?;
+                let eouts = out.exact.out.clone();
 
-                let wmc_params = out.exact.weightmap.as_params(self.opts.max_label);
-                let var_order = self.opts.order.clone();
-                let accept = out.exact.accept.clone();
-
-                for eval in out.exact.out.iter() {
-                    match (eval, SExpr::<Trace>::embed(eval)) {
-                        (_, Ok(sv)) => {
-                            out.sample.out.push(sv);
-                        }
+                for eval in eouts.iter() {
+                    let val = match (eval, SExpr::<Trace>::embed(eval)) {
+                        (_, Ok(sv)) => sv,
                         (EVal::EBdd(dist), Err(_)) => {
-                            let theta_q = crate::inference::calculate_wmc_prob(
-                                self.mgr,
-                                &wmc_params,
-                                &var_order,
-                                dist.clone(),
-                                accept.clone(),
-                                ctx.exact.samples(self.opts.sample_pruning),
-                            )
-                            .0;
-
-                            let bern = statrs::distribution::Bernoulli::new(theta_q).unwrap();
-                            let sample = self.sample(bern) == 1.0;
-
-                            let weight = if sample { theta_q } else { 1.0 - theta_q };
-
-                            self.pq.q *= weight;
-                            self.pq.p *= weight;
-
-                            out.sample.trace.push((
-                                SVal::SBool(sample),
-                                Dist::Bern(theta_q),
-                                Probability::new(weight),
-                                None,
-                            ));
-
-                            // sample in sequence. A smarter sample would compile
-                            // all samples of a multi-rooted BDD, but I need to futz
-                            // with rsdd's fold
-                            out.exact.samples.push((dist.clone(), sample));
-                            out.sample.out.push(SVal::SBool(sample));
+                            let sample = self.exact2sample_bdd_eff(&mut out, dist);
+                            SVal::SBool(sample)
                         }
                         _ => panic!("typecheck_failed"),
-                    }
+                    };
+                    out.sample.out.push(val);
                 }
                 Ok((out.clone(), SExact(out, Box::new(etr))))
             }
             SLetSample(_, _, _, _) => errors::erased(Trace, "let-sample"),
         }
+    }
+
+    pub fn exact2sample_bdd_eff(&mut self, out: &mut Output, dist: &BddPlan) -> bool {
+        let wmc_params = out.exact.weightmap.as_params(self.opts.max_label);
+        let var_order = self.opts.order.clone();
+        let accept = out.exact.accept.clone();
+
+        let theta_q = crate::inference::calculate_wmc_prob(
+            self.mgr,
+            &wmc_params,
+            &var_order,
+            dist.clone(),
+            accept.clone(),
+            GetSamples::samples(&out.exact, self.opts.sample_pruning),
+        )
+        .0;
+
+        let bern = statrs::distribution::Bernoulli::new(theta_q).unwrap();
+        let sample = self.sample(bern) == 1.0;
+
+        let weight = if sample { theta_q } else { 1.0 - theta_q };
+
+        self.pq.q *= weight;
+        self.pq.p *= weight;
+
+        out.sample.trace.push((
+            SVal::SBool(sample),
+            Dist::Bern(theta_q),
+            Probability::new(weight),
+            None,
+        ));
+
+        // sample in sequence. A smarter sample would compile
+        // all samples of a multi-rooted BDD, but I need to futz
+        // with rsdd's fold
+        out.exact.samples.push((dist.clone(), sample));
+        sample
     }
 }
