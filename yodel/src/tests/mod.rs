@@ -336,34 +336,44 @@ fn sample_tuple() {
     // check_invariant("sharedtuple ", None, None, &p);
 }
 
-// #[test]
-// fn test_big_tuple() {
-//     let p = program!(lets![
-//         "a" ;= flip!(1/2);
-//         "b" ;= flip!(1/2);
-//         "c" ;= flip!(1/2);
-//         "d" ;= flip!(1/2);
-//         "e" ;= flip!(1/2);
-//         "z" ;= b!("a", "b", "c", "d", "e");
-//         ...? b!("z")
-//     ]);
-//     check_exact("3-tuple", vec![0.5, 0.5, 0.5, 0.5, 0.5], &p);
-//     let p = program!(lets![
-//         "a" ;= flip!(1/2);
-//         "b" ;= flip!(1/2);
-//         "c" ;= flip!(1/2);
-//         "d" ;= flip!(1/2);
-//         "e" ;= flip!(1/2);
-//         "z" ;= b!("a", "b", "c", "d", "e");
-//         "q" ;= prj!(0, "z");
-//         "r" ;= prj!(1, "z");
-//         "s" ;= prj!(2, "z");
-//         "t" ;= prj!(3, "z");
-//         "u" ;= prj!(4, "z");
-//         ...? b!("q", "r", "s", "t", "u")
-//     ]);
-//     check_exact("3-tuple", vec![0.5, 0.5, 0.5, 0.5, 0.5], &p);
-// }
+#[test]
+fn test_big_tuple1() {
+    let p = r#"
+    exact {
+      let a = flip 0.5 in
+      let b = flip 0.5 in
+      let c = flip 0.5 in
+      let d = flip 0.5 in
+      let e = flip 0.5 in
+      let z = (a, b, c, d, e) in
+      z
+    } "#
+    .to_owned()
+        + "\n}";
+    check_exact("3-tuple", vec![0.5, 0.5, 0.5, 0.5, 0.5], &p);
+}
+
+#[test]
+fn test_big_tuple2() {
+    let p = r#"
+    exact {
+      let a = flip 0.5 in
+      let b = flip 0.5 in
+      let c = flip 0.5 in
+      let d = flip 0.5 in
+      let e = flip 0.5 in
+      let z = (a, b, c, d, e) in
+      let q = z[0] in
+      let r = z[1] in
+      let s = z[2] in
+      let t = z[3] in
+      let u = z[4] in
+      (q, r, s, t, u)
+    }"#
+    .to_owned()
+        + "\n}";
+    check_exact("3-tuple", vec![0.5, 0.5, 0.5, 0.5, 0.5], &p);
+}
 
 // ===================================================================== //
 //                          free variable tests                          //
