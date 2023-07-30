@@ -369,20 +369,21 @@ fn sample_tuple() {
 //                          free variable tests                          //
 // ===================================================================== //
 
-// #[test]
-// // #[traced_test]
-// fn free_variables_1() {
-//     let problem = {
-//         Program::EBody(lets![
-//            "x"  ;= flip!(1/3);
-//            "l"  ;= sample!(var!("x"));
-//            "_"  ;= observe!(var!("x"));
-//            ...? var!("l")
-//         ])
-//     };
-//     check_approx1("free/!!", 1.0, &problem, 1000);
-//     // check_approx1("free/!!", 1.0, &problem, 2);
-// }
+#[test]
+#[traced_test]
+fn free_variables_1() {
+    let problem = r#"
+    exact {
+      let x = flip 1.0 / 3.0 in
+      let l = sample { exact(x) } in
+      let _ = observe x in
+      l
+    }"#
+    .to_owned()
+        + "\n}";
+    check_approx1("free/!!", 1.0, &problem, 100);
+    // check_approx1("free/!!", 1.0, &problem, 2);
+}
 
 // macro_rules! free_variable_2_tests {
 //     ($($name:ident: $value:expr,)*) => {

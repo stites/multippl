@@ -935,6 +935,7 @@ impl<'a> State<'a> {
                             // all samples of a multi-rooted BDD, but I need to futz
                             // with rsdd's fold
                             out.exact.samples.push((dist.clone(), sample));
+                            out.sample.out.push(SVal::SBool(sample));
                         }
                         _ => panic!("typecheck_failed"),
                     }
