@@ -166,8 +166,12 @@ module.exports = grammar({
     ),
 
     site: $ => choice(
+      seq('if', $.sanf, '{', $.sexpr, '}', 'else', '{', $.sexpr, '}'),
+      seq('if', $.sanf, '{', $.sexpr, '}', 'else', $.site ),
       seq('if', '(', $.sanf, ')', '{', $.sexpr, '}', 'else', '{', $.sexpr, '}'),
       seq('if', '(', $.sanf, ')', '{', $.sexpr, '}', 'else', $.site ),
+      seq('if', $.sanf, 'then', $.sexpr, 'else', $.sexpr),
+      seq('if', '(', $.sanf, ')', 'then', $.sexpr, 'else', $.sexpr),
     ),
 
     sapp: $ => choice(
@@ -189,7 +193,7 @@ module.exports = grammar({
     // sseq_first: $ => seq($.sexpr, ';',),
     smap: $ => seq('map', '(', $.identifier, '->', $.sexpr, ')', $.sanf),
     swhile: $ => choice(
-      seq('while', '(',  $.sanf, ')', '{', $.sexpr, '}'),
+      // seq('while', '(',  $.sanf, ')', '{', $.sexpr, '}'),
       seq('while', $.sanf, '{', $.sexpr, '}'),
     ),
 
@@ -200,7 +204,7 @@ module.exports = grammar({
       seq('(\\', $.identifier, '->', $.sexpr, ')'),
       seq('(\\', repeat(seq($.identifier, ',')), $.identifier, '->', $.sexpr, ')'),
     ),
-    sobs: $ => seq('observe', '(', $.sanf, ',', $.sanf, ')'),
+    sobs: $ => seq('observe', $.sanf, 'in', $.sanf),
     sexact: $ => choice(
       seq('exact', '(', $.eexpr, ')' ),
       seq('exact', '{', $.eexpr, '}' ),
@@ -286,11 +290,26 @@ module.exports = grammar({
     ),
 
     /// value forms of distributions
-    sbern: $ => seq('bern', '(', $.svalue, ')'),
-    spoisson: $ => seq('poisson', '(', $.svalue, ')'),
-    suniform: $ => seq('uniform', '(', $.svalue, ',', $.svalue, ')'),
-    snormal: $ => seq('normal', '(', $.svalue, ',', $.svalue, ')'),
-    sbeta: $ => seq('beta', '(', $.svalue, ',', $.svalue, ')'),
+    sbern: $ => choice(
+      seq('bern', $.svalue),
+      seq('bern', '(', $.svalue, ')'),
+    ),
+    spoisson: $ => choice(
+      seq('poisson', $.svalue),
+      seq('poisson', '(', $.svalue, ')'),
+    ),
+    suniform: $ => choice(
+      //seq('uniform', $.svalue, $.svalue),
+      seq('uniform', '(', $.svalue, ',', $.svalue, ')'),
+    ),
+    snormal: $ => choice(
+      //seq('normal', $.svalue, $.svalue),
+      seq('normal', '(', $.svalue, ',', $.svalue, ')'),
+    ),
+    sbeta: $ => choice(
+      //seq('beta', $.svalue, $.svalue),
+      seq('beta', '(', $.svalue, ',', $.svalue, ')'),
+    ),
     sdiscrete: $ => choice(
       seq('discrete', '(', $.svalue, ')'),
       seq('discrete', '(', repeat(seq($.svalue, ',')), $.svalue, ')'),
@@ -299,7 +318,6 @@ module.exports = grammar({
       seq('dirichlet', '(', $.svalue, ')'),
       seq('dirichlet', '(', repeat(seq($.svalue, ',')), $.svalue, ')'),
     ),
-
 
     sty: $ => choice($.tyBool, $.tyFloat, $.tyInt, $.tyVec, $.tyDistribution, $.styProd),
     tyInt: $ => 'Int',
