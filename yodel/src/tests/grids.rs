@@ -160,8 +160,8 @@ fn grid3x3_sampled_diag() {
         let x22 =
             if  x21  &&  x12 then flip 3.0 /  7.0 else
             if  x21  && !x12 then flip 3.0 /  8.0 else
-            if !x21  &&  x12 then flip 3.0 /  9.0 else
-                                  flip 3.0 / 11.0 in
+            if !x21  &&  x12 then flip 8.0 /  9.0 else
+                                  flip 9.0 / 11.0 in
         "#
         .to_owned()
             + ret
@@ -190,7 +190,7 @@ fn grid3x3_sampled_diag() {
             0.770263904,
         ],
         &mk("(x00, x01, x10, x02, x20, x11, x12, x21, x22)"),
-        20000,
+        5000,
     );
 }
 

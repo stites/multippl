@@ -39,7 +39,10 @@ where
     // [x] && x [ 0 ]
     AnfVec(Vec<Anf<X, Val>>), // in the exact language, this denotes a one-hot encoded integer
     AnfProd(Vec<Anf<X, Val>>),
-    AnfPrj(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    AnfPrj(
+        Box<Anf<X, Val>>, // tuple to index
+        Box<Anf<X, Val>>,
+    ), // index value
 
     // Distributions
     AnfBernoulli(<ADistExt<Val> as ξ<X>>::Ext, Box<Anf<X, Val>>),

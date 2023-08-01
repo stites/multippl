@@ -12,7 +12,10 @@ macro_rules! print_network {
 
         for v in $bn.topological_sort() {
             println!("{}", v);
-            println!("    assignments: {}", $bn.get_all_assignments(&v).join(","));
+            println!(
+                "    assignments: {}",
+                $bn.all_possible_assignments(&v).join(",")
+            );
             println!("    parents    : {}", $bn.get_parents(&v).join(","));
             println!("    CPT");
             for passigns in $bn.parent_assignments(&v) {
@@ -21,7 +24,7 @@ macro_rules! print_network {
                     .map(|(p, pa)| format!("{}={}", p, pa))
                     .collect();
 
-                for vassign in $bn.get_all_assignments(&v) {
+                for vassign in $bn.all_possible_assignments(&v) {
                     println!(
                         "            P({} = {}\t| {})\t: {}",
                         v,
@@ -57,6 +60,19 @@ pub fn _pprint_anf(anf: &Anf<Inferable, EVal>) {
             print!(" && ");
             _pprint_anf(r);
         }
+        Anf::AnfPrj(ix, anf) => {
+            print!("prj(");
+            _pprint_anf(ix);
+            print!(",");
+            _pprint_anf(anf);
+            print!(")");
+        }
+        Anf::AnfProd(anfs) => {
+            for anf in anfs {
+                _pprint_anf(anf);
+                print!(", ");
+            }
+        }
         _ => todo!(),
     }
 }
@@ -64,22 +80,12 @@ pub fn _pprint_anf(anf: &Anf<Inferable, EVal>) {
 pub fn _pprint(expr: &EExprInferable, depth: usize) {
     match &expr {
         EExpr::EFlip(_, p) => {
-            print!("flip {}", p);
+            print!("flip {:?}", p);
         }
         EExpr::EAnf(_, anf) => {
             _pprint_anf(anf);
         }
-        EExpr::EPrj(_, ix, anf) => {
-            print!("prj_{}(", ix);
-            _pprint_anf(anf);
-            print!(")");
-        }
-        EExpr::EProd(_, anfs) => {
-            for anf in anfs {
-                _pprint_anf(anf);
-                print!(", ");
-            }
-        }
+
         EExpr::ELetIn(_, var, bindee, body) => {
             let indent = " ".repeat(depth * 2);
             print!("{}let {} := ", indent, var);
@@ -103,7 +109,6 @@ pub fn _pprint(expr: &EExprInferable, depth: usize) {
             let indent = " ".repeat(depth * 2);
             println!("{}{:?}", indent, x)
         }
-        _ => println!(""),
     }
 }
 

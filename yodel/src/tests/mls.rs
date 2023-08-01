@@ -125,32 +125,25 @@ use crate::*;
 // #[traced_test]
 fn healthcare() {}
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tracing_test::*;
+#[test]
+fn diamond_router() {
+    let mk = || {
+        r#"
+exact fn diamond (s1: Bool) : Bool {
+  let route = flip 0.5 in
+  let s2 = if route then s1 else false in
+  let s3 = if route then false else s1 in
+  let drop = flip 0.0001 in
+  s2 || (s3 && !drop)
+}
+sample {
+  p ~ poisson(0.4);
+  exact (iterate(diamond, true, p + 1))
+}"#
+    };
 
-    #[test]
-    #[traced_test]
-    fn proto_arrival() {
-        let mk = || {
-            r#"
-    exact fn diamond (s1: Bool) : Bool {
-      let route = flip 0.5 in
-      let s2 = if route then s1 else false in
-      let s3 = if route then false else s1 in
-      let drop = flip 0.0001 in
-      s2 || (s3 && !drop)
-    }
-    sample {
-      p ~ poisson(0.4);
-      exact (iterate(diamond, true, p + 1))
-    }"#
-        };
+    let n = 100;
 
-        let n = 100;
-
-        let _ = crate::inference::importance_weighting_h(1, &mk(), &Default::default());
-        // crate::tests::check_approx("proto_arrival", vec![1.0 / 3.0, 1.0 / 3.0], &mk(), n);
-    }
+    let _ = crate::inference::importance_weighting_h(1, &mk(), &Default::default());
+    // crate::tests::check_approx("proto_arrival", vec![1.0 / 3.0, 1.0 / 3.0], &mk(), n);
 }

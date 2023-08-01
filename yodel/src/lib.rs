@@ -39,8 +39,9 @@ pub use pipeline::*;
 
 pub mod inference;
 
-// // extras
-// pub mod bayesian_network;
+// extras
+pub mod bayesian_network;
+pub mod upcast;
 // pub mod grids;
 pub mod utils;
 

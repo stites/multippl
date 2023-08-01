@@ -1,5 +1,7 @@
+use crate::data::errors::*;
 use crate::grammar::*;
 use crate::typeinf::grammar::*;
+use crate::upcast::upcast_eexpr;
 use itertools::*;
 use rsgm::bayesian_network::BayesianNetwork;
 use std::collections::{HashMap, HashSet};
@@ -20,12 +22,12 @@ fn get_probs(
     parents: &HashMap<String, String>,
     suffix: Option<String>,
 ) -> (Vec<f64>, Vec<String>) {
-    bn.get_all_assignments(v)
+    bn.all_possible_assignments(v)
         .into_iter()
         .cloned()
         .map(|vassign| {
             (
-                bn.get_conditional_prob(v, &vassign, parents),
+                bn.conditional_probability(v, &vassign, parents),
                 format!("{}{}", vassign, suffix.clone().unwrap_or_default()),
             )
         })
@@ -37,17 +39,26 @@ fn _to_statements(
     v: &String,
     parents: &HashMap<String, String>,
     suffix: Option<String>,
-) -> (Vec<(String, EExprInferable)>, Vec<String>) {
+) -> Result<(Vec<(String, EExprInferable)>, Vec<String>)> {
     let (mut ps, mut vars) = get_probs(bn, v, parents, suffix);
     if ps.len() == 2 && !is_high(vars.first().unwrap()) {
         ps.rotate_right(1);
         vars.rotate_right(1);
     }
-    (discrete::params2named_statements(&v, &vars, &ps), vars)
+    let ps = ps
+        .into_iter()
+        .map(|f| Anf::AVal((), EVal::EFloat(f)))
+        .collect::<Vec<_>>();
+    let (es, fin) = crate::desugar::exact::discrete::params2named_statements(&v, &vars, &ps);
+    let es = es
+        .into_iter()
+        .map(|(s, e)| Ok((s, upcast_eexpr(&e)?)))
+        .collect::<Result<Vec<(String, EExprInferable)>>>()?;
+    Ok((es, vars))
 }
 
-fn independent_node(bn: &BayesianNetwork, v: &String) -> Vec<(String, EExprInferable)> {
-    _to_statements(bn, v, &Default::default(), None).0
+fn independent_node(bn: &BayesianNetwork, v: &String) -> Result<Vec<(String, EExprInferable)>> {
+    Ok(_to_statements(bn, v, &Default::default(), None)?.0)
 }
 
 fn to_statements_returning(
@@ -55,10 +66,10 @@ fn to_statements_returning(
     v: &String,
     parents: &HashMap<String, String>,
     suffix: Option<String>,
-) -> (Vec<(String, EExprInferable)>, EExprInferable) {
-    let (lbl_binds, vars) = _to_statements(bn, v, parents, suffix);
+) -> Result<(Vec<(String, EExprInferable)>, EExprInferable)> {
+    let (lbl_binds, vars) = _to_statements(bn, v, parents, suffix)?;
     let body = vars2prod(v, &vars);
-    (lbl_binds, body)
+    Ok((lbl_binds, body))
 }
 
 fn vars2prod(v: &String, params: &Vec<String>) -> EExprInferable {
@@ -67,7 +78,7 @@ fn vars2prod(v: &String, params: &Vec<String>) -> EExprInferable {
         .map(|p| Anf::AVar(None, var_label(v, p)))
         .collect_vec();
     let ty = ETy::EProd(params.iter().map(|_| ETy::EBool).collect_vec());
-    EExpr::EProd(Some(ty), vec)
+    EExpr::EAnf((), Box::new(Anf::AnfProd(vec)))
 }
 
 pub fn ite_star(ifs: &Vec<Anf<Inferable, EVal>>, branches: &Vec<EExprInferable>) -> EExprInferable {
@@ -90,22 +101,29 @@ pub fn ite_star(ifs: &Vec<Anf<Inferable, EVal>>, branches: &Vec<EExprInferable>)
 }
 
 fn prod2vars(name: &String, p: &EExprInferable) -> Vec<(String, EExprInferable)> {
+    use Anf::*;
+    use EExpr::*;
     match p {
-        EExpr::EProd(_, prod) => prod
-            .into_iter()
-            .enumerate()
-            .map(|(ix, anf)| match anf {
-                Anf::AVar(_, inst) => (
-                    inst.clone(),
-                    EExpr::EPrj(
-                        Some(ETy::EBool),
-                        ix,
-                        Box::new(Anf::AVar(None, name.clone())),
+        EAnf(_, anf) => match &**anf {
+            Anf::AnfProd(prod) => prod
+                .into_iter()
+                .enumerate()
+                .map(|(ix, anf)| match anf {
+                    AVar(_, inst) => (
+                        inst.clone(),
+                        EAnf(
+                            (),
+                            Box::new(AnfPrj(
+                                Box::new(AVar(None, name.clone())),
+                                Box::new(AVal((), EVal::EInteger(ix))),
+                            )),
+                        ),
                     ),
-                ),
-                _ => panic!("stop that!"),
-            })
-            .collect_vec(),
+                    _ => panic!("stop that!"),
+                })
+                .collect_vec(),
+            _ => panic!("why, you!!"),
+        },
         _ => panic!("bad user! go away!"),
     }
 }
@@ -129,13 +147,13 @@ fn conjoin_vars(vars: &Vec<String>) -> Anf<Inferable, EVal> {
     *fin
 }
 
-pub fn compile(bn: &BayesianNetwork, final_query: &EExprInferable) -> Program<Inferable> {
+pub fn compile(bn: &BayesianNetwork, final_query: &EExprInferable) -> Result<Program<Inferable>> {
     let mut program = final_query.clone();
     for (node_ix, v) in bn.topological_sort().into_iter().enumerate().rev() {
-        let assigns = bn.get_all_assignments(&v);
-        let parents = bn.get_parents(&v);
+        let assigns = bn.all_possible_assignments(&v);
+        let parents = bn.parents(&v);
         if parents.len() == 0 {
-            for (label, stmnt) in independent_node(&bn, &v).into_iter().rev() {
+            for (label, stmnt) in independent_node(&bn, &v)?.into_iter().rev() {
                 program = EExpr::ELetIn(None, label, Box::new(stmnt), Box::new(program));
             }
         }
@@ -147,14 +165,15 @@ pub fn compile(bn: &BayesianNetwork, final_query: &EExprInferable) -> Program<In
             let mut branches = vec![];
             for (pix, passigns) in all_passigns.into_iter().enumerate() {
                 if consistent_return.is_none() {
-                    let vars = _to_statements(&bn, &v, &passigns, None).1;
+                    let vars = _to_statements(&bn, &v, &passigns, None)?.1;
                     let query = vars2prod(&v, &vars);
                     consistent_return = Some(query.clone());
                 }
                 let pvar = parent_vars(&passigns);
 
                 guards.push(conjoin_vars(&pvar));
-                let (l_s, vars) = _to_statements(&bn, &v, &passigns, Some(format!("_{}", pix)));
+                let (l_s, vars) =
+                    _to_statements(&bn, &v, &passigns, Some(format!("_{}", pix))).unwrap();
                 let query = vars2prod(&v, &vars);
 
                 let mut branch = query;
@@ -176,25 +195,25 @@ pub fn compile(bn: &BayesianNetwork, final_query: &EExprInferable) -> Program<In
             );
         }
     }
-    Program::EBody(program)
+    Ok(Program::EBody(program))
 }
 
 pub fn allmarg_query(bn: &BayesianNetwork) -> EExprInferable {
-    let vars = bn.get_variables();
+    let vars = bn.variables();
     let mut query = vec![];
     let mut qtype = vec![];
     for var in vars {
-        for var_instance in bn.get_all_assignments(var) {
+        for var_instance in bn.all_possible_assignments(var) {
             let qvar = var_label(var, var_instance);
             query.push(Anf::AVar(Some(ETy::EBool), qvar));
             qtype.push(ETy::EBool);
         }
     }
     let t = Some(ETy::EProd(qtype));
-    EExpr::EProd(t, query)
+    EExpr::EAnf((), Box::new(Anf::AnfProd(query)))
 }
 
 pub fn compile_allmarg(bn: &BayesianNetwork) -> Program<Inferable> {
     let query = allmarg_query(&bn);
-    compile(&bn, &query)
+    compile(&bn, &query).unwrap()
 }
