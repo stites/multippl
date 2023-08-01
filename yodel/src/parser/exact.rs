@@ -26,21 +26,6 @@ macro_rules! assert_children {
     }};
 }
 
-// fn parse_anf<'a, 'b>(c: &'a mut TreeCursor<'b>, n: &'b Node) -> (ANF, Ty) {
-// anf: $ => choice(
-//   $.identifier,
-//   $._value,
-//   prec.left(3, seq($.anf, $.bool_biop, $.anf)),
-//   prec.left(5, seq($.bool_unop, $.anf)),
-// ),
-
-fn parse_anf_child_h(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EVal> {
-    let mut c_ = c.clone();
-    let mut cs = n.named_children(&mut c_);
-    let a = cs.next().unwrap();
-    parse_anf(src, c, a)
-}
-
 fn parse_anf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EVal> {
     // top level forms:
     match n.kind() {
@@ -68,11 +53,28 @@ fn parse_anf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EVal> {
             match n.named_child_count() {
                 0 => {
                     tracing::debug!("parsing anf 0: {} >>> {}", n.to_sexp(), parse_str(src, &n));
-                    parse_anf_enode(src, c, n)
+                    match kind {
+                        "identifier" => {
+                            let utf8 = n.utf8_text(src).unwrap();
+                            let var = String::from_utf8(utf8.into()).unwrap();
+                            Anf::AVar(None, var)
+                        }
+                        _ => {
+                            if kind == "bool" || kind == "float" || kind == "int" {
+                                let eval = parse_eval(src, c, n);
+                                Anf::AVal((), eval)
+                            } else {
+                                panic!("invalid anf! found sexp:\n{}", n.to_sexp())
+                            }
+                        }
+                    }
                 }
                 1 => {
                     tracing::debug!("parsing anf 1: {} >>> {}", n.to_sexp(), parse_str(src, &n));
-                    parse_anf_child_h(src, c, n)
+                    let mut c_ = c.clone();
+                    let mut cs = n.named_children(&mut c_);
+                    let a = cs.next().unwrap();
+                    parse_anf(src, c, a)
                 }
                 2 => {
                     // // unary operation
@@ -210,24 +212,6 @@ fn parse_eval(src: &[u8], c: &mut TreeCursor, n: Node) -> EVal {
             EVal::EFloat(x)
         }
         _ => panic!("invalid value! found sexp:\n{}", n.to_sexp()),
-    }
-}
-fn parse_anf_enode(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EVal> {
-    let k = n.kind();
-    match k {
-        "identifier" => {
-            let utf8 = n.utf8_text(src).unwrap();
-            let var = String::from_utf8(utf8.into()).unwrap();
-            Anf::AVar(None, var)
-        }
-        _ => {
-            if k == "bool" || k == "float" || k == "int" {
-                let eval = parse_eval(src, c, n);
-                Anf::AVal((), eval)
-            } else {
-                panic!("invalid anf! found sexp:\n{}", n.to_sexp())
-            }
-        }
     }
 }
 

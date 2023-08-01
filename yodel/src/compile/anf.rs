@@ -124,7 +124,12 @@ pub fn eval_sanf_bop<'a>(
             let out = ctx.sample.as_output(vec![SVal::SBool(bop(*l, *r))]);
             Ok((out.clone(), op(Box::new(bl), Box::new(br))))
         }
-        _ => return errors::typecheck_failed("sanf boolop"),
+        (l, r) => {
+            return errors::typecheck_failed(&format!(
+                "sanf boolop. Arguments:\nleft: {:?}\nright: {:?}",
+                l, r
+            ))
+        }
     }
 }
 pub fn eval_eanf_bop<'a>(

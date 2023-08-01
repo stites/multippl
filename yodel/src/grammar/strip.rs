@@ -17,7 +17,7 @@ impl AnfInferable<SVal> {
             And(l, r) => Ok(And(Box::new(l.strip_anf()?), Box::new(r.strip_anf()?))),
             Or(l, r) => Ok(Or(Box::new(l.strip_anf()?), Box::new(r.strip_anf()?))),
             Neg(n) => Ok(Neg(Box::new(n.strip_anf()?))),
-            _ => todo!(),
+            x => todo!("{:?}", x),
         }
     }
 }

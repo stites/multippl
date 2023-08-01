@@ -25,116 +25,196 @@ macro_rules! assert_children {
         );
     }};
 }
-pub fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVal> {
-    match n.named_child_count() {
-        0 => {
-            // println!("parse 0: {}", n.to_sexp());
-            parse_sanf_node(src, c, &n)
-        } // parse that node!
-        1 => {
-            // unwrap an svalue, or an anf wrapped with extra parens
-            // println!("parse 1: {}", n.to_sexp());
+fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVal> {
+    // top level forms:
+    match n.kind() {
+        "sanfprod" => Anf::AnfProd(parse_vec(src, c, n, |a, b, c| parse_sanf(a, b, c))),
+        "sanfprj" => {
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let ident = cs.next().unwrap();
+            let ident = Anf::AVar(None, parse_str(src, &ident));
+
+            let prj = cs.next().unwrap();
+            let prj = parse_sanf(src, c, prj);
+            Anf::AnfPrj(Box::new(ident), Box::new(prj))
+        }
+        "svalue" => {
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
             let node = cs.next().unwrap();
 
-            match node.kind() {
-                "sanf" => parse_sanf(src, c, node),
-                "identifier" => Anf::AVar(None, parse_str(src, &node)),
-                "svalue" => Anf::AVal((), parse_sval(src, c, &node)),
-                "sanfprod" => Anf::AnfProd(parse_vec(src, c, node, |a, b, c| parse_sanf(a, b, c))),
-                "!" => Anf::Neg(Box::new(parse_sanf(src, c, node))),
-                "sanfbern" => Anf::AnfBernoulli((), Box::new(parse_sanf(src, c, node))),
-                "sanfpoisson" => Anf::AnfPoisson((), Box::new(parse_sanf(src, c, node))),
-                "sanfdirichlet" => Anf::AnfDirichlet(
-                    (),
-                    parse_vec(src, c, node, |a, b, c| parse_sanf_node(a, b, &c)),
-                ),
-                "sanfdiscrete" => Anf::AnfDiscrete(
-                    (),
-                    parse_vec(src, c, node, |a, b, c| parse_sanf_node(a, b, &c)),
-                ),
-                _ => panic!("invalid unary operator found!\nsexp: {}", n.to_sexp()),
-            }
+            Anf::AVal((), parse_sval(src, c, &node))
         }
-        3 => {
-            // println!("parse 3: {}", n.to_sexp());
-            // binary operation
-            let mut _c = c.clone();
-            let mut cs = n.named_children(&mut _c);
-
-            let c0 = cs.next().unwrap();
-            let prefixop = parse_str(src, &c0);
-            let isprefix_dist = match prefixop.as_str() {
-                "sprj" => Some(false),
-                "sanfuniform" => Some(true),
-                "sanfnormal" => Some(true),
-                "sanfbeta" => Some(true),
-                _ => None,
-            };
-            if isprefix_dist.is_none() {
-                let c0 = parse_sanf(src, c, c0);
-
-                let c1 = cs.next().unwrap();
-                let utf8 = c1.utf8_text(src).unwrap();
-                let infix_str = String::from_utf8(utf8.into()).unwrap();
-
-                let c2 = cs.next().unwrap();
-                let c2 = parse_sanf(src, c, c2);
-
-                match infix_str.as_str() {
-                    "&&" => Anf::And(Box::new(c0), Box::new(c2)),
-                    "||" => Anf::Or(Box::new(c0), Box::new(c2)),
-
-                    "/" => Anf::Div(Box::new(c0), Box::new(c2)),
-                    "*" => Anf::Mult(Box::new(c0), Box::new(c2)),
-                    "+" => Anf::Plus(Box::new(c0), Box::new(c2)),
-                    "-" => Anf::Minus(Box::new(c0), Box::new(c2)),
-
-                    "<" => Anf::LT(Box::new(c0), Box::new(c2)),
-                    "<=" => Anf::LTE(Box::new(c0), Box::new(c2)),
-                    ">" => Anf::GT(Box::new(c0), Box::new(c2)),
-                    ">=" => Anf::GTE(Box::new(c0), Box::new(c2)),
-                    "==" => Anf::EQ(Box::new(c0), Box::new(c2)),
-                    _ => panic!("invalid binary operator found!\nsexp: {}", n.to_sexp()),
+        kind => {
+            tracing::debug!("kind: {kind}, #children: {}", n.named_child_count());
+            match n.named_child_count() {
+                0 => {
+                    tracing::debug!("parsing anf 0: {} >>> {}", n.to_sexp(), parse_str(src, &n));
+                    match kind {
+                        "identifier" => {
+                            let utf8 = n.utf8_text(src).unwrap();
+                            let var = String::from_utf8(utf8.into()).unwrap();
+                            Anf::AVar(None, var)
+                        }
+                        _ => {
+                            if kind == "bool" || kind == "float" || kind == "int" {
+                                let sval = parse_sval(src, c, &n);
+                                Anf::AVal((), sval)
+                            } else {
+                                panic!("invalid anf! found sexp:\n{}", n.to_sexp())
+                            }
+                        }
+                    }
                 }
-            } else if isprefix_dist == Some(true) {
-                let c1 = cs.next().unwrap();
-                let c1 = parse_sanf(src, c, c1);
+                1 => {
+                    // unwrap an svalue, or an anf wrapped with extra parens
+                    // println!("parse 1: {}", n.to_sexp());
+                    let mut _c = c.clone();
+                    let mut cs = n.named_children(&mut _c);
+                    let node = cs.next().unwrap();
 
-                let c2 = cs.next().unwrap();
-                let c2 = parse_sanf(src, c, c2);
-                match prefixop.as_str() {
-                    "sanfuniform" => Anf::AnfUniform((), Box::new(c1), Box::new(c2)),
-                    "sanfnormal" => Anf::AnfNormal((), Box::new(c1), Box::new(c2)),
-                    "sanfbeta" => Anf::AnfBeta((), Box::new(c1), Box::new(c2)),
-                    _ => panic!("invalid binary operator found!\nsexp: {}", n.to_sexp()),
+                    match node.kind() {
+                        "sanf" => parse_sanf(src, c, node),
+                        "identifier" => Anf::AVar(None, parse_str(src, &node)),
+                        "svalue" => Anf::AVal((), parse_sval(src, c, &node)),
+                        "sanfprod" => {
+                            Anf::AnfProd(parse_vec(src, c, node, |a, b, c| parse_sanf(a, b, c)))
+                        }
+                        "!" => Anf::Neg(Box::new(parse_sanf(src, c, node))),
+                        "sanfbern" => Anf::AnfBernoulli((), Box::new(parse_sanf(src, c, node))),
+                        "sanfpoisson" => Anf::AnfPoisson((), Box::new(parse_sanf(src, c, node))),
+                        "sanfdirichlet" => Anf::AnfDirichlet(
+                            (),
+                            parse_vec(src, c, node, |a, b, c| parse_sanf_node(a, b, &c)),
+                        ),
+                        "sanfdiscrete" => Anf::AnfDiscrete(
+                            (),
+                            parse_vec(src, c, node, |a, b, c| parse_sanf_node(a, b, &c)),
+                        ),
+                        _ => panic!("invalid unary operator found!\nsexp: {}", n.to_sexp()),
+                    }
                 }
-            } else if isprefix_dist == Some(false) {
-                match prefixop.as_str() {
-                    "sanfprj" => {
-                        // let c1 = cs.next().unwrap();
-                        // let utf8 = c1.utf8_text(src).unwrap();
-                        // let arr_str = String::from_utf8(utf8.into()).unwrap();
+                2 => {
+                    // // unary operation
+                    // let mut _c = c.clone();
+                    // let mut cs = n.named_children(&mut _c);
+                    // let op = cs.next().unwrap();
+                    // let utf8 = op.utf8_text(src).unwrap();
+                    // let op = String::from_utf8(utf8.into()).unwrap();
 
+                    let mut _c = c.clone();
+                    let mut cs = n.named_children(&mut _c);
+                    let node = cs.next().unwrap();
+                    tracing::debug!(
+                        "parsing anf 2: (kind {}) {} {}",
+                        node.kind(),
+                        n.to_sexp(),
+                        parse_str(src, &n)
+                    );
+                    match node.kind() {
+                        "sanf" => parse_sanf(src, c, node),
+                        "identifier" => Anf::AVar(None, parse_str(src, &node)),
+                        "bool_unop" => {
+                            let node = cs.next().unwrap();
+                            Anf::Neg(Box::new(parse_sanf(src, c, node)))
+                        }
+                        _ => panic!("invalid unary operator found!\nsexp: {}", n.to_sexp()),
+                    }
+                }
+                3 => {
+                    // println!("parse 3: {}", n.to_sexp());
+                    // binary operation
+                    let mut _c = c.clone();
+                    let mut cs = n.named_children(&mut _c);
+
+                    let c0 = cs.next().unwrap();
+                    let prefixop = parse_str(src, &c0);
+                    let isprefix_dist = match prefixop.as_str() {
+                        "sprj" => Some(false),
+                        "sanfuniform" => Some(true),
+                        "sanfnormal" => Some(true),
+                        "sanfbeta" => Some(true),
+                        _ => None,
+                    };
+                    if isprefix_dist.is_none() {
+                        let c0 = parse_sanf(src, c, c0);
+
+                        let c1 = cs.next().unwrap();
+                        let utf8 = c1.utf8_text(src).unwrap();
+                        let infix_str = String::from_utf8(utf8.into()).unwrap();
+
+                        let c2 = cs.next().unwrap();
+                        let c2 = parse_sanf(src, c, c2);
+
+                        match infix_str.as_str() {
+                            "&&" => Anf::And(Box::new(c0), Box::new(c2)),
+                            "||" => Anf::Or(Box::new(c0), Box::new(c2)),
+
+                            "/" => Anf::Div(Box::new(c0), Box::new(c2)),
+                            "*" => Anf::Mult(Box::new(c0), Box::new(c2)),
+                            "+" => Anf::Plus(Box::new(c0), Box::new(c2)),
+                            "-" => Anf::Minus(Box::new(c0), Box::new(c2)),
+
+                            "<" => Anf::LT(Box::new(c0), Box::new(c2)),
+                            "<=" => Anf::LTE(Box::new(c0), Box::new(c2)),
+                            ">" => Anf::GT(Box::new(c0), Box::new(c2)),
+                            ">=" => Anf::GTE(Box::new(c0), Box::new(c2)),
+                            "==" => Anf::EQ(Box::new(c0), Box::new(c2)),
+                            _ => panic!("invalid binary operator found!\nsexp: {}", n.to_sexp()),
+                        }
+                    } else if isprefix_dist == Some(true) {
                         let c1 = cs.next().unwrap();
                         let c1 = parse_sanf(src, c, c1);
 
                         let c2 = cs.next().unwrap();
                         let c2 = parse_sanf(src, c, c2);
-                        Anf::AnfPrj(Box::new(c1), Box::new(c2))
+                        match prefixop.as_str() {
+                            "sanfuniform" => Anf::AnfUniform((), Box::new(c1), Box::new(c2)),
+                            "sanfnormal" => Anf::AnfNormal((), Box::new(c1), Box::new(c2)),
+                            "sanfbeta" => Anf::AnfBeta((), Box::new(c1), Box::new(c2)),
+                            _ => panic!("invalid binary operator found!\nsexp: {}", n.to_sexp()),
+                        }
+                    } else if isprefix_dist == Some(false) {
+                        match prefixop.as_str() {
+                            "sanfprj" => {
+                                // let c1 = cs.next().unwrap();
+                                // let utf8 = c1.utf8_text(src).unwrap();
+                                // let arr_str = String::from_utf8(utf8.into()).unwrap();
+
+                                let c1 = cs.next().unwrap();
+                                let c1 = parse_sanf(src, c, c1);
+
+                                let c2 = cs.next().unwrap();
+                                let c2 = parse_sanf(src, c, c2);
+                                Anf::AnfPrj(Box::new(c1), Box::new(c2))
+                            }
+                            _ => panic!("invalid operator found!\nsexp: {}", n.to_sexp()),
+                        }
+                    } else {
+                        panic!("incomplete function is impossible")
                     }
-                    _ => panic!("invalid operator found!\nsexp: {}", n.to_sexp()),
                 }
-            } else {
-                panic!("incomplete function is impossible")
+
+                k => {
+                    // try again
+                    let mut _c = c.clone();
+                    let mut cs = n.named_children(&mut _c);
+                    let node = cs.next().unwrap();
+                    match node.kind() {
+                        // "eanfprod" => {
+                        //     tracing::debug!("caught a prod");
+                        //     Anf::AnfProd(parse_vec(src, c, node, |a, b, c| parse_anf(a, b, c)))
+                        // }
+                        _ => panic!(
+                            "invalid program found with {k} children!\nsexp: {}",
+                            n.to_sexp()
+                        ),
+                    }
+                }
             }
         }
-        nchilds => panic!(
-            "invalid a-normal form found with {} children!\nsexp: {}",
-            nchilds,
-            n.to_sexp()
-        ),
     }
 }
 

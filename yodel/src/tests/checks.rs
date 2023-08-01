@@ -99,26 +99,21 @@ pub fn check_exact(s: &str, f: Vec<f64>, p: &str) {
 pub fn check_exact1(s: &str, f: f64, p: &str) {
     check_exact(s, vec![f], p)
 }
-pub fn check_approx(s: &str, f: Vec<f64>, p: &str, n: usize) {
+pub fn check_approx_h(s: &str, f: Vec<f64>, p: &str, n: usize, seed: Option<u64>) {
     check_inference(
         "approx",
-        &|p| {
-            importance_weighting_h(
-                n,
-                p,
-                &Options {
-                    opt: USE_OPT,
-                    debug: USE_DEBUG,
-                    // seed: Some(9),
-                    ..Default::default()
-                },
-            )
-        },
+        &|p| importance_weighting_h(n, p, &Options::new(seed, false, USE_DEBUG, USE_OPT, 0)),
         0.01,
         s,
         f,
         p,
     );
+}
+
+pub fn check_approx(s: &str, f: Vec<f64>, p: &str, n: usize) {
+    for seed in [Some(3), Some(5), Some(7)] {
+        check_approx_h(s, f.clone(), p, n, seed)
+    }
 }
 pub fn check_approx1(s: &str, f: f64, p: &str, n: usize) {
     check_approx(s, vec![f], p, n)
