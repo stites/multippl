@@ -12,25 +12,6 @@ use tracing::*;
 
 use super::eval::State;
 
-pub fn eval_anf_var<V1, V2>(
-    ctx: &Ctx,
-    nv: &NamedVar,
-    lookup1: impl Fn(&UniqueId) -> Option<Vec<V1>>,
-    lookup2: impl Fn(&UniqueId) -> Option<Vec<V2>>,
-    embed: impl FnMut(&V2) -> Result<V1>,
-) -> Result<Vec<V1>> {
-    match lookup1(&nv.id()) {
-        None => match lookup2(&nv.id()) {
-            None => Err(Generic(format!(
-                "variable {} does not reference known substitution in: s{:?}, e{:?}",
-                nv.name, ctx.sample.substitutions, ctx.exact.substitutions
-            ))),
-            Some(v) => v.iter().map(embed).collect::<Result<Vec<V1>>>(),
-        },
-        Some(v) => Ok(v),
-    }
-}
-
 pub fn eval_sanf_var(
     state: &mut super::eval::State,
     ctx: &Ctx,
@@ -64,10 +45,11 @@ pub fn eval_sanf_var(
                     let embedding = vs
                         .iter()
                         .map(SExpr::<Trace>::embed)
-                        .collect::<Result<Vec<_>>>();
+                        .collect::<Result<Vec<_>>>()?;
+                    out.sample.out = embedding.clone();
                     out.sample
                         .substitutions
-                        .insert(nv.id(), Subst::mk(embedding?, Some(Var::Named(nv.clone()))));
+                        .insert(nv.id(), Subst::mk(embedding, Some(Var::Named(nv.clone()))));
                     Ok(out)
                 }
             },
@@ -75,14 +57,31 @@ pub fn eval_sanf_var(
     }
 }
 
-pub fn eval_eanf_var(ctx: &Ctx, nv: &NamedVar, s: &str) -> Result<Vec<EVal>> {
-    eval_anf_var(
-        ctx,
-        nv,
-        |i| ctx.exact.substitutions.get(i).map(Subst::val),
-        |i| ctx.sample.substitutions.get(i).map(Subst::val),
-        EExpr::<Trace>::embed,
-    )
+pub fn eval_eanf_var(ctx: &Ctx, nv: &NamedVar, s: &str) -> Result<EOutput> {
+    let mut eout = ctx.exact.as_output(vec![]);
+
+    match ctx.exact.substitutions.get(&nv.id()).map(Subst::val) {
+        Some(vs) => {
+            eout.out = vs;
+            Ok(eout)
+        }
+        None => match ctx.sample.substitutions.get(&nv.id()).map(Subst::val) {
+            None => Err(Generic(format!(
+                "variable {} does not reference known substitution in: s{:?}, e{:?}",
+                nv.name, ctx.sample.substitutions, ctx.exact.substitutions
+            ))),
+            Some(vs) => {
+                let embedding = vs
+                    .iter()
+                    .map(EExpr::<Trace>::embed)
+                    .collect::<Result<Vec<_>>>()?;
+                eout.out = embedding.clone();
+                eout.substitutions
+                    .insert(nv.id(), Subst::mk(embedding, Some(Var::Named(nv.clone()))));
+                Ok(eout)
+            }
+        },
+    }
 }
 
 pub fn eval_sanf_numop<'a>(
@@ -522,8 +521,7 @@ pub fn eval_eanf<'a>(ctx: &'a Ctx, a: &'a AnfAnn<EVal>) -> Result<(EOutput, AnfT
             let _enter = span.enter();
             tracing::debug!("var");
 
-            let v = eval_eanf_var(ctx, d, s)?;
-            let out = ctx.exact.as_output(v);
+            let out = eval_eanf_var(ctx, d, s)?;
             Ok((out.clone(), AVar(out.pkg(), s.to_string())))
         }
         Neg(bl) => {
