@@ -10,17 +10,18 @@ use super::*;
 use tree_sitter_yodel;
 
 macro_rules! assert_children {
-    ( $x:expr, $count:literal, $node:expr, $c:expr ) => {{
+    ( $src:expr, $x:expr, $count:literal, $node:expr, $c:expr ) => {{
         let mut c__ = $c.clone();
         let cs = $node.named_children(&mut c__).into_iter().collect_vec();
         assert!(
             $node.named_child_count() == $count,
-            "{} #named_children: {} (expected {})\nchildren: {:?}\nsexp: {}\n",
+            "{} #named_children: {} (expected {})\nchildren: {:?}\nsexp: {}\nsrc: {}\n",
             $x,
             $node.named_child_count(),
             $count,
             cs,
-            $node.to_sexp()
+            $node.to_sexp(),
+            parse_str($src, &$node)
         );
     }};
 }
@@ -317,7 +318,7 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
             // EExpr::EProd(None, anfs)
         }
         "eapp" => {
-            assert_children!(k, 2, n, c);
+            assert_children!(src, k, 2, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
 
@@ -341,7 +342,7 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
         }
         "elet" => {
             //println!("{}", n.to_sexp());
-            assert_children!(k, 3, n, c);
+            assert_children!(src, k, 3, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
 
@@ -358,7 +359,7 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
         }
         "eite" => {
             //println!("{}", n.to_sexp());
-            assert_children!(k, 3, n, c);
+            assert_children!(src, k, 3, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
 
@@ -391,7 +392,7 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
         }
         "eiterate" => {
             //println!("{}", n.to_sexp());
-            assert_children!(k, 3, n, c);
+            assert_children!(src, k, 3, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
 

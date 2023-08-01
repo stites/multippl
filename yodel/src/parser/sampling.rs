@@ -10,17 +10,18 @@ use super::*;
 use tree_sitter_yodel;
 
 macro_rules! assert_children {
-    ( $x:expr, $count:literal, $node:expr, $c:expr ) => {{
+    ( $src:expr, $x:expr, $count:literal, $node:expr, $c:expr ) => {{
         let mut c__ = $c.clone();
         let cs = $node.named_children(&mut c__).into_iter().collect_vec();
         assert!(
             $node.named_child_count() == $count,
-            "{} #named_children: {} (expected {})\nchildren: {:?}\nsexp: {}\n",
+            "{} #named_children: {} (expected {})\nchildren: {:?}\nsexp: {}\nsrc: {}\n",
             $x,
             $node.named_child_count(),
             $count,
             cs,
-            $node.to_sexp()
+            $node.to_sexp(),
+            parse_str($src, &$node)
         );
     }};
 }
@@ -277,11 +278,13 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             parse_sexpr(src, c, &n)
         }
         "sanf" => {
+            tracing::debug!("parsing sanf: {} >>> {}", n.to_sexp(), parse_str(src, &n));
             let anf = parse_sanf(src, c, n);
             SExpr::SAnf((), Box::new(anf))
         }
         "slet" => {
-            assert_children!(k, 3, n, c);
+            tracing::debug!("parsing slet: {} >>> {}", n.to_sexp(), parse_str(src, &n));
+            assert_children!(src, k, 3, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
 
@@ -295,9 +298,11 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             let body = parse_sexpr(src, c, &body);
             SExpr::SLetIn(None, ident, Box::new(bindee), Box::new(body))
         }
-        // sugar: let x = ~(<sexpr>) in <sexpr>
+        // sugarx <- ~(<sexpr>); <sexpr>
         "sletsample" => {
-            assert_children!(k, 3, n, c);
+            tracing::debug!("parsing sletsample: {} >>> {}", n.to_sexp(), parse_str(src, &n));
+            assert_children!(src, k, 3, n, c);
+
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
 
@@ -313,7 +318,8 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             SExpr::SLetSample((), ident, Box::new(bindee), Box::new(body))
         }
         "site" => {
-            assert_children!(k, 3, n, c);
+            tracing::debug!("parsing site: {} >>> {}", n.to_sexp(), parse_str(src, &n));
+            assert_children!(src, k, 3, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
 
@@ -328,13 +334,15 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             SExpr::SIte(None, Box::new(pred), Box::new(tbranch), Box::new(fbranch))
         }
         "sobserve" => {
+            tracing::debug!("parsing sobserve: {} >>> {}", n.to_sexp(), parse_str(src, &n));
             let a0 = parse_sanf(src, c, n);
             let a1 = parse_sanf(src, c, n);
             SExpr::SObserve((), Box::new(a0), Box::new(a1))
         }
 
         "sseq" => {
-            assert_children!(k, 2, n, c);
+            tracing::debug!("parsing sseq: {} >>> {}", n.to_sexp(), parse_str(src, &n));
+            assert_children!(src, k, 2, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
 
@@ -346,7 +354,8 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             SExpr::SSeq((), Box::new(e0), Box::new(e1))
         }
         "ssample" => {
-            assert_children!(k, 1, n, c);
+            tracing::debug!("parsing ssample: {} >>> {}", n.to_sexp(), parse_str(src, &n));
+            assert_children!(src, k, 1, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
 
@@ -356,7 +365,8 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             SExpr::SSample((), Box::new(distobj))
         }
         "sexact" => {
-            assert_children!(k, 1, n, c);
+            tracing::debug!("parsing sexact: {} >>> {}", n.to_sexp(), parse_str(src, &n));
+            assert_children!(src, k, 1, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
 
@@ -366,7 +376,8 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             SExpr::SExact((), Box::new(e))
         }
         "sapp" => {
-            assert_children!(k, 2, n, c);
+            tracing::debug!("parsing sapp: {} >>> {}", n.to_sexp(), parse_str(src, &n));
+            assert_children!(src, k, 2, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
 
@@ -378,7 +389,8 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             SExpr::SApp((), fnname, args)
         }
         "slambda" => {
-            assert_children!(k, 2, n, c);
+            tracing::debug!("parsing slambda: {} >>> {}", n.to_sexp(), parse_str(src, &n));
+            assert_children!(src, k, 2, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
 
@@ -390,7 +402,8 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             SExpr::SLambda((), args, Box::new(e))
         }
         "swhile" => {
-            assert_children!(k, 2, n, c);
+            tracing::debug!("parsing swhile: {} >>> {}", n.to_sexp(), parse_str(src, &n));
+            assert_children!(src, k, 2, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
 
@@ -403,7 +416,8 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             SExpr::SWhile((), Box::new(guard), Box::new(block))
         }
         "smap" => {
-            assert_children!(k, 5, n, c);
+            tracing::debug!("parsing smap: {} >>> {}", n.to_sexp(), parse_str(src, &n));
+            assert_children!(src, k, 5, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
 
@@ -420,7 +434,8 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
         }
 
         "sfold" => {
-            assert_children!(k, 5, n, c);
+            tracing::debug!("parsing sfold: {} >>> {}", n.to_sexp(), parse_str(src, &n));
+            assert_children!(src, k, 5, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
 
