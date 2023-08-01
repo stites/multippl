@@ -864,3 +864,54 @@ exact {
                                     (identifier))
                                   (eanf
                                     (identifier)))))))))))))))))
+
+===========================================
+exact can have mixed tuples
+===========================================
+
+exact {
+    (0, p, 1)
+}
+---
+    (source_file
+      (program
+        (eexpr
+          (eanf
+            (eanfprod
+              (eanf
+                (evalue
+                  (int)))
+              (eanf
+                (identifier))
+              (eanf
+                (evalue
+                  (int))))))))
+
+
+
+===========================================
+exact can call iterate with mixed tuple arguments
+===========================================
+
+exact {
+    iterate(foo, (0, p, 1), 10)
+}
+---
+    (source_file
+      (program
+        (eexpr
+          (eiterate
+            (identifier)
+            (eanf
+              (eanfprod
+                (eanf
+                  (evalue
+                    (int)))
+                (eanf
+                  (identifier))
+                (eanf
+                  (evalue
+                    (int)))))
+            (eanf
+              (evalue
+                (int)))))))

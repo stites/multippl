@@ -72,8 +72,15 @@ module.exports = grammar({
     //   seq('(', $.eanf, ',', repeat(seq($.eanf, ',')), $.eanf, ')'),
     // ),
 
+    // _eanfprod_item: $ => choice(
+    //   $.evalue, $.eanf,
+    // ),
+
+
     eanfprod: $ => choice(
+      seq('(', $.evalue, ',', $.eanf, ')'),
       seq('(', $.eanf, ',', $.eanf, ')'),
+      // seq('(', $.eanf, ',', repeat(seq($.eanf, ',')), $.evalue, ')'),
       seq('(', $.eanf, ',', repeat(seq($.eanf, ',')), $.eanf, ')'),
     ),
 
@@ -115,25 +122,18 @@ module.exports = grammar({
     compare_op: $ => choice('==', '<', '<=', '>', '>='),
 
     evalue: $ => choice(
-      $.evalueprod,
+      // $.evalueprod,
       $.bool,
       $.int,
       $.float,
     ),
 
-    evalueprod: $ => choice(
-      // must have highest precedence when composing with eexpr
-      prec(10, seq('(', $.evalue, ',', $.evalue, ')')),
-      prec(10, seq('(', $.evalue, ',', repeat(seq($.evalue, ',')), $.evalue, ')')),
-    ),
-
-
     eann: $ => prec.right(5, seq($.eexpr, ':', $.ety)),
 
     eanf: $ => choice(
+      prec(10, $.eanfprod),
       $.identifier,
-      $.evalue,
-      $.eanfprod,
+      prec(6, $.evalue),
       $.eanfprj,
       prec.left(2, seq($.eanf, $.numeric_op, $.eanf)),
       prec.left(3, seq($.eanf, $.bool_biop, $.eanf)),

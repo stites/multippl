@@ -91,6 +91,10 @@
         {
           "type": "eanf",
           "named": true
+        },
+        {
+          "type": "evalue",
+          "named": true
         }
       ]
     }
@@ -463,30 +467,11 @@
           "named": true
         },
         {
-          "type": "evalueprod",
-          "named": true
-        },
-        {
           "type": "float",
           "named": true
         },
         {
           "type": "int",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
-    "type": "evalueprod",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "evalue",
           "named": true
         }
       ]
