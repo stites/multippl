@@ -19,23 +19,15 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": true,
+      "multiple": false,
       "required": true,
       "types": [
         {
-          "type": "bool_biop",
-          "named": true
-        },
-        {
-          "type": "bool_unop",
-          "named": true
-        },
-        {
-          "type": "compare_op",
-          "named": true
-        },
-        {
           "type": "eanf",
+          "named": true
+        },
+        {
+          "type": "eanfbinop",
           "named": true
         },
         {
@@ -47,11 +39,38 @@
           "named": true
         },
         {
+          "type": "eanfunop",
+          "named": true
+        },
+        {
           "type": "evalue",
           "named": true
         },
         {
           "type": "identifier",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "eanfbinop",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "bool_biop",
+          "named": true
+        },
+        {
+          "type": "compare_op",
+          "named": true
+        },
+        {
+          "type": "eanf",
           "named": true
         },
         {
@@ -94,6 +113,25 @@
         },
         {
           "type": "evalue",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "eanfunop",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "bool_unop",
+          "named": true
+        },
+        {
+          "type": "eanf",
           "named": true
         }
       ]
@@ -518,31 +556,11 @@
     "named": true,
     "fields": {},
     "children": {
-      "multiple": true,
+      "multiple": false,
       "required": true,
       "types": [
         {
-          "type": "bool_biop",
-          "named": true
-        },
-        {
-          "type": "bool_unop",
-          "named": true
-        },
-        {
-          "type": "compare_op",
-          "named": true
-        },
-        {
           "type": "identifier",
-          "named": true
-        },
-        {
-          "type": "numeric_op",
-          "named": true
-        },
-        {
-          "type": "sanf",
           "named": true
         },
         {
@@ -551,6 +569,10 @@
         },
         {
           "type": "sanfbeta",
+          "named": true
+        },
+        {
+          "type": "sanfbinop",
           "named": true
         },
         {
@@ -579,6 +601,10 @@
         },
         {
           "type": "sanfuniform",
+          "named": true
+        },
+        {
+          "type": "sanfunop",
           "named": true
         },
         {
@@ -615,6 +641,33 @@
       "multiple": true,
       "required": true,
       "types": [
+        {
+          "type": "sanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sanfbinop",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "bool_biop",
+          "named": true
+        },
+        {
+          "type": "compare_op",
+          "named": true
+        },
+        {
+          "type": "numeric_op",
+          "named": true
+        },
         {
           "type": "sanf",
           "named": true
@@ -724,6 +777,25 @@
       "multiple": true,
       "required": true,
       "types": [
+        {
+          "type": "sanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sanfunop",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "bool_unop",
+          "named": true
+        },
         {
           "type": "sanf",
           "named": true

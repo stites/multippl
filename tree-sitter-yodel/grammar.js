@@ -130,15 +130,21 @@ module.exports = grammar({
 
     eann: $ => prec.right(5, seq($.eexpr, ':', $.ety)),
 
+    eanfbinop: $ => choice(
+      prec.left(2, seq($.eanf, $.numeric_op, $.eanf)),
+      prec.left(3, seq($.eanf, $.bool_biop, $.eanf)),
+      prec.left(4, seq($.eanf, $.compare_op, $.eanf)),
+    ),
+    eanfunop: $ => choice(
+      prec.left(5, seq($.bool_unop, $.eanf)),
+    ),
     eanf: $ => choice(
       prec(10, $.eanfprod),
       $.identifier,
       prec(6, $.evalue),
       $.eanfprj,
-      prec.left(2, seq($.eanf, $.numeric_op, $.eanf)),
-      prec.left(3, seq($.eanf, $.bool_biop, $.eanf)),
-      prec.left(4, seq($.eanf, $.compare_op, $.eanf)),
-      prec.left(5, seq($.bool_unop, $.eanf)),
+      $.eanfbinop,
+      $.eanfunop,
       seq('(', $.eanf, ')'),
     ),
 
@@ -225,16 +231,22 @@ module.exports = grammar({
       $.sanfbeta,
       $.sanfdiscrete,
       $.sanfdirichlet,
+
+      $.sanfbinop,
+      $.sanfunop,
+    ),
+
+    sanfbinop: $ => choice(
       prec.left(6, seq($.sanf, $.numeric_op, $.sanf)),
       prec.left(6, seq('(', $.sanf, $.numeric_op, $.sanf, ')')),
       prec.left(3, seq($.sanf, $.bool_biop, $.sanf)),
       prec.left(3, seq('(', $.sanf, $.bool_biop, $.sanf, ')')),
       prec.left(4, seq($.sanf, $.compare_op, $.sanf)),
       prec.left(4, seq('(', $.sanf, $.compare_op, $.sanf, ')')),
+    ),
+    sanfunop: $ => choice(
       prec.left(5, seq($.bool_unop, $.sanf)),
     ),
-
-
     sann: $ => prec.right(4, seq($.sexpr, ':', $.sty)),
     svalue: $ => choice(
       $.bool,

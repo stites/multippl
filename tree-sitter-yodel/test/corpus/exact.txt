@@ -87,36 +87,39 @@ exact {
 
 ---
 
-(source_file
-  (program
-    (eexpr
-      (elet
-        (identifier)
-        (ety
-          (tyBool))
+
+
+    (source_file
+      (program
         (eexpr
-          (eflip
-            (eanf
-              (eanf
-                (eanf
-                  (evalue
-                    (float)))
-                (numeric_op)
-                (eanf
-                  (evalue
-                    (float)))))))
-        (eexpr
-          (eann
-            (eexpr
-              (eexpr
-                (eann
-                  (eexpr
-                    (eanf
-                      (identifier)))
-                  (ety
-                    (tyBool)))))
+          (elet
+            (identifier)
             (ety
-              (tyBool))))))))
+              (tyBool))
+            (eexpr
+              (eflip
+                (eanf
+                  (eanf
+                    (eanfbinop
+                      (eanf
+                        (evalue
+                          (float)))
+                      (numeric_op)
+                      (eanf
+                        (evalue
+                          (float))))))))
+            (eexpr
+              (eann
+                (eexpr
+                  (eexpr
+                    (eann
+                      (eexpr
+                        (eanf
+                          (identifier)))
+                      (ety
+                        (tyBool)))))
+                (ety
+                  (tyBool))))))))
 
 ======================
 exact: one untyped flip
@@ -129,25 +132,26 @@ exact {
 
 ---
 
-(source_file
-  (program
-    (eexpr
-      (elet
-        (identifier)
+    (source_file
+      (program
         (eexpr
-          (eflip
-            (eanf
+          (elet
+            (identifier)
+            (eexpr
+              (eflip
+                (eanf
+                  (eanf
+                    (eanfbinop
+                      (eanf
+                        (evalue
+                          (int)))
+                      (numeric_op)
+                      (eanf
+                        (evalue
+                          (int))))))))
+            (eexpr
               (eanf
-                (eanf
-                  (evalue
-                    (int)))
-                (numeric_op)
-                (eanf
-                  (evalue
-                    (int)))))))
-        (eexpr
-          (eanf
-            (identifier)))))))
+                (identifier)))))))
 
 ======================
 exact: one flip needs inference
@@ -158,27 +162,29 @@ exact {
 }
 ---
 
-(source_file
-  (program
-    (eexpr
-      (elet
-        (identifier)
-        (ety
-          (tyBool))
+
+    (source_file
+      (program
         (eexpr
-          (eflip
-            (eanf
+          (elet
+            (identifier)
+            (ety
+              (tyBool))
+            (eexpr
+              (eflip
+                (eanf
+                  (eanf
+                    (eanfbinop
+                      (eanf
+                        (evalue
+                          (int)))
+                      (numeric_op)
+                      (eanf
+                        (evalue
+                          (int))))))))
+            (eexpr
               (eanf
-                (eanf
-                  (evalue
-                    (int)))
-                (numeric_op)
-                (eanf
-                  (evalue
-                    (int)))))))
-        (eexpr
-          (eanf
-            (identifier)))))))
+                (identifier)))))))
 
 ======================
 exact: two flips untyped
@@ -191,6 +197,7 @@ exact {
 }
 
 ---
+
 
 
     (source_file
@@ -209,20 +216,22 @@ exact {
                 (eexpr
                   (eflip
                     (eanf
-                      (eanf
-                        (evalue
-                          (int)))
-                      (numeric_op)
-                      (eanf
-                        (evalue
-                          (int))))))
+                      (eanfbinop
+                        (eanf
+                          (evalue
+                            (int)))
+                        (numeric_op)
+                        (eanf
+                          (evalue
+                            (int)))))))
                 (eexpr
                   (eanf
-                    (eanf
-                      (identifier))
-                    (bool_biop)
-                    (eanf
-                      (identifier))))))))))
+                    (eanfbinop
+                      (eanf
+                        (identifier))
+                      (bool_biop)
+                      (eanf
+                        (identifier)))))))))))
 
 
 ===========================
@@ -238,7 +247,6 @@ exact {
 
 ---
 
-
     (source_file
       (program
         (eexpr
@@ -255,13 +263,14 @@ exact {
                 (eexpr
                   (eflip
                     (eanf
-                      (eanf
-                        (evalue
-                          (int)))
-                      (numeric_op)
-                      (eanf
-                        (evalue
-                          (int))))))
+                      (eanfbinop
+                        (eanf
+                          (evalue
+                            (int)))
+                        (numeric_op)
+                        (eanf
+                          (evalue
+                            (int)))))))
                 (eexpr
                   (elet
                     (identifier)
@@ -269,11 +278,12 @@ exact {
                       (eobserve
                         (eanf
                           (eanf
-                            (eanf
-                              (identifier))
-                            (bool_biop)
-                            (eanf
-                              (identifier))))))
+                            (eanfbinop
+                              (eanf
+                                (identifier))
+                              (bool_biop)
+                              (eanf
+                                (identifier)))))))
                     (eexpr
                       (eanf
                         (identifier)))))))))))
@@ -291,54 +301,58 @@ exact {
 
 ---
 
-(source_file
-  (program
-    (eexpr
-      (elet
-        (identifier)
-        (eexpr
-          (esample
-            (sexpr
-              (ssample
-                (sexpr
-                (sanf
-                  (sanfbern
-                    (sanf
-                      (sanf
-                        (svalue
-                          (int)))
-                        (numeric_op)
-                        (sanf
-                          (svalue
-                            (int)))))))))))
+
+    (source_file
+      (program
         (eexpr
           (elet
             (identifier)
             (eexpr
-              (eflip
-                (eanf
-                  (eanf
-                    (evalue
-                      (int)))
-                  (numeric_op)
-                  (eanf
-                    (evalue
-                      (int))))))
+              (esample
+                (sexpr
+                  (ssample
+                    (sexpr
+                      (sanf
+                        (sanfbern
+                          (sanf
+                            (sanfbinop
+                              (sanf
+                                (svalue
+                                  (int)))
+                              (numeric_op)
+                              (sanf
+                                (svalue
+                                  (int))))))))))))
             (eexpr
               (elet
                 (identifier)
                 (eexpr
-                  (eobserve
+                  (eflip
                     (eanf
-                      (eanf
+                      (eanfbinop
                         (eanf
-                          (identifier))
-                        (bool_biop)
+                          (evalue
+                            (int)))
+                        (numeric_op)
                         (eanf
-                          (identifier))))))
+                          (evalue
+                            (int)))))))
                 (eexpr
-                  (eanf
-                    (identifier)))))))))))
+                  (elet
+                    (identifier)
+                    (eexpr
+                      (eobserve
+                        (eanf
+                          (eanf
+                            (eanfbinop
+                              (eanf
+                                (identifier))
+                              (bool_biop)
+                              (eanf
+                                (identifier)))))))
+                    (eexpr
+                      (eanf
+                        (identifier)))))))))))
 
 
 ======================
@@ -494,18 +508,21 @@ exact {
                                   (float)))))
                           (eexpr
                             (eanf
-                              (eanf
-                                (identifier))
-                              (bool_biop)
-                              (eanf
+                              (eanfbinop
+                                (eanf
+                                  (identifier))
+                                (bool_biop)
                                 (eanf
                                   (eanf
-                                    (identifier))
-                                  (bool_biop)
-                                  (eanf
-                                    (bool_unop)
-                                    (eanf
-                                      (identifier))))))))))))))))
+                                    (eanfbinop
+                                      (eanf
+                                        (identifier))
+                                      (bool_biop)
+                                      (eanf
+                                        (eanfunop
+                                          (bool_unop)
+                                          (eanf
+                                            (identifier)))))))))))))))))))
         (program
           (eexpr
             (elet
@@ -545,6 +562,7 @@ exact {
   iterate(diamond, true, p)
 }
 ---------
+
 
     (source_file
       (program
@@ -603,18 +621,21 @@ exact {
                                   (float)))))
                           (eexpr
                             (eanf
-                              (eanf
-                                (identifier))
-                              (bool_biop)
-                              (eanf
+                              (eanfbinop
+                                (eanf
+                                  (identifier))
+                                (bool_biop)
                                 (eanf
                                   (eanf
-                                    (identifier))
-                                  (bool_biop)
-                                  (eanf
-                                    (bool_unop)
-                                    (eanf
-                                      (identifier))))))))))))))))
+                                    (eanfbinop
+                                      (eanf
+                                        (identifier))
+                                      (bool_biop)
+                                      (eanf
+                                        (eanfunop
+                                          (bool_unop)
+                                          (eanf
+                                            (identifier)))))))))))))))))))
         (program
           (eexpr
             (elet
@@ -659,6 +680,7 @@ exact {
   (x00, x01, x10, x11)
 }
 ---
+
     (source_file
       (program
         (eexpr
@@ -667,13 +689,14 @@ exact {
             (eexpr
               (eflip
                 (eanf
-                  (eanf
-                    (evalue
-                      (float)))
-                  (numeric_op)
-                  (eanf
-                    (evalue
-                      (float))))))
+                  (eanfbinop
+                    (eanf
+                      (evalue
+                        (float)))
+                    (numeric_op)
+                    (eanf
+                      (evalue
+                        (float)))))))
             (eexpr
               (elet
                 (identifier)
@@ -696,49 +719,54 @@ exact {
                                   (identifier))
                                 (sexpr
                                   (sanf
-                                    (sanf
-                                      (svalue
-                                        (float)))
-                                    (numeric_op)
-                                    (sanf
-                                      (svalue
-                                        (float)))))
+                                    (sanfbinop
+                                      (sanf
+                                        (svalue
+                                          (float)))
+                                      (numeric_op)
+                                      (sanf
+                                        (svalue
+                                          (float))))))
                                 (sexpr
                                   (sanf
-                                    (sanf
-                                      (svalue
-                                        (float)))
-                                    (numeric_op)
-                                    (sanf
-                                      (svalue
-                                        (float)))))))
+                                    (sanfbinop
+                                      (sanf
+                                        (svalue
+                                          (float)))
+                                      (numeric_op)
+                                      (sanf
+                                        (svalue
+                                          (float))))))))
                             (sexpr
                               (slet
                                 (identifier)
                                 (sexpr
                                   (site
                                     (sanf
-                                      (bool_unop)
-                                      (sanf
-                                        (identifier)))
+                                      (sanfunop
+                                        (bool_unop)
+                                        (sanf
+                                          (identifier))))
                                     (sexpr
                                       (sanf
-                                        (sanf
-                                          (svalue
-                                            (float)))
-                                        (numeric_op)
-                                        (sanf
-                                          (svalue
-                                            (float)))))
+                                        (sanfbinop
+                                          (sanf
+                                            (svalue
+                                              (float)))
+                                          (numeric_op)
+                                          (sanf
+                                            (svalue
+                                              (float))))))
                                     (sexpr
                                       (sanf
-                                        (sanf
-                                          (svalue
-                                            (float)))
-                                        (numeric_op)
-                                        (sanf
-                                          (svalue
-                                            (float)))))))
+                                        (sanfbinop
+                                          (sanf
+                                            (svalue
+                                              (float)))
+                                          (numeric_op)
+                                          (sanf
+                                            (svalue
+                                              (float))))))))
                                 (sexpr
                                   (sletsample
                                     (identifier)
@@ -788,71 +816,80 @@ exact {
                             (eexpr
                               (eite
                                 (eanf
-                                  (eanf
-                                    (identifier))
-                                  (bool_biop)
-                                  (eanf
-                                    (identifier)))
+                                  (eanfbinop
+                                    (eanf
+                                      (identifier))
+                                    (bool_biop)
+                                    (eanf
+                                      (identifier))))
                                 (eexpr
                                   (eflip
                                     (eanf
-                                      (eanf
-                                        (evalue
-                                          (float)))
-                                      (numeric_op)
-                                      (eanf
-                                        (evalue
-                                          (float))))))
+                                      (eanfbinop
+                                        (eanf
+                                          (evalue
+                                            (float)))
+                                        (numeric_op)
+                                        (eanf
+                                          (evalue
+                                            (float)))))))
                                 (eexpr
                                   (eite
                                     (eanf
-                                      (eanf
-                                        (identifier))
-                                      (bool_biop)
-                                      (eanf
-                                        (bool_unop)
+                                      (eanfbinop
                                         (eanf
-                                          (identifier))))
+                                          (identifier))
+                                        (bool_biop)
+                                        (eanf
+                                          (eanfunop
+                                            (bool_unop)
+                                            (eanf
+                                              (identifier))))))
                                     (eexpr
                                       (eflip
                                         (eanf
-                                          (eanf
-                                            (evalue
-                                              (float)))
-                                          (numeric_op)
-                                          (eanf
-                                            (evalue
-                                              (float))))))
+                                          (eanfbinop
+                                            (eanf
+                                              (evalue
+                                                (float)))
+                                            (numeric_op)
+                                            (eanf
+                                              (evalue
+                                                (float)))))))
                                     (eexpr
                                       (eite
                                         (eanf
-                                          (eanf
-                                            (bool_unop)
+                                          (eanfbinop
                                             (eanf
-                                              (identifier)))
-                                          (bool_biop)
-                                          (eanf
-                                            (identifier)))
+                                              (eanfunop
+                                                (bool_unop)
+                                                (eanf
+                                                  (identifier))))
+                                            (bool_biop)
+                                            (eanf
+                                              (identifier))))
                                         (eexpr
                                           (eflip
                                             (eanf
-                                              (eanf
-                                                (evalue
-                                                  (float)))
-                                              (numeric_op)
-                                              (eanf
-                                                (evalue
-                                                  (float))))))
+                                              (eanfbinop
+                                                (eanf
+                                                  (evalue
+                                                    (float)))
+                                                (numeric_op)
+                                                (eanf
+                                                  (evalue
+                                                    (float)))))))
                                         (eexpr
                                           (eflip
                                             (eanf
-                                              (eanf
-                                                (evalue
-                                                  (float)))
-                                              (numeric_op)
-                                              (eanf
-                                                (evalue
-                                                  (float))))))))))))
+                                              (eanfbinop
+                                                (eanf
+                                                  (evalue
+                                                    (float)))
+                                                (numeric_op)
+                                                (eanf
+                                                  (evalue
+                                                    (float)))))))))))))
                             (eexpr
                               (eanf
                                 (eanfprod

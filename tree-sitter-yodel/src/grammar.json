@@ -1076,33 +1076,9 @@
         ]
       }
     },
-    "eanf": {
+    "eanfbinop": {
       "type": "CHOICE",
       "members": [
-        {
-          "type": "PREC",
-          "value": 10,
-          "content": {
-            "type": "SYMBOL",
-            "name": "eanfprod"
-          }
-        },
-        {
-          "type": "SYMBOL",
-          "name": "identifier"
-        },
-        {
-          "type": "PREC",
-          "value": 6,
-          "content": {
-            "type": "SYMBOL",
-            "name": "evalue"
-          }
-        },
-        {
-          "type": "SYMBOL",
-          "name": "eanfprj"
-        },
         {
           "type": "PREC_LEFT",
           "value": 2,
@@ -1165,7 +1141,12 @@
               }
             ]
           }
-        },
+        }
+      ]
+    },
+    "eanfunop": {
+      "type": "CHOICE",
+      "members": [
         {
           "type": "PREC_LEFT",
           "value": 5,
@@ -1182,6 +1163,43 @@
               }
             ]
           }
+        }
+      ]
+    },
+    "eanf": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "PREC",
+          "value": 10,
+          "content": {
+            "type": "SYMBOL",
+            "name": "eanfprod"
+          }
+        },
+        {
+          "type": "SYMBOL",
+          "name": "identifier"
+        },
+        {
+          "type": "PREC",
+          "value": 6,
+          "content": {
+            "type": "SYMBOL",
+            "name": "evalue"
+          }
+        },
+        {
+          "type": "SYMBOL",
+          "name": "eanfprj"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "eanfbinop"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "eanfunop"
         },
         {
           "type": "SEQ",
@@ -1971,6 +1989,19 @@
           "name": "sanfdirichlet"
         },
         {
+          "type": "SYMBOL",
+          "name": "sanfbinop"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sanfunop"
+        }
+      ]
+    },
+    "sanfbinop": {
+      "type": "CHOICE",
+      "members": [
+        {
           "type": "PREC_LEFT",
           "value": 6,
           "content": {
@@ -2119,7 +2150,12 @@
               }
             ]
           }
-        },
+        }
+      ]
+    },
+    "sanfunop": {
+      "type": "CHOICE",
+      "members": [
         {
           "type": "PREC_LEFT",
           "value": 5,
