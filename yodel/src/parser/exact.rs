@@ -308,6 +308,7 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
             let fnname = cs.next().unwrap();
             let fnname = parse_str(src, &fnname);
 
+            let n = cs.next().unwrap();
             let args = parse_vec(src, c, n, |a, b, c| parse_anf(a, b, c));
 
             EExpr::EApp(None, fnname, args)
@@ -624,5 +625,20 @@ mod tests {
         "#;
         let expr = parse(code);
         assert_eq!(expr.unwrap(), program!(discrete![0.0, 0.2, 1.5]));
+    }
+
+    #[test]
+    fn function_call() {
+        let code = r#"
+        exact { apply(0) }
+        "#;
+        let expr = parse(code);
+        let call = EExpr::EApp(
+            None,
+            "apply".to_string(),
+            vec![Anf::AVal((), EVal::EInteger(0))],
+        );
+
+        assert_eq!(expr.unwrap(), program!(call));
     }
 }

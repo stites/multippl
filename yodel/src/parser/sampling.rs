@@ -464,6 +464,7 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             let fnname = cs.next().unwrap();
             let fnname = parse_str(src, &fnname);
 
+            let n = cs.next().unwrap();
             let args = parse_vec(src, c, n, |a, b, c| parse_sanf(a, b, c));
 
             SExpr::SApp((), fnname, args)
@@ -593,7 +594,7 @@ mod sampling_parser_tests {
                 Box::new(EApp(
                     None,
                     "baz".to_string(),
-                    [AVar(None, "baz".to_string()), AVar(None, "p".to_string())].to_vec(),
+                    [AVar(None, "p".to_string())].to_vec(),
                 )),
             )),
         );
@@ -601,5 +602,16 @@ mod sampling_parser_tests {
             expr.unwrap(),
             Program::EDefine(efun, Box::new(Program::SDefine(sfun, Box::new(SBody(prg)))))
         );
+    }
+
+    #[test]
+    fn function_call() {
+        let code = r#"
+        sample { apply(0) }
+        "#;
+        let expr = parse(code);
+        let call = SExpr::SApp((), "apply".to_string(), vec![Anf::AVal((), SVal::SInt(0))]);
+
+        assert_eq!(expr.unwrap(), Program::SBody(call));
     }
 }

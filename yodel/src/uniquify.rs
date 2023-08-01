@@ -276,6 +276,7 @@ impl SymEnv {
             // )),
             // EProd(_, anfs) => Ok(EProd((), self.uniquify_anfs(anfs)?)),
             ELetIn(_, s, ebound, ebody) => {
+                trace!("elet {:?}", s);
                 // too lazy to do something smarter
                 self.read_only = false;
                 let v = self.get_or_create(s.to_string())?;

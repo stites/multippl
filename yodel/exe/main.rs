@@ -50,7 +50,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
     setup_tracing(if args.debug {
-        Level::DEBUG
+        Level::TRACE
     } else {
         Level::INFO
     });
