@@ -332,6 +332,7 @@ sample {
                                           (int))))
                                     (sexpr
                                       (ssample
+                                        (sexpr
                                         (sanf
                                           (sanfnormal
                                             (sanf
@@ -339,7 +340,7 @@ sample {
                                                 (float)))
                                             (sanf
                                               (svalue
-                                                (float)))))))
+                                                (float))))))))
                                     (site
                                       (sanf
                                         (sanf
@@ -350,6 +351,7 @@ sample {
                                             (int))))
                                       (sexpr
                                         (ssample
+                                          (sexpr
                                           (sanf
                                             (sanfnormal
                                               (sanf
@@ -357,9 +359,10 @@ sample {
                                                   (float)))
                                               (sanf
                                                 (svalue
-                                                  (float)))))))
+                                                  (float))))))))
                                       (sexpr
                                         (ssample
+                                          (sexpr
                                           (sanf
                                             (sanfnormal
                                               (sanf
@@ -367,7 +370,7 @@ sample {
                                                   (float)))
                                               (sanf
                                                 (svalue
-                                                  (float))))))))))))
+                                                  (float)))))))))))))
                             (sexpr
                               (sletsample
                                 (identifier)
@@ -777,6 +780,7 @@ sample {
                                               (int))))
                                         (sexpr
                                           (ssample
+                                            (sexpr
                                             (sanf
                                               (sanfnormal
                                                 (sanf
@@ -784,7 +788,7 @@ sample {
                                                     (float)))
                                                 (sanf
                                                   (svalue
-                                                    (float)))))))
+                                                    (float))))))))
                                         (site
                                           (sanf
                                             (sanf
@@ -795,6 +799,7 @@ sample {
                                                 (int))))
                                           (sexpr
                                             (ssample
+                                              (sexpr
                                               (sanf
                                                 (sanfnormal
                                                   (sanf
@@ -802,9 +807,10 @@ sample {
                                                       (float)))
                                                   (sanf
                                                     (svalue
-                                                      (float)))))))
+                                                      (float))))))))
                                           (sexpr
                                             (ssample
+                                              (sexpr
                                               (sanf
                                                 (sanfnormal
                                                   (sanf
@@ -812,7 +818,7 @@ sample {
                                                       (float)))
                                                   (sanf
                                                     (svalue
-                                                      (float))))))))))))
+                                                      (float)))))))))))))
                                 (sexpr
                                   (sletsample
                                     (identifier)
@@ -979,7 +985,7 @@ sample {
 ==================
 sample(hybrid): arrival problem on diamond-network
 ==================
-exact fn diamond (s1: Bool) : Bool {
+exact fn diamond (s1: Bool) -> Bool {
   let route = flip 0.5 in
   let s2 = if route then s1 else false in
   let s3 = if route then false else s1 in

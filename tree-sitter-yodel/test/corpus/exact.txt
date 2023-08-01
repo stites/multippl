@@ -300,6 +300,7 @@ exact {
           (esample
             (sexpr
               (ssample
+                (sexpr
                 (sanf
                   (sanfbern
                     (sanf
@@ -309,7 +310,7 @@ exact {
                         (numeric_op)
                         (sanf
                           (svalue
-                            (int))))))))))
+                            (int)))))))))))
         (eexpr
           (elet
             (identifier)
@@ -423,7 +424,7 @@ exact {
 ==================
 exact: diamond network
 ==================
-exact fn diamond (s1:Bool):Bool {
+exact fn diamond (s1:Bool) -> Bool {
   let route = flip 0.5 in
   let s2 = if route then s1 else false in
   let s3 = if route then false else s1 in
@@ -532,7 +533,7 @@ exact {
 ==================
 exact(hybrid): arrival problem on diamond-network
 ==================
-exact fn diamond (s1:Bool):Bool {
+exact fn diamond (s1:Bool) -> Bool {
   let route = flip 0.5 in
   let s2 = if route then s1 else false in
   let s3 = if route then false else s1 in

@@ -23,8 +23,8 @@ module.exports = grammar({
       seq('(', repeat(seq($.earg, ',')), $.earg, ')')
     ),
 
-    sfun: $ => seq('sample', 'fn', $.identifier, $.sargs, ':', $.sty, '{', $.sexpr, '}'),
-    efun: $ => seq('exact', 'fn', $.identifier, $.eargs, ':', $.ety, '{', $.eexpr, '}'),
+    sfun: $ => seq('sample', 'fn', $.identifier, $.sargs, '->', $.sty, '{', $.sexpr, '}'),
+    efun: $ => seq('exact', 'fn', $.identifier, $.eargs, '->', $.ety, '{', $.eexpr, '}'),
 
     eexpr: $ => choice(
       $.elet,
