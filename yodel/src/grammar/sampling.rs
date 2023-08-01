@@ -197,7 +197,7 @@ TTG!(
         SApp(<SAppExt as ξ<X>>::Ext, String, Vec<Anf<X, SVal>>),
         SLambda(<SLambdaExt as ξ<X>>::Ext, Vec<String>, Box<SExpr<X>>),
 
-        SSample(<SSampleExt as ξ<X>>::Ext, Box<Anf<X, SVal>>),
+        SSample(<SSampleExt as ξ<X>>::Ext, Box<SExpr<X>>),
         SObserve(
             <SObserveExt as ξ<X>>::Ext,
             Box<Anf<X, SVal>>, // value
@@ -210,9 +210,9 @@ TTG!(
         // sugar: let x = ~(<dist anf>) in <sexpr>
         SLetSample(
             <SLetSampleExt as ξ<X>>::Ext,
-            String,
-            Box<Anf<X, SVal>>,
-            Box<SExpr<X>>,
+            String,        // variable bound to sample
+            Box<SExpr<X>>, // distribution to sample
+            Box<SExpr<X>>, // rest of binding
         ),
     }
 );

@@ -1212,7 +1212,7 @@
       "required": true,
       "types": [
         {
-          "type": "sanf",
+          "type": "sexpr",
           "named": true
         }
       ]
@@ -1390,10 +1390,6 @@
         }
       ]
     }
-  },
-  {
-    "type": "",
-    "named": false
   },
   {
     "type": "&&",

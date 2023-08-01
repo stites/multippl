@@ -683,7 +683,7 @@ impl LabelEnv {
                     Box::new(self.annotate_sexpr(body)?),
                 ))
             }
-            SSample(_, dist) => Ok(SSample((), Box::new(self.annotate_sanf(dist)?))),
+            SSample(_, dist) => Ok(SSample((), Box::new(self.annotate_sexpr(dist)?))),
 
             SExact(_, e) => Ok(SExact((), Box::new(self.annotate_eexpr(e)?))),
             SLetSample(_, _, _, _) => errors::erased(Annotated, "let-sample"),

@@ -281,7 +281,7 @@ fn typecheck_sexpr(e: &grammar::SExprTyped) -> Result<SExprUD> {
         SApp(_, f, args) => Ok(SApp((), f.clone(), typecheck_anfs(args)?)),
         SLambda(_, args, body) => Ok(SLambda((), args.clone(), Box::new(typecheck_sexpr(body)?))),
 
-        SSample(_, dist) => Ok(SSample((), Box::new(typecheck_anf(dist)?))),
+        SSample(_, dist) => Ok(SSample((), Box::new(typecheck_sexpr(dist)?))),
         SObserve(_, val, dist) => Ok(SObserve(
             (),
             Box::new(typecheck_anf(val)?),
@@ -292,10 +292,10 @@ fn typecheck_sexpr(e: &grammar::SExprTyped) -> Result<SExprUD> {
         SExact(_, e) => Ok(SExact((), Box::new(typecheck_eexpr(e)?))),
 
         // sugar: let x = ~(<sexpr>) in <sexpr>
-        SLetSample(_, var, model, rest) => Ok(SLetSample(
+        SLetSample(_, var, dist, rest) => Ok(SLetSample(
             (),
             var.clone(),
-            Box::new(typecheck_anf(model)?),
+            Box::new(typecheck_sexpr(dist)?),
             Box::new(typecheck_sexpr(rest)?),
         )),
     }

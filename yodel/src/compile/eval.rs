@@ -767,9 +767,9 @@ impl<'a> State<'a> {
                 let span = tracing::span!(tracing::Level::DEBUG, "sample");
                 let _enter = span.enter();
                 tracing::debug!("sample");
-                let (mut out, dist) = crate::compile::anf::eval_sanf(&ctx, dist)?;
+                let (mut out, dist) = self.eval_sexpr(ctx, &dist)?;
 
-                let (q, v, d) = match &out.out[..] {
+                let (q, v, d) = match &out.sample.out[..] {
                     [SVal::SDist(d)] => match d {
                         Dist::Bern(param) => {
                             let dist = statrs::distribution::Bernoulli::new(*param).unwrap();
@@ -828,11 +828,11 @@ impl<'a> State<'a> {
                 self.pq.p *= q;
                 self.pq.q *= q;
 
-                out.trace
+                out.sample
+                    .trace
                     .push((v.clone(), d.clone(), Probability::new(q), None));
-                out.out = vec![v];
-                let o = ctx.mk_soutput(out);
-                Ok((o.clone(), SSample(o, Box::new(dist))))
+                out.sample.out = vec![v];
+                Ok((out.clone(), SSample(out, Box::new(dist))))
             }
 
             SObserve(_, a, dist) => {

@@ -390,7 +390,7 @@ impl SymEnv {
                 Box::new(self.uniquify_sexpr(body)?),
             )),
             SApp(_, f, args) => Ok(SApp((), f.clone(), self.uniquify_anfs(args)?)),
-            SSample(_, dist) => Ok(SSample((), Box::new(self.uniquify_anf(dist)?))),
+            SSample(_, dist) => Ok(SSample((), Box::new(self.uniquify_sexpr(dist)?))),
             SLetSample(_, _, _, _) => errors::erased(Uniquify, "let-sample"),
         }
     }

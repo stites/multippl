@@ -247,10 +247,7 @@ fn typeinference_sexpr(e: &grammar::SExprInferable) -> Result<SExprTyped> {
             Box::new(typeinference_sexpr(body)?),
         )),
 
-        SSample(_, dist) => Ok(SSample(
-            (),
-            Box::new(typeinference_anf(&ignored_stype(), dist)?),
-        )),
+        SSample(_, dist) => Ok(SSample((), Box::new(typeinference_sexpr(dist)?))),
         SObserve(_, val, dist) => Ok(SObserve(
             (),
             Box::new(typeinference_anf(&ignored_stype(), val)?),
@@ -261,10 +258,10 @@ fn typeinference_sexpr(e: &grammar::SExprInferable) -> Result<SExprTyped> {
         SExact(_, e) => Ok(SExact((), Box::new(typeinference_eexpr(e)?))),
 
         // sugar: let x = ~(<sexpr>) in <sexpr>
-        SLetSample(_, var, model, rest) => Ok(SLetSample(
+        SLetSample(_, var, dist, rest) => Ok(SLetSample(
             (),
             var.clone(),
-            Box::new(typeinference_anf(&ignored_stype(), model)?),
+            Box::new(typeinference_sexpr(dist)?),
             Box::new(typeinference_sexpr(rest)?),
         )),
     }

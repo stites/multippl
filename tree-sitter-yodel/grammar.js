@@ -197,7 +197,7 @@ module.exports = grammar({
       seq('while', $.sanf, '{', $.sexpr, '}'),
     ),
 
-    ssample: $ => seq('~', $.sanf, ''),
+    ssample: $ => seq('~', $.sexpr),
     sfold: $ => seq('fold', '(', $.sanf, '(', $.identifier, $.identifier, '->', $.sexpr, ')', $.sanf),
 
     slam: $ => choice(

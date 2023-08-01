@@ -1777,11 +1777,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "sanf"
-        },
-        {
-          "type": "STRING",
-          "value": ""
+          "name": "sexpr"
         }
       ]
     },
