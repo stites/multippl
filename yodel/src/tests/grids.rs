@@ -134,7 +134,6 @@ fn grid3x3_sampled_diag() {
         let x10 = if !x00 then flip 1.0 / 5.0  else flip 1.0 / 6.0 in
 
         let x20_11_02 = sample {
-            x10 <- exact x10
             x20 ~ if !x10 then bern(1.0 / 5.0) else bern(1.0 / 6.0);
             x11 ~
                 if   x10 &&   x01 then bern(1.0 /  7.0) else

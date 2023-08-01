@@ -32,72 +32,7 @@ use CompileError::*;
 
 use super::anf::*;
 use super::grammar::*;
-
-pub const SQRT_2PI: f64 = 2.5066282746310005024157652848110452530069867406099;
-
-// pub fn eval_eobserve<'a>(
-//     mgr: &'a mut Mgr,
-//     ctx: &'a Ctx,
-//     a: &'a Anf<Annotated, EVal>,
-//     opts: &'a Opts,
-// ) -> Result<(
-//     Output,
-//     AnfTr<EVal>,
-//     f64,
-//     &'a dyn Fn(Output, AnfTr<EVal>) -> EExprTr,
-// )> {
-//     let (comp, atr, _) = eval_eanf(mgr, ctx, a)?;
-
-//     debug!("In. Accept {}", &ctx.accept.print_bdd());
-//     debug!("Comp. dist {}", renderbdds(&comp.dists));
-//     debug!("weightmap  {:?}", ctx.weightmap);
-//     let dist = comp
-//         .dists
-//         .into_iter()
-//         .fold(ctx.accept, |global, cur| mgr.and(global, cur));
-//     let var_order = opts.order.clone();
-//     let wmc_params = ctx.weightmap.as_params(opts.max_label);
-//     let avars = crate::utils::variables(dist);
-//     for (i, var) in avars.iter().enumerate() {
-//         debug!("{}@{:?}: {:?}", i, var, wmc_params.get_var_weight(*var));
-//     }
-//     debug!("WMCParams  {:?}", wmc_params);
-//     debug!("VarOrder   {:?}", var_order);
-//     debug!("Accept     {}", dist.print_bdd());
-//     // FIXME: should be aggregating these stats somewhere
-//     debug!("using optimizations: {}", opts.sample_pruning);
-
-//     let (wmc, _) = crate::inference::calculate_wmc_prob(
-//         mgr,
-//         &wmc_params,
-//         &var_order,
-//         dist,
-//         ctx.accept,
-//         if opts.sample_pruning {
-//             BddPtr::PtrTrue
-//         } else {
-//             ctx.samples
-//         },
-//     );
-
-//     // let importance = I::Weight(wmc);
-//     // debug!("IWeight    {}", importance.weight());
-
-//     let o = Output {
-//         dists: vec![BddPtr::PtrTrue],
-//         accept: dist,
-//         samples: ctx.samples,
-//         weightmap: ctx.weightmap.clone(),
-//         substitutions: ctx.substitutions.clone(),
-//         probabilities: vec![Probability::new(1.0)],
-//         // importance,
-//         ssubstitutions: ctx.ssubstitutions.clone(),
-//         sout: vec![],
-//     };
-//     Ok((o, atr, wmc, &move |c, atr| {
-//         EExpr::EObserve(Box::new(c), Box::new(atr))
-//     }))
-// }
+use super::sample::*;
 
 pub fn eval_eite_predicate(
     mgr: &mut Mgr,
@@ -232,7 +167,7 @@ pub enum Fn {
     Sample(Function<SExpr<Annotated>>),
 }
 impl Fn {
-    fn exact(&self) -> Result<Function<EExpr<Annotated>>> {
+    pub fn exact(&self) -> Result<Function<EExpr<Annotated>>> {
         match self {
             Self::Exact(f) => Ok(f.clone()),
             Self::Sample(f) => {
@@ -240,7 +175,7 @@ impl Fn {
             }
         }
     }
-    fn sample(&self) -> Result<Function<SExpr<Annotated>>> {
+    pub fn sample(&self) -> Result<Function<SExpr<Annotated>>> {
         match self {
             Self::Exact(f) => {
                 errors::generic("tried to extract an exact function in the sampling language")
@@ -562,12 +497,6 @@ impl<'a> State<'a> {
             EDiscrete(_, _) => errors::erased(Trace, "discrete"),
         }
     }
-    fn sample<D: Distribution<V>, V>(&mut self, dist: D) -> V {
-        match self.rng.as_mut() {
-            Some(rng) => dist.sample(rng),
-            None => dist.sample(&mut rand::thread_rng()),
-        }
-    }
     pub fn eval_sexpr(&mut self, ctx: Ctx, e: &SExprAnn) -> Result<(Output, SExprTr)> {
         use SExpr::*;
         let span = tracing::span!(tracing::Level::DEBUG, "s");
@@ -578,8 +507,8 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 debug!("anf: {:?}", a);
 
-                let (o, a) = eval_sanf(&ctx, a)?;
-                let out = ctx.mk_soutput(o);
+                let (out, a) = eval_sanf(self, &ctx, a)?;
+                // let out = ctx.mk_soutput(out);
                 Ok((out.clone(), SAnf(out, Box::new(a))))
             }
             SLetIn(d, name, bindee, body) => {
@@ -616,9 +545,9 @@ impl<'a> State<'a> {
                 let span = tracing::span!(tracing::Level::DEBUG, "ite");
                 let _enter = span.enter();
                 tracing::debug!("ite");
-                let (guardout, guard) = crate::compile::anf::eval_sanf(&ctx, guard)?;
+                let (guardout, guard) = crate::compile::anf::eval_sanf(self, &ctx, guard)?;
                 // Note that we are _collapsing_ SIte because the program trace does not go down both sides.
-                match &guardout.out[..] {
+                match &guardout.sample.out[..] {
                     [SVal::SBool(true)] => self.eval_sexpr(ctx.clone(), truthy),
                     [SVal::SBool(false)] => self.eval_sexpr(ctx.clone(), falsey),
                     _ => errors::typecheck_failed("s-ite guard"),
@@ -628,11 +557,11 @@ impl<'a> State<'a> {
                 let span = tracing::span!(tracing::Level::DEBUG, "map");
                 let _enter = span.enter();
                 tracing::debug!("map");
-                let (argval, arg) = crate::compile::anf::eval_sanf(&ctx, arg)?;
-                if argval.out.len() != 1 {
+                let (argval, arg) = crate::compile::anf::eval_sanf(self, &ctx, arg)?;
+                if argval.sample.out.len() != 1 {
                     errors::typecheck_failed("map args != 1")
                 } else {
-                    let vs = match &argval.out[..] {
+                    let vs = match &argval.sample.out[..] {
                         [SVal::SProd(vs)] => Ok(vs),
                         [SVal::SVec(vs)] => Ok(vs),
                         _ => errors::typecheck_failed("map arg != prod or vec"),
@@ -641,7 +570,7 @@ impl<'a> State<'a> {
                     let outs = vs
                         .iter()
                         .map(|v| {
-                            let mut newctx = Ctx::from(&ctx.mk_soutput(argval.clone()));
+                            let mut newctx = Ctx::from(&argval);
                             newctx
                                 .sample
                                 .substitutions
@@ -677,9 +606,9 @@ impl<'a> State<'a> {
                 let mut bodytr = None;
                 let mut loopctx = ctx.clone();
                 let guardout = loop {
-                    let (g, gtr) = crate::compile::anf::eval_sanf(&loopctx, guard)?;
+                    let (g, gtr) = crate::compile::anf::eval_sanf(self, &loopctx, guard)?;
                     guardtr = gtr;
-                    match &g.out[..] {
+                    match &g.sample.out[..] {
                         [SVal::SBool(true)] => break Ok(g),
                         [SVal::SBool(false)] => {
                             let (out, btr) = self.eval_sexpr(loopctx, body)?;
@@ -689,10 +618,10 @@ impl<'a> State<'a> {
                         _ => break errors::typecheck_failed("while guard"),
                     }
                 }?;
-                let out = ctx.mk_soutput(guardout);
+                // let out = ctx.mk_soutput(guardout);
                 Ok((
-                    out.clone(),
-                    SWhile(out, Box::new(guardtr), Box::new(bodytr.unwrap())),
+                    guardout.clone(),
+                    SWhile(guardout, Box::new(guardtr), Box::new(bodytr.unwrap())),
                 ))
             }
             SFold((accvar, argvar), initial, acc, arg, body, values) => {
@@ -700,7 +629,7 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 tracing::debug!("fold");
 
-                let (valueso, values) = crate::compile::anf::eval_sanf(&ctx, values)?;
+                let (valueso, values) = crate::compile::anf::eval_sanf(self, &ctx, values)?;
 
                 errors::TODO()
                 // if valueso.out.len() != 1 {
@@ -712,7 +641,7 @@ impl<'a> State<'a> {
                 //        _ => errors::typecheck_failed(),
                 //     }?;
 
-                //     let (initialo, initial) = crate::compile::anf::eval_sanf(&ctx, initial)?;
+                //     let (initialo, initial) = crate::compile::anf::eval_sanf(&mut self, &ctx, initial)?;
 
                 //     let mut bodytr = None;
                 //     let outs = vs.iter().map(|v| {
@@ -746,8 +675,8 @@ impl<'a> State<'a> {
                         fname
                     )),
                 })?;
-                let (argvals, args) = eval_sanfs(&ctx, args)?;
-                let argvals = argvals.out;
+                let (argvals, args) = eval_sanfs(self, &ctx, args)?;
+                let argvals = argvals.sample.out;
                 if params.len() != argvals.len() {
                     return errors::generic(&format!("function {:?} arguments mismatch", fname));
                 }
@@ -773,21 +702,21 @@ impl<'a> State<'a> {
                     [SVal::SDist(d)] => match d {
                         Dist::Bern(param) => {
                             let dist = statrs::distribution::Bernoulli::new(*param).unwrap();
-                            let v = self.sample(&dist);
+                            let v = sample_from(self, &dist);
                             let q = statrs::distribution::Discrete::pmf(&dist, v as u64);
                             let v = SVal::SBool(v == 1.0);
                             (q, v, d)
                         }
                         Dist::Discrete(ps) => {
                             let dist = statrs::distribution::Categorical::new(&ps).unwrap();
-                            let v = self.sample(&dist);
+                            let v = sample_from(self, &dist);
                             let q = statrs::distribution::Discrete::pmf(&dist, v as u64);
                             let v = SVal::SInt(v as u64);
                             (q, v, d)
                         }
                         Dist::Dirichlet(ps) => {
                             let dist = statrs::distribution::Dirichlet::new(ps.to_vec()).unwrap();
-                            let vs = self.sample(&dist);
+                            let vs = sample_from(self, &dist);
                             let q = statrs::distribution::Continuous::pdf(&dist, &vs);
                             let vs = SVal::SVec(
                                 vs.into_iter().map(|x: &f64| SVal::SFloat(*x)).collect_vec(),
@@ -796,28 +725,28 @@ impl<'a> State<'a> {
                         }
                         Dist::Uniform(lo, hi) => {
                             let dist = statrs::distribution::Uniform::new(*lo, *hi).unwrap();
-                            let v = self.sample(dist);
+                            let v = sample_from(self, dist);
                             let q = statrs::distribution::Continuous::pdf(&dist, v);
                             let v = SVal::SFloat(v);
                             (q, v, d)
                         }
                         Dist::Normal(mn, sd) => {
                             let dist = statrs::distribution::Normal::new(*mn, *sd).unwrap();
-                            let v = self.sample(dist);
+                            let v = sample_from(self, dist);
                             let q = statrs::distribution::Continuous::pdf(&dist, v);
                             let v = SVal::SFloat(v);
                             (q, v, d)
                         }
                         Dist::Beta(a, b) => {
                             let dist = statrs::distribution::Beta::new(*a, *b).unwrap();
-                            let v = self.sample(dist);
+                            let v = sample_from(self, dist);
                             let q = statrs::distribution::Continuous::pdf(&dist, v);
                             let v = SVal::SFloat(v);
                             (q, v, d)
                         }
                         Dist::Poisson(p) => {
                             let dist = statrs::distribution::Poisson::new(*p).unwrap();
-                            let v = self.sample(dist) as u64;
+                            let v = sample_from(self, dist) as u64;
                             let q = statrs::distribution::Discrete::pmf(&dist, v);
                             let v = SVal::SInt(v);
                             (q, v, d)
@@ -840,9 +769,9 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 tracing::debug!("observe");
 
-                let (a_out, a) = crate::compile::anf::eval_sanf(&ctx, a)?;
-                let (d_out, dist) = crate::compile::anf::eval_sanf(&ctx, dist)?;
-                let q = match (&d_out.out[..], &a_out.out[..]) {
+                let (a_out, a) = crate::compile::anf::eval_sanf(self, &ctx, a)?;
+                let (d_out, dist) = crate::compile::anf::eval_sanf(self, &ctx, dist)?;
+                let q = match (&d_out.sample.out[..], &a_out.sample.out[..]) {
                     ([SVal::SDist(d)], [v]) => match (d, v) {
                         (Dist::Bern(param), SVal::SBool(b)) => {
                             let dist = statrs::distribution::Bernoulli::new(*param).unwrap();
@@ -885,8 +814,8 @@ impl<'a> State<'a> {
 
                 self.pq.q *= q;
 
-                let o = ctx.mk_soutput(a_out);
-                Ok((o.clone(), SObserve(o, Box::new(a), Box::new(dist))))
+                //let a_out = ctx.mk_soutput(a_out);
+                Ok((a_out.clone(), SObserve(a_out, Box::new(a), Box::new(dist))))
             }
             // Multi-language boundary / natural embedding.
             SExact(_, eexpr) => {
@@ -901,7 +830,7 @@ impl<'a> State<'a> {
                     let val = match (eval, SExpr::<Trace>::embed(eval)) {
                         (_, Ok(sv)) => sv,
                         (EVal::EBdd(dist), Err(_)) => {
-                            let sample = self.exact2sample_bdd_eff(&mut out, dist);
+                            let sample = exact2sample_bdd_eff(self, &mut out, dist);
                             SVal::SBool(sample)
                         }
                         _ => panic!("typecheck_failed"),
@@ -912,42 +841,5 @@ impl<'a> State<'a> {
             }
             SLetSample(_, _, _, _) => errors::erased(Trace, "let-sample"),
         }
-    }
-
-    pub fn exact2sample_bdd_eff(&mut self, out: &mut Output, dist: &BddPlan) -> bool {
-        let wmc_params = out.exact.weightmap.as_params(self.opts.max_label);
-        let var_order = self.opts.order.clone();
-        let accept = out.exact.accept.clone();
-
-        let theta_q = crate::inference::calculate_wmc_prob(
-            self.mgr,
-            &wmc_params,
-            &var_order,
-            dist.clone(),
-            accept.clone(),
-            GetSamples::samples(&out.exact, self.opts.sample_pruning),
-        )
-        .0;
-
-        let bern = statrs::distribution::Bernoulli::new(theta_q).unwrap();
-        let sample = self.sample(bern) == 1.0;
-
-        let weight = if sample { theta_q } else { 1.0 - theta_q };
-
-        self.pq.q *= weight;
-        self.pq.p *= weight;
-
-        out.sample.trace.push((
-            SVal::SBool(sample),
-            Dist::Bern(theta_q),
-            Probability::new(weight),
-            None,
-        ));
-
-        // sample in sequence. A smarter sample would compile
-        // all samples of a multi-rooted BDD, but I need to futz
-        // with rsdd's fold
-        out.exact.samples.push((dist.clone(), sample));
-        sample
     }
 }

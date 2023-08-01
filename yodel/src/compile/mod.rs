@@ -1,6 +1,7 @@
 pub mod anf;
 pub mod eval;
 pub mod grammar;
+pub mod sample;
 
 use crate::annotate::grammar::ProgramAnn;
 use crate::compile::eval::State;
