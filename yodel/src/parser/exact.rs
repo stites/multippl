@@ -232,7 +232,7 @@ pub fn parse_etype(src: &[u8], c: &mut TreeCursor, n: &Node) -> ETy {
         "tyInt" => {
             ETy::EInt
         }
-        "tyProd" => {
+        "etyProd" => {
             ETy::EProd(parse_vec(src, c, n, |a, b, c| parse_etype(a, b, &c)))
         }
         s => panic!(
@@ -302,7 +302,6 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
             // EExpr::EProd(None, anfs)
         }
         "eapp" => {
-            assert_children!(src, k, 2, n, c);
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
 
@@ -448,9 +447,9 @@ mod tests {
             program!(lets!["x" ;= b!("a", "b"); ...? prj!("x", 0)])
         );
         println!("prods4");
-        let f = EVal::EBdd(BddPlan::ConstFalse);
-        let t = EVal::EBdd(BddPlan::ConstTrue);
-        let prd = EExpr::EAnf((), Box::new(Anf::AVal((), EVal::EProd(vec![f, t]))));
+        let f = Anf::AVal((), EVal::EBdd(BddPlan::ConstFalse));
+        let t = Anf::AVal((), EVal::EBdd(BddPlan::ConstTrue));
+        let prd = EExpr::EAnf((), Box::new(Anf::AnfProd(vec![f, t])));
         assert_eq!(
             parse(r#"exact { let x = (false, true) in fst x }"#).unwrap(),
             program!(lets!["x" ;= prd; ...? prj!("x", 0)])

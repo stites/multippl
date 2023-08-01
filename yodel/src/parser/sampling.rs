@@ -557,10 +557,10 @@ mod sampling_parser_tests {
         use SExpr::*;
         use STy::*;
         let code = r#"
-            exact fn foo (s1: Bool) : Bool {
+            exact fn foo (s1: Bool) -> Bool {
               bar
             }
-            sample fn foo (s1: Bool) : Bool {
+            sample fn foo (s1: Bool) -> Bool {
               bar
             }
             sample {

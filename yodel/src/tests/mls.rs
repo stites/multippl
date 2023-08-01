@@ -129,7 +129,7 @@ fn healthcare() {}
 fn diamond_router() {
     let mk = || {
         r#"
-exact fn diamond (s1: Bool) : Bool {
+exact fn diamond (s1: Bool) -> Bool {
   let route = flip 0.5 in
   let s2 = if route then s1 else false in
   let s3 = if route then false else s1 in
@@ -152,7 +152,7 @@ sample {
 fn arrival_router() {
     let mk = || {
         r#"
-exact fn diamond (s1: Bool) : Bool {
+exact fn diamond (s1: Bool) -> Bool {
   let route = flip 0.5 in
   let s2 = if route then s1 else false in
   let s3 = if route then false else s1 in

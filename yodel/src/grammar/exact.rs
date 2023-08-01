@@ -155,9 +155,9 @@ TTG!(
         // sugar: iterate(f, init, k)
         EIterate(
             <EIterateExt as ξ<X>>::Ext,
-            String,
-            Box<Anf<X, EVal>>,
-            Box<Anf<X, EVal>>,
+            String,            // function name
+            Box<Anf<X, EVal>>, // initial argument
+            Box<Anf<X, EVal>>, // number of times to iterate
         ),
     }
 );
