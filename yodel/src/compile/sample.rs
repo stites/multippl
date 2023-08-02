@@ -1,6 +1,5 @@
 use crate::*;
 use rand::distributions::Distribution;
-use rsdd::builder::bdd_plan::BddPlan;
 
 pub fn sample_from<D: Distribution<V>, V>(state: &mut super::eval::State, dist: D) -> V {
     match state.rng.as_mut() {
@@ -12,19 +11,20 @@ pub fn sample_from<D: Distribution<V>, V>(state: &mut super::eval::State, dist: 
 pub fn exact2sample_bdd_eff(
     state: &mut super::eval::State,
     out: &mut Output,
-    dist: &BddPlan,
+    dist: &BddPtr,
 ) -> bool {
     let wmc_params = out.exact.weightmap.as_params(state.opts.max_label);
     let var_order = state.opts.order.clone();
     let accept = out.exact.accept.clone();
 
+    let ss = GetSamples::samples(&out.exact, state.mgr, state.opts.sample_pruning);
     let theta_q = crate::inference::calculate_wmc_prob(
         state.mgr,
         &wmc_params,
         &var_order,
         dist.clone(),
         accept.clone(),
-        GetSamples::samples(&out.exact, state.opts.sample_pruning),
+        ss,
     )
     .0;
 

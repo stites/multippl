@@ -7,6 +7,7 @@ use tree_sitter::*;
 
 use super::shared::*;
 use super::*;
+use crate::*;
 use tracing::*;
 use tree_sitter_yodel;
 
@@ -134,7 +135,7 @@ fn parse_eval(src: &[u8], c: &mut TreeCursor, n: Node) -> EVal {
             } else {
                 panic!("impossible")
             };
-            EVal::EBdd(BddPlan::from_bool(b))
+            EVal::EBdd(BddPtr::from_bool(b))
         }
         "int" => {
             let istr = parse_str(src, &n);
@@ -378,8 +379,8 @@ mod tests {
             program!(lets!["x" ;= b!("a", "b"); ...? prj!("x", 0)])
         );
         println!("prods4");
-        let f = Anf::AVal((), EVal::EBdd(BddPlan::ConstFalse));
-        let t = Anf::AVal((), EVal::EBdd(BddPlan::ConstTrue));
+        let f = Anf::AVal((), EVal::EBdd(BddPtr::PtrFalse));
+        let t = Anf::AVal((), EVal::EBdd(BddPtr::PtrTrue));
         let prd = EExpr::EAnf((), Box::new(Anf::AnfProd(vec![f, t])));
         assert_eq!(
             parse(r#"exact { let x = (false, true) in fst x }"#).unwrap(),

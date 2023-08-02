@@ -5,10 +5,9 @@ use crate::data::errors;
 use crate::data::{Result, Weight, WeightMap};
 use crate::grammar::{EVal, SVal};
 use crate::uniquify::grammar::UniqueId;
-use crate::Dist;
+use crate::*;
 use itertools::izip;
 use num_traits::identities::Zero;
-use rsdd::builder::bdd_plan::BddPlan;
 use rsdd::sample::probability::Probability;
 use std::collections::HashMap;
 
@@ -42,43 +41,44 @@ pub type Tr = Vec<(SVal, Dist, Probability, Option<UniqueId>)>;
 /// exact compilation context
 #[derive(Debug, Clone, PartialEq)]
 pub struct ECtx {
-    pub accept: BddPlan,
-    pub samples: Vec<(BddPlan, bool)>,
+    pub accept: BddPtr,
+    pub samples: Vec<(BddPtr, bool)>,
     pub substitutions: SubstMap<EVal>,
     pub weightmap: WeightMap,
 }
 pub trait GetSamples {
     /// optionally prune these samples.
-    fn compile_samples(&self) -> BddPlan;
-    fn samples(&self, prune: bool) -> BddPlan {
+    fn compile_samples(&self, mgr: &mut Mgr) -> BddPtr;
+    fn samples(&self, mgr: &mut Mgr, prune: bool) -> BddPtr {
         if prune {
-            BddPlan::ConstTrue
+            BddPtr::PtrTrue
         } else {
-            Self::compile_samples(self)
+            Self::compile_samples(self, mgr)
         }
     }
 }
 
-fn _all_samples(samples: &[(BddPlan, bool)]) -> BddPlan {
-    samples.iter().fold(BddPlan::ConstTrue, |ss, (dist, s)| {
-        BddPlan::and(ss, BddPlan::iff(dist.clone(), BddPlan::from_bool(*s)))
+fn _all_samples(samples: &[(BddPtr, bool)], mgr: &mut Mgr) -> BddPtr {
+    samples.iter().fold(BddPtr::PtrTrue, |ss, (dist, s)| {
+        let nxt = mgr.iff(dist.clone(), BddPtr::from_bool(*s));
+        mgr.and(ss, nxt)
     })
 }
 impl GetSamples for ECtx {
-    fn compile_samples(&self) -> BddPlan {
-        _all_samples(&self.samples)
+    fn compile_samples(&self, mgr: &mut Mgr) -> BddPtr {
+        _all_samples(&self.samples, mgr)
     }
 }
 impl GetSamples for Ctx {
-    fn compile_samples(&self) -> BddPlan {
-        GetSamples::compile_samples(&self.exact)
+    fn compile_samples(&self, mgr: &mut Mgr) -> BddPtr {
+        GetSamples::compile_samples(&self.exact, mgr)
     }
 }
 
 impl Default for ECtx {
     fn default() -> Self {
         ECtx {
-            accept: BddPlan::ConstTrue,
+            accept: BddPtr::PtrTrue,
             samples: Default::default(),
             substitutions: Default::default(),
             weightmap: Default::default(),
@@ -125,17 +125,17 @@ pub struct EOutput {
     /// compiled distributions
     pub out: Vec<EVal>,
     /// acceptance criteria
-    pub accept: BddPlan,
+    pub accept: BddPtr,
     /// sample consistency
-    pub samples: Vec<(BddPlan, bool)>,
+    pub samples: Vec<(BddPtr, bool)>,
     /// compiled weightmap
     pub weightmap: WeightMap,
     /// substitution environment
     pub substitutions: SubstMap<EVal>,
 }
 impl GetSamples for EOutput {
-    fn compile_samples(&self) -> BddPlan {
-        _all_samples(&self.samples)
+    fn compile_samples(&self, mgr: &mut Mgr) -> BddPtr {
+        _all_samples(&self.samples, mgr)
     }
 }
 impl EOutput {
@@ -151,17 +151,15 @@ impl EOutput {
     pub fn pkg(&self) -> Output {
         Output::exact(self.clone())
     }
-    pub fn samples(&self) -> BddPlan {
+    pub fn samples(&self, mgr: &mut Mgr) -> BddPtr {
         self.samples
             .iter()
-            .fold(BddPlan::ConstTrue, |acc, (dist, sample)| {
-                BddPlan::and(
-                    acc,
-                    BddPlan::iff(dist.clone(), BddPlan::from_bool(sample.clone())),
-                )
+            .fold(BddPtr::PtrTrue, |acc, (dist, sample)| {
+                let s = mgr.iff(dist.clone(), BddPtr::from_bool(sample.clone()));
+                mgr.and(acc, s)
             })
     }
-    pub fn dists(&self) -> Vec<BddPlan> {
+    pub fn dists(&self) -> Vec<BddPtr> {
         self.out
             .iter()
             .cloned()
@@ -169,7 +167,7 @@ impl EOutput {
                 EVal::EBdd(b) => Ok(b),
                 a => errors::typecheck_failed(&format!("eoutput projection into bdds got {a:?}")),
             })
-            .collect::<Result<Vec<BddPlan>>>()
+            .collect::<Result<Vec<_>>>()
             .unwrap()
     }
 }
@@ -177,7 +175,7 @@ impl Default for EOutput {
     fn default() -> Self {
         EOutput {
             out: Default::default(),
-            accept: BddPlan::ConstTrue,
+            accept: BddPtr::PtrTrue,
             samples: Default::default(),
             weightmap: Default::default(),
             substitutions: Default::default(),

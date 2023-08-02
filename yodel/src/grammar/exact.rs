@@ -3,7 +3,6 @@ use crate::*;
 use ::core::fmt;
 use ::core::fmt::Debug;
 use itertools::Itertools;
-use rsdd::builder::bdd_plan::BddPlan;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -35,7 +34,7 @@ crate::TTG!(
             use EVal::*;
             use SVal::*;
             match e {
-                SBool(b) => Ok(EBdd(BddPlan::from_bool(*b))),
+                SBool(b) => Ok(EBdd(BddPtr::from_bool(*b))),
                 SFloat(f) => Ok(EFloat(*f)),
                 // SInt(i) => Ok(integers::as_onehot(*i as usize)),
                 SInt(i) => Ok(EInteger(*i as usize)),
@@ -85,7 +84,7 @@ impl ETy {
 #[derive(Debug, Clone, PartialEq)]
 pub enum EVal {
     // EBool(bool),
-    EBdd(BddPlan),
+    EBdd(BddPtr),
     EFloat(f64),
     EProd(Vec<EVal>),
     // extensions: not part of the core IR, just included in the maximal values as part of TTG
@@ -94,8 +93,8 @@ pub enum EVal {
 impl EVal {
     pub fn as_bool(&self) -> Option<bool> {
         match self {
-            Self::EBdd(BddPlan::ConstTrue) => Some(true),
-            Self::EBdd(BddPlan::ConstFalse) => Some(false),
+            Self::EBdd(BddPtr::PtrTrue) => Some(true),
+            Self::EBdd(BddPtr::PtrFalse) => Some(false),
             _ => None,
         }
     }
@@ -118,8 +117,8 @@ impl super::classes::IsTyped<ETy> for EVal {
             // EBool(_) => ETy::EBool,
             EFloat(_) => ETy::EFloat,
             EProd(vs) => ETy::EProd(vs.iter().map(|x| x.as_type()).collect_vec()),
-            EBdd(BddPlan::ConstTrue) => ETy::EBool,
-            EBdd(BddPlan::ConstFalse) => ETy::EBool,
+            EBdd(BddPtr::PtrTrue) => ETy::EBool,
+            EBdd(BddPtr::PtrFalse) => ETy::EBool,
             EBdd(_) => ETy::EFormula,
             EInteger(i) => ETy::EProd(vec![ETy::EBool; *i]),
         }

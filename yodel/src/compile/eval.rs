@@ -35,12 +35,12 @@ use super::grammar::*;
 use super::sample::*;
 
 pub fn eval_eite_predicate(
-    mgr: &mut Mgr,
+    state: &mut super::eval::State,
     ctx: &Ctx,
     cond: &AnfAnn<EVal>,
     opts: &Opts,
-) -> Result<(BddPlan, AnfTr<EVal>, (Probability, Probability))> {
-    let (pred, atr) = eval_eanf(&ctx, cond)?;
+) -> Result<(BddPtr, AnfTr<EVal>, (Probability, Probability))> {
+    let (pred, atr) = eval_eanf(state, &ctx, cond)?;
     let pred_dist = pred.dists();
     if !pred_dist.len() == 1 {
         return Err(TypeError(format!(
@@ -53,53 +53,55 @@ pub fn eval_eite_predicate(
 
     // FIXME : should be adding stats somewhere
     let mut wmc_opt_h = |pred_dist| {
+        let ss = ctx.exact.samples(state.mgr, opts.sample_pruning);
         Probability::new(
             crate::inference::calculate_wmc_prob(
-                mgr,
+                state.mgr,
                 &wmc_params,
                 &var_order,
                 pred_dist,
                 ctx.exact.accept.clone(),
                 // TODO if switching to samples_opt, no need to use ctx.
-                ctx.exact.samples(opts.sample_pruning),
+                ss,
             )
             .0,
         )
     };
-    let wmc_true = wmc_opt_h(pred_dist.clone());
-    let wmc_false = wmc_opt_h(BddPlan::neg(pred_dist.clone()));
+    let wmc_true = wmc_opt_h(pred_dist);
+    let wmc_false = wmc_opt_h(pred_dist.neg());
     Ok((pred_dist, atr, (wmc_true, wmc_false)))
 }
-pub fn eval_eite_output<'a>(
-    mgr: &'a mut Mgr,
-    ctx: &'a Ctx,
-    pred: (BddPlan, AnfTr<EVal>),
+pub fn eval_eite_output(
+    state: &mut super::eval::State,
+    ctx: &Ctx,
+    pred: (BddPtr, AnfTr<EVal>),
     truthy_branch: (Probability, Output),
     falsey_branch: (Probability, Output),
-    opts: &'a Opts,
+    opts: &Opts,
 ) -> Result<EOutput> {
     let (pred_dist, pred_anf) = pred;
     let (wmc_true, truthy) = truthy_branch;
     let (wmc_false, falsey) = falsey_branch;
     let dists = izip!(&truthy.exact.dists(), &falsey.exact.dists())
         .map(|(tdist, fdist)| {
-            let dist_l = pred_dist._and(tdist);
-            let dist_r = pred_dist._neg()._and(fdist);
-            EVal::EBdd(dist_l._or(&dist_r))
+            let dist_l = state.mgr.and(pred_dist, *tdist);
+            let dist_r = state.mgr.and(pred_dist.neg(), *fdist);
+            let fin = state.mgr.or(dist_l, dist_r);
+            EVal::EBdd(fin)
         })
         .collect_vec();
 
-    let tsamples = GetSamples::samples(&truthy.exact, opts.sample_pruning);
+    let tsamples = GetSamples::samples(&truthy.exact, state.mgr, opts.sample_pruning);
     let mut samples = vec![];
     if !opts.sample_pruning {
         samples.extend(truthy.exact.samples);
         samples.extend(falsey.exact.samples);
     };
 
-    let accept_l = pred_dist._and(&truthy.exact.accept);
-    let accept_r = pred_dist._neg()._and(&falsey.exact.accept);
-    let accept = accept_l._or(&accept_r);
-    let accept = accept._and(&ctx.exact.accept);
+    let accept_l = state.mgr.and(pred_dist, truthy.exact.accept);
+    let accept_r = state.mgr.and(pred_dist.neg(), falsey.exact.accept);
+    let accept = state.mgr.or(accept_l, accept_r);
+    let accept = state.mgr.and(accept, ctx.exact.accept);
 
     let mut substitutions = truthy.exact.substitutions.clone();
     substitutions.extend(falsey.exact.substitutions.clone());
@@ -137,7 +139,7 @@ pub fn eval_elet_output(
     body: Output,
     opts: &Opts,
 ) -> Result<EOutput> {
-    let accept = body.exact.accept._and(&ctx.exact.accept);
+    let accept = mgr.and(body.exact.accept, ctx.exact.accept);
     let mut samples = ctx.exact.samples.clone();
     samples.extend(body.exact.samples);
 
@@ -268,7 +270,7 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 tracing::debug!("anf");
 
-                let (o, a) = eval_eanf(&ctx, a)?;
+                let (o, a) = eval_eanf(self, &ctx, a)?;
                 debug_step_ng!("anf", ctx, &o);
                 let out = ctx.mk_eoutput(o);
                 Ok((out.clone(), EExpr::EAnf(out, Box::new(a))))
@@ -277,14 +279,15 @@ impl<'a> State<'a> {
                 let span = tracing::span!(tracing::Level::DEBUG, "flip");
                 let _enter = span.enter();
                 tracing::debug!("flip: {:?}", e);
-                let (o, param) = eval_eanf(&ctx, param)?;
+                let (o, param) = eval_eanf(self, &ctx, param)?;
                 tracing::debug!("flip done");
                 let o = match &o.out[..] {
                     [EVal::EFloat(param)] => {
                         let mut weightmap = ctx.exact.weightmap.clone();
                         weightmap.insert(d.label, *param);
+                        let var = self.mgr.var(d.label, true);
                         Ok(EOutput {
-                            out: vec![EVal::EBdd(BddPlan::Literal(d.label, true))],
+                            out: vec![EVal::EBdd(var)],
                             accept: ctx.exact.accept.clone(),
                             samples: ctx.exact.samples.clone(),
                             weightmap,
@@ -303,7 +306,7 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 tracing::debug!("observe");
 
-                let (comp, a) = eval_eanf(&ctx, a)?;
+                let (comp, a) = eval_eanf(self, &ctx, a)?;
 
                 // debug!("In. Accept {}", &ctx.accept.print_bdd());
                 // debug!("Comp. dist {}", renderbdds(&comp.dists));
@@ -312,12 +315,12 @@ impl<'a> State<'a> {
                     .dists()
                     .into_iter()
                     .fold(ctx.exact.accept.clone(), |global, cur| {
-                        BddPlan::and(global, cur)
+                        self.mgr.and(global, cur)
                     });
 
                 let var_order = self.opts.order.clone();
                 let wmc_params = ctx.exact.weightmap.as_params(self.opts.max_label);
-                let avars = crate::utils::plan_variables(&dist);
+                let avars = crate::utils::variables(dist);
                 for (i, var) in avars.iter().enumerate() {
                     debug!("{}@{:?}: {:?}", i, var, wmc_params.get_var_weight(*var));
                 }
@@ -327,20 +330,21 @@ impl<'a> State<'a> {
                 // FIXME: should be aggregating these stats somewhere
                 debug!("using optimizations: {}", self.opts.sample_pruning);
 
+                let ss = ctx.exact.samples(self.mgr, self.opts.sample_pruning);
                 let (wmc, _) = crate::inference::calculate_wmc_prob(
                     self.mgr,
                     &wmc_params,
                     &var_order,
                     dist.clone(),
                     ctx.exact.accept.clone(),
-                    ctx.exact.samples(self.opts.sample_pruning),
+                    ss,
                 );
 
                 // let importance = I::Weight(wmc);
                 // debug!("IWeight    {}", importance.weight());
 
                 let o = EOutput {
-                    out: vec![EVal::EBdd(BddPlan::ConstTrue)],
+                    out: vec![EVal::EBdd(BddPtr::PtrTrue)],
                     accept: dist.clone(),
                     samples: ctx.exact.samples.clone(),
                     weightmap: ctx.exact.weightmap.clone(),
@@ -359,8 +363,9 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 tracing::debug!("ite");
 
+                let opts = &self.opts.clone();
                 let (pred_dist, pred_anf, (wmc_true, wmc_false)) =
-                    eval_eite_predicate(self.mgr, &ctx, cond, &self.opts)?;
+                    eval_eite_predicate(self, &ctx, cond, opts)?;
 
                 debug!("=============================");
                 debug!("wmc_true {}, wmc_false {}", wmc_true, wmc_false);
@@ -380,12 +385,12 @@ impl<'a> State<'a> {
                     return Err(TypeError(format!("Expected both branches of ITE to return same len tuple\nGot (left): {:?}\nGot (right):{:?}", truthy.exact.out.len(), falsey.exact.out.len(),)));
                 }
                 let o: EOutput = eval_eite_output(
-                    self.mgr,
+                    self,
                     &ctx,
                     (pred_dist, pred_anf.clone()),
                     (wmc_true, truthy.clone()),
                     (wmc_false, falsey),
-                    &self.opts,
+                    opts,
                 )?;
                 debug_step_ng!("ite", ctx, &o);
                 let out = ctx.mk_eoutput(o);
@@ -431,7 +436,7 @@ impl<'a> State<'a> {
                         fname
                     )),
                 })?;
-                let (argvals, args) = eval_eanfs(&ctx, args)?;
+                let (argvals, args) = eval_eanfs(self, &ctx, args)?;
                 let argvals = argvals.out;
                 if params.len() != argvals.len() {
                     return errors::generic(&format!(
@@ -457,7 +462,7 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 tracing::debug!("iterate");
 
-                let (argoutput, init) = eval_eanf(&ctx, init)?;
+                let (argoutput, init) = eval_eanf(self, &ctx, init)?;
                 tracing::trace!("arg: {:?}", argoutput.out);
 
                 // HACK: currently we treat everything as a prod. This should
@@ -469,7 +474,7 @@ impl<'a> State<'a> {
                     EVal::EProd(argoutput.out.clone())
                 };
 
-                let (niters, k) = eval_eanf(&ctx, k)?;
+                let (niters, k) = eval_eanf(self, &ctx, k)?;
                 match &niters.out[..] {
                     [EVal::EInteger(0)] => {
                         let fout = ctx.mk_eoutput(argoutput);

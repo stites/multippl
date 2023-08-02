@@ -29,8 +29,8 @@ crate::TTG!(
             use EVal::*;
             use SVal::*;
             match e {
-                EBdd(BddPlan::ConstTrue) => Ok(SBool(true)),
-                EBdd(BddPlan::ConstFalse) => Ok(SBool(false)),
+                EBdd(BddPtr::PtrTrue) => Ok(SBool(true)),
+                EBdd(BddPtr::PtrFalse) => Ok(SBool(false)),
                 EFloat(f) => Ok(SFloat(*f)),
                 EProd(vs) => Ok(SProd(
                     vs.iter().map(Self::embed).collect::<Result<Vec<_>>>()?,

@@ -57,7 +57,12 @@ pub fn eval_sanf_var(
     }
 }
 
-pub fn eval_eanf_var(ctx: &Ctx, nv: &NamedVar, s: &str) -> Result<EOutput> {
+pub fn eval_eanf_var(
+    state: &mut super::eval::State,
+    ctx: &Ctx,
+    nv: &NamedVar,
+    s: &str,
+) -> Result<EOutput> {
     let mut eout = ctx.exact.as_output(vec![]);
 
     match ctx.exact.substitutions.get(&nv.id()).map(Subst::val) {
@@ -110,6 +115,7 @@ pub fn eval_sanf_numop<'a>(
     }
 }
 pub fn eval_eanf_numop<'a>(
+    state: &mut super::eval::State,
     ctx: &'a Ctx,
     bl: &'a AnfAnn<EVal>,
     br: &'a AnfAnn<EVal>,
@@ -120,8 +126,8 @@ pub fn eval_eanf_numop<'a>(
     let span = tracing::span!(Level::DEBUG, "numop");
     let _enter = span.enter();
 
-    let (ol, bl) = eval_eanf(ctx, &bl)?;
-    let (or, br) = eval_eanf(ctx, &br)?;
+    let (ol, bl) = eval_eanf(state, ctx, &bl)?;
+    let (or, br) = eval_eanf(state, ctx, &br)?;
     match (&ol.out[..], &or.out[..]) {
         ([EVal::EFloat(l)], [EVal::EFloat(r)]) => {
             let x = fop(*l, *r);
@@ -172,22 +178,24 @@ pub fn eval_sanf_bop<'a>(
         }
     }
 }
-pub fn eval_eanf_bop<'a>(
-    ctx: &'a Ctx,
-    bl: &'a AnfAnn<EVal>,
-    br: &'a AnfAnn<EVal>,
-    bop: impl Fn(Box<BddPlan>, Box<BddPlan>) -> BddPlan,
+pub fn eval_eanf_bop(
+    state: &mut super::eval::State,
+    ctx: &Ctx,
+    bl: &AnfAnn<EVal>,
+    br: &AnfAnn<EVal>,
+    mut bop: impl FnMut(&mut Mgr, Box<BddPtr>, Box<BddPtr>) -> BddPtr,
     op: impl Fn(Box<AnfTr<EVal>>, Box<AnfTr<EVal>>) -> AnfTr<EVal>,
 ) -> Result<(EOutput, AnfTr<EVal>)> {
     let span = tracing::span!(Level::DEBUG, "binop");
     let _enter = span.enter();
     tracing::debug!("binop");
 
-    let (ol, bl) = eval_eanf(ctx, &bl)?;
-    let (or, br) = eval_eanf(ctx, &br)?;
+    let (ol, bl) = eval_eanf(state, ctx, &bl)?;
+    let (or, br) = eval_eanf(state, ctx, &br)?;
     match (&ol.out[..], &or.out[..]) {
         ([EVal::EBdd(l)], [EVal::EBdd(r)]) => {
             let out = ctx.exact.as_output(vec![EVal::EBdd(bop(
+                &mut state.mgr,
                 Box::new(l.clone()),
                 Box::new(r.clone()),
             ))]);
@@ -229,36 +237,37 @@ pub fn eval_sanf_cop(
     }
 }
 pub fn eval_eanf_cop(
+    state: &mut super::eval::State,
     ctx: &Ctx,
     bl: &AnfAnn<EVal>,
     br: &AnfAnn<EVal>,
-    bop: Option<impl Fn(&BddPlan, &BddPlan) -> bool>,
+    bop: Option<impl Fn(&BddPtr, &BddPtr) -> bool>,
     fop: impl Fn(&f64, &f64) -> bool,
     iop: impl Fn(&usize, &usize) -> bool,
     op: impl Fn(Box<AnfTr<EVal>>, Box<AnfTr<EVal>>) -> AnfTr<EVal>,
 ) -> Result<(EOutput, AnfTr<EVal>)> {
-    let (ol, bl) = eval_eanf(ctx, &bl)?;
-    let (or, br) = eval_eanf(ctx, &br)?;
+    let (ol, bl) = eval_eanf(state, ctx, &bl)?;
+    let (or, br) = eval_eanf(state, ctx, &br)?;
     match (&ol.out[..], &or.out[..]) {
         ([EVal::EBdd(l)], [EVal::EBdd(r)]) => match bop {
             None => return errors::typecheck_failed("eanf compare op invalid"),
             Some(bop) => {
                 let out = ctx
                     .exact
-                    .as_output(vec![EVal::EBdd(BddPlan::from_bool(bop(l, r)))]);
+                    .as_output(vec![EVal::EBdd(BddPtr::from_bool(bop(l, r)))]);
                 Ok((out.clone(), op(Box::new(bl), Box::new(br))))
             }
         },
         ([EVal::EFloat(l)], [EVal::EFloat(r)]) => {
             let out = ctx
                 .exact
-                .as_output(vec![EVal::EBdd(BddPlan::from_bool(fop(l, r)))]);
+                .as_output(vec![EVal::EBdd(BddPtr::from_bool(fop(l, r)))]);
             Ok((out.clone(), op(Box::new(bl), Box::new(br))))
         }
         ([EVal::EInteger(l)], [EVal::EInteger(r)]) => {
             let out = ctx
                 .exact
-                .as_output(vec![EVal::EBdd(BddPlan::from_bool(iop(l, r)))]);
+                .as_output(vec![EVal::EBdd(BddPtr::from_bool(iop(l, r)))]);
             Ok((out.clone(), op(Box::new(bl), Box::new(br))))
         }
         _ => return errors::typecheck_failed("eanf compare op"),
@@ -505,7 +514,11 @@ pub fn eval_sanfs(
     Ok((out, trs))
 }
 
-pub fn eval_eanf<'a>(ctx: &'a Ctx, a: &'a AnfAnn<EVal>) -> Result<(EOutput, AnfTr<EVal>)> {
+pub fn eval_eanf<'a>(
+    state: &mut super::eval::State,
+    ctx: &'a Ctx,
+    a: &'a AnfAnn<EVal>,
+) -> Result<(EOutput, AnfTr<EVal>)> {
     use Anf::*;
     match a {
         AVal(_, v) => {
@@ -521,7 +534,7 @@ pub fn eval_eanf<'a>(ctx: &'a Ctx, a: &'a AnfAnn<EVal>) -> Result<(EOutput, AnfT
             let _enter = span.enter();
             tracing::debug!("var");
 
-            let out = eval_eanf_var(ctx, d, s)?;
+            let out = eval_eanf_var(state, ctx, d, s)?;
             Ok((out.clone(), AVar(out.pkg(), s.to_string())))
         }
         Neg(bl) => {
@@ -529,81 +542,84 @@ pub fn eval_eanf<'a>(ctx: &'a Ctx, a: &'a AnfAnn<EVal>) -> Result<(EOutput, AnfT
             let _enter = span.enter();
             tracing::debug!("neg");
 
-            let (ol, bl) = eval_eanf(ctx, &bl)?;
+            let (ol, bl) = eval_eanf(state, ctx, &bl)?;
             match &ol.out[..] {
                 [EVal::EBdd(bdd)] => {
-                    let out = ctx
-                        .exact
-                        .as_output(vec![EVal::EBdd(BddPlan::neg(bdd.clone()))]);
+                    let out = ctx.exact.as_output(vec![EVal::EBdd(bdd.neg())]);
                     Ok((out.clone(), Neg(Box::new(bl))))
                 }
                 _ => return errors::typecheck_failed("anf negation"),
             }
         }
-        Or(bl, br) => eval_eanf_bop(ctx, bl, br, BddPlan::Or, Or),
-        And(bl, br) => eval_eanf_bop(ctx, bl, br, BddPlan::And, Or),
+        Or(bl, br) => eval_eanf_bop(state, ctx, bl, br, |mgr, l, r| mgr.or(*l, *r), Or),
+        And(bl, br) => eval_eanf_bop(state, ctx, bl, br, |mgr, l, r| mgr.and(*l, *r), Or),
 
         Plus(bl, br) => {
             let span = tracing::span!(Level::DEBUG, "+");
             let _enter = span.enter();
-            eval_eanf_numop(ctx, bl, br, |a, b| a + b, |a, b| a + b, Plus)
+            eval_eanf_numop(state, ctx, bl, br, |a, b| a + b, |a, b| a + b, Plus)
         }
         Minus(bl, br) => {
             let span = tracing::span!(Level::DEBUG, "-");
             let _enter = span.enter();
 
-            eval_eanf_numop(ctx, bl, br, |a, b| a - b, |a, b| a - b, Minus)
+            eval_eanf_numop(state, ctx, bl, br, |a, b| a - b, |a, b| a - b, Minus)
         }
         Mult(bl, br) => {
             let span = tracing::span!(Level::DEBUG, "*");
             let _enter = span.enter();
 
-            eval_eanf_numop(ctx, bl, br, |a, b| a * b, |a, b| a * b, Mult)
+            eval_eanf_numop(state, ctx, bl, br, |a, b| a * b, |a, b| a * b, Mult)
         }
         Div(bl, br) => {
             let span = tracing::span!(Level::DEBUG, "/");
             let _enter = span.enter();
 
-            eval_eanf_numop(ctx, bl, br, |a, b| a / b, |a, b| a / b, Div)
+            eval_eanf_numop(state, ctx, bl, br, |a, b| a / b, |a, b| a / b, Div)
         }
 
         GT(bl, br) => eval_eanf_cop(
+            state,
             ctx,
             bl,
             br,
-            None::<&dyn Fn(&BddPlan, &BddPlan) -> bool>,
+            None::<&dyn Fn(&BddPtr, &BddPtr) -> bool>,
             PartialOrd::gt,
             PartialOrd::gt,
             GT,
         ),
         GTE(bl, br) => eval_eanf_cop(
+            state,
             ctx,
             bl,
             br,
-            None::<&dyn Fn(&BddPlan, &BddPlan) -> bool>,
+            None::<&dyn Fn(&BddPtr, &BddPtr) -> bool>,
             PartialOrd::ge,
             PartialOrd::ge,
             GTE,
         ),
         LT(bl, br) => eval_eanf_cop(
+            state,
             ctx,
             bl,
             br,
-            None::<&dyn Fn(&BddPlan, &BddPlan) -> bool>,
+            None::<&dyn Fn(&BddPtr, &BddPtr) -> bool>,
             PartialOrd::lt,
             PartialOrd::lt,
             LT,
         ),
         LTE(bl, br) => eval_eanf_cop(
+            state,
             ctx,
             bl,
             br,
-            None::<&dyn Fn(&BddPlan, &BddPlan) -> bool>,
+            None::<&dyn Fn(&BddPtr, &BddPtr) -> bool>,
             PartialOrd::le,
             PartialOrd::le,
             LTE,
         ),
         EQ(bl, br) => eval_eanf_cop(
+            state,
             ctx,
             bl,
             br,
@@ -617,7 +633,7 @@ pub fn eval_eanf<'a>(ctx: &'a Ctx, a: &'a AnfAnn<EVal>) -> Result<(EOutput, AnfT
             let (outs, trs): (Vec<EVal>, Vec<AnfTr<EVal>>) =
                 anfs.iter().fold(Ok((vec![], vec![])), |acc, a| match acc {
                     Ok((mut vs, mut trs)) => {
-                        let (aout, tr) = eval_eanf(ctx, a)?;
+                        let (aout, tr) = eval_eanf(state, ctx, a)?;
                         trs.push(tr);
                         if aout.out.len() > 1 {
                             return errors::generic("nested vector not (yet) supported");
@@ -631,8 +647,8 @@ pub fn eval_eanf<'a>(ctx: &'a Ctx, a: &'a AnfAnn<EVal>) -> Result<(EOutput, AnfT
             Ok((ctx.exact.as_output(outs), AnfProd(trs)))
         }
         AnfPrj(var, ix) => {
-            let (ovar, var) = eval_eanf(ctx, var)?;
-            let (oix, ix) = eval_eanf(ctx, ix)?;
+            let (ovar, var) = eval_eanf(state, ctx, var)?;
+            let (oix, ix) = eval_eanf(state, ctx, ix)?;
 
             match (&ovar.out[..], &oix.out[..]) {
                 ([EVal::EProd(vs)], [EVal::EInteger(i)]) => {
@@ -663,10 +679,14 @@ pub fn eval_eanf<'a>(ctx: &'a Ctx, a: &'a AnfAnn<EVal>) -> Result<(EOutput, AnfT
     }
 }
 
-pub fn eval_eanfs(ctx: &Ctx, anfs: &[AnfAnn<EVal>]) -> Result<(EOutput, Vec<AnfTr<EVal>>)> {
+pub fn eval_eanfs(
+    state: &mut super::eval::State,
+    ctx: &Ctx,
+    anfs: &[AnfAnn<EVal>],
+) -> Result<(EOutput, Vec<AnfTr<EVal>>)> {
     let (vals, trs) = anfs.iter().fold(Ok((vec![], vec![])), |res, a| {
         let (vals_fin, mut trs_fin) = res?;
-        let (o, atr) = eval_eanf(ctx, a)?;
+        let (o, atr) = eval_eanf(state, ctx, a)?;
         let vals = vals_fin.iter().chain(&o.out).cloned().collect_vec();
         trs_fin.push(atr);
         Ok((vals, trs_fin))

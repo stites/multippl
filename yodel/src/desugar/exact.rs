@@ -234,10 +234,10 @@ pub mod integers {
     pub fn as_onehot(i: usize) -> EVal {
         let ty = vec![ETy::EBool; i];
         match i {
-            0 => EVal::EProd(vec![EVal::EBdd(BddPlan::ConstFalse); 8]),
+            0 => EVal::EProd(vec![EVal::EBdd(BddPtr::PtrFalse); 8]),
             _ => {
-                let mut val = vec![EVal::EBdd(BddPlan::ConstFalse); i - 1];
-                val.push(EVal::EBdd(BddPlan::ConstTrue));
+                let mut val = vec![EVal::EBdd(BddPtr::PtrFalse); i - 1];
+                val.push(EVal::EBdd(BddPtr::PtrTrue));
                 EVal::EProd(val)
             }
         }
@@ -246,8 +246,8 @@ pub mod integers {
         let (tot, int) = vs.iter().enumerate().fold(Ok((0, 0)), |acc, (ix, v)| {
             let (tot, int) = acc?;
             match v {
-                EVal::EBdd(BddPlan::ConstTrue) => Ok((tot + 1, ix)),
-                EVal::EBdd(BddPlan::ConstFalse) => Ok((tot, int)),
+                EVal::EBdd(BddPtr::PtrTrue) => Ok((tot + 1, ix)),
+                EVal::EBdd(BddPtr::PtrFalse) => Ok((tot, int)),
                 _ => errors::generic("prod is not one-hot encoded"),
             }
         })?;
@@ -291,8 +291,8 @@ pub mod integers {
     //                     .enumerate()
     //                     .fold(Some((0, 0)), |memo, (ix, x)| match (memo, x) {
     //                         (Some((one_ix, tot)), EVal::EBdd(bdd)) => match bdd {
-    //                             BddPlan::ConstTrue => Some((ix, tot + 1)),
-    //                             BddPlan::ConstFalse => Some((one_ix, tot)),
+    //                             BddPtr::PtrTrue => Some((ix, tot + 1)),
+    //                             BddPtr::PtrFalse => Some((one_ix, tot)),
     //                             _ => None,
 
     //                         }
