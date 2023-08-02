@@ -2,6 +2,7 @@ use crate::typeinf::grammar::Inferable;
 use crate::*;
 use std::fmt::Debug;
 use std::str::FromStr;
+use tracing::*;
 use tree_sitter::{Node, Parser, Tree, TreeCursor};
 
 pub fn tree_parser(code: String) -> Option<Tree> {
@@ -36,22 +37,40 @@ macro_rules! parse_todo {
     }};
 }
 
+pub fn parse_vec_h<X>(
+    src: &[u8],
+    c: &mut TreeCursor,
+    n: Node,
+    parse_el: impl Fn(&[u8], &mut TreeCursor, Node) -> X,
+    nshifts: usize,
+) -> Vec<X> {
+    trace!("parse_vec: {}", parse_str(src, &n));
+    trace!("     sexp: {}", n.to_sexp());
+    let mut xs = vec![];
+    let mut _c = c.clone();
+    let mut cs = n.named_children(&mut _c);
+    let mut sft = nshifts;
+    while sft > 0 {
+        cs.next();
+        sft -= 1;
+    }
+
+    for i in 0..(n.named_child_count() - nshifts) {
+        let x = cs.next().unwrap();
+        trace!("arg[{}]: {}", i, x.to_sexp());
+        let x = parse_el(src, c, x);
+        xs.push(x);
+    }
+    xs
+}
+
 pub fn parse_vec<X>(
     src: &[u8],
     c: &mut TreeCursor,
     n: Node,
     parse_el: impl Fn(&[u8], &mut TreeCursor, Node) -> X,
 ) -> Vec<X> {
-    let mut xs = vec![];
-    let mut _c = c.clone();
-    let mut cs = n.named_children(&mut _c);
-
-    for _ in 0..n.named_child_count() {
-        let x = cs.next().unwrap();
-        let x = parse_el(src, c, x);
-        xs.push(x);
-    }
-    xs
+    parse_vec_h(src, c, n, parse_el, 0)
 }
 
 pub fn parse_num<T: FromStr>(src: &[u8], n: &Node) -> T

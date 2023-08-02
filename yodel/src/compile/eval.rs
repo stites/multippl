@@ -434,7 +434,10 @@ impl<'a> State<'a> {
                 let (argvals, args) = eval_eanfs(&ctx, args)?;
                 let argvals = argvals.out;
                 if params.len() != argvals.len() {
-                    return errors::generic(&format!("function {:?} arguments mismatch", fname));
+                    return errors::generic(&format!(
+                        "function {:?} arguments mismatch\nleft: {:?}\nright{:?}",
+                        fname, params, argvals
+                    ));
                 }
                 let mut subs = ctx.exact.substitutions.clone();
                 for (param, val) in params.iter().zip(argvals.iter()) {
@@ -454,30 +457,58 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 tracing::debug!("iterate");
 
-                let (args, init) = eval_eanf(&ctx, init)?;
-                let mut args = args.out;
+                let (argoutput, init) = eval_eanf(&ctx, init)?;
+                tracing::trace!("arg: {:?}", argoutput.out);
+
+                // HACK: currently we treat everything as a prod. This should
+                // probably be changed back. Here is a good example of when we
+                // do _not_ want this generalization:
+                let mut arg = if argoutput.out.len() == 1 {
+                    argoutput.out[0].clone()
+                } else {
+                    EVal::EProd(argoutput.out.clone())
+                };
+
                 let (niters, k) = eval_eanf(&ctx, k)?;
-                let mut niters: usize = match &niters.out[..] {
-                    [EVal::EInteger(i)] => Ok(*i),
+                match &niters.out[..] {
+                    [EVal::EInteger(0)] => {
+                        let fout = ctx.mk_eoutput(argoutput);
+
+                        Ok((
+                            fout.clone(),
+                            EIterate(fout, fname.clone(), Box::new(init), Box::new(k)),
+                        ))
+                    }
+                    [EVal::EInteger(i)] => {
+                        let mut niters: usize = *i;
+                        let mut ctx = ctx.clone();
+                        let mut out = None;
+                        trace!("niters: {}", niters);
+                        while niters > 0 {
+                            let anfarg = Anf::AVal((), arg.clone());
+                            let o = self
+                                .eval_eexpr(ctx.clone(), &EApp((), fname.clone(), vec![anfarg]))?
+                                .0;
+                            out = Some(o.clone());
+                            println!("{out:?}");
+                            ctx = ctx.new_from_eoutput(&o.exact);
+                            arg = if o.exact.out.len() == 1 {
+                                o.exact.out[0].clone()
+                            } else {
+                                EVal::EProd(o.exact.out)
+                            };
+                            niters -= 1;
+                            trace!("niters: {}", niters);
+                        }
+
+                        let fout = out.expect("k > 0");
+                        Ok((
+                            fout.clone(),
+                            EIterate(fout, fname.clone(), Box::new(init), Box::new(k)),
+                        ))
+                    }
                     _ => errors::typecheck_failed("iterate k"),
-                }?;
-                let mut ctx = ctx.clone();
-                let mut out = None;
-                while niters > 0 {
-                    let anfargs = args.iter().map(|i| Anf::AVal((), i.clone())).collect();
-                    let o = self
-                        .eval_eexpr(ctx.clone(), &EApp((), fname.clone(), anfargs))?
-                        .0;
-                    out = Some(o.clone());
-                    ctx = ctx.new_from_eoutput(&o.exact);
-                    args = o.exact.out;
-                    niters -= 1;
                 }
-                let out = out.expect("k > 0");
-                Ok((
-                    out.clone(),
-                    EIterate(out, fname.clone(), Box::new(init), Box::new(k)),
-                ))
             }
             ESample((), sexpr) => {
                 let span = tracing::span!(Level::DEBUG, "sample");

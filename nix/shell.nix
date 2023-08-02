@@ -75,6 +75,8 @@ inputs.devenv.lib.mkShell {
             evcxr # make sure repl is in a gc-root
             cargo-play # quickly run a rust file that has a main function
 
+            cargo-tarpaulin # code coverage
+
             # tree-sitter-specific
             tree-sitter
 

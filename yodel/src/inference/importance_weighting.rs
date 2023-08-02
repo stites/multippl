@@ -5,7 +5,7 @@ use crate::utils::render::*;
 use crate::*;
 use itertools::*;
 use std::collections::HashMap;
-use tracing::debug;
+use tracing::*;
 
 pub fn importance_weighting(steps: usize, p: &str) -> Vec<f64> {
     importance_weighting_h(
@@ -32,20 +32,23 @@ pub fn importance_weighting_h(
     for _step in 1..=steps {
         match crate::runner(code, &mut mgr, &mut rng, opt) {
             Ok(o) => {
+                trace!("{:?}", o.out.exact.out);
                 let (out, p, pq) = (o.out, o.prg, o.pq);
-                let (ps, stats) = wmc_prob(&mut mgr, &out.exact);
-                let w = pq.weight();
-                debug!("distribution  : {}", renderbdds(&out.exact.out));
+                debug!("sample output : {}", renderbdds(&out.exact.out));
+                debug!("exact output  : {}", renderbdds(&out.exact.out));
                 debug!("accepting     : {:?}", out.exact.accept);
-                debug!("computed probs: {:?}", ps);
+                // debug!("computed probs: {:?}", ps);
                 debug!("weight        : {} = {}", pq.render(), pq.weight());
-                let query: Vec<f64> = match p.query() {
-                    Query::EQuery(_) => ps.clone(),
-                    Query::SQuery(_) => out.sample.out.iter().fold(vec![], |mut acc, v| {
-                        let vs: Vec<f64> = From::<&SVal>::from(v);
-                        acc.extend(vs);
-                        acc
-                    }),
+                let (query, stats): (Vec<f64>, Option<WmcStats>) = match p.query() {
+                    Query::EQuery(_) => wmc_prob(&mut mgr, &out.exact),
+                    Query::SQuery(_) => (
+                        out.sample.out.iter().fold(vec![], |mut acc, v| {
+                            let vs: Vec<f64> = From::<&SVal>::from(v);
+                            acc.extend(vs);
+                            acc
+                        }),
+                        None,
+                    ),
                 };
                 let exp_cur = Expectations::new(pq, query);
                 e = Expectations::add(e.clone(), exp_cur);

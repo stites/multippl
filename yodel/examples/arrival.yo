@@ -1,0 +1,37 @@
+exact fn binomial_helper(count_param: (Int, Float)) -> (Int, Float) {
+  let count = count_param[0] in
+  let param = count_param[1] in
+  let x = flip param in
+  sample { if x then (count + 1, param) else (count, param) }
+}
+
+exact fn binomial(n: Int, p: Float) -> Int {
+  let np = iterate(binomial_helper, (0, p), n) in
+  np[0]
+}
+
+exact fn diamond_arrival (npackets: Int) -> Int {
+  let packets_left  = binomial(npackets, 0.5) in
+  let packets_right = npackets - packets_left in
+
+  let packets_left_lost  = binomial(packets_left, 0.0001) in
+  let packets_right_lost = binomial(packets_right, 0.0001) in
+
+  let packets_left_received = packets_left - packets_left_lost in
+  let packets_right_received = packets_right - packets_right_lost in
+
+  let left_sent_to_destination = packets_left_received in
+  let right_sent_to_destination = packets_right_received in
+
+  let destination_lost_left_packets  = binomial(left_sent_to_destination, 0.0001) in
+  let destination_lost_right_packets = binomial(right_sent_to_destination, 0.0001) in
+
+  let destination_received_left  = left_sent_to_destination  - destination_lost_left_packets in
+  let destination_received_right = right_sent_to_destination - destination_lost_right_packets in
+
+  destination_received_left + destination_received_right
+}
+sample {
+  p ~ poisson(10);
+  exact (diamond_arrival(p))
+}

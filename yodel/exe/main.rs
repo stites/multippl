@@ -22,6 +22,9 @@ struct Args {
 
     #[clap(long, value_parser)]
     debug: bool,
+
+    #[clap(long)]
+    stats: bool,
     // #[clap(short, long, value_parser)]
     // opt: bool,         // use optimizations
 
@@ -35,7 +38,7 @@ struct Args {
 fn setup_tracing(lvl: Level) {
     let format = fmt::format()
         .with_level(true)
-        .with_target(true)
+        .with_target(false)
         .with_thread_ids(false)
         .with_thread_names(false)
         .without_time()
@@ -52,7 +55,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     setup_tracing(if args.debug {
         Level::TRACE
     } else {
-        Level::INFO
+        Level::WARN
     });
     info!("cli arguments: {:?}", args);
 
@@ -64,8 +67,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     let options = yodel::pipeline::Options::new(args.rng, false, false, false, 0);
 
     debug!("compilation options: {:?}", options);
-    let prg = yodel::inference::importance_weighting_h(args.steps, &src, &options);
-
-    info!("output: {:?}", prg);
+    let (query, stats) = yodel::inference::importance_weighting_h(args.steps, &src, &options);
+    if args.stats {
+        println!("{:?}", stats);
+    }
+    println!("{:?}", query);
     Ok(())
 }

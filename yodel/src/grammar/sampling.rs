@@ -35,9 +35,7 @@ crate::TTG!(
                 EProd(vs) => Ok(SProd(
                     vs.iter().map(Self::embed).collect::<Result<Vec<_>>>()?,
                 )),
-                EInteger(i) => errors::semantics(
-                    "integers in the exact lang is sugar and not part of the boundary",
-                ),
+                EInteger(i) => Ok(SInt(*i as u64)),
                 EBdd(_) => errors::semantics("sampling lang cannot compile a formula"),
             }
         }

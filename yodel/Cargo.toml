@@ -61,3 +61,4 @@ quickcheck_macros = "1"
 [features]
 plots = ["dep:plotters", "dep:csv", "dep:spinoff", "dep:rayon", "dep:serde", "dep:clap"]
 exe = ["dep:clap"]
+long_tests = []

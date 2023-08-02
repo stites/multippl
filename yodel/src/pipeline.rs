@@ -2,7 +2,6 @@ use crate::annotate::{InvMap, LabelEnv};
 use crate::compile::eval::State;
 use crate::compile::grammar::ProgramTr;
 use crate::compile::grammar::Trace;
-use crate::data::*;
 use crate::typecheck::{
     grammar::{EExprTyped, ProgramTyped},
     typecheck,
@@ -10,6 +9,7 @@ use crate::typecheck::{
 use crate::typeinf::grammar::ProgramInferable;
 use crate::typeinf::typeinference;
 use crate::uniquify::SymEnv;
+use crate::*;
 use rand::rngs::StdRng;
 use tracing::debug;
 
