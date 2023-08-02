@@ -495,7 +495,6 @@ impl<'a> State<'a> {
                                 .eval_eexpr(ctx.clone(), &EApp((), fname.clone(), vec![anfarg]))?
                                 .0;
                             out = Some(o.clone());
-                            println!("{out:?}");
                             ctx = ctx.new_from_eoutput(&o.exact);
                             arg = if o.exact.out.len() == 1 {
                                 o.exact.out[0].clone()

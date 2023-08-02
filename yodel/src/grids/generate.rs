@@ -31,7 +31,7 @@ where
     <AVarExt<X> as ξ<crate::typeinf::grammar::Inferable>>::Ext: Debug + Clone + PartialEq,
     <AValExt<X> as ξ<crate::typeinf::grammar::Inferable>>::Ext: Debug + Clone + PartialEq,
 {
-    println!("{:?}", vars);
+    // println!("{:?}", vars);
     vars.into_iter()
         .fold(None, |fin, var| match fin {
             None => Some(var),
