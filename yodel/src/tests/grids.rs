@@ -126,7 +126,7 @@ fn grid2x2_sampled() {
 ///     v        v        v
 ///   (2,0) -> (2,1) -> (2,2)
 #[test]
-#[cfg(features = "long_tests")]
+// #[cfg(features = "long_tests")]
 fn grid3x3_sampled_diag() {
     let mk = |ret: &str| {
         r#"exact {
@@ -202,7 +202,7 @@ fn grid3x3_sampled_diag() {
 ///     v        v        v
 ///   (2,0) -> (2,1) -> (2,2)
 #[test]
-#[cfg(features = "long_tests")]
+// #[cfg(features = "long_tests")]
 fn grid3x3() {
     let mk = |ret: &str| {
         r#"exact {
