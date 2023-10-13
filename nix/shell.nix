@@ -8,30 +8,12 @@ inputs.devenv.lib.mkShell {
   modules = [
     {
       # git configuration block
-      pre-commit.hooks = {
-        shellcheck.enable = true;
-        clippy.enable = true;
-        hunspell.enable = true;
-        alejandra.enable = true; # nix formatter
-        # statix.enable = true; # lints for nix, but apparently borked
-        rustfmt.enable = true;
-        typos.enable = true;
-      };
     }
     {
       # ad-hoc dev packages
       packages = with pkgs; [
         # dice cli:
         inputs.dice.packages.${system}.default
-        # python for the rsdd visualizer
-        (python3.withPackages (p:
-          with p; [
-            graphviz
-            matplotlib
-            seaborn
-            numpy
-            pandas
-          ]))
         # plotters dependencies
         zlib.dev
         bzip2.dev
@@ -91,6 +73,28 @@ inputs.devenv.lib.mkShell {
           ++ lib.optionals stdenv.isLinux [
             cargo-rr
             rr-unstable
+          ]
+          ++ [
+            cmdstan
+            (rWrapper.override {
+              packages = with pkgs.rPackages; [
+                rstan
+                bnlearn
+                ggplot2
+                tidyverse
+              ];
+            })
+            # python for the rsdd visualizer
+            (python3.withPackages (p:
+              with p; [
+                graphviz
+                matplotlib
+                seaborn
+                numpy
+                pandas
+                # pyro-ppl
+                # ] ++  pyro-ppl.optional-dependencies.extras ))
+              ]))
           ]
         # ++ builtins.attrValues self.checks
         ;
