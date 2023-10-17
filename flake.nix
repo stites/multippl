@@ -1,11 +1,10 @@
 {
   nixConfig.extra-substituters = "https://stites.cachix.org";
-  nixConfig.extra-trusted-public-keys = "stites.cachix.org-1:JN1rOOglf6VA+2aFsZnpkGUFfutdBIP1LbANgiJ940s=";
+  nixConfig.extra-trusted-public-keys = "stites.cachix.org-1:ZuZInLV0i4TjoZhdh0pr9TFl2OFtHoSnOf4vKqwpthQ=";
 
   inputs = {
     devenv.url = "github:cachix/devenv";
     crane.url = "github:ipetkov/crane/v0.14.1";
-    dice.url = "github:stites/dice.nix";
     rsdd.url = "github:stites/rsdd/yodel-additions?dir=nix";
     # rsdd.url = "path:/home/stites/git/rust/rsdd/nix";
     advisory-db.url = "github:rustsec/advisory-db";
@@ -155,20 +154,9 @@
             help = "rust repl with evcxr";
             command = "${pkgs.evcxr}/bin/evcxr";
           }
-          {
-            name = "cmdstan";
-            help = "run make in the cmdstan source";
-            command = ''
-              model="$(pwd)/''${1%.stan}"
-              cd ${pkgs.cmdstan}/opt/cmdstan
-              make "$model" "''${@:2}"
-            '';
-          }
         ];
         devshells.default.packages = with pkgs;
           [
-            # dice cli:
-            inputs.dice.packages.${system}.default
             # plotters dependencies
             zlib.dev
             bzip2.dev
@@ -181,12 +169,12 @@
             fontconfig
 
             hunspellDicts.en_US-large
-            cmdstan
           ]
           ++ [
             lldb
 
             cargo
+            clippy
             rustc
             rustfmt
             rust-analyzer
@@ -216,28 +204,6 @@
           ++ lib.optionals stdenv.isLinux [
             cargo-rr
             rr-unstable
-          ]
-          ++ [
-            cmdstan
-            (rWrapper.override {
-              packages = with pkgs.rPackages; [
-                rstan
-                bnlearn
-                ggplot2
-                tidyverse
-              ];
-            })
-            # # python for the rsdd visualizer
-            # (python3.withPackages (p:
-            #   with p; [
-            #     graphviz
-            #     matplotlib
-            #     seaborn
-            #     numpy
-            #     #pandas
-            #     # pyro-ppl
-            #     # ] ++  pyro-ppl.optional-dependencies.extras ))
-            #   ]))
           ];
       };
     };
