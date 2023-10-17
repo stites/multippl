@@ -9,6 +9,7 @@ members = [
   "ttg",
 ]
 [workspace.package]
+name = "multippl"
 version = "0.0.0"
 edition = "2021"
 

@@ -17,13 +17,13 @@ use tracing_test::*;
 #[traced_test]
 fn tuple0() {
     let p = r#"exact { let x = (false, true) in fst x }"#;
-    check_exact("tuples0/F, ", vec![0.0], &p);
+    check_exact("tuples0/F, ", vec![0.0], p);
 }
 #[test]
 #[traced_test]
 fn tuple1() {
     let p = r#"exact { let y = true in (y, true) }"#;
-    check_exact("tuples0/T,T", vec![1.0, 1.0], &p);
+    check_exact("tuples0/T,T", vec![1.0, 1.0], p);
 }
 #[test]
 #[traced_test]

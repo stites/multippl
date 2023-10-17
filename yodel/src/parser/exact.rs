@@ -95,6 +95,11 @@ fn parse_eanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EVal> {
                 "*" => Anf::Mult(Box::new(l), Box::new(r)),
                 "+" => Anf::Plus(Box::new(l), Box::new(r)),
                 "-" => Anf::Minus(Box::new(l), Box::new(r)),
+                "==" => Anf::EQ(Box::new(l), Box::new(r)),
+                ">" => Anf::GT(Box::new(l), Box::new(r)),
+                "<" => Anf::LT(Box::new(l), Box::new(r)),
+                ">=" => Anf::GTE(Box::new(l), Box::new(r)),
+                "<=" => Anf::LTE(Box::new(l), Box::new(r)),
                 op => panic!("unknown binary operator found: {l:?} <{op}> {r:?}"),
             }
         }

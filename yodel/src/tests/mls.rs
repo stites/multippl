@@ -83,43 +83,43 @@ use crate::*;
 
 // TODO: inspiration from https://dl.acm.org/doi/pdf/10.1145/3490421 a causal query could be nice
 
-// #[rustfmt::skip]
-// pub mod networks {
-//     /// https://www.bnlearn.com/bnrepository/clgaussian-small.html#healthcare
-//     pub fn healthcare() -> ProgramInferable {
-//        program!(~lets![
-//          ~ "Age"             <- categorical!(0.35, 0.45, 0.20); // A: young, adult, old
-//          ~ "PreExistingCond" <-                           // none, mild, severe
-//              ite!(~ (eq!(var!(~ "Age"), 0)) ? ( categorical!(0.88, 0.10, 0.20) ) : (
-//                     (eq!(var!(~ "Age"), 1)) ? ( categorical!(0.75, 0.20, 0.05) )
-//                                             : ( categorical!(0.42, 0.53, 0.05) )   ))
-//          ~ "OutpatientExpenditure" <-
-//              ite!(~ (eq!(var!(~ "Age"), 0)) ? ( normal!( 60.0,  100.0) ) : (
-//                     (eq!(var!(~ "Age"), 1)) ? ( normal!(180.0,  400.0) )
-//                                             : ( normal!(360.0, 1600.0) )   ))
-//          ~ "AnyHospitalStay" <-                    // any   (vs none)
-//              ite!(~ (eq!(var!(~ "Age"), 0)) ? ( bern!(0.1 ) ) : (
-//                     (eq!(var!(~ "Age"), 1)) ? ( bern!(0.25) )
-//                                             : ( bern!(0.40) )   ))
-//          ~ "DaysHospitalStay" <-
-//              ite!(~ (not!(~ "AnyHospitalStay")) ? ( 0.0 ) : (
-//                        ite!(~ (eq!(var!(~ "Age"), 0)) ? ( normal!( 1.0, 0.25) ) : (
-//                               (eq!(var!(~ "Age"), 1)) ? ( normal!( 4.0, 1.00) )
-//                                                       : ( normal!( 7.0, 2.25) )   ))
-//                  ))
-//          ~ "InpatientExpenditure" <-
-//                        ite!(~ (eq!(var!(~ "PreExistingCond"), 0)) ? ( normal!( plus!(100, mult!(300, var!(~ "DaysHospitalStay"))),  30^2) ) : (
-//                               (eq!(var!(~ "PreExistingCond"), 1)) ? ( normal!( plus!(100, mult!(550, var!(~ "DaysHospitalStay"))),  50^2) )
-//                                                                   : ( normal!( plus!(100, mult!(800, var!(~ "DaysHospitalStay"))), 100^2) )   ))
-//          ~ "Taxes" <- normal!(
-//              plus!(120,
-//                    mult!(1.02, var!(~ "InpatientExpenditure")),
-//                    mult!(1.05, var!(~ "OutpatientExpenditure"))
-//              ),  10^2)
-//          ~~ var!(~ "Taxes")
-//        ])
-//     }
-// }
+#[rustfmt::skip]
+pub mod networks {
+    // /// https://www.bnlearn.com/bnrepository/clgaussian-small.html#healthcare
+    // pub fn healthcare() -> ProgramInferable {
+    //    program!(~lets![
+    //      ~ "Age"             <- categorical!(0.35, 0.45, 0.20); // A: young, adult, old
+    //      ~ "PreExistingCond" <-                           // none, mild, severe
+    //          ite!(~ (eq!(var!(~ "Age"), 0)) ? ( categorical!(0.88, 0.10, 0.20) ) : (
+    //                 (eq!(var!(~ "Age"), 1)) ? ( categorical!(0.75, 0.20, 0.05) )
+    //                                         : ( categorical!(0.42, 0.53, 0.05) )   ))
+    //      ~ "OutpatientExpenditure" <-
+    //          ite!(~ (eq!(var!(~ "Age"), 0)) ? ( normal!( 60.0,  100.0) ) : (
+    //                 (eq!(var!(~ "Age"), 1)) ? ( normal!(180.0,  400.0) )
+    //                                         : ( normal!(360.0, 1600.0) )   ))
+    //      ~ "AnyHospitalStay" <-                    // any   (vs none)
+    //          ite!(~ (eq!(var!(~ "Age"), 0)) ? ( bern!(0.1 ) ) : (
+    //                 (eq!(var!(~ "Age"), 1)) ? ( bern!(0.25) )
+    //                                         : ( bern!(0.40) )   ))
+    //      ~ "DaysHospitalStay" <-
+    //          ite!(~ (not!(~ "AnyHospitalStay")) ? ( 0.0 ) : (
+    //                    ite!(~ (eq!(var!(~ "Age"), 0)) ? ( normal!( 1.0, 0.25) ) : (
+    //                           (eq!(var!(~ "Age"), 1)) ? ( normal!( 4.0, 1.00) )
+    //                                                   : ( normal!( 7.0, 2.25) )   ))
+    //              ))
+    //      ~ "InpatientExpenditure" <-
+    //                    ite!(~ (eq!(var!(~ "PreExistingCond"), 0)) ? ( normal!( plus!(100, mult!(300, var!(~ "DaysHospitalStay"))),  30^2) ) : (
+    //                           (eq!(var!(~ "PreExistingCond"), 1)) ? ( normal!( plus!(100, mult!(550, var!(~ "DaysHospitalStay"))),  50^2) )
+    //                                                               : ( normal!( plus!(100, mult!(800, var!(~ "DaysHospitalStay"))), 100^2) )   ))
+    //      ~ "Taxes" <- normal!(
+    //          plus!(120,
+    //                mult!(1.02, var!(~ "InpatientExpenditure")),
+    //                mult!(1.05, var!(~ "OutpatientExpenditure"))
+    //          ),  10^2)
+    //      ~~ var!(~ "Taxes")
+    //    ])
+    // }
+}
 
 #[test]
 // #[traced_test]
@@ -144,8 +144,8 @@ sample {
 
     let n = 100;
 
-    let _ = crate::inference::importance_weighting_h(1, &mk(), &Default::default());
-    // crate::tests::check_approx("proto_arrival", vec![1.0 / 3.0, 1.0 / 3.0], &mk(), n);
+    let _ = crate::inference::importance_weighting_h(1, mk(), &Default::default());
+    // crate::tests::check_approx("proto_arrival", vec![1.0 / 3.0, 1.0 / 3.0], mk(), n);
 }
 
 #[test]
@@ -167,6 +167,6 @@ sample {
 
     let n = 100;
 
-    let _ = crate::inference::importance_weighting_h(1, &mk(), &Default::default());
-    // crate::tests::check_approx("proto_arrival", vec![1.0 / 3.0, 1.0 / 3.0], &mk(), n);
+    let _ = crate::inference::importance_weighting_h(1, mk(), &Default::default());
+    // crate::tests::check_approx("proto_arrival", vec![1.0 / 3.0, 1.0 / 3.0], mk(), n);
 }

@@ -4,6 +4,5 @@ use rand::distributions::{Bernoulli, Distribution};
 pub extern "C" fn bern(p: f64) -> bool {
     println!("in rust");
     let d = Bernoulli::new(p).unwrap();
-    let v = d.sample(&mut rand::thread_rng());
-    v
+    d.sample(&mut rand::thread_rng())
 }

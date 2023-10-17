@@ -94,7 +94,7 @@ module.exports = grammar({
       prec.left(2, seq('if', $.eanf, 'then', $.eexpr, 'else', $.eexpr)),
 
     eflip: $ => seq('flip', $.eanf),
-    ediscrete: $ => seq('discrete', '(', repeat(seq($.eanf, ",")), $.eanf,  ')'),
+    ediscrete: $ => seq('discrete', '(', repeat(seq($.eanf, ',')), $.eanf,  ')'),
     eiterate: $ => seq('iterate', '(', $.identifier, ',',$.eanf, ',', $.eanf,  ')'),
     eobserve: $ => choice(
       seq('observe', $.eanf),

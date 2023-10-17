@@ -12,7 +12,7 @@
   my-crate-clippy = craneLib.cargoClippy (commonArgs
     // {
       inherit cargoArtifacts;
-      cargoClippyExtraArgs = "--all-targets -- --deny warnings";
+      cargoClippyExtraArgs = "--all-targets -- --deny warnings -D clippy::redundant-closure-call";
     });
 
   my-crate-doc = craneLib.cargoDoc (commonArgs
@@ -21,7 +21,7 @@
     });
 
   my-crate-fmt = craneLib.cargoFmt {
-    inherit src;
+    src = ../.;
   };
 
   # maybe in the far far future this can be uncommented
