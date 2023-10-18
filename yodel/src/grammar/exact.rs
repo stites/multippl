@@ -1,7 +1,7 @@
 use crate::desugar::exact::integers;
 use crate::*;
-use ::core::fmt;
-use ::core::fmt::Debug;
+use core::fmt;
+use core::fmt::Debug;
 use itertools::Itertools;
 use std::any::{Any, TypeId};
 use std::collections::HashMap;

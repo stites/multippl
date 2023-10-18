@@ -3,6 +3,7 @@ use crate::grammar::*;
 use crate::uniquify::grammar::UniqueId;
 use crate::utils::render::*;
 use crate::*;
+use either::{Either, Either::*};
 use itertools::*;
 use num_traits::*;
 use rand::distributions::{Bernoulli, Distribution};
@@ -22,7 +23,6 @@ use std::collections::HashSet;
 use std::fmt;
 use std::string::String;
 use tracing::*;
-use either::{Either, Either::*};
 
 pub type Mgr = BddManager<AllTable<BddPtr>>;
 
@@ -767,9 +767,7 @@ impl<'a> Env<'a> {
 
                 Ok((c.clone(), ESample(Box::new(c), Box::new(etr))))
             }
-            ESample2(_, e) => {
-
-            },
+            ESample2(_, e) => {}
         }
     }
     pub fn eval_sexpr(&mut self, ctx: &Context, e: &SExprAnn) -> Result<(Compiled, SExprTr)> {

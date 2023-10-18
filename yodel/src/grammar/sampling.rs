@@ -1,8 +1,8 @@
 /// Trees-that-grow style grammar to unify type-checking, analysis, and
 /// compilation. going to be honest it's pretty atrocious in rust.
 use crate::*;
-use ::core::fmt;
-use ::core::fmt::Debug;
+use core::fmt;
+use core::fmt::Debug;
 use itertools::Itertools;
 use rsdd::builder::bdd_plan::BddPlan;
 use std::any::{Any, TypeId};

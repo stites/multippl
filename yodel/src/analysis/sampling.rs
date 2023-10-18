@@ -8,7 +8,7 @@ use crate::typeinf::grammar::*;
 use crate::uniquify::grammar::UniqueId;
 use crate::uniquify::grammar::*;
 use crate::*;
-use ::core::fmt::{Debug, Formatter};
+use core::fmt::{Debug, Formatter};
 use itertools::*;
 // use grammar::*;
 use rsdd::builder::bdd_plan::*;

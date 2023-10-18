@@ -9,8 +9,8 @@ use crate::*;
 use crate::desugar::sample::*;
 use crate::grammar::program::Program;
 
-use ::core::fmt;
-use ::core::fmt::Debug;
+use core::fmt;
+use core::fmt::Debug;
 use discrete::from_params;
 use itertools::Itertools;
 use rsdd::builder::bdd_plan::BddPlan;
