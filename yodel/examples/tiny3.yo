@@ -1,0 +1,9 @@
+
+sample {
+  A <- exact {
+    let distA = flip 0.5 in
+    let _ = observe true in
+    distA
+  };
+  A
+}
