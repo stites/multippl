@@ -2,15 +2,14 @@ extern crate tracing;
 extern crate yodel;
 
 use clap::Parser;
+use clap_verbosity_flag::LevelFilter as VerbLevel;
+use clap_verbosity_flag::{InfoLevel, Verbosity};
 use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
 use std::time::*;
 use tracing::*;
 use tracing_subscriber::fmt;
-use clap_verbosity_flag::{Verbosity, InfoLevel};
-use clap_verbosity_flag::LevelFilter as VerbLevel;
-
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -59,7 +58,6 @@ fn verbosity_to_tracing(lvl: VerbLevel) -> Level {
     }
 }
 fn setup_tracing(lvl: Level) {
-
     let format = fmt::format()
         .with_level(true)
         .with_target(false)

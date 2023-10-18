@@ -1,0 +1,202 @@
+======================
+hybrid: tiny
+======================
+
+sample fn network(params: (Float, Float), obs: (Bool, Float) ) -> (Float, Float) {
+  paramA <- params[0];
+  paramB <- params[1];
+  obsA <- obs[0];
+  obsB <- obs[1];
+
+  A <- exact {
+    let distA = flip paramA in
+    let _ = observe (distA == obsA) in
+    distA
+  };
+  modA <- if A then 0 else 5;
+  B <- normal(paramB + modA, 1);
+  _ <- observe obsB in B;
+  (paramA, paramB)
+}
+
+sample {
+  params <- (0.5, 1);
+  params <- network(params, (False, 3.74459001));
+  params
+}
+
+---
+
+    (source_file
+      (program
+        (sfun
+          (identifier)
+          (sargs
+            (sarg
+              (identifier)
+              (sty
+                (styProd
+                  (sty
+                    (tyFloat))
+                  (sty
+                    (tyFloat)))))
+            (sarg
+              (identifier)
+              (sty
+                (styProd
+                  (sty
+                    (tyBool))
+                  (sty
+                    (tyFloat))))))
+          (sty
+            (styProd
+              (sty
+                (tyFloat))
+              (sty
+                (tyFloat))))
+          (sexpr
+            (slet
+              (identifier)
+              (sexpr
+                (sanf
+                  (sanfprj
+                    (identifier)
+                    (sanf
+                      (svalue
+                        (int))))))
+              (sexpr
+                (slet
+                  (identifier)
+                  (sexpr
+                    (sanf
+                      (sanfprj
+                        (identifier)
+                        (sanf
+                          (svalue
+                            (int))))))
+                  (sexpr
+                    (slet
+                      (identifier)
+                      (sexpr
+                        (sanf
+                          (sanfprj
+                            (identifier)
+                            (sanf
+                              (svalue
+                                (int))))))
+                      (sexpr
+                        (slet
+                          (identifier)
+                          (sexpr
+                            (sanf
+                              (sanfprj
+                                (identifier)
+                                (sanf
+                                  (svalue
+                                    (int))))))
+                          (sexpr
+                            (slet
+                              (identifier)
+                              (sexpr
+                                (sexact
+                                  (eexpr
+                                    (elet
+                                      (identifier)
+                                      (eexpr
+                                        (eflip
+                                          (eanf
+                                            (identifier))))
+                                      (eexpr
+                                        (elet
+                                          (identifier)
+                                          (eexpr
+                                            (eobserve
+                                              (eanf
+                                                (eanf
+                                                  (eanfbinop
+                                                    (eanf
+                                                      (identifier))
+                                                    (compare_op)
+                                                    (eanf
+                                                      (identifier)))))))
+                                          (eexpr
+                                            (eanf
+                                              (identifier)))))))))
+                              (sexpr
+                                (slet
+                                  (identifier)
+                                  (sexpr
+                                    (site
+                                      (sanf
+                                        (identifier))
+                                      (sexpr
+                                        (sanf
+                                          (svalue
+                                            (int))))
+                                      (sexpr
+                                        (sanf
+                                          (svalue
+                                            (int))))))
+                                  (sexpr
+                                    (slet
+                                      (identifier)
+                                      (sexpr
+                                        (sanf
+                                          (sanfnormal
+                                            (sanf
+                                              (sanfbinop
+                                                (sanf
+                                                  (identifier))
+                                                (numeric_op)
+                                                (sanf
+                                                  (identifier))))
+                                            (sanf
+                                              (svalue
+                                                (int))))))
+                                      (sexpr
+                                        (slet
+                                          (identifier)
+                                          (sexpr
+                                            (sobs
+                                              (sanf
+                                                (identifier))
+                                              (sanf
+                                                (identifier))))
+                                          (sexpr
+                                            (sanf
+                                              (sanfprod
+                                                (sanf
+                                                  (identifier))
+                                                (sanf
+                                                  (identifier))))))))))))))))))))))
+        (program
+          (sexpr
+            (slet
+              (identifier)
+              (sexpr
+                (sanf
+                  (sanfprod
+                    (sanf
+                      (svalue
+                        (float)))
+                    (sanf
+                      (svalue
+                        (int))))))
+              (sexpr
+                (slet
+                  (identifier)
+                  (sexpr
+                    (sapp
+                      (identifier)
+                      (sanf
+                        (identifier))
+                      (sanf
+                        (sanfprod
+                          (sanf
+                            (identifier))
+                          (sanf
+                            (svalue
+                              (float)))))))
+                  (sexpr
+                    (sanf
+                      (identifier))))))))))

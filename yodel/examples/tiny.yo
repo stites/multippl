@@ -6,13 +6,13 @@ sample fn network(params: (Float, Float), obs: (Bool, Float) ) -> (Float, Float)
 
   A <- exact {
     let distA = flip paramA in
-    observe distA == obsA
+    let _ = observe (distA == obsA) in
     distA
   };
   modA <- if A then 0 else 5;
   B <- normal(paramB + modA, 1);
-  observe obsB in B;
-  return (paramA, paramB)
+  _ <- observe obsB in B;
+  (paramA, paramB)
 }
 
 sample {

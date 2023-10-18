@@ -284,7 +284,7 @@ pub fn parse_stype(src: &[u8], c: &mut TreeCursor, n: &Node) -> STy {
 
             STy::SVec(Box::new(ty))
         }
-        "tyProd" => {
+        "styProd" => {
             STy::SProd(parse_vec(src, c, n, |a, b, c| parse_stype(a, b, &c)))
         }
         s => panic!(
@@ -362,13 +362,19 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             let fbranch = parse_sexpr(src, c, &fbranch);
             SExpr::SIte(None, Box::new(pred), Box::new(tbranch), Box::new(fbranch))
         }
-        "sobserve" => {
-            tracing::debug!("parsing sobserve: {} >>> {}", n.to_sexp(), parse_str(src, &n));
-            let a0 = parse_sanf(src, c, n);
-            let a1 = parse_sanf(src, c, n);
-            SExpr::SObserve((), Box::new(a0), Box::new(a1))
-        }
+        "sobs" => {
+            tracing::debug!("parsing sobs: {} >>> {}", n.to_sexp(), parse_str(src, &n));
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
 
+            let aval = cs.next().unwrap();
+            let aval = parse_sanf(src, c, aval);
+
+            let adist = cs.next().unwrap();
+            let adist = parse_sanf(src, c, adist);
+
+            SExpr::SObserve((), Box::new(aval), Box::new(adist))
+        }
         "sseq" => {
             tracing::debug!("parsing sseq: {} >>> {}", n.to_sexp(), parse_str(src, &n));
             assert_children!(src, k, 2, n, c);
