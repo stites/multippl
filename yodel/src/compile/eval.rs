@@ -230,6 +230,10 @@ impl<'a> State<'a> {
     pub fn q(&self) -> f64 {
         self.pq.q
     }
+    pub fn mult_pq(&mut self, p: f64, q: f64) {
+        self.pq.p *= p;
+        self.pq.q *= q;
+    }
     pub fn eval_program(&mut self, prog: &Program<Annotated>) -> Result<(Output, Program<Trace>)> {
         match prog {
             Program::SBody(e) => {
@@ -357,9 +361,6 @@ impl<'a> State<'a> {
                     weightmap: ctx.exact.weightmap.clone(),
                     substitutions: ctx.exact.substitutions.clone(),
                 };
-
-                // let Importance::Weight(theta) = o.importance;
-                self.pq.p *= wmc; // <<<<<<<<<<<<<<<<<<<<
 
                 debug_step_ng!("observe", ctx, o);
                 let out = ctx.mk_eoutput(o);
@@ -804,8 +805,7 @@ impl<'a> State<'a> {
                     },
                     _ => panic!("semantic error, see note on SObserve in SExpr enum"),
                 };
-                self.pq.p *= q;
-                self.pq.q *= q;
+                self.mult_pq(q, q);
 
                 out.sample
                     .trace
@@ -857,12 +857,13 @@ impl<'a> State<'a> {
                             let dist = statrs::distribution::Beta::new(*a, *b).unwrap();
                             statrs::distribution::Continuous::pdf(&dist, *f)
                         }
-                        (_, _) => panic!("new distribution encountered"),
+                        (d, v) => {
+                            panic!("new distribution encountered in sobserve: {d:?} in {v:?}")
+                        }
                     },
                     _ => panic!("semantic error, see note on SObserve in SExpr enum"),
                 };
-
-                self.pq.q *= q;
+                self.mult_pq(1.0, q);
 
                 //let a_out = ctx.mk_soutput(a_out);
                 Ok((a_out.clone(), SObserve(a_out, Box::new(a), Box::new(dist))))

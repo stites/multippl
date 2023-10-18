@@ -33,9 +33,6 @@ pub fn exact2sample_bdd_eff(
 
     let weight = if s { theta_q } else { 1.0 - theta_q };
 
-    state.pq.q *= weight;
-    state.pq.p *= weight;
-
     out.sample.trace.push((
         SVal::SBool(s),
         Dist::Bern(theta_q),
