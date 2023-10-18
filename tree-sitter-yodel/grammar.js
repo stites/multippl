@@ -98,7 +98,6 @@ module.exports = grammar({
     eiterate: $ => seq('iterate', '(', $.identifier, ',',$.eanf, ',', $.eanf,  ')'),
     eobserve: $ => choice(
       seq('observe', $.eanf),
-      // seq('observe', '(', $.eanf, ')'),
     ),
     esample: $ => choice(
       seq('sample', '(', $.sexpr, ')' ),

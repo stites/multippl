@@ -9,7 +9,6 @@ sample {
 
 ---
 
-
     (source_file
       (program
         (sexpr

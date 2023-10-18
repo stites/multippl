@@ -8,6 +8,9 @@ use std::path::PathBuf;
 use std::time::*;
 use tracing::*;
 use tracing_subscriber::fmt;
+use clap_verbosity_flag::{Verbosity, InfoLevel};
+use clap_verbosity_flag::LevelFilter as VerbLevel;
+
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -21,8 +24,17 @@ struct Args {
     #[clap(short, long, value_parser)]
     rng: Option<u64>,
 
-    #[clap(long, value_parser)]
-    debug: bool,
+    // verbosity flags provided by clap-verbosity-flag
+    //
+    //   -q silences output
+    //   -v show warnings
+    //   -vv show info
+    //   -vvv show debug
+    //   -vvvv show trace
+    //
+    // see https://docs.rs/clap-verbosity-flag/latest/clap_verbosity_flag/ for more
+    #[command(flatten)]
+    verbose: Verbosity,
 
     #[clap(long)]
     stats: bool,
@@ -36,7 +48,18 @@ struct Args {
     // stats_window: u64, // use optimizations
 }
 
+fn verbosity_to_tracing(lvl: VerbLevel) -> Level {
+    match lvl {
+        VerbLevel::Off => Level::WARN,
+        VerbLevel::Error => Level::WARN,
+        VerbLevel::Warn => Level::WARN, // this is the default tracing level, you can't get any lower
+        VerbLevel::Info => Level::INFO,
+        VerbLevel::Debug => Level::DEBUG,
+        VerbLevel::Trace => Level::TRACE,
+    }
+}
 fn setup_tracing(lvl: Level) {
+
     let format = fmt::format()
         .with_level(true)
         .with_target(false)
@@ -53,11 +76,6 @@ fn setup_tracing(lvl: Level) {
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
-    setup_tracing(if args.debug {
-        Level::TRACE
-    } else {
-        Level::WARN
-    });
     println!("          /\\                                       ");
     println!("         /**\\           The Yodel compiler         ");
     println!("        /****\\   /\\                                ");
@@ -78,11 +96,13 @@ fn main() -> Result<(), Box<dyn Error>> {
         .collect::<Result<Vec<&str>, _>>()
         .unwrap()
         .join(",");
+    let lvl = verbosity_to_tracing(args.verbose.log_level_filter());
     println!("       File: {}", args.file);
     println!("    # Steps: {}", strstep);
     println!("       Seed: {:?}", args.rng);
-    println!("Debug level: {}", args.debug);
+    println!("Debug level: {:?}", lvl);
     println!("Print stats: {}", args.stats);
+    setup_tracing(lvl);
 
     let pth = PathBuf::from(args.file);
     debug!("loading file: {:?}", fs::canonicalize(&pth));
