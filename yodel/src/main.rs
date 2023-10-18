@@ -3,7 +3,7 @@ extern crate yodel;
 
 use clap::Parser;
 use clap_verbosity_flag::LevelFilter as VerbLevel;
-use clap_verbosity_flag::{InfoLevel, Verbosity};
+use clap_verbosity_flag::Verbosity;
 use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
@@ -60,7 +60,7 @@ fn verbosity_to_tracing(lvl: VerbLevel) -> Level {
 fn setup_tracing(lvl: Level) {
     let format = fmt::format()
         .with_level(true)
-        .with_target(false)
+        // .with_target(false)
         .with_thread_ids(false)
         .with_thread_names(false)
         .without_time()
