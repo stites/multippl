@@ -2,6 +2,7 @@ use crate::annotate::grammar::Var;
 use crate::data::*;
 use crate::grammar::*;
 use crate::uniquify::grammar::UniqueId;
+use crate::SVal;
 use itertools::*;
 /// helper functions for rendering
 use rsdd::builder::bdd_plan::*;
@@ -13,6 +14,23 @@ pub fn rendervec(fs: &[String]) -> String {
     format!("[{}]", fs.join(", "))
 }
 
+pub fn rendersval(s: &SVal) -> String {
+    match s {
+        SVal::SBool(x) => format!("{}", x),
+        SVal::SFloat(x) => format!("{}", x),
+        SVal::SInt(x) => format!("{}", x),
+        SVal::SVec(xs) => rendersvals(&xs),
+        SVal::SProd(xs) => rendersvals(&xs),
+        SVal::SDist(x) => format!("{:?}", x),
+    }
+}
+
+pub fn rendersvals_h(s: &[SVal]) -> Vec<String> {
+    s.iter().map(|x| rendersval(x)).collect_vec()
+}
+pub fn rendersvals(xs: &[SVal]) -> String {
+    rendervec(&rendersvals_h(xs))
+}
 pub fn renderfloats(fs: &[f64], high_prec: bool) -> String {
     rendervec(&fs.iter().map(|x| fmt_f64(high_prec)(*x)).collect_vec())
 }

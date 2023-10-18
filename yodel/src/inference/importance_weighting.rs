@@ -29,12 +29,15 @@ pub fn importance_weighting_h(
     let mut e = Expectations::empty();
     let mut stats_max = None;
     debug!("running with options: {:#?}", opt);
-    for _step in 1..=steps {
+    for step in 1..=steps {
+        if step % 100 == 1 {
+            debug!("step: {step}");
+        }
         match crate::runner(code, &mut mgr, &mut rng, opt) {
             Ok(o) => {
                 trace!("{:?}", o.out.exact.out);
                 let (out, p, pq) = (o.out, o.prg, o.pq);
-                debug!("sample output : {}", renderbdds(&out.exact.out));
+                debug!("sample output : {}", rendersvals(&out.sample.out));
                 debug!("exact output  : {}", renderbdds(&out.exact.out));
                 debug!("accepting     : {:?}", out.exact.accept);
                 // debug!("computed probs: {:?}", ps);
