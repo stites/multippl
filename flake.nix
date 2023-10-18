@@ -155,6 +155,12 @@
             command = "${pkgs.evcxr}/bin/evcxr";
           }
         ];
+        devshells.default.env = [
+          {
+            name = "CARGO_REGISTRIES_CRATES_IO_PROTOCOL";
+            value = "sparse";
+          }
+        ];
         devshells.default.packages = with pkgs;
           [
             # plotters dependencies
@@ -198,6 +204,7 @@
             cargo-outdated # find out outdated dependencies
             cargo-udeps # find out unused dependencies
             cargo-audit # search for security vulnerabilities
+            bacon
             # cargo-pants # search for security vulnerabilities (by sonatype )
           ]
           ++ lib.optionals stdenv.isDarwin []
