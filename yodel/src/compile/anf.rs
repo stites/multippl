@@ -317,7 +317,12 @@ fn eval_sanf_dist2(
             let ext = (sv.clone(), out.sample.clone());
             Ok((out.clone(), mkanf(ext, Box::new(p0), Box::new(p1))))
         }
-        _ => return errors::typecheck_failed("sanf dist with 2 args not given correct arguments"),
+        (l, r) => {
+            tracing::debug!(" left: {l:?}");
+            tracing::debug!("right: {r:?}");
+
+            return errors::typecheck_failed("sanf dist with 2 args not given correct arguments.");
+        }
     }
 }
 fn vals2vec_params(vs: &[SVal]) -> Result<Vec<f64>> {
