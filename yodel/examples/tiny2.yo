@@ -10,5 +10,5 @@ sample fn network(params: Float, obs: Bool ) -> (Float, Float) {
 
 sample {
   params <- 0.5;
-  network(params, true)
+  network(params, false)
 }

@@ -6,7 +6,7 @@ sample fn network(params: (Float, Float), obs: (Bool, Float) ) -> (Float, Float)
 
   A <- exact {
     let distA = flip paramA in
-    let _ = observe (distA == obsA) in
+    let _ = observe obsA in
     distA
   };
   modA <- if A then 0.0 else 5.0;
@@ -17,5 +17,6 @@ sample fn network(params: (Float, Float), obs: (Bool, Float) ) -> (Float, Float)
 
 sample {
   params <- (0.5, 1.0);
-  network(params, (false, -3.74459001))
+  params <- network(params, (false, 3.74459001));
+  params
 }
