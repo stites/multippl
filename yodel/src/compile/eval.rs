@@ -231,17 +231,22 @@ impl<'a> State<'a> {
         self.pq.q
     }
     pub fn eval_program(&mut self, prog: &Program<Annotated>) -> Result<(Output, Program<Trace>)> {
-        tracing::debug!("compiling...");
         match prog {
             Program::SBody(e) => {
+                tracing::trace!("compiling sbody...");
+                tracing::debug!("ast: {e:?}");
                 let (c, e) = self.eval_sexpr(Ctx::default(), e)?;
                 Ok((c, Program::SBody(e)))
             }
             Program::EBody(e) => {
+                tracing::trace!("compiling ebody...");
+                tracing::debug!("ast: {e:?}");
                 let (c, e) = self.eval_eexpr(Ctx::default(), e)?;
                 Ok((c, Program::EBody(e)))
             }
             Program::SDefine(f, e) => {
+                tracing::trace!("compiling sdefine...");
+                tracing::debug!("fun: {f:?}");
                 let name = f
                     .clone()
                     .name
@@ -250,6 +255,8 @@ impl<'a> State<'a> {
                 self.eval_program(e)
             }
             Program::EDefine(f, e) => {
+                tracing::trace!("compiling edefine...");
+                tracing::debug!("fun: {f:?}");
                 let name = f
                     .clone()
                     .name
@@ -541,6 +548,7 @@ impl<'a> State<'a> {
                 let span = tracing::span!(tracing::Level::DEBUG, "sanf");
                 let _enter = span.enter();
                 debug!("anf: {:?}", a);
+                debug!("ast: {:?}", e);
 
                 let (out, a) = eval_sanf(self, &ctx, a)?;
                 // let out = ctx.mk_soutput(out);

@@ -130,24 +130,24 @@ pub fn run(code: &str, opt: &Options) -> Result<ROut> {
 }
 
 pub fn runner(code: &str, mgr: &mut Mgr, rng: &mut StdRng, opt: &Options) -> Result<PartialROut> {
-    tracing::debug!("compiling code:\n{code}");
+    tracing::trace!("compiling code:\n{code}");
     let p = crate::parser::program::parse(code)?;
-    tracing::debug!("program... parsed!");
+    tracing::trace!("program... parsed!");
     let p = if opt.exact_only {
         p.strip_samples()?
     } else {
         p
     };
     let p = crate::typeinf::typeinference(&p)?;
-    tracing::debug!("types... inferred!");
+    tracing::trace!("types... inferred!");
     let p = crate::typecheck::typecheck(&p)?;
-    tracing::debug!("types... checked!");
+    tracing::trace!("types... checked!");
     let p = crate::desugar::desugar(&p)?;
-    tracing::debug!("code... desugared!");
+    tracing::trace!("code... desugared!");
     let p = SymEnv::default().uniquify(&p)?.0;
-    tracing::debug!("symbols... uniquified!");
+    tracing::trace!("symbols... uniquified!");
     let ar = LabelEnv::new().annotate(&p)?;
-    tracing::debug!("variables... annotated!");
+    tracing::trace!("variables... annotated!");
     let p = ar.program;
     let maxlbl = ar.maxbdd.0;
 
@@ -166,7 +166,7 @@ pub fn runner(code: &str, mgr: &mut Mgr, rng: &mut StdRng, opt: &Options) -> Res
 }
 
 pub fn make_mgr(code: &str) -> Result<Mgr> {
-    tracing::debug!("making manager");
+    tracing::trace!("making manager");
     let p = crate::parser::program::parse(code)?;
     tracing::debug!("(parsed)");
     tracing::debug!("(parsed) >>> {p:?}");
@@ -194,6 +194,6 @@ pub fn make_mgr(code: &str) -> Result<Mgr> {
     tracing::debug!("(annotated) >>> {p:?}");
     tracing::debug!("(annotated)");
     let maxlbl = ar.maxbdd.0;
-    tracing::debug!("(manager created with max label: {maxlbl})");
+    tracing::trace!("(manager created with max label: {maxlbl})");
     Ok(Mgr::new_default_order(maxlbl as usize))
 }
