@@ -982,7 +982,7 @@
     },
     "float": {
       "type": "PATTERN",
-      "value": "\\d+\\.(?:\\d*|)"
+      "value": "-?\\d+\\.(?:\\d*|)"
     },
     "int": {
       "type": "PATTERN",

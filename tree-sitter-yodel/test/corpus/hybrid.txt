@@ -20,8 +20,8 @@ sample fn network(params: (Float, Float), obs: (Bool, Float) ) -> (Float, Float)
 }
 
 sample {
-  params <- (0.5, 1);
-  params <- network(params, (False, 3.74459001));
+  params <- (0.5, 1.0);
+  params <- network(params, (False, -3.74459001));
   params
 }
 
