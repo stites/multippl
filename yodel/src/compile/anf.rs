@@ -293,7 +293,8 @@ pub fn eval_sanf_vec(
             }
             Err(e) => Err(e),
         })?;
-    let o = ctx.sample.as_output(outs);
+    tracing::debug!("sanf_vec: {outs:?}");
+    let o = ctx.sample.as_output(vec![SVal::SVec(outs)]);
     let o = ctx.mk_soutput(o);
     Ok((o.clone(), op(trs)))
 }
@@ -353,13 +354,18 @@ pub fn eval_sanf<'a>(
     a: &'a AnfAnn<SVal>,
 ) -> Result<(Output, AnfTr<SVal>)> {
     use Anf::*;
+    let span = tracing::span!(tracing::Level::DEBUG, "eval_sanf");
+    let _enter = span.enter();
     match a {
         AVal(_, v) => {
+            tracing::debug!("aval in: {v:?}");
             let out = ctx.sample.as_output(vec![v.clone()]);
             let out = ctx.mk_soutput(out);
+            tracing::debug!("aval ot: {out:?}");
             Ok((out.clone(), AVal(out, v.clone())))
         }
         AVar(d, s) => {
+            tracing::debug!("avar: {d:?} -- {s:?}");
             let out = eval_sanf_var(state, ctx, d, s)?;
             Ok((out.clone(), AVar(out, s.to_string())))
         }

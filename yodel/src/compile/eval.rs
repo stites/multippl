@@ -721,7 +721,14 @@ impl<'a> State<'a> {
                 let (argvals, args) = eval_sanfs(self, &ctx, args)?;
                 let argvals = argvals.sample.out;
                 if params.len() != argvals.len() {
-                    return errors::generic(&format!("function {:?} arguments mismatch", fname));
+                    tracing::debug!("params: {params:?}");
+                    tracing::debug!("argvals: {argvals:?}");
+                    return errors::generic(&format!(
+                        "function {:?} arguments mismatch. Got {}, expected {}",
+                        fname,
+                        params.len(),
+                        argvals.len()
+                    ));
                 }
                 let mut subs = ctx.sample.substitutions.clone();
                 for (param, val) in params.iter().zip(argvals.iter()) {
