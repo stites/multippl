@@ -156,10 +156,11 @@
           }
         ];
         devshells.default.env = [
-          {
-            name = "CARGO_REGISTRIES_CRATES_IO_PROTOCOL";
-            value = "sparse";
-          }
+          # apparently this makes the pre-commit hooks cry :' (
+          #{
+          #  name = "CARGO_REGISTRIES_CRATES_IO_PROTOCOL";
+          #  value = "sparse";
+          #}
         ];
         devshells.default.packages = with pkgs;
           [
