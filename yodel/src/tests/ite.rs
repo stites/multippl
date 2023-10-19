@@ -29,8 +29,8 @@ fn ite_00() {
         "#
     };
 
-    check_exact1("ite_00/T", 1.0 / 3.0, mk("true"));
-    check_exact1("ite_00/F", 1.0 / 5.0, mk("false"));
+    check_exact1("ite_00/T", 1.0 / 3.0, &mk("true"));
+    check_exact1("ite_00/F", 1.0 / 5.0, &mk("false"));
 }
 
 #[test]
@@ -46,7 +46,7 @@ fn ite_0() {
             + r#"\n}"#
     };
 
-    check_exact1("ite_0  ", 1.0 / 4.0, mk("b"));
+    check_exact1("ite_0  ", 1.0 / 4.0, &mk("b"));
 }
 
 #[test]
@@ -64,10 +64,10 @@ fn ite_1() {
     };
 
     let yres = (1.0 / 3.0 * 0.25) + (2.0 / 3.0 * 0.4);
-    check_exact1("ite_1/x  ", 1.0 / 3.0, mk("x"));
-    check_exact1("ite_1/y  ", yres, mk("y"));
-    check_exact1("ite_1/x|y", 0.6, mk("x || y"));
-    check_exact1("ite_1/x&y", 0.083333333, mk("x && y"));
+    check_exact1("ite_1/x  ", 1.0 / 3.0, &mk("x"));
+    check_exact1("ite_1/y  ", yres, &mk("y"));
+    check_exact1("ite_1/x|y", 0.6, &mk("x || y"));
+    check_exact1("ite_1/x&y", 0.083333333, &mk("x && y"));
 }
 
 #[test]
@@ -85,10 +85,10 @@ fn ite_2() {
             + r#"\n}"#
     };
 
-    check_exact1("ite_2/y  ", 0.464285714, mk("y"));
-    check_exact1("ite_2/x  ", 0.714285714, mk("x"));
-    check_exact1("ite_2/x|y", 1.000000000, mk("x || y"));
-    check_exact1("ite_2/x&y", 0.178571429, mk("x && y"));
+    check_exact1("ite_2/y  ", 0.464285714, &mk("y"));
+    check_exact1("ite_2/x  ", 0.714285714, &mk("x"));
+    check_exact1("ite_2/x|y", 1.000000000, &mk("x || y"));
+    check_exact1("ite_2/x&y", 0.178571429, &mk("x && y"));
 }
 
 #[test]
@@ -124,7 +124,7 @@ fn ite_3_with_one_sample_hard1_simplified_more() {
     let n = 5000;
     // debug_approx1("ite_3/x", 0.6, mk(b!("x")), n); // works!
     // debug_approx1("ite_3/y", 0.3, mk(b!("y")), n); // broken!
-    check_approx1("ite_3/y", 0.3, mk("y"), n); // broken!
+    check_approx1("ite_3/y", 0.3, &mk("y"), n); // broken!
 
     // debug_approx1("ite_3/x|y", 0.7, mk(b!("x" || "y")), n); // broken!
     // debug_approx1("ite_3/x&y", 0.2, mk(b!("x" && "y")), n); // broken!
@@ -303,7 +303,7 @@ fn ite_3_with_one_sample_hard1_simplified() {
     let n = 5000;
 
     // check_exact1("ite_3/y-sample1/4-simpl", 0.266666667, mk(b!("y")));
-    check_approx1("ite_3/y-sample1/4-simpl", 0.266666667, mk("y"), n);
+    check_approx1("ite_3/y-sample1/4-simpl", 0.266666667, &mk("y"), n);
     // dice's answer for 2/4 @ sample site
     // check_approx1("ite_3/y-sample2/4  ", 0.545454545, mk(b!("y")), n);
     // dice's answer for 3/4 @ sample site
@@ -326,7 +326,7 @@ fn ite_3_with_one_sample_easy_x() {
             + ret
             + r#"\n}"#
     };
-    check_approx1("ite_3/x  ", 0.909090909, mk("x"), 1000);
+    check_approx1("ite_3/x  ", 0.909090909, &mk("x"), 1000);
 }
 
 #[test]
@@ -342,10 +342,10 @@ fn ite_3_with_one_sample_hard1() {
             + r#"\n}"#
     };
     let n = 3000;
-    check_approx1("ite_3/observe/x  ", 0.909090909, mk("x"), n);
-    check_approx1("ite_3/observe/y  ", 0.318181818, mk("y"), n);
-    check_approx1("ite_3/observe/x|y", 1.000000000, mk("x || y"), n);
-    check_approx1("ite_3/observe/x&y", 0.227272727, mk("x && y"), n);
+    check_approx1("ite_3/observe/x  ", 0.909090909, &mk("x"), n);
+    check_approx1("ite_3/observe/y  ", 0.318181818, &mk("y"), n);
+    check_approx1("ite_3/observe/x|y", 1.000000000, &mk("x || y"), n);
+    check_approx1("ite_3/observe/x&y", 0.227272727, &mk("x && y"), n);
 
     // dice's answer for 2/4 @ sample site
     // check_approx1("ite_3/y-sample2/4  ", 0.545454545, mk(b!("y")), n);
@@ -369,7 +369,7 @@ fn ite_3_with_one_sample_easy_x_or_y() {
             + ret
             + r#"\n}"#
     };
-    check_approx1("ite_3/x|y", 1.000000000, mk("x || y"), 1000);
+    check_approx1("ite_3/x|y", 1.000000000, &mk("x || y"), 1000);
 }
 
 #[test]
@@ -394,7 +394,7 @@ fn ite_3_with_one_sample_hard1_extra() {
             + r#"\n}"#
     };
     let n = 50000;
-    check_approx1("ite_3/observe/y  ", 0.620253165, mk("y"), n);
+    check_approx1("ite_3/observe/y  ", 0.620253165, &mk("y"), n);
 
     // dice's answer for 2/4 @ sample site
     // check_approx1("ite_3/y-sample2/4  ", 0.545454545, mk(b!("y")), n);
