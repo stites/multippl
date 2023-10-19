@@ -25,6 +25,25 @@ pub mod grammar {
         }
     }
 
+    #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
+    pub struct FnId(pub UniqueId);
+
+    #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
+    pub struct FnCall(pub FnId, pub u64);
+
+    #[derive(Debug, Clone, Hash, Eq, PartialEq)]
+    pub struct FnCounts {
+        pub num_calls: u64,
+        pub num_uids: u64,
+    }
+    impl Default for FnCounts {
+        fn default() -> Self {
+            Self {
+                num_calls: 0,
+                num_uids: 0,
+            }
+        }
+    }
     impl fmt::Display for UniqueId {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(f, "#{}", self.0)
@@ -49,6 +68,9 @@ pub mod grammar {
         // original semantic
         EFlipExt: UniqueId,
 
+        SAppExt: FnCall,
+        EAppExt: FnCall,
+
         SMapExt: UniqueId,
         SFoldExt: (UniqueId, UniqueId),
         SLambdaExt: Vec<UniqueId>,
@@ -60,6 +82,8 @@ pub mod grammar {
 pub struct SymEnv {
     pub names: HashMap<String, VecDeque<UniqueId>>,
     pub scope: VecDeque<HashSet<String>>,
+    pub functions: HashMap<String, FnId>, // just going to assume a nice flat structure for a hot minute
+    pub fun_stats: HashMap<FnId, FnCounts>,
     pub gensym: u64,
     read_only: bool,
 }
@@ -70,6 +94,8 @@ impl Default for SymEnv {
             scope: Default::default(),
             gensym: 0,
             read_only: true,
+            functions: Default::default(),
+            fun_stats: Default::default(),
         }
     }
 }
@@ -128,6 +154,21 @@ impl SymEnv {
     }
     fn fresh(&mut self) -> UniqueId {
         self._fresh(None)
+    }
+    fn fresh_function(&mut self, name: String) -> FnId {
+        let id = FnId(self.fresh());
+        self.functions.insert(name, id);
+        self.fun_stats.insert(id, Default::default());
+        id
+    }
+    fn call_function(&mut self, f: &str) -> FnCall {
+        let id = self.functions.get(f).expect("function {f} is not defined");
+        let cs = self
+            .fun_stats
+            .get_mut(id)
+            .expect("counters always  created at same time as ");
+        cs.num_calls += 1;
+        FnCall(*id, cs.num_calls)
     }
     fn get_var(&self, var: String) -> Option<UniqueId> {
         self.names.get(&var)?.iter().last().copied()
@@ -299,8 +340,8 @@ impl SymEnv {
                 Ok(EFlip(self.fresh(), Box::new(p)))
             }
             EApp(_, f, args) => {
-                let args = self.uniquify_anfs(args)?;
-                Ok(EApp((), f.clone(), args))
+                let fcall = self.call_function(f);
+                Ok(EApp(fcall, f.clone(), self.uniquify_anfs(args)?))
             }
             EIterate(_, f, init, k) => {
                 let init = self.uniquify_anf(init)?;
@@ -390,7 +431,10 @@ impl SymEnv {
                 Box::new(self.uniquify_anf(guard)?),
                 Box::new(self.uniquify_sexpr(body)?),
             )),
-            SApp(_, f, args) => Ok(SApp((), f.clone(), self.uniquify_anfs(args)?)),
+            SApp(_, f, args) => {
+                let fcall = self.call_function(f);
+                Ok(SApp(fcall, f.clone(), self.uniquify_anfs(args)?))
+            }
             SSample(_, dist) => Ok(SSample((), Box::new(self.uniquify_sexpr(dist)?))),
             SLetSample(_, _, _, _) => errors::erased(Uniquify, "let-sample"),
         }
@@ -438,12 +482,25 @@ impl SymEnv {
                 Ok((Program::EBody(eann), MaxUniqueId(self.gensym)))
             }
             Program::EDefine(f, p) => {
+                let id =
+                    self.fresh_function(f.name.clone().expect("defined functions must be named"));
+                let start_ids = self.gensym.clone();
                 let f = self.uniquify_efun(f)?;
+                let end_ids = self.gensym.clone();
+                let cs = self.fun_stats.get_mut(&id).expect("I just made that!");
+                cs.num_uids = end_ids - start_ids;
                 let (p, mx) = self.uniquify(p)?;
                 Ok((Program::EDefine(f, Box::new(p)), mx))
             }
             Program::SDefine(f, p) => {
+                let id =
+                    self.fresh_function(f.name.clone().expect("defined functions must be named"));
+                let start_ids = self.gensym.clone();
                 let f = self.uniquify_sfun(f)?;
+                let end_ids = self.gensym.clone();
+                let cs = self.fun_stats.get_mut(&id).expect("I just made that!");
+                cs.num_uids = end_ids - start_ids;
+
                 let (p, mx) = self.uniquify(p)?;
                 Ok((Program::SDefine(f, Box::new(p)), mx))
             }
