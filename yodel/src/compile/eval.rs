@@ -92,7 +92,7 @@ pub fn eval_eite_output(
         .collect_vec();
 
     let tsamples = GetSamples::samples(&truthy.exact, state.mgr, opts.sample_pruning);
-    let mut samples = vec![];
+    let mut samples = HashMap::new();
     if !opts.sample_pruning {
         samples.extend(truthy.exact.samples);
         samples.extend(falsey.exact.samples);

@@ -43,6 +43,6 @@ pub fn exact2sample_bdd_eff(
     // sample in sequence. A smarter sample would compile
     // all samples of a multi-rooted BDD, but I need to futz
     // with rsdd's fold
-    out.exact.samples.push((dist.clone(), s));
+    out.exact.samples.insert(dist.clone(), s);
     s
 }

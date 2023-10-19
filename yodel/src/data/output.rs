@@ -42,13 +42,14 @@ pub type Tr = Vec<(SVal, Dist, Probability, Option<UniqueId>)>;
 #[derive(Debug, Clone, PartialEq)]
 pub struct ECtx {
     pub accept: BddPtr,
-    pub samples: Vec<(BddPtr, bool)>,
+    pub samples: HashMap<BddPtr, bool>,
     pub substitutions: SubstMap<EVal>,
     pub weightmap: WeightMap,
 }
 pub trait GetSamples {
     /// optionally prune these samples.
     fn compile_samples(&self, mgr: &mut Mgr) -> BddPtr;
+
     fn samples(&self, mgr: &mut Mgr, prune: bool) -> BddPtr {
         if prune {
             BddPtr::PtrTrue
@@ -58,7 +59,7 @@ pub trait GetSamples {
     }
 }
 
-fn _all_samples(samples: &[(BddPtr, bool)], mgr: &mut Mgr) -> BddPtr {
+fn _all_samples(samples: &HashMap<BddPtr, bool>, mgr: &mut Mgr) -> BddPtr {
     samples.iter().fold(BddPtr::PtrTrue, |ss, (dist, s)| {
         let nxt = mgr.iff(dist.clone(), BddPtr::from_bool(*s));
         mgr.and(ss, nxt)
@@ -127,7 +128,7 @@ pub struct EOutput {
     /// acceptance criteria
     pub accept: BddPtr,
     /// sample consistency
-    pub samples: Vec<(BddPtr, bool)>,
+    pub samples: HashMap<BddPtr, bool>,
     /// compiled weightmap
     pub weightmap: WeightMap,
     /// substitution environment
