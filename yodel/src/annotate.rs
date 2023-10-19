@@ -46,6 +46,7 @@ pub mod grammar {
         pub id: UniqueId,
         pub label: VarLabel,
         pub provenance: Option<NamedVar>,
+        pub fid: Option<FnId>,
     }
     impl Debug for BddVar {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -65,11 +66,17 @@ pub mod grammar {
         pub fn id(&self) -> UniqueId {
             self.id
         }
-        pub fn new(id: UniqueId, label: VarLabel, provenance: Option<NamedVar>) -> Self {
+        pub fn new(
+            id: UniqueId,
+            label: VarLabel,
+            provenance: Option<NamedVar>,
+            fid: Option<FnId>,
+        ) -> Self {
             BddVar {
                 id,
                 label,
                 provenance,
+                fid,
             }
         }
     }
@@ -143,8 +150,13 @@ pub mod grammar {
         Sampled(SampledVar),
     }
     impl Var {
-        pub fn new_bdd(id: UniqueId, label: VarLabel, provenance: Option<NamedVar>) -> Self {
-            Var::Bdd(BddVar::new(id, label, provenance))
+        pub fn new_bdd(
+            id: UniqueId,
+            label: VarLabel,
+            provenance: Option<NamedVar>,
+            fid: Option<FnId>,
+        ) -> Self {
+            Var::Bdd(BddVar::new(id, label, provenance, fid))
         }
         pub fn new_named(id: UniqueId, name: String) -> Self {
             Var::Named(NamedVar::new(id, name))
@@ -183,11 +195,13 @@ pub mod grammar {
 
         ELetInExt: NamedVar,
         EFlipExt: BddVar,
+        EAppExt: FnCall,
 
         SLetInExt: NamedVar,
         SMapExt: NamedVar,
         SFoldExt: (NamedVar, NamedVar),
         SLambdaExt: Vec<NamedVar>,
+        SAppExt: FnCall,
     });
 
     ::ttg::alias!(Annotated as Ann + (Program, EExpr, SExpr, Anf<Var>));
@@ -197,6 +211,8 @@ pub struct LabelEnv {
     lblsym: u64,
     subst_var: HashMap<UniqueId, Var>,
     letpos: Option<NamedVar>,
+    fnctx: Option<FnId>,
+    fids: HashMap<String, FnId>,
 }
 
 pub fn insert_inv<T: Hash + Eq + Clone>(inv: &mut InvMap<T>, v: &T, provenance: &Option<NamedVar>) {
@@ -254,11 +270,13 @@ where
         .collect::<Result<Vec<AnfAnn<Val>>>>()?))
 }
 impl LabelEnv {
-    pub fn new() -> Self {
+    pub fn new(fids: HashMap<String, FnId>) -> Self {
         Self {
             lblsym: 0,
             subst_var: HashMap::new(),
             letpos: None,
+            fnctx: None,
+            fids,
         }
     }
     pub fn max_varlabel_val(&self) -> MaxVarLabel {
@@ -565,7 +583,7 @@ impl LabelEnv {
             )),
             EFlip(id, param) => {
                 let lbl = self.fresh();
-                let var = BddVar::new(*id, lbl, self.letpos.clone());
+                let var = BddVar::new(*id, lbl, self.letpos.clone(), self.fnctx);
                 self.subst_var.insert(*id, Var::Bdd(var.clone()));
                 Ok(EFlip(var, Box::new(self.annotate_eanf(param)?)))
             }
@@ -575,12 +593,12 @@ impl LabelEnv {
                 Ok(EIterate((), f.clone(), Box::new(init), Box::new(k)))
             }
 
-            EApp(_, f, args) => {
+            EApp(i, f, args) => {
                 let args = args
                     .iter()
                     .map(|a| self.annotate_eanf(a))
                     .collect::<Result<Vec<AnfAnn<EVal>>>>()?;
-                Ok(EApp((), f.clone(), args.clone()))
+                Ok(EApp(*i, f.clone(), args.clone()))
             }
             EObserve(_, a) => {
                 let anf = self.annotate_eanf(a)?;
@@ -667,7 +685,7 @@ impl LabelEnv {
                 Box::new(self.annotate_sanf(guard)?),
                 Box::new(self.annotate_sexpr(body)?),
             )),
-            SApp(_, f, args) => Ok(SApp((), f.clone(), self.annotate_sanfs(args)?)),
+            SApp(i, f, args) => Ok(SApp(*i, f.clone(), self.annotate_sanfs(args)?)),
             SLambda(ids, args, body) => {
                 let nvars: Vec<NamedVar> = args
                     .iter()
@@ -729,6 +747,7 @@ impl LabelEnv {
                 let eann = self.annotate_sexpr(e)?;
                 let order = self.linear_var_order();
                 let mx = self.max_varlabel_val();
+                self.fnctx = None;
                 Ok(AnnotateResult::new(
                     Program::SBody(eann),
                     order,
@@ -740,6 +759,7 @@ impl LabelEnv {
                 let eann = self.annotate_eexpr(e)?;
                 let order = self.linear_var_order();
                 let mx = self.max_varlabel_val();
+                self.fnctx = None;
                 Ok(AnnotateResult::new(
                     Program::EBody(eann),
                     order,
@@ -748,6 +768,11 @@ impl LabelEnv {
                 ))
             }
             Program::EDefine(f, p) => {
+                let i = self
+                    .fids
+                    .get(&f.name.clone().expect("name defined"))
+                    .expect("function id created in previous pass");
+                self.fnctx = Some(*i);
                 let f = self.annotate_efun(f)?;
                 let r = self.annotate(p)?;
                 Ok(AnnotateResult::new(
@@ -758,6 +783,11 @@ impl LabelEnv {
                 ))
             }
             Program::SDefine(f, p) => {
+                let i = self
+                    .fids
+                    .get(&f.name.clone().expect("name defined"))
+                    .expect("function id created in previous pass");
+                self.fnctx = Some(*i);
                 let f = self.annotate_sfun(f)?;
                 let r = self.annotate(p)?;
                 Ok(AnnotateResult::new(
@@ -772,7 +802,7 @@ impl LabelEnv {
 }
 
 pub fn pipeline(p: &ProgramInferable) -> Result<AnnotateResult> {
-    let p = crate::uniquify::pipeline(p)?.0;
-    let mut lenv = LabelEnv::new();
-    lenv.annotate(&p)
+    let p = crate::uniquify::pipeline(p)?;
+    let mut lenv = LabelEnv::new(p.1.functions);
+    lenv.annotate(&p.0)
 }

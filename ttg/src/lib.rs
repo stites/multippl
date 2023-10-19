@@ -33,6 +33,7 @@ const EXPRS: &str = r"{
     EFlipExt : (),
     EObserveExt : (),
     ESampleExt : (),
+    EAppExt : (),
 
     SObserveExt : (),
     SAnfExt : (),
