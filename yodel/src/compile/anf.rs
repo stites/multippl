@@ -236,12 +236,13 @@ pub fn eval_sanf_cop(
         _ => return errors::typecheck_failed("sanf compare op"),
     }
 }
+
 pub fn eval_eanf_cop(
     state: &mut super::eval::State,
     ctx: &Ctx,
     bl: &AnfAnn<EVal>,
     br: &AnfAnn<EVal>,
-    bop: Option<impl Fn(&BddPtr, &BddPtr) -> bool>,
+    bop: Option<impl Fn(&Mgr, Box<BddPtr>, Box<BddPtr>) -> bool>,
     fop: impl Fn(&f64, &f64) -> bool,
     iop: impl Fn(&usize, &usize) -> bool,
     op: impl Fn(Box<AnfTr<EVal>>, Box<AnfTr<EVal>>) -> AnfTr<EVal>,
@@ -252,9 +253,11 @@ pub fn eval_eanf_cop(
         ([EVal::EBdd(l)], [EVal::EBdd(r)]) => match bop {
             None => return errors::typecheck_failed("eanf compare op invalid"),
             Some(bop) => {
-                let out = ctx
-                    .exact
-                    .as_output(vec![EVal::EBdd(BddPtr::from_bool(bop(l, r)))]);
+                let out = ctx.exact.as_output(vec![EVal::EBdd(BddPtr::from_bool(bop(
+                    &state.mgr,
+                    Box::new(l.clone()),
+                    Box::new(r.clone()),
+                )))]);
                 Ok((out.clone(), op(Box::new(bl), Box::new(br))))
             }
         },
@@ -594,7 +597,7 @@ pub fn eval_eanf<'a>(
             ctx,
             bl,
             br,
-            None::<&dyn Fn(&BddPtr, &BddPtr) -> bool>,
+            None::<&dyn Fn(&Mgr, Box<BddPtr>, Box<BddPtr>) -> bool>,
             PartialOrd::gt,
             PartialOrd::gt,
             GT,
@@ -604,7 +607,7 @@ pub fn eval_eanf<'a>(
             ctx,
             bl,
             br,
-            None::<&dyn Fn(&BddPtr, &BddPtr) -> bool>,
+            None::<&dyn Fn(&Mgr, Box<BddPtr>, Box<BddPtr>) -> bool>,
             PartialOrd::ge,
             PartialOrd::ge,
             GTE,
@@ -614,7 +617,7 @@ pub fn eval_eanf<'a>(
             ctx,
             bl,
             br,
-            None::<&dyn Fn(&BddPtr, &BddPtr) -> bool>,
+            None::<&dyn Fn(&Mgr, Box<BddPtr>, Box<BddPtr>) -> bool>,
             PartialOrd::lt,
             PartialOrd::lt,
             LT,
@@ -624,7 +627,7 @@ pub fn eval_eanf<'a>(
             ctx,
             bl,
             br,
-            None::<&dyn Fn(&BddPtr, &BddPtr) -> bool>,
+            None::<&dyn Fn(&Mgr, Box<BddPtr>, Box<BddPtr>) -> bool>,
             PartialOrd::le,
             PartialOrd::le,
             LTE,
@@ -634,7 +637,7 @@ pub fn eval_eanf<'a>(
             ctx,
             bl,
             br,
-            Some(PartialEq::eq),
+            Some(| mgr : &Mgr, l : Box<BddPtr>, r: Box<BddPtr>| mgr.eq_bdd(*l, *r)),
             PartialEq::eq,
             PartialEq::eq,
             EQ,
