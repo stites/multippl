@@ -70,10 +70,12 @@ pub mod grammar {
 
         SAppExt: FnCall,
         EAppExt: FnCall,
+        EIterateExt: FnId,
 
         SMapExt: UniqueId,
         SFoldExt: (UniqueId, UniqueId),
         SLambdaExt: Vec<UniqueId>,
+
     });
 
     ::ttg::alias!(Uniquify as Unq + (Program, EExpr, SExpr, Anf<Var>));
@@ -170,6 +172,11 @@ impl SymEnv {
         cs.num_calls += 1;
         FnCall(*id, cs.num_calls)
     }
+    fn call_function_iter(&mut self, f: &str) -> FnId {
+        let id = self.functions.get(f).expect("function {f} is not defined");
+        *id
+    }
+
     fn get_var(&self, var: String) -> Option<UniqueId> {
         self.names.get(&var)?.iter().last().copied()
     }
@@ -346,7 +353,8 @@ impl SymEnv {
             EIterate(_, f, init, k) => {
                 let init = self.uniquify_anf(init)?;
                 let k = self.uniquify_anf(k)?;
-                Ok(EIterate((), f.clone(), Box::new(init), Box::new(k)))
+                let fid = self.call_function_iter(f);
+                Ok(EIterate(fid, f.clone(), Box::new(init), Box::new(k)))
             }
             EObserve(_, a) => {
                 let anf = self.uniquify_anf(a)?;
@@ -508,12 +516,11 @@ impl SymEnv {
     }
 }
 
-pub fn pipeline(
-    p: &crate::typeinf::grammar::ProgramInferable,
-) -> Result<(ProgramUnq, MaxUniqueId)> {
+pub fn pipeline(p: &crate::typeinf::grammar::ProgramInferable) -> Result<(ProgramUnq, SymEnv)> {
     let p = crate::typecheck::pipeline(p)?;
     let mut senv = SymEnv::default();
-    senv.uniquify(&p)
+    let (p, mx) = senv.uniquify(&p)?;
+    Ok((p, senv))
 }
 
 #[cfg(test)]

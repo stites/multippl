@@ -144,9 +144,10 @@ pub fn runner(code: &str, mgr: &mut Mgr, rng: &mut StdRng, opt: &Options) -> Res
     tracing::trace!("types... checked!");
     let p = crate::desugar::desugar(&p)?;
     tracing::trace!("code... desugared!");
-    let p = SymEnv::default().uniquify(&p)?.0;
+    let mut senv = SymEnv::default();
+    let p = senv.uniquify(&p)?.0;
     tracing::trace!("symbols... uniquified!");
-    let ar = LabelEnv::new().annotate(&p)?;
+    let ar = LabelEnv::new(senv.functions, senv.fun_stats).annotate(&p)?;
     tracing::trace!("variables... annotated!");
     let p = ar.program;
     let maxlbl = ar.maxbdd.0;
@@ -188,7 +189,7 @@ pub fn make_mgr(code: &str) -> Result<Mgr> {
     tracing::debug!("(uniquifyed)");
     tracing::debug!("(uniquifyed) >>> {p:?}");
     tracing::debug!("(uniquifyed)");
-    let ar = LabelEnv::new().annotate(&p)?;
+    let ar = LabelEnv::new(env.functions, env.fun_stats).annotate(&p)?;
     let p = ar.program;
     tracing::debug!("(annotated)");
     tracing::debug!("(annotated) >>> {p:?}");

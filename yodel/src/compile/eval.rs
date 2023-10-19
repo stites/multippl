@@ -1,6 +1,6 @@
 use crate::annotate::grammar::*;
 use crate::grammar::*;
-use crate::uniquify::grammar::UniqueId;
+use crate::uniquify::grammar::{UniqueId, FnId, FnCall};
 use crate::utils::render::*;
 use crate::*;
 use itertools::*;
@@ -465,7 +465,7 @@ impl<'a> State<'a> {
                 let (out, _) = self.eval_eexpr(callerctx, &f.body)?;
                 Ok((out.clone(), EApp(out.clone(), fname.clone(), args)))
             }
-            EIterate(_, fname, init, k) => {
+            EIterate(fid, fname, init, k) => {
                 let span = tracing::span!(Level::DEBUG, "iterate", f = fname);
                 let _enter = span.enter();
                 tracing::debug!("iterate");
@@ -497,10 +497,11 @@ impl<'a> State<'a> {
                         let mut ctx = ctx.clone();
                         let mut out = None;
                         trace!("niters: {}", niters);
+                        let mut callix = 0;
                         while niters > 0 {
                             let anfarg = Anf::AVal((), arg.clone());
                             let o = self
-                                .eval_eexpr(ctx.clone(), &EApp((), fname.clone(), vec![anfarg]))?
+                                .eval_eexpr(ctx.clone(), &EApp(FnCall(*fid, callix), fname.clone(), vec![anfarg]))?
                                 .0;
                             out = Some(o.clone());
                             ctx = ctx.new_from_eoutput(&o.exact);
@@ -510,6 +511,7 @@ impl<'a> State<'a> {
                                 EVal::EProd(o.exact.out)
                             };
                             niters -= 1;
+                            callix += 1;
                             trace!("niters: {}", niters);
                         }
 

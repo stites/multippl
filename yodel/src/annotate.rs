@@ -19,6 +19,9 @@ pub struct AnnotateResult {
     pub order: VarOrder,
     pub idmap: HashMap<UniqueId, Var>,
     pub maxbdd: MaxVarLabel,
+    // this is now a lower bound since we can call
+    // iterate dynamically now. It's fine since RSDD will grow the number of
+    // variables and the order will be linear
 }
 impl AnnotateResult {
     pub fn new(
@@ -196,6 +199,7 @@ pub mod grammar {
         ELetInExt: NamedVar,
         EFlipExt: BddVar,
         EAppExt: FnCall,
+        EIterateExt: FnId,
 
         SLetInExt: NamedVar,
         SMapExt: NamedVar,
@@ -213,6 +217,7 @@ pub struct LabelEnv {
     letpos: Option<NamedVar>,
     fnctx: Option<FnId>,
     fids: HashMap<String, FnId>,
+    fun_stats : HashMap<FnId, FnCounts>
 }
 
 pub fn insert_inv<T: Hash + Eq + Clone>(inv: &mut InvMap<T>, v: &T, provenance: &Option<NamedVar>) {
@@ -270,13 +275,18 @@ where
         .collect::<Result<Vec<AnfAnn<Val>>>>()?))
 }
 impl LabelEnv {
-    pub fn new(fids: HashMap<String, FnId>) -> Self {
+    pub fn new(fids: HashMap<String, FnId>, fun_stats : HashMap<FnId, FnCounts>) -> Self {
         Self {
             lblsym: 0,
             subst_var: HashMap::new(),
             letpos: None,
             fnctx: None,
             fids,
+            fun_stats: fun_stats.iter().map(|(k, v)| {
+                (k.clone(), FnCounts {
+                    num_calls: v.num_calls,
+                    num_uids: 0, // restart this counter
+                })}).collect()
         }
     }
     pub fn max_varlabel_val(&self) -> MaxVarLabel {
@@ -587,10 +597,10 @@ impl LabelEnv {
                 self.subst_var.insert(*id, Var::Bdd(var.clone()));
                 Ok(EFlip(var, Box::new(self.annotate_eanf(param)?)))
             }
-            EIterate(_, f, init, k) => {
+            EIterate(i, f, init, k) => {
                 let init = self.annotate_eanf(init)?;
                 let k = self.annotate_eanf(k)?;
-                Ok(EIterate((), f.clone(), Box::new(init), Box::new(k)))
+                Ok(EIterate(*i, f.clone(), Box::new(init), Box::new(k)))
             }
 
             EApp(i, f, args) => {
@@ -744,36 +754,53 @@ impl LabelEnv {
     pub fn annotate(&mut self, p: &ProgramUnq) -> Result<AnnotateResult> {
         match p {
             Program::SBody(e) => {
-                let eann = self.annotate_sexpr(e)?;
-                let order = self.linear_var_order();
-                let mx = self.max_varlabel_val();
                 self.fnctx = None;
+                let start_bdd = self.max_varlabel_val();
+                let sann = self.annotate_sexpr(e)?;
+                let end_bdd = self.max_varlabel_val();
+                let order = self.linear_var_order(); // FIXME this is the _worst_ order!!!
+                let new_bdds = end_bdd.0 - start_bdd.0;
+                let mx = new_bdds + self.fun_stats.iter().map(|(_, ctr)| {
+                    ctr.num_calls * ctr.num_uids
+                }).sum::<u64>();
+
                 Ok(AnnotateResult::new(
-                    Program::SBody(eann),
+                    Program::SBody(sann),
                     order,
                     self.subst_var.clone(),
-                    mx,
+                    MaxVarLabel(mx),
                 ))
             }
             Program::EBody(e) => {
-                let eann = self.annotate_eexpr(e)?;
-                let order = self.linear_var_order();
-                let mx = self.max_varlabel_val();
                 self.fnctx = None;
+                let start_bdd = self.max_varlabel_val();
+                let eann = self.annotate_eexpr(e)?;
+                let end_bdd = self.max_varlabel_val();
+                let order = self.linear_var_order(); // FIXME this is the _worst_ order!!!
+                let new_bdds = end_bdd.0 - start_bdd.0;
+                let mx = new_bdds + self.fun_stats.values().map(|ctr| {
+                    ctr.num_calls * ctr.num_uids
+                }).sum::<u64>();
+
                 Ok(AnnotateResult::new(
                     Program::EBody(eann),
                     order,
                     self.subst_var.clone(),
-                    mx,
+                    MaxVarLabel(mx),
                 ))
             }
             Program::EDefine(f, p) => {
                 let i = self
                     .fids
                     .get(&f.name.clone().expect("name defined"))
-                    .expect("function id created in previous pass");
-                self.fnctx = Some(*i);
+                    .expect("function id created in previous pass").clone();
+                self.fnctx = Some(i);
+                let start_bdds = self.max_varlabel_val();
                 let f = self.annotate_efun(f)?;
+                let end_bdds = self.max_varlabel_val();
+                let mut ctr = self.fun_stats.get_mut(&i).expect("it's 9L up there!");
+                ctr.num_uids = end_bdds.0 - start_bdds.0;
+
                 let r = self.annotate(p)?;
                 Ok(AnnotateResult::new(
                     Program::EDefine(f, Box::new(r.program)),
@@ -786,9 +813,14 @@ impl LabelEnv {
                 let i = self
                     .fids
                     .get(&f.name.clone().expect("name defined"))
-                    .expect("function id created in previous pass");
-                self.fnctx = Some(*i);
+                    .expect("function id created in previous pass").clone();
+                self.fnctx = Some(i);
+                let start_bdds = self.max_varlabel_val();
                 let f = self.annotate_sfun(f)?;
+                let end_bdds = self.max_varlabel_val();
+                let mut ctr = self.fun_stats.get_mut(&i).expect("it's 9L up there!");
+                ctr.num_uids = end_bdds.0 - start_bdds.0;
+
                 let r = self.annotate(p)?;
                 Ok(AnnotateResult::new(
                     Program::SDefine(f, Box::new(r.program)),
@@ -803,6 +835,6 @@ impl LabelEnv {
 
 pub fn pipeline(p: &ProgramInferable) -> Result<AnnotateResult> {
     let p = crate::uniquify::pipeline(p)?;
-    let mut lenv = LabelEnv::new(p.1.functions);
+    let mut lenv = LabelEnv::new(p.1.functions, p.1.fun_stats);
     lenv.annotate(&p.0)
 }
