@@ -211,13 +211,36 @@ pub mod grammar {
     ::ttg::alias!(Annotated as Ann + (Program, EExpr, SExpr, Anf<Var>));
 }
 
+pub enum Fun {
+    Exact(Function<EExpr<Annotated>>),
+    Sample(Function<SExpr<Annotated>>),
+}
+impl Fun {
+    fn err<X>(fr: &str, to: &str) -> Result<X> {
+        errors::generic("tried to run a {fr} function in the {to} language")
+    }
+    pub fn exact(&self) -> Result<Function<EExpr<Annotated>>> {
+        match self {
+            Self::Exact(f) => Ok(f.clone()),
+            Self::Sample(f) => Fun::err("sample", "exact"),
+        }
+    }
+    pub fn sample(&self) -> Result<Function<SExpr<Annotated>>> {
+        match self {
+            Self::Exact(f) => Fun::err("exact", "sample"),
+            Self::Sample(f) => Ok(f.clone()),
+        }
+    }
+}
+
 pub struct LabelEnv {
-    lblsym: u64,
-    subst_var: HashMap<UniqueId, Var>,
-    letpos: Option<NamedVar>,
-    fnctx: Option<FnId>,
-    fids: HashMap<String, FnId>,
-    fun_stats : HashMap<FnId, FnCounts>
+    pub lblsym: u64,
+    pub subst_var: HashMap<UniqueId, Var>,
+    pub letpos: Option<NamedVar>,
+    pub fnctx: Option<FnId>,
+    pub fids: HashMap<String, FnId>,
+    pub fun_stats: HashMap<FnId, FnCounts>,
+    pub funs: HashMap<FnId, Fun>,
 }
 
 pub fn insert_inv<T: Hash + Eq + Clone>(inv: &mut InvMap<T>, v: &T, provenance: &Option<NamedVar>) {
@@ -275,18 +298,27 @@ where
         .collect::<Result<Vec<AnfAnn<Val>>>>()?))
 }
 impl LabelEnv {
-    pub fn new(fids: HashMap<String, FnId>, fun_stats : HashMap<FnId, FnCounts>) -> Self {
+    pub fn new(fids: HashMap<String, FnId>, fun_stats: HashMap<FnId, FnCounts>) -> Self {
         Self {
             lblsym: 0,
             subst_var: HashMap::new(),
             letpos: None,
             fnctx: None,
             fids,
-            fun_stats: fun_stats.iter().map(|(k, v)| {
-                (k.clone(), FnCounts {
-                    num_calls: v.num_calls,
-                    num_uids: 0, // restart this counter
-                })}).collect()
+            fun_stats: fun_stats
+                .iter()
+                .map(|(k, v)| {
+                    (
+                        k.clone(),
+                        FnCounts {
+                            num_calls: v.num_calls,
+                            num_uids: 0, // restart this counter
+                            iterates: v.iterates,
+                        },
+                    )
+                })
+                .collect(),
+            funs: HashMap::new(),
         }
     }
     pub fn max_varlabel_val(&self) -> MaxVarLabel {
@@ -760,9 +792,12 @@ impl LabelEnv {
                 let end_bdd = self.max_varlabel_val();
                 let order = self.linear_var_order(); // FIXME this is the _worst_ order!!!
                 let new_bdds = end_bdd.0 - start_bdd.0;
-                let mx = new_bdds + self.fun_stats.iter().map(|(_, ctr)| {
-                    ctr.num_calls * ctr.num_uids
-                }).sum::<u64>();
+                let mx = new_bdds
+                    + self
+                        .fun_stats
+                        .iter()
+                        .map(|(_, ctr)| ctr.num_calls * ctr.num_uids)
+                        .sum::<u64>();
 
                 Ok(AnnotateResult::new(
                     Program::SBody(sann),
@@ -778,9 +813,12 @@ impl LabelEnv {
                 let end_bdd = self.max_varlabel_val();
                 let order = self.linear_var_order(); // FIXME this is the _worst_ order!!!
                 let new_bdds = end_bdd.0 - start_bdd.0;
-                let mx = new_bdds + self.fun_stats.values().map(|ctr| {
-                    ctr.num_calls * ctr.num_uids
-                }).sum::<u64>();
+                let mx = new_bdds
+                    + self
+                        .fun_stats
+                        .values()
+                        .map(|ctr| ctr.num_calls * ctr.num_uids)
+                        .sum::<u64>();
 
                 Ok(AnnotateResult::new(
                     Program::EBody(eann),
@@ -793,13 +831,17 @@ impl LabelEnv {
                 let i = self
                     .fids
                     .get(&f.name.clone().expect("name defined"))
-                    .expect("function id created in previous pass").clone();
+                    .expect("function id created in previous pass")
+                    .clone();
                 self.fnctx = Some(i);
                 let start_bdds = self.max_varlabel_val();
                 let f = self.annotate_efun(f)?;
+                self.funs.insert(i, Fun::Exact(f.clone()));
                 let end_bdds = self.max_varlabel_val();
                 let mut ctr = self.fun_stats.get_mut(&i).expect("it's 9L up there!");
                 ctr.num_uids = end_bdds.0 - start_bdds.0;
+                // reserve the next #fncalls-worth of bdd ptrs
+                self.lblsym += ctr.num_uids * ctr.num_calls;
 
                 let r = self.annotate(p)?;
                 Ok(AnnotateResult::new(
@@ -813,13 +855,17 @@ impl LabelEnv {
                 let i = self
                     .fids
                     .get(&f.name.clone().expect("name defined"))
-                    .expect("function id created in previous pass").clone();
+                    .expect("function id created in previous pass")
+                    .clone();
                 self.fnctx = Some(i);
                 let start_bdds = self.max_varlabel_val();
                 let f = self.annotate_sfun(f)?;
+                self.funs.insert(i, Fun::Sample(f.clone()));
                 let end_bdds = self.max_varlabel_val();
                 let mut ctr = self.fun_stats.get_mut(&i).expect("it's 9L up there!");
                 ctr.num_uids = end_bdds.0 - start_bdds.0;
+                // reserve the next #fncalls-worth of bdd ptrs
+                self.lblsym += ctr.num_uids * ctr.num_calls;
 
                 let r = self.annotate(p)?;
                 Ok(AnnotateResult::new(

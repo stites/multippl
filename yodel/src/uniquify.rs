@@ -35,12 +35,14 @@ pub mod grammar {
     pub struct FnCounts {
         pub num_calls: u64,
         pub num_uids: u64,
+        pub iterates: bool,
     }
     impl Default for FnCounts {
         fn default() -> Self {
             Self {
                 num_calls: 0,
                 num_uids: 0,
+                iterates: false,
             }
         }
     }
@@ -174,6 +176,11 @@ impl SymEnv {
     }
     fn call_function_iter(&mut self, f: &str) -> FnId {
         let id = self.functions.get(f).expect("function {f} is not defined");
+        let cs = self
+            .fun_stats
+            .get_mut(id)
+            .expect("counters always  created at same time as ");
+        cs.iterates = true;
         *id
     }
 

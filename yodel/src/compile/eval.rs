@@ -1,6 +1,7 @@
 use crate::annotate::grammar::*;
+use crate::annotate::Fun;
 use crate::grammar::*;
-use crate::uniquify::grammar::{UniqueId, FnId, FnCall};
+use crate::uniquify::grammar::{FnCall, FnId, UniqueId};
 use crate::utils::render::*;
 use crate::*;
 use itertools::*;
@@ -164,35 +165,13 @@ pub struct Opts {
     pub order: VarOrder,
 }
 
-pub enum Fn {
-    Exact(Function<EExpr<Annotated>>),
-    Sample(Function<SExpr<Annotated>>),
-}
-impl Fn {
-    pub fn exact(&self) -> Result<Function<EExpr<Annotated>>> {
-        match self {
-            Self::Exact(f) => Ok(f.clone()),
-            Self::Sample(f) => {
-                errors::generic("tried to extract a sample function in the exact language")
-            }
-        }
-    }
-    pub fn sample(&self) -> Result<Function<SExpr<Annotated>>> {
-        match self {
-            Self::Exact(f) => {
-                errors::generic("tried to extract an exact function in the sampling language")
-            }
-            Self::Sample(f) => Ok(f.clone()),
-        }
-    }
-}
-
 pub struct State<'a> {
     pub opts: Opts,
     pub mgr: &'a mut Mgr,
     pub rng: Option<&'a mut StdRng>, // None will use the thread rng
-    pub fns: HashMap<String, Fn>,
+    pub funs: HashMap<FnId, Fun>,
     pub pq: PQ,
+    pub fnctx: Option<FnCall>,
 }
 
 impl<'a> State<'a> {
@@ -200,6 +179,7 @@ impl<'a> State<'a> {
         mgr: &'a mut Mgr,
         rng: Option<&'a mut StdRng>, // None will use the thread rng
         sample_pruning: bool,
+        funs: HashMap<FnId, Fun>,
     ) -> State<'a> {
         let opts = Opts {
             order: mgr.get_order().clone(),
@@ -211,7 +191,8 @@ impl<'a> State<'a> {
             mgr,
             rng,
             pq: Default::default(),
-            fns: Default::default(),
+            funs,
+            fnctx: None,
         }
     }
     pub fn new_from<'b>(&self) -> State<'b> {
@@ -249,23 +230,23 @@ impl<'a> State<'a> {
                 Ok((c, Program::EBody(e)))
             }
             Program::SDefine(f, e) => {
-                tracing::trace!("compiling sdefine...");
-                tracing::debug!("fun: {f:?}");
-                let name = f
-                    .clone()
-                    .name
-                    .expect("all defined functions must have a name");
-                self.fns.insert(name, Fn::Sample(f.clone()));
+                tracing::trace!("skipping sdefine... (collected in annotate)");
+                // tracing::debug!("fun: {f:?}");
+                // let name = f
+                //     .clone()
+                //     .name
+                //     .expect("all defined functions must have a name");
+                // self.fns.insert(name, Fn::Sample(f.clone()));
                 self.eval_program(e)
             }
             Program::EDefine(f, e) => {
-                tracing::trace!("compiling edefine...");
+                tracing::trace!("skipping edefine... (collected in annotate)");
                 tracing::debug!("fun: {f:?}");
-                let name = f
-                    .clone()
-                    .name
-                    .expect("all defined functions must have a name");
-                self.fns.insert(name, Fn::Exact(f.clone()));
+                // let name = f
+                //     .clone()
+                //     .name
+                //     .expect("all defined functions must have a name");
+                // self.fns.insert(name, Fn::Exact(f.clone()));
                 self.eval_program(e)
             }
         }
@@ -341,6 +322,16 @@ impl<'a> State<'a> {
                 // FIXME: should be aggregating these stats somewhere
                 debug!("using optimizations: {}", self.opts.sample_pruning);
 
+                // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                // TODO Need to talk to review the semantics in detail and talk
+                // to steven about this if it doesn't get resolved. the issue is
+                // that weighting should be a /clean separation/ from exact
+                // compilation (which also saves us a WMC count) the fix is that
+                // we need to compile this at the _end_ of the program and
+                // weight the distribution accordingly. this amounts to the
+                // partially collapsed importance sampling of bayesian networks
+                // as documented in (Koller & Friedman, 2009). As-is we are kind of cheating.
+                // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 let ss = ctx.exact.samples(self.mgr, self.opts.sample_pruning);
                 let (wmc, _) = crate::inference::calculate_wmc_prob(
                     self.mgr,
@@ -350,9 +341,12 @@ impl<'a> State<'a> {
                     ctx.exact.accept.clone(),
                     ss,
                 );
-
-                // let importance = I::Weight(wmc);
-                // debug!("IWeight    {}", importance.weight());
+                info!("  dist: {}", dist.print_bdd());
+                info!("accept: {}", ctx.exact.accept.print_bdd());
+                info!("   map: {:?}", wmc_params);
+                info!("   wmc: {wmc}");
+                self.pq.p *= wmc;
+                // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
                 let o = EOutput {
                     out: vec![EVal::EBdd(BddPtr::PtrTrue)],
@@ -431,12 +425,16 @@ impl<'a> State<'a> {
                     ELetIn(outs, s.clone(), Box::new(eboundtr), Box::new(bodiestr)),
                 ))
             }
-            EApp(_, fname, args) => {
+            EApp(fcall, fname, args) => {
                 let span = tracing::span!(Level::DEBUG, "app", f = fname);
                 let _enter = span.enter();
                 tracing::debug!("app");
 
-                let f = self.fns.get(fname).expect("function is defined").exact()?;
+                let f = self
+                    .funs
+                    .get(&fcall.0)
+                    .expect("function is defined")
+                    .exact()?;
                 let params = f.args2vars(|v| match v {
                     Anf::AVar(nv, _) => Ok(nv.clone()),
                     _ => errors::generic(&format!(
@@ -501,7 +499,10 @@ impl<'a> State<'a> {
                         while niters > 0 {
                             let anfarg = Anf::AVal((), arg.clone());
                             let o = self
-                                .eval_eexpr(ctx.clone(), &EApp(FnCall(*fid, callix), fname.clone(), vec![anfarg]))?
+                                .eval_eexpr(
+                                    ctx.clone(),
+                                    &EApp(FnCall(*fid, callix), fname.clone(), vec![anfarg]),
+                                )?
                                 .0;
                             out = Some(o.clone());
                             ctx = ctx.new_from_eoutput(&o.exact);
@@ -709,11 +710,15 @@ impl<'a> State<'a> {
                 //     Ok((out.clone(), SMap(out, argname.clone(), Box::new(bodytr.unwrap()), Box::new(arg))))
                 // }
             }
-            SApp(_, fname, args) => {
+            SApp(fcall, fname, args) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "app");
                 let _enter = span.enter();
                 tracing::debug!("fold");
-                let f = self.fns.get(fname).expect("function is defined").sample()?;
+                let f = self
+                    .funs
+                    .get(&fcall.0)
+                    .expect("function is defined")
+                    .sample()?;
                 let params = f.args2vars(|v| match v {
                     Anf::AVar(nv, _) => Ok(nv.clone()),
                     _ => errors::generic(&format!(
@@ -890,6 +895,7 @@ impl<'a> State<'a> {
                     };
                     out.sample.out.push(val);
                 }
+                info!("boundary sample: {:?}", out.sample.out);
                 Ok((out.clone(), SExact(out, Box::new(etr))))
             }
             SLetSample(_, _, _, _) => errors::erased(Trace, "let-sample"),

@@ -637,7 +637,7 @@ pub fn eval_eanf<'a>(
             ctx,
             bl,
             br,
-            Some(| mgr : &Mgr, l : Box<BddPtr>, r: Box<BddPtr>| mgr.eq_bdd(*l, *r)),
+            Some(|mgr: &Mgr, l: Box<BddPtr>, r: Box<BddPtr>| mgr.eq_bdd(*l, *r)),
             PartialEq::eq,
             PartialEq::eq,
             EQ,

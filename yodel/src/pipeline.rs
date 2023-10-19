@@ -130,7 +130,7 @@ pub fn run(code: &str, opt: &Options) -> Result<ROut> {
 }
 
 pub fn runner(code: &str, mgr: &mut Mgr, rng: &mut StdRng, opt: &Options) -> Result<PartialROut> {
-    tracing::trace!("compiling code:\n{code}");
+    tracing::info!("compiling code:\n{code}");
     let p = crate::parser::program::parse(code)?;
     tracing::trace!("program... parsed!");
     let p = if opt.exact_only {
@@ -147,14 +147,15 @@ pub fn runner(code: &str, mgr: &mut Mgr, rng: &mut StdRng, opt: &Options) -> Res
     let mut senv = SymEnv::default();
     let p = senv.uniquify(&p)?.0;
     tracing::trace!("symbols... uniquified!");
-    let ar = LabelEnv::new(senv.functions, senv.fun_stats).annotate(&p)?;
+    let mut lenv = LabelEnv::new(senv.functions, senv.fun_stats);
+    let ar = lenv.annotate(&p)?;
     tracing::trace!("variables... annotated!");
     let p = ar.program;
     let maxlbl = ar.maxbdd.0;
 
     let sample_pruning = opt.opt;
 
-    let mut state = State::new(mgr, Some(rng), sample_pruning);
+    let mut state = State::new(mgr, Some(rng), sample_pruning, lenv.funs);
     let (out, ptrace) = state.eval_program(&p)?;
     tracing::debug!("program... compiled!");
 
