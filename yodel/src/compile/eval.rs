@@ -170,7 +170,7 @@ pub struct State<'a> {
     pub mgr: &'a mut Mgr,
     pub rng: Option<&'a mut StdRng>, // None will use the thread rng
     pub funs: &'a HashMap<FnId, Fun>,
-    pub pq: PQ,
+    log_pq: PQ,
     pub fnctx: Option<FnCall>,
 }
 
@@ -190,7 +190,10 @@ impl<'a> State<'a> {
             opts,
             mgr,
             rng,
-            pq: Default::default(),
+            log_pq: PQ {
+                p: 0.0,
+                q: 0.0,
+            },
             funs,
             fnctx: None,
         }
@@ -206,14 +209,22 @@ impl<'a> State<'a> {
     }
 
     pub fn p(&self) -> f64 {
-        self.pq.p
+        self.pq().p
     }
     pub fn q(&self) -> f64 {
-        self.pq.q
+        self.pq().q
+    }
+    pub fn pq(&self) -> PQ {
+        let p = self.log_pq.p;
+        let q = self.log_pq.p;
+        PQ { p: p.exp(), q: q.exp() }
     }
     pub fn mult_pq(&mut self, p: f64, q: f64) {
-        self.pq.p *= p;
-        self.pq.q *= q;
+        // if !(p == q) {
+            self.log_pq.p += p.ln();
+            self.log_pq.q += q.ln();
+            info!("{:?}", self.log_pq);
+        // }
     }
     pub fn eval_program(&mut self, prog: &Program<Annotated>) -> Result<Output> {
         match prog {
@@ -341,11 +352,8 @@ impl<'a> State<'a> {
                     ctx.exact.accept.clone(),
                     ss,
                 );
-                info!("  dist: {}", dist.print_bdd());
-                info!("accept: {}", ctx.exact.accept.print_bdd());
-                info!("   map: {:?}", wmc_params);
-                info!("   wmc: {wmc}");
-                self.pq.p *= wmc;
+
+                self.mult_pq(wmc, 1.0);
                 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
                 let o = EOutput {

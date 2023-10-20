@@ -135,7 +135,7 @@ pub fn runner(mgr: &mut Mgr, rng: &mut StdRng, opt: &Options, p:&Program<crate::
 
     Ok(PartialROut {
         out,
-        pq: state.pq,
+        pq: state.pq(),
         rng: state.rng.cloned(),
     })
 }
