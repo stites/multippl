@@ -48,7 +48,8 @@ impl Iterator for SamplingIter {
         if self.current_step >= self.max_steps {
             return None;
         }
-        match crate::runner(&self.code, &mut self.manager, &mut self.rng, &self.opt) {
+        let (mgr, p, lenv) = crate::make_mgr_and_ir(&self.code).ok()?;
+        match crate::runner(&mut self.manager, &mut self.rng, &self.opt, &p, &lenv) {
             Ok(r) => {
                 let (c, rng, pq) = (r.out, r.rng, r.pq);
                 let mut newopt = self.opt.clone();

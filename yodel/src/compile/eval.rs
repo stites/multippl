@@ -40,8 +40,8 @@ pub fn eval_eite_predicate(
     ctx: &Ctx,
     cond: &AnfAnn<EVal>,
     opts: &Opts,
-) -> Result<(BddPtr, AnfTr<EVal>, (Probability, Probability))> {
-    let (pred, atr) = eval_eanf(state, &ctx, cond)?;
+) -> Result<(BddPtr, (Probability, Probability))> {
+    let pred = eval_eanf(state, &ctx, cond)?;
     let pred_dist = pred.dists();
     if !pred_dist.len() == 1 {
         return Err(TypeError(format!(
@@ -70,17 +70,17 @@ pub fn eval_eite_predicate(
     };
     let wmc_true = wmc_opt_h(pred_dist);
     let wmc_false = wmc_opt_h(pred_dist.neg());
-    Ok((pred_dist, atr, (wmc_true, wmc_false)))
+    Ok((pred_dist, (wmc_true, wmc_false)))
 }
 pub fn eval_eite_output(
     state: &mut super::eval::State,
     ctx: &Ctx,
-    pred: (BddPtr, AnfTr<EVal>),
+    pred: BddPtr,
     truthy_branch: (Probability, Output),
     falsey_branch: (Probability, Output),
     opts: &Opts,
 ) -> Result<EOutput> {
-    let (pred_dist, pred_anf) = pred;
+    let pred_dist = pred;
     let (wmc_true, truthy) = truthy_branch;
     let (wmc_false, falsey) = falsey_branch;
     let dists = izip!(&truthy.exact.dists(), &falsey.exact.dists())
@@ -169,7 +169,7 @@ pub struct State<'a> {
     pub opts: Opts,
     pub mgr: &'a mut Mgr,
     pub rng: Option<&'a mut StdRng>, // None will use the thread rng
-    pub funs: HashMap<FnId, Fun>,
+    pub funs: &'a HashMap<FnId, Fun>,
     pub pq: PQ,
     pub fnctx: Option<FnCall>,
 }
@@ -179,7 +179,7 @@ impl<'a> State<'a> {
         mgr: &'a mut Mgr,
         rng: Option<&'a mut StdRng>, // None will use the thread rng
         sample_pruning: bool,
-        funs: HashMap<FnId, Fun>,
+        funs: &'a HashMap<FnId, Fun>,
     ) -> State<'a> {
         let opts = Opts {
             order: mgr.get_order().clone(),
@@ -215,19 +215,19 @@ impl<'a> State<'a> {
         self.pq.p *= p;
         self.pq.q *= q;
     }
-    pub fn eval_program(&mut self, prog: &Program<Annotated>) -> Result<(Output, Program<Trace>)> {
+    pub fn eval_program(&mut self, prog: &Program<Annotated>) -> Result<Output> {
         match prog {
             Program::SBody(e) => {
                 tracing::trace!("compiling sbody...");
                 tracing::debug!("ast: {e:?}");
-                let (c, e) = self.eval_sexpr(Ctx::default(), e)?;
-                Ok((c, Program::SBody(e)))
+                let c = self.eval_sexpr(Ctx::default(), e)?;
+                Ok(c)
             }
             Program::EBody(e) => {
                 tracing::trace!("compiling ebody...");
                 tracing::debug!("ast: {e:?}");
-                let (c, e) = self.eval_eexpr(Ctx::default(), e)?;
-                Ok((c, Program::EBody(e)))
+                let c = self.eval_eexpr(Ctx::default(), e)?;
+                Ok(c)
             }
             Program::SDefine(f, e) => {
                 tracing::trace!("skipping sdefine... (collected in annotate)");
@@ -252,7 +252,7 @@ impl<'a> State<'a> {
         }
     }
 
-    pub fn eval_eexpr(&mut self, ctx: Ctx, e: &EExprAnn) -> Result<(Output, EExprTr)> {
+    pub fn eval_eexpr(&mut self, ctx: Ctx, e: &EExprAnn) -> Result<Output> {
         let span = tracing::span!(tracing::Level::DEBUG, "e");
         let _senter = span.enter();
         use EExpr::*;
@@ -262,16 +262,16 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 tracing::debug!("anf");
 
-                let (o, a) = eval_eanf(self, &ctx, a)?;
+                let o = eval_eanf(self, &ctx, a)?;
                 debug_step_ng!("anf", ctx, &o);
                 let out = ctx.mk_eoutput(o);
-                Ok((out.clone(), EExpr::EAnf(out, Box::new(a))))
+                Ok(out)
             }
             EFlip(d, param) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "flip");
                 let _enter = span.enter();
                 tracing::debug!("flip: {:?}", e);
-                let (o, param) = eval_eanf(self, &ctx, param)?;
+                let o = eval_eanf(self, &ctx, param)?;
                 tracing::debug!("flip done");
                 let o = match &o.out[..] {
                     [EVal::EFloat(param)] => {
@@ -291,14 +291,14 @@ impl<'a> State<'a> {
 
                 debug_step_ng!("flip", ctx, o);
                 let out = ctx.mk_eoutput(o);
-                Ok((out.clone(), EExpr::EFlip(out, Box::new(param))))
+                Ok(out)
             }
             EObserve(_, a) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "observe");
                 let _enter = span.enter();
                 tracing::debug!("observe");
 
-                let (comp, a) = eval_eanf(self, &ctx, a)?;
+                let comp = eval_eanf(self, &ctx, a)?;
 
                 // debug!("In. Accept {}", &ctx.accept.print_bdd());
                 // debug!("Comp. dist {}", renderbdds(&comp.dists));
@@ -358,7 +358,7 @@ impl<'a> State<'a> {
 
                 debug_step_ng!("observe", ctx, o);
                 let out = ctx.mk_eoutput(o);
-                Ok((out.clone(), EExpr::EObserve(out, Box::new(a))))
+                Ok(out)
             }
             EIte(_, cond, t, f) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "ite");
@@ -366,7 +366,7 @@ impl<'a> State<'a> {
                 tracing::debug!("ite");
 
                 let opts = &self.opts.clone();
-                let (pred_dist, pred_anf, (wmc_true, wmc_false)) =
+                let (pred_dist, (wmc_true, wmc_false)) =
                     eval_eite_predicate(self, &ctx, cond, opts)?;
 
                 debug!("=============================");
@@ -375,12 +375,12 @@ impl<'a> State<'a> {
 
                 let tspan = tracing::span!(tracing::Level::DEBUG, "tru");
                 let _tenter = tspan.enter();
-                let (truthy, ttr) = self.eval_eexpr(ctx.clone(), t)?;
+                let truthy = self.eval_eexpr(ctx.clone(), t)?;
                 drop(_tenter);
 
                 let fspan = tracing::span!(tracing::Level::DEBUG, "fls");
                 let _fenter = fspan.enter();
-                let (falsey, ftr) = self.eval_eexpr(ctx.clone(), f)?;
+                let falsey = self.eval_eexpr(ctx.clone(), f)?;
                 drop(_fenter);
 
                 if truthy.exact.out.len() != falsey.exact.out.len() {
@@ -389,24 +389,21 @@ impl<'a> State<'a> {
                 let o: EOutput = eval_eite_output(
                     self,
                     &ctx,
-                    (pred_dist, pred_anf.clone()),
+                    pred_dist,
                     (wmc_true, truthy.clone()),
                     (wmc_false, falsey),
                     opts,
                 )?;
                 debug_step_ng!("ite", ctx, &o);
                 let out = ctx.mk_eoutput(o);
-                Ok((
-                    out.clone(),
-                    EIte(out, Box::new(pred_anf), Box::new(ttr), Box::new(ftr)),
-                ))
+                Ok(out)
             }
             ELetIn(d, s, ebound, ebody) => {
                 let span = tracing::span!(Level::DEBUG, "let", var = s);
                 let _enter = span.enter();
                 tracing::debug!("let");
 
-                let (bound, eboundtr) = self.eval_eexpr(ctx.clone(), ebound)?;
+                let bound = self.eval_eexpr(ctx.clone(), ebound)?;
 
                 // let mut newctx = ctx.new_from_eoutput(&bound);
                 let mut newctx = Ctx::from(&bound);
@@ -414,16 +411,13 @@ impl<'a> State<'a> {
                     d.id(),
                     Subst::mk(bound.exact.out.clone(), Some(Var::Named(d.clone()))),
                 );
-                let (body, bodiestr) = self.eval_eexpr(newctx, ebody)?;
+                let body = self.eval_eexpr(newctx, ebody)?;
 
                 let o = eval_elet_output(self.mgr, &ctx, bound.clone(), body, &self.opts)?;
                 debug_step_ng!(format!("let-in {}", s), ctx, o);
 
                 let outs = ctx.mk_eoutput(o);
-                Ok((
-                    outs.clone(),
-                    ELetIn(outs, s.clone(), Box::new(eboundtr), Box::new(bodiestr)),
-                ))
+                Ok(outs)
             }
             EApp(fcall, fname, args) => {
                 let span = tracing::span!(Level::DEBUG, "app", f = fname);
@@ -442,7 +436,7 @@ impl<'a> State<'a> {
                         fname
                     )),
                 })?;
-                let (argvals, args) = eval_eanfs(self, &ctx, args)?;
+                let argvals = eval_eanfs(self, &ctx, args)?;
                 let argvals = argvals.out;
                 if params.len() != argvals.len() {
                     return errors::generic(&format!(
@@ -460,15 +454,15 @@ impl<'a> State<'a> {
                 let mut callerctx = ctx.clone();
                 callerctx.exact.substitutions = subs;
 
-                let (out, _) = self.eval_eexpr(callerctx, &f.body)?;
-                Ok((out.clone(), EApp(out.clone(), fname.clone(), args)))
+                let out = self.eval_eexpr(callerctx, &f.body)?;
+                Ok(out)
             }
             EIterate(fid, fname, init, k) => {
                 let span = tracing::span!(Level::DEBUG, "iterate", f = fname);
                 let _enter = span.enter();
                 tracing::debug!("iterate");
 
-                let (argoutput, init) = eval_eanf(self, &ctx, init)?;
+                let argoutput = eval_eanf(self, &ctx, init)?;
                 tracing::trace!("arg: {:?}", argoutput.out);
 
                 // HACK: currently we treat everything as a prod. This should
@@ -480,15 +474,12 @@ impl<'a> State<'a> {
                     EVal::EProd(argoutput.out.clone())
                 };
 
-                let (niters, k) = eval_eanf(self, &ctx, k)?;
+                let niters = eval_eanf(self, &ctx, k)?;
                 match &niters.out[..] {
                     [EVal::EInteger(0)] => {
                         let fout = ctx.mk_eoutput(argoutput);
 
-                        Ok((
-                            fout.clone(),
-                            EIterate(fout, fname.clone(), Box::new(init), Box::new(k)),
-                        ))
+                        Ok(fout)
                     }
                     [EVal::EInteger(i)] => {
                         let mut niters: usize = *i;
@@ -503,7 +494,7 @@ impl<'a> State<'a> {
                                     ctx.clone(),
                                     &EApp(FnCall(*fid, callix), fname.clone(), vec![anfarg]),
                                 )?
-                                .0;
+                                ;
                             out = Some(o.clone());
                             ctx = ctx.new_from_eoutput(&o.exact);
                             arg = if o.exact.out.len() == 1 {
@@ -517,10 +508,7 @@ impl<'a> State<'a> {
                         }
 
                         let fout = out.expect("k > 0");
-                        Ok((
-                            fout.clone(),
-                            EIterate(fout, fname.clone(), Box::new(init), Box::new(k)),
-                        ))
+                        Ok(fout)
                     }
                     _ => errors::typecheck_failed("iterate k"),
                 }
@@ -530,7 +518,7 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 tracing::debug!("sample");
 
-                let (mut o, s) = self.eval_sexpr(ctx, sexpr)?;
+                let mut o = self.eval_sexpr(ctx, sexpr)?;
                 let sout = o.sample.out.clone();
 
                 let out = sout
@@ -538,12 +526,12 @@ impl<'a> State<'a> {
                     .map(EExpr::<Trace>::embed)
                     .collect::<Result<Vec<_>>>()?;
                 o.exact.out = out;
-                Ok((o.clone(), ESample(o, Box::new(s))))
+                Ok(o)
             }
             EDiscrete(_, _) => errors::erased(Trace, "discrete"),
         }
     }
-    pub fn eval_sexpr(&mut self, ctx: Ctx, e: &SExprAnn) -> Result<(Output, SExprTr)> {
+    pub fn eval_sexpr(&mut self, ctx: Ctx, e: &SExprAnn) -> Result<Output> {
         use SExpr::*;
         let span = tracing::span!(tracing::Level::DEBUG, "s");
         let _senter = span.enter();
@@ -554,45 +542,42 @@ impl<'a> State<'a> {
                 debug!("anf: {:?}", a);
                 debug!("ast: {:?}", e);
 
-                let (out, a) = eval_sanf(self, &ctx, a)?;
+                let out = eval_sanf(self, &ctx, a)?;
                 // let out = ctx.mk_soutput(out);
-                Ok((out.clone(), SAnf(out, Box::new(a))))
+                Ok(out)
             }
             SLetIn(d, name, bindee, body) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "let", v = name);
                 let _enter = span.enter();
                 tracing::debug!("let");
-                let (bound, bindee) = self.eval_sexpr(ctx.clone(), bindee)?; // clone ctx purely for debug
+                let bound = self.eval_sexpr(ctx.clone(), bindee)?; // clone ctx purely for debug
 
                 let mut newctx = Ctx::from(&bound);
                 newctx
                     .sample
                     .substitutions
                     .insert(d.id(), Subst::mk(bound.sample.out.clone(), None));
-                let (out, body) = self.eval_sexpr(newctx, body)?;
+                let out = self.eval_sexpr(newctx, body)?;
 
                 debug_step_ng!(format!("let-in {}", name), ctx, out; "sample");
 
-                Ok((
-                    out.clone(),
-                    SLetIn(out, name.clone(), Box::new(bindee), Box::new(body)),
-                ))
+                Ok(out)
             }
             SSeq(_, s0, s1) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "seq");
                 let _enter = span.enter();
                 tracing::debug!("seq");
-                let (s0out, s0) = self.eval_sexpr(ctx.clone(), s0)?;
+                let s0out = self.eval_sexpr(ctx.clone(), s0)?;
                 let newctx = Ctx::from(&s0out);
-                let (s1out, s1) = self.eval_sexpr(newctx, s1)?;
+                let s1out = self.eval_sexpr(newctx, s1)?;
                 debug_step_ng!("seq", ctx, s1out; "sample");
-                Ok((s1out.clone(), SSeq(s1out, Box::new(s0), Box::new(s1))))
+                Ok(s1out)
             }
             SIte(_, guard, truthy, falsey) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "ite");
                 let _enter = span.enter();
                 tracing::debug!("ite");
-                let (guardout, guard) = crate::compile::anf::eval_sanf(self, &ctx, guard)?;
+                let guardout = crate::compile::anf::eval_sanf(self, &ctx, guard)?;
                 // Note that we are _collapsing_ SIte because the program trace does not go down both sides.
                 match &guardout.sample.out[..] {
                     [SVal::SBool(true)] => self.eval_sexpr(ctx.clone(), truthy),
@@ -604,7 +589,7 @@ impl<'a> State<'a> {
                 let span = tracing::span!(tracing::Level::DEBUG, "map");
                 let _enter = span.enter();
                 tracing::debug!("map");
-                let (argval, arg) = crate::compile::anf::eval_sanf(self, &ctx, arg)?;
+                let argval = crate::compile::anf::eval_sanf(self, &ctx, arg)?;
                 if argval.sample.out.len() != 1 {
                     errors::typecheck_failed("map args != 1")
                 } else {
@@ -613,7 +598,6 @@ impl<'a> State<'a> {
                         [SVal::SVec(vs)] => Ok(vs),
                         _ => errors::typecheck_failed("map arg != prod or vec"),
                     }?;
-                    let mut bodytr = None;
                     let outs = vs
                         .iter()
                         .map(|v| {
@@ -622,8 +606,7 @@ impl<'a> State<'a> {
                                 .sample
                                 .substitutions
                                 .insert(d.id(), Subst::mk(vec![v.clone()], None));
-                            let (o, b) = self.eval_sexpr(newctx, body)?;
-                            bodytr = Some(b);
+                            let o = self.eval_sexpr(newctx, body)?;
                             if o.sample.out.len() != 1 {
                                 errors::typecheck_failed("map fn did not compile to a single value")
                             } else {
@@ -633,15 +616,7 @@ impl<'a> State<'a> {
                         .collect::<Result<Vec<SVal>>>()?;
                     let sout = ctx.sample.as_output(outs);
                     let out = ctx.mk_soutput(sout);
-                    Ok((
-                        out.clone(),
-                        SMap(
-                            out,
-                            argname.clone(),
-                            Box::new(bodytr.unwrap()),
-                            Box::new(arg),
-                        ),
-                    ))
+                    Ok(out)
                 }
             }
             SWhile(_, guard, body) => {
@@ -649,34 +624,27 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 tracing::debug!("while");
 
-                let mut guardtr;
-                let mut bodytr = None;
                 let mut loopctx = ctx.clone();
                 let guardout = loop {
-                    let (g, gtr) = crate::compile::anf::eval_sanf(self, &loopctx, guard)?;
-                    guardtr = gtr;
+                    let g = crate::compile::anf::eval_sanf(self, &loopctx, guard)?;
                     match &g.sample.out[..] {
                         [SVal::SBool(true)] => break Ok(g),
                         [SVal::SBool(false)] => {
-                            let (out, btr) = self.eval_sexpr(loopctx, body)?;
-                            bodytr = Some(btr);
+                            let out = self.eval_sexpr(loopctx, body)?;
                             loopctx = Ctx::from(&out);
                         }
                         _ => break errors::typecheck_failed("while guard"),
                     }
                 }?;
                 // let out = ctx.mk_soutput(guardout);
-                Ok((
-                    guardout.clone(),
-                    SWhile(guardout, Box::new(guardtr), Box::new(bodytr.unwrap())),
-                ))
+                Ok(guardout)
             }
             SFold((accvar, argvar), initial, acc, arg, body, values) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "fold");
                 let _enter = span.enter();
                 tracing::debug!("fold");
 
-                let (valueso, values) = crate::compile::anf::eval_sanf(self, &ctx, values)?;
+                let valueso = crate::compile::anf::eval_sanf(self, &ctx, values)?;
 
                 errors::TODO()
                 // if valueso.out.len() != 1 {
@@ -726,7 +694,7 @@ impl<'a> State<'a> {
                         fname
                     )),
                 })?;
-                let (argvals, args) = eval_sanfs(self, &ctx, args)?;
+                let argvals = eval_sanfs(self, &ctx, args)?;
                 let argvals = argvals.sample.out;
                 if params.len() != argvals.len() {
                     tracing::debug!("params: {params:?}");
@@ -745,8 +713,8 @@ impl<'a> State<'a> {
                 let mut callerctx = ctx.clone();
                 callerctx.sample.substitutions = subs;
 
-                let (out, _) = self.eval_sexpr(callerctx, &f.body)?;
-                Ok((out.clone(), SApp(out.clone(), fname.clone(), args)))
+                let out = self.eval_sexpr(callerctx, &f.body)?;
+                Ok(out)
             }
             SLambda(_, _, _) => errors::TODO(),
 
@@ -754,7 +722,7 @@ impl<'a> State<'a> {
                 let span = tracing::span!(tracing::Level::DEBUG, "sample");
                 let _enter = span.enter();
                 tracing::debug!("sample");
-                let (mut out, dist) = self.eval_sexpr(ctx, &dist)?;
+                let mut out = self.eval_sexpr(ctx, &dist)?;
 
                 let (q, v, d) = match &out.sample.out[..] {
                     [SVal::SDist(d)] => match d {
@@ -772,33 +740,34 @@ impl<'a> State<'a> {
                             let v = SVal::SInt(v as u64);
                             (q, v, d)
                         }
-                        Dist::Dirichlet(ps) => {
-                            let dist = statrs::distribution::Dirichlet::new(ps.to_vec()).unwrap();
-                            let vs = sample_from(self, &dist);
-                            let q = statrs::distribution::Continuous::pdf(&dist, &vs);
-                            let vs = SVal::SVec(
-                                vs.into_iter().map(|x: &f64| SVal::SFloat(*x)).collect_vec(),
-                            );
-                            (q, vs, d)
-                        }
+                        Dist::Dirichlet(ps) => todo!("punted"),
+                        // Dist::Dirichlet(ps) => {
+                        //     let dist = statrs::distribution::Dirichlet::new(ps.to_vec()).unwrap();
+                        //     let vs = sample_from(self, &dist);
+                        //     let q = statrs::distribution::ContinuousCDF::cdf(&dist, &vs);
+                        //     let vs = SVal::SVec(
+                        //         vs.into_iter().map(|x: &f64| SVal::SFloat(*x)).collect_vec(),
+                        //     );
+                        //     (q, vs, d)
+                        // }
                         Dist::Uniform(lo, hi) => {
                             let dist = statrs::distribution::Uniform::new(*lo, *hi).unwrap();
                             let v = sample_from(self, dist);
-                            let q = statrs::distribution::Continuous::pdf(&dist, v);
+                            let q = statrs::distribution::ContinuousCDF::cdf(&dist, v);
                             let v = SVal::SFloat(v);
                             (q, v, d)
                         }
                         Dist::Normal(mn, sd) => {
                             let dist = statrs::distribution::Normal::new(*mn, *sd).unwrap();
                             let v = sample_from(self, dist);
-                            let q = statrs::distribution::Continuous::pdf(&dist, v);
+                            let q = statrs::distribution::ContinuousCDF::cdf(&dist, v);
                             let v = SVal::SFloat(v);
                             (q, v, d)
                         }
                         Dist::Beta(a, b) => {
                             let dist = statrs::distribution::Beta::new(*a, *b).unwrap();
                             let v = sample_from(self, dist);
-                            let q = statrs::distribution::Continuous::pdf(&dist, v);
+                            let q = statrs::distribution::ContinuousCDF::cdf(&dist, v);
                             let v = SVal::SFloat(v);
                             (q, v, d)
                         }
@@ -812,13 +781,16 @@ impl<'a> State<'a> {
                     },
                     _ => panic!("semantic error, see note on SObserve in SExpr enum"),
                 };
+                info!("  dist: {:?}", d);
+                info!("sample: {:?}", v);
+                info!("  prob: {}", q);
                 self.mult_pq(q, q);
 
                 out.sample
                     .trace
                     .push((v.clone(), d.clone(), Probability::new(q), None));
                 out.sample.out = vec![v];
-                Ok((out.clone(), SSample(out, Box::new(dist))))
+                Ok(out)
             }
 
             SObserve(_, a, dist) => {
@@ -826,8 +798,8 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 tracing::debug!("observe");
 
-                let (a_out, a) = crate::compile::anf::eval_sanf(self, &ctx, a)?;
-                let (d_out, dist) = crate::compile::anf::eval_sanf(self, &ctx, dist)?;
+                let a_out = crate::compile::anf::eval_sanf(self, &ctx, a)?;
+                let d_out = crate::compile::anf::eval_sanf(self, &ctx, dist)?;
                 let q = match (&d_out.sample.out[..], &a_out.sample.out[..]) {
                     ([SVal::SDist(d)], [v]) => match (d, v) {
                         (Dist::Bern(param), SVal::SBool(b)) => {
@@ -838,31 +810,33 @@ impl<'a> State<'a> {
                             let dist = statrs::distribution::Categorical::new(&ps).unwrap();
                             statrs::distribution::Discrete::pmf(&dist, *i as u64)
                         }
-                        (Dist::Dirichlet(ps), SVal::SVec(vs)) => {
-                            let dist = statrs::distribution::Dirichlet::new(ps.to_vec()).unwrap();
+                        (Dist::Dirichlet(ps), _) => todo!("punted"),
+                        // FIXME: Punt-- might nee a different library to preform this integration.
+                        // (Dist::Dirichlet(ps), SVal::SVec(vs)) => {
+                        //     let dist = statrs::distribution::Dirichlet::new(ps.to_vec()).unwrap();
 
-                            let vs = vs
-                                .iter()
-                                .map(|v| match v {
-                                    SVal::SFloat(f) => Ok(*f),
-                                    _ => errors::typecheck_failed("observe dirichlet"),
-                                })
-                                .collect::<Result<Vec<f64>>>()?;
-                            let vs = <nalgebra::base::DVector<f64> as From<Vec<f64>>>::from(vs);
+                        //     let vs = vs
+                        //         .iter()
+                        //         .map(|v| match v {
+                        //             SVal::SFloat(f) => Ok(*f),
+                        //             _ => errors::typecheck_failed("observe dirichlet"),
+                        //         })
+                        //         .collect::<Result<Vec<f64>>>()?;
+                        //     let vs = <nalgebra::base::DVector<f64> as From<Vec<f64>>>::from(vs);
 
-                            statrs::distribution::Continuous::pdf(&dist, &vs)
-                        }
+                        //     statrs::distribution::ContinuousCDF::cdf(&dist, &vs)
+                        // }
                         (Dist::Uniform(lo, hi), SVal::SFloat(f)) => {
                             let dist = statrs::distribution::Uniform::new(*lo, *hi).unwrap();
-                            statrs::distribution::Continuous::pdf(&dist, *f)
+                            statrs::distribution::ContinuousCDF::cdf(&dist, *f)
                         }
                         (Dist::Normal(mn, sd), SVal::SFloat(f)) => {
                             let dist = statrs::distribution::Normal::new(*mn, *sd).unwrap();
-                            statrs::distribution::Continuous::pdf(&dist, *f)
+                            statrs::distribution::ContinuousCDF::cdf(&dist, *f)
                         }
                         (Dist::Beta(a, b), SVal::SFloat(f)) => {
                             let dist = statrs::distribution::Beta::new(*a, *b).unwrap();
-                            statrs::distribution::Continuous::pdf(&dist, *f)
+                            statrs::distribution::ContinuousCDF::cdf(&dist, *f)
                         }
                         (d, v) => {
                             panic!("new distribution encountered in sobserve: {d:?} in {v:?}")
@@ -873,7 +847,7 @@ impl<'a> State<'a> {
                 self.mult_pq(1.0, q);
 
                 //let a_out = ctx.mk_soutput(a_out);
-                Ok((a_out.clone(), SObserve(a_out, Box::new(a), Box::new(dist))))
+                Ok(a_out)
             }
             // Multi-language boundary / natural embedding.
             SExact(_, eexpr) => {
@@ -881,7 +855,7 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 tracing::debug!("exact");
 
-                let (mut out, etr) = self.eval_eexpr(ctx.clone(), eexpr)?;
+                let mut out = self.eval_eexpr(ctx.clone(), eexpr)?;
                 let eouts = out.exact.out.clone();
 
                 for eval in eouts.iter() {
@@ -896,7 +870,7 @@ impl<'a> State<'a> {
                     out.sample.out.push(val);
                 }
                 info!("boundary sample: {:?}", out.sample.out);
-                Ok((out.clone(), SExact(out, Box::new(etr))))
+                Ok(out)
             }
             SLetSample(_, _, _, _) => errors::erased(Trace, "let-sample"),
         }

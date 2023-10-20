@@ -78,14 +78,12 @@ pub struct ROut {
     pub rng: Option<StdRng>,
     pub mgr: Mgr,
     pub pq: PQ,
-    pub prg: ProgramTr,
 }
 
 pub struct PartialROut {
     pub out: Output,
     pub pq: PQ,
     pub rng: Option<StdRng>,
-    pub prg: ProgramTr,
 }
 impl PartialROut {
     pub fn to_rout(&self, mgr: Mgr) -> ROut {
@@ -94,7 +92,6 @@ impl PartialROut {
             out: self.out.clone(),
             rng: self.rng.clone(),
             pq: self.pq,
-            prg: self.prg.clone(),
         }
     }
 }
@@ -121,49 +118,25 @@ macro_rules! run {
 }
 
 pub fn run(code: &str, opt: &Options) -> Result<ROut> {
-    let mut mgr = make_mgr(code)?;
+    let (mut mgr, p, lenv) = make_mgr_and_ir(code)?;
     tracing::debug!(",====================================.");
     tracing::debug!("| manager compiled! building program |");
     tracing::debug!("`===================================='");
-    let r = runner(code, &mut mgr, &mut opt.rng(), &opt)?;
+    let r = runner(&mut mgr, &mut opt.rng(), &opt, &p, &lenv)?;
     Ok(r.to_rout(mgr))
 }
 
-pub fn runner(code: &str, mgr: &mut Mgr, rng: &mut StdRng, opt: &Options) -> Result<PartialROut> {
-    tracing::info!("compiling code:\n{code}");
-    let p = crate::parser::program::parse(code)?;
-    tracing::trace!("program... parsed!");
-    let p = if opt.exact_only {
-        p.strip_samples()?
-    } else {
-        p
-    };
-    let p = crate::typeinf::typeinference(&p)?;
-    tracing::trace!("types... inferred!");
-    let p = crate::typecheck::typecheck(&p)?;
-    tracing::trace!("types... checked!");
-    let p = crate::desugar::desugar(&p)?;
-    tracing::trace!("code... desugared!");
-    let mut senv = SymEnv::default();
-    let p = senv.uniquify(&p)?.0;
-    tracing::trace!("symbols... uniquified!");
-    let mut lenv = LabelEnv::new(senv.functions, senv.fun_stats);
-    let ar = lenv.annotate(&p)?;
-    tracing::trace!("variables... annotated!");
-    let p = ar.program;
-    let maxlbl = ar.maxbdd.0;
-
+pub fn runner(mgr: &mut Mgr, rng: &mut StdRng, opt: &Options, p:&Program<crate::annotate::grammar::Annotated>, lenv:&LabelEnv) -> Result<PartialROut> {
     let sample_pruning = opt.opt;
 
-    let mut state = State::new(mgr, Some(rng), sample_pruning, lenv.funs);
-    let (out, ptrace) = state.eval_program(&p)?;
+    let mut state = State::new(mgr, Some(rng), sample_pruning, &lenv.funs);
+    let out = state.eval_program(&p)?;
     tracing::debug!("program... compiled!");
 
     Ok(PartialROut {
         out,
         pq: state.pq,
         rng: state.rng.cloned(),
-        prg: ptrace,
     })
 }
 
@@ -198,4 +171,39 @@ pub fn make_mgr(code: &str) -> Result<Mgr> {
     let maxlbl = ar.maxbdd.0;
     tracing::trace!("(manager created with max label: {maxlbl})");
     Ok(Mgr::new_default_order(maxlbl as usize))
+}
+
+pub fn make_mgr_and_ir(code: &str) -> Result<(Mgr, Program<crate::annotate::grammar::Annotated>, LabelEnv)> {
+    tracing::info!("compiling code:\n{code}");
+    tracing::trace!("making manager");
+    let p = crate::parser::program::parse(code)?;
+    tracing::debug!("(parsed)");
+    tracing::debug!("(parsed) >>> {p:?}");
+    tracing::debug!("(parsed)");
+    let p = crate::typeinf::typeinference(&p)?;
+    tracing::debug!("(inferred)");
+    tracing::debug!("(inferred) >>> {p:?}");
+    tracing::debug!("(inferred)");
+    let p = crate::typecheck::typecheck(&p)?;
+    tracing::debug!("(checked)");
+    tracing::debug!("(checked) >>> {p:?}");
+    tracing::debug!("(checked)");
+    let p = crate::desugar::desugar(&p)?;
+    tracing::debug!("(desugared)");
+    tracing::debug!("(desugared) >>> {p:?}");
+    tracing::debug!("(desugared)");
+    let mut env = SymEnv::default();
+    let p = env.uniquify(&p)?.0;
+    tracing::debug!("(uniquifyed)");
+    tracing::debug!("(uniquifyed) >>> {p:?}");
+    tracing::debug!("(uniquifyed)");
+    let mut lenv = LabelEnv::new(env.functions, env.fun_stats);
+    let ar = lenv.annotate(&p)?;
+    let p = ar.program;
+    tracing::debug!("(annotated)");
+    tracing::debug!("(annotated) >>> {p:?}");
+    tracing::debug!("(annotated)");
+    let maxlbl = ar.maxbdd.0;
+    tracing::trace!("(manager created with max label: {maxlbl})");
+    Ok((Mgr::new_default_order(maxlbl as usize), p, lenv))
 }

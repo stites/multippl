@@ -97,19 +97,19 @@ pub fn eval_sanf_numop<'a>(
     fop: impl Fn(f64, f64) -> f64,
     iop: impl Fn(u64, u64) -> u64,
     op: impl Fn(Box<AnfTr<SVal>>, Box<AnfTr<SVal>>) -> AnfTr<SVal>,
-) -> Result<(Output, AnfTr<SVal>)> {
-    let (ol, bl) = eval_sanf(state, ctx, &bl)?;
-    let (or, br) = eval_sanf(state, ctx, &br)?;
+) -> Result<Output> {
+    let ol = eval_sanf(state, ctx, &bl)?;
+    let or = eval_sanf(state, ctx, &br)?;
     match (&ol.sample.out[..], &or.sample.out[..]) {
         ([SVal::SFloat(l)], [SVal::SFloat(r)]) => {
             let out = ctx.sample.as_output(vec![SVal::SFloat(fop(*l, *r))]);
             let out = ctx.mk_soutput(out);
-            Ok((out.clone(), op(Box::new(bl), Box::new(br))))
+            Ok(out)
         }
         ([SVal::SInt(l)], [SVal::SInt(r)]) => {
             let out = ctx.sample.as_output(vec![SVal::SInt(iop(*l, *r))]);
             let out = ctx.mk_soutput(out);
-            Ok((out.clone(), op(Box::new(bl), Box::new(br))))
+            Ok(out)
         }
         _ => return errors::typecheck_failed("sanf numop"),
     }
@@ -122,18 +122,17 @@ pub fn eval_eanf_numop<'a>(
     fop: impl Fn(f64, f64) -> f64,
     iop: impl Fn(usize, usize) -> usize,
     op: impl Fn(Box<AnfTr<EVal>>, Box<AnfTr<EVal>>) -> AnfTr<EVal>,
-) -> Result<(EOutput, AnfTr<EVal>)> {
+) -> Result<EOutput> {
     let span = tracing::span!(Level::DEBUG, "numop");
     let _enter = span.enter();
-
-    let (ol, bl) = eval_eanf(state, ctx, &bl)?;
-    let (or, br) = eval_eanf(state, ctx, &br)?;
+    let ol = eval_eanf(state, ctx, &bl)?;
+    let or = eval_eanf(state, ctx, &br)?;
     match (&ol.out[..], &or.out[..]) {
         ([EVal::EFloat(l)], [EVal::EFloat(r)]) => {
             let x = fop(*l, *r);
             tracing::debug!("{l} <fop> {r} = {x}");
             let out = ctx.exact.as_output(vec![EVal::EFloat(x)]);
-            Ok((out.clone(), op(Box::new(bl), Box::new(br))))
+            Ok(out)
         }
         ([EVal::EInteger(l)], [EVal::EInteger(r)]) => {
             // let l = integers::from_prod(l)?;
@@ -142,7 +141,7 @@ pub fn eval_eanf_numop<'a>(
             tracing::debug!("{l} <iop> {r} = {x}");
             // let out = ctx.exact.as_output(vec![integers::as_onehot(x)]);
             let out = ctx.exact.as_output(vec![EVal::EInteger(x)]);
-            Ok((out.clone(), op(Box::new(bl), Box::new(br))))
+            Ok(out)
         }
         // ([EVal::EInteger(l)], _) => return errors::erased(),
         // (_, [EVal::EInteger(r)]) => return errors::erased(),
@@ -161,14 +160,14 @@ pub fn eval_sanf_bop<'a>(
     br: &'a AnfAnn<SVal>,
     bop: impl Fn(bool, bool) -> bool,
     op: impl Fn(Box<AnfTr<SVal>>, Box<AnfTr<SVal>>) -> AnfTr<SVal>,
-) -> Result<(Output, AnfTr<SVal>)> {
-    let (ol, bl) = eval_sanf(state, ctx, &bl)?;
-    let (or, br) = eval_sanf(state, ctx, &br)?;
+) -> Result<Output> {
+    let ol = eval_sanf(state, ctx, &bl)?;
+    let or = eval_sanf(state, ctx, &br)?;
     match (&ol.sample.out[..], &or.sample.out[..]) {
         ([SVal::SBool(l)], [SVal::SBool(r)]) => {
             let out = ctx.sample.as_output(vec![SVal::SBool(bop(*l, *r))]);
             let out = ctx.mk_soutput(out);
-            Ok((out.clone(), op(Box::new(bl), Box::new(br))))
+            Ok(out)
         }
         (l, r) => {
             return errors::typecheck_failed(&format!(
@@ -185,13 +184,13 @@ pub fn eval_eanf_bop(
     br: &AnfAnn<EVal>,
     mut bop: impl FnMut(&mut Mgr, Box<BddPtr>, Box<BddPtr>) -> BddPtr,
     op: impl Fn(Box<AnfTr<EVal>>, Box<AnfTr<EVal>>) -> AnfTr<EVal>,
-) -> Result<(EOutput, AnfTr<EVal>)> {
+) -> Result<EOutput> {
     let span = tracing::span!(Level::DEBUG, "binop");
     let _enter = span.enter();
     tracing::debug!("binop");
 
-    let (ol, bl) = eval_eanf(state, ctx, &bl)?;
-    let (or, br) = eval_eanf(state, ctx, &br)?;
+    let ol = eval_eanf(state, ctx, &bl)?;
+    let or = eval_eanf(state, ctx, &br)?;
     match (&ol.out[..], &or.out[..]) {
         ([EVal::EBdd(l)], [EVal::EBdd(r)]) => {
             let out = ctx.exact.as_output(vec![EVal::EBdd(bop(
@@ -199,7 +198,7 @@ pub fn eval_eanf_bop(
                 Box::new(l.clone()),
                 Box::new(r.clone()),
             ))]);
-            Ok((out.clone(), op(Box::new(bl), Box::new(br))))
+            Ok(out)
         }
         _ => return errors::typecheck_failed("eanf boolop"),
     }
@@ -214,24 +213,24 @@ pub fn eval_sanf_cop(
     fop: impl Fn(&f64, &f64) -> bool,
     iop: impl Fn(&u64, &u64) -> bool,
     op: impl Fn(Box<AnfTr<SVal>>, Box<AnfTr<SVal>>) -> AnfTr<SVal>,
-) -> Result<(Output, AnfTr<SVal>)> {
-    let (ol, bl) = eval_sanf(state, ctx, &bl)?;
-    let (or, br) = eval_sanf(state, ctx, &br)?;
+) -> Result<Output> {
+    let ol = eval_sanf(state, ctx, &bl)?;
+    let or = eval_sanf(state, ctx, &br)?;
     match (&ol.sample.out[..], &or.sample.out[..]) {
         ([SVal::SBool(l)], [SVal::SBool(r)]) => {
             let out = ctx.sample.as_output(vec![SVal::SBool(bop(l, r))]);
             let out = ctx.mk_soutput(out);
-            Ok((out.clone(), op(Box::new(bl), Box::new(br))))
+            Ok(out)
         }
         ([SVal::SFloat(l)], [SVal::SFloat(r)]) => {
             let out = ctx.sample.as_output(vec![SVal::SBool(fop(l, r))]);
             let out = ctx.mk_soutput(out);
-            Ok((out.clone(), op(Box::new(bl), Box::new(br))))
+            Ok(out)
         }
         ([SVal::SInt(l)], [SVal::SInt(r)]) => {
             let out = ctx.sample.as_output(vec![SVal::SBool(iop(l, r))]);
             let out = ctx.mk_soutput(out);
-            Ok((out.clone(), op(Box::new(bl), Box::new(br))))
+            Ok(out)
         }
         _ => return errors::typecheck_failed("sanf compare op"),
     }
@@ -242,36 +241,36 @@ pub fn eval_eanf_cop(
     ctx: &Ctx,
     bl: &AnfAnn<EVal>,
     br: &AnfAnn<EVal>,
-    bop: Option<impl Fn(&Mgr, Box<BddPtr>, Box<BddPtr>) -> bool>,
+    bop: Option<impl FnMut(&mut Mgr, Box<BddPtr>, Box<BddPtr>) -> BddPtr>,
     fop: impl Fn(&f64, &f64) -> bool,
     iop: impl Fn(&usize, &usize) -> bool,
     op: impl Fn(Box<AnfTr<EVal>>, Box<AnfTr<EVal>>) -> AnfTr<EVal>,
-) -> Result<(EOutput, AnfTr<EVal>)> {
-    let (ol, bl) = eval_eanf(state, ctx, &bl)?;
-    let (or, br) = eval_eanf(state, ctx, &br)?;
+) -> Result<EOutput> {
+    let ol = eval_eanf(state, ctx, &bl)?;
+    let or = eval_eanf(state, ctx, &br)?;
     match (&ol.out[..], &or.out[..]) {
         ([EVal::EBdd(l)], [EVal::EBdd(r)]) => match bop {
             None => return errors::typecheck_failed("eanf compare op invalid"),
-            Some(bop) => {
-                let out = ctx.exact.as_output(vec![EVal::EBdd(BddPtr::from_bool(bop(
-                    &state.mgr,
+            Some(mut bop) => {
+                let out = ctx.exact.as_output(vec![EVal::EBdd(bop(
+                    &mut state.mgr,
                     Box::new(l.clone()),
                     Box::new(r.clone()),
-                )))]);
-                Ok((out.clone(), op(Box::new(bl), Box::new(br))))
+                ))]);
+                Ok(out)
             }
         },
         ([EVal::EFloat(l)], [EVal::EFloat(r)]) => {
             let out = ctx
                 .exact
                 .as_output(vec![EVal::EBdd(BddPtr::from_bool(fop(l, r)))]);
-            Ok((out.clone(), op(Box::new(bl), Box::new(br))))
+            Ok(out)
         }
         ([EVal::EInteger(l)], [EVal::EInteger(r)]) => {
             let out = ctx
                 .exact
                 .as_output(vec![EVal::EBdd(BddPtr::from_bool(iop(l, r)))]);
-            Ok((out.clone(), op(Box::new(bl), Box::new(br))))
+            Ok(out)
         }
         _ => return errors::typecheck_failed("eanf compare op"),
     }
@@ -281,25 +280,24 @@ pub fn eval_sanf_vec(
     ctx: &Ctx,
     anfs: &[AnfAnn<SVal>],
     op: impl Fn(Vec<AnfTr<SVal>>) -> AnfTr<SVal>,
-) -> Result<(Output, AnfTr<SVal>)> {
-    let (outs, trs): (Vec<SVal>, Vec<AnfTr<SVal>>) =
-        anfs.iter().fold(Ok((vec![], vec![])), |acc, a| match acc {
-            Ok((mut vs, mut trs)) => {
-                let (aout, tr) = eval_sanf(state, ctx, a)?;
-                trs.push(tr);
+) -> Result<Output> {
+    let outs: Vec<SVal> =
+        anfs.iter().fold(Ok(vec![]), |acc, a| match acc {
+            Ok(mut vs) => {
+                let aout = eval_sanf(state, ctx, a)?;
                 if aout.sample.out.len() > 1 {
                     return errors::generic("nested vector not (yet) supported");
                 } else {
                     vs.extend(aout.sample.out);
                 }
-                Ok((vs, trs))
+                Ok(vs)
             }
             Err(e) => Err(e),
         })?;
     tracing::debug!("sanf_vec: {outs:?}");
     let o = ctx.sample.as_output(vec![SVal::SVec(outs)]);
     let o = ctx.mk_soutput(o);
-    Ok((o.clone(), op(trs)))
+    Ok(o)
 }
 fn eval_sanf_dist2(
     state: &mut super::eval::State,
@@ -309,16 +307,16 @@ fn eval_sanf_dist2(
     p1: &AnfAnn<SVal>,
     mkdist: impl Fn(f64, f64) -> Dist,
     mkanf: impl Fn((SampledVar, SOutput), Box<AnfTr<SVal>>, Box<AnfTr<SVal>>) -> AnfTr<SVal>,
-) -> Result<(Output, AnfTr<SVal>)> {
-    let (o0, p0) = eval_sanf(state, ctx, p0)?;
-    let (o1, p1) = eval_sanf(state, ctx, p1)?;
+) -> Result<Output> {
+    let o0 = eval_sanf(state, ctx, p0)?;
+    let o1 = eval_sanf(state, ctx, p1)?;
     match (&o0.sample.out[..], &o1.sample.out[..]) {
         ([SVal::SFloat(l)], [SVal::SFloat(r)]) => {
             let out = ctx.sample.as_output(vec![SVal::SDist(mkdist(*l, *r))]);
 
             let out = ctx.mk_soutput(out);
             let ext = (sv.clone(), out.sample.clone());
-            Ok((out.clone(), mkanf(ext, Box::new(p0), Box::new(p1))))
+            Ok(out)
         }
         (l, r) => {
             tracing::debug!(" left: {l:?}");
@@ -343,15 +341,15 @@ fn eval_sanf_dist_vec(
     ps: &[AnfAnn<SVal>],
     mkdist: impl Fn(Vec<f64>) -> Dist,
     mkanf: impl Fn((SampledVar, SOutput), Vec<AnfTr<SVal>>) -> AnfTr<SVal>,
-) -> Result<(Output, AnfTr<SVal>)> {
-    let (o, ps) = eval_sanfs(state, ctx, ps)?;
+) -> Result<Output> {
+    let o = eval_sanfs(state, ctx, ps)?;
     match &o.sample.out[..] {
         [SVal::SVec(vs)] => {
             let vs = vals2vec_params(&vs)?;
             let out = ctx.sample.as_output(vec![SVal::SDist(mkdist(vs))]);
             let out = ctx.mk_soutput(out);
             let ext = (sv.clone(), out.sample.clone());
-            Ok((out.clone(), mkanf(ext, ps)))
+            Ok(out)
         }
         _ => return errors::typecheck_failed("sanf distribution was not vector args not given"),
     }
@@ -360,7 +358,7 @@ pub fn eval_sanf<'a>(
     state: &'a mut super::eval::State,
     ctx: &'a Ctx,
     a: &'a AnfAnn<SVal>,
-) -> Result<(Output, AnfTr<SVal>)> {
+) -> Result<Output> {
     use Anf::*;
     let span = tracing::span!(tracing::Level::DEBUG, "eval_sanf");
     let _enter = span.enter();
@@ -370,20 +368,20 @@ pub fn eval_sanf<'a>(
             let out = ctx.sample.as_output(vec![v.clone()]);
             let out = ctx.mk_soutput(out);
             tracing::debug!("aval ot: {out:?}");
-            Ok((out.clone(), AVal(out, v.clone())))
+            Ok(out)
         }
         AVar(d, s) => {
             tracing::debug!("avar: {d:?} -- {s:?}");
             let out = eval_sanf_var(state, ctx, d, s)?;
-            Ok((out.clone(), AVar(out, s.to_string())))
+            Ok(out)
         }
         Neg(bl) => {
-            let (ol, bl) = eval_sanf(state, ctx, &bl)?;
+            let ol = eval_sanf(state, ctx, &bl)?;
             match &ol.sample.out[..] {
                 [SVal::SBool(l)] => {
                     let out = ctx.sample.as_output(vec![SVal::SBool(!*l)]);
                     let out = ctx.mk_soutput(out);
-                    Ok((out.clone(), Neg(Box::new(bl))))
+                    Ok(out)
                 }
                 a => errors::typecheck_failed(&format!("sanf negation got {a:?}")),
             }
@@ -450,36 +448,41 @@ pub fn eval_sanf<'a>(
         AnfProd(anfs) => eval_sanf_vec(state, ctx, anfs, AnfProd),
         AnfVec(anfs) => eval_sanf_vec(state, ctx, anfs, AnfVec),
         AnfPrj(var, ix) => {
-            let (ovar, var) = eval_sanf(state, ctx, var)?;
-            let (oix, ix) = eval_sanf(state, ctx, ix)?;
+            let ovar = eval_sanf(state, ctx, var)?;
+            let oix = eval_sanf(state, ctx, ix)?;
             match (&ovar.sample.out[..], &oix.sample.out[..]) {
                 ([SVal::SProd(vs)], [SVal::SInt(i)]) => {
                     let out = ctx.sample.as_output(vec![vs[*i as usize].clone()]);
                     let out = ctx.mk_soutput(out);
-                    Ok((out.clone(), AnfPrj(Box::new(var), Box::new(ix))))
+                    Ok(out)
                 }
                 ([SVal::SVec(vs)], [SVal::SInt(i)]) => {
                     let out = ctx.sample.as_output(vec![vs[*i as usize].clone()]);
                     let out = ctx.mk_soutput(out);
-                    Ok((out.clone(), AnfPrj(Box::new(var), Box::new(ix))))
+                    Ok(out)
+                }
+                (xs, [SVal::SInt(i)]) => {
+                    let out = ctx.sample.as_output(vec![xs[*i as usize].clone()]);
+                    let out = ctx.mk_soutput(out);
+                    Ok(out)
                 }
                 a => return errors::typecheck_failed(&format!("anf projection got {a:?}")),
             }
         }
         AnfBernoulli(sv, p) => {
-            let (o, p) = eval_sanf(state, ctx, p)?;
+            let o = eval_sanf(state, ctx, p)?;
             match &o.sample.out[..] {
                 [SVal::SFloat(f)] => {
                     let out = ctx.sample.as_output(vec![SVal::SDist(Dist::Bern(*f))]);
                     let out = ctx.mk_soutput(out);
                     let ext = (sv.clone(), out.sample.clone());
-                    Ok((out.clone(), AnfBernoulli(ext, Box::new(p))))
+                    Ok(out)
                 }
                 a => return errors::typecheck_failed(&format!("anf bernoulli got {a:?}")),
             }
         }
         AnfPoisson(sv, p) => {
-            let (o, p) = eval_sanf(state, ctx, p)?;
+            let o = eval_sanf(state, ctx, p)?;
             match &o.sample.out[..] {
                 [SVal::SInt(i)] => {
                     let out = ctx
@@ -487,13 +490,13 @@ pub fn eval_sanf<'a>(
                         .as_output(vec![SVal::SDist(Dist::Poisson(*i as f64))]);
                     let out = ctx.mk_soutput(out);
                     let ext = (sv.clone(), out.sample.clone());
-                    Ok((out.clone(), AnfPoisson(ext, Box::new(p))))
+                    Ok(out)
                 }
                 [SVal::SFloat(f)] => {
                     let out = ctx.sample.as_output(vec![SVal::SDist(Dist::Poisson(*f))]);
                     let out = ctx.mk_soutput(out);
                     let ext = (sv.clone(), out.sample.clone());
-                    Ok((out.clone(), AnfPoisson(ext, Box::new(p))))
+                    Ok(out)
                 }
                 a => return errors::typecheck_failed(&format!("anf poisson got {a:?}")),
             }
@@ -514,25 +517,23 @@ pub fn eval_sanfs(
     state: &mut super::eval::State,
     ctx: &Ctx,
     anfs: &[AnfAnn<SVal>],
-) -> Result<(Output, Vec<AnfTr<SVal>>)> {
-    let (svals, trs) = anfs.iter().fold(Ok((vec![], vec![])), |res, a| {
-        let (svals_fin, mut trs_fin) = res?;
-        let (o, atr) = eval_sanf(state, ctx, a)?;
+) -> Result<Output> {
+    let svals = anfs.iter().fold(Ok(vec![]), |res, a| {
+        let svals_fin = res?;
+        let o = eval_sanf(state, ctx, a)?;
         let svals = svals_fin.iter().chain(&o.sample.out).cloned().collect_vec();
-        trs_fin.push(atr);
-        Ok((svals, trs_fin))
+        Ok(svals)
     })?;
     let out = ctx.sample.as_output(svals);
     let out = ctx.mk_soutput(out);
-
-    Ok((out, trs))
+    Ok(out)
 }
 
 pub fn eval_eanf<'a>(
     state: &mut super::eval::State,
     ctx: &'a Ctx,
     a: &'a AnfAnn<EVal>,
-) -> Result<(EOutput, AnfTr<EVal>)> {
+) -> Result<EOutput> {
     use Anf::*;
     match a {
         AVal(_, v) => {
@@ -541,7 +542,7 @@ pub fn eval_eanf<'a>(
             tracing::debug!("val");
 
             let out = ctx.exact.as_output(vec![v.clone()]);
-            Ok((out.clone(), AVal(Output::exact(out), v.clone())))
+            Ok(out)
         }
         AVar(d, s) => {
             let span = tracing::span!(Level::DEBUG, "var");
@@ -549,18 +550,18 @@ pub fn eval_eanf<'a>(
             tracing::debug!("var");
 
             let out = eval_eanf_var(state, ctx, d, s)?;
-            Ok((out.clone(), AVar(out.pkg(), s.to_string())))
+            Ok(out)
         }
         Neg(bl) => {
             let span = tracing::span!(Level::DEBUG, "neg");
             let _enter = span.enter();
             tracing::debug!("neg");
 
-            let (ol, bl) = eval_eanf(state, ctx, &bl)?;
+            let ol = eval_eanf(state, ctx, &bl)?;
             match &ol.out[..] {
                 [EVal::EBdd(bdd)] => {
                     let out = ctx.exact.as_output(vec![EVal::EBdd(bdd.neg())]);
-                    Ok((out.clone(), Neg(Box::new(bl))))
+                    Ok(out)
                 }
                 _ => return errors::typecheck_failed("anf negation"),
             }
@@ -597,7 +598,7 @@ pub fn eval_eanf<'a>(
             ctx,
             bl,
             br,
-            None::<&dyn Fn(&Mgr, Box<BddPtr>, Box<BddPtr>) -> bool>,
+            None::<&dyn Fn(&mut Mgr, Box<BddPtr>, Box<BddPtr>) -> BddPtr>,
             PartialOrd::gt,
             PartialOrd::gt,
             GT,
@@ -607,7 +608,7 @@ pub fn eval_eanf<'a>(
             ctx,
             bl,
             br,
-            None::<&dyn Fn(&Mgr, Box<BddPtr>, Box<BddPtr>) -> bool>,
+            None::<&dyn Fn(&mut Mgr, Box<BddPtr>, Box<BddPtr>) -> BddPtr>,
             PartialOrd::ge,
             PartialOrd::ge,
             GTE,
@@ -617,7 +618,7 @@ pub fn eval_eanf<'a>(
             ctx,
             bl,
             br,
-            None::<&dyn Fn(&Mgr, Box<BddPtr>, Box<BddPtr>) -> bool>,
+            None::<&dyn Fn(&mut Mgr, Box<BddPtr>, Box<BddPtr>) -> BddPtr>,
             PartialOrd::lt,
             PartialOrd::lt,
             LT,
@@ -627,7 +628,7 @@ pub fn eval_eanf<'a>(
             ctx,
             bl,
             br,
-            None::<&dyn Fn(&Mgr, Box<BddPtr>, Box<BddPtr>) -> bool>,
+            None::<&dyn Fn(&mut Mgr, Box<BddPtr>, Box<BddPtr>) -> BddPtr>,
             PartialOrd::le,
             PartialOrd::le,
             LTE,
@@ -637,41 +638,40 @@ pub fn eval_eanf<'a>(
             ctx,
             bl,
             br,
-            Some(|mgr: &Mgr, l: Box<BddPtr>, r: Box<BddPtr>| mgr.eq_bdd(*l, *r)),
+            Some(|mgr: &mut Mgr, l: Box<BddPtr>, r: Box<BddPtr>| mgr.iff(*l, *r)),
             PartialEq::eq,
             PartialEq::eq,
             EQ,
         ),
 
         AnfProd(anfs) => {
-            let (outs, trs): (Vec<EVal>, Vec<AnfTr<EVal>>) =
-                anfs.iter().fold(Ok((vec![], vec![])), |acc, a| match acc {
-                    Ok((mut vs, mut trs)) => {
-                        let (aout, tr) = eval_eanf(state, ctx, a)?;
-                        trs.push(tr);
+            let outs: Vec<EVal> =
+                anfs.iter().fold(Ok(vec![]), |acc, a| match acc {
+                    Ok(mut vs) => {
+                        let aout = eval_eanf(state, ctx, a)?;
                         if aout.out.len() > 1 {
                             return errors::generic("nested vector not (yet) supported");
                         } else {
                             vs.extend(aout.out);
                         }
-                        Ok((vs, trs))
+                        Ok(vs)
                     }
                     Err(e) => Err(e),
                 })?;
-            Ok((ctx.exact.as_output(outs), AnfProd(trs)))
+            Ok(ctx.exact.as_output(outs))
         }
         AnfPrj(var, ix) => {
-            let (ovar, var) = eval_eanf(state, ctx, var)?;
-            let (oix, ix) = eval_eanf(state, ctx, ix)?;
+            let ovar = eval_eanf(state, ctx, var)?;
+            let oix = eval_eanf(state, ctx, ix)?;
 
             match (&ovar.out[..], &oix.out[..]) {
                 ([EVal::EProd(vs)], [EVal::EInteger(i)]) => {
                     let out = ctx.exact.as_output(vec![vs[*i].clone()]);
-                    Ok((out.clone(), AnfPrj(Box::new(var), Box::new(ix))))
+                    Ok(out)
                 }
                 (vs, [EVal::EInteger(i)]) => {
                     let out = ctx.exact.as_output(vec![vs[*i].clone()]);
-                    Ok((out.clone(), AnfPrj(Box::new(var), Box::new(ix))))
+                    Ok(out)
                 }
 
                 (l, r) => {
@@ -697,13 +697,12 @@ pub fn eval_eanfs(
     state: &mut super::eval::State,
     ctx: &Ctx,
     anfs: &[AnfAnn<EVal>],
-) -> Result<(EOutput, Vec<AnfTr<EVal>>)> {
-    let (vals, trs) = anfs.iter().fold(Ok((vec![], vec![])), |res, a| {
-        let (vals_fin, mut trs_fin) = res?;
-        let (o, atr) = eval_eanf(state, ctx, a)?;
+) -> Result<EOutput> {
+    let vals = anfs.iter().fold(Ok(vec![]), |res, a| {
+        let vals_fin = res?;
+        let o = eval_eanf(state, ctx, a)?;
         let vals = vals_fin.iter().chain(&o.out).cloned().collect_vec();
-        trs_fin.push(atr);
-        Ok((vals, trs_fin))
+        Ok(vals)
     })?;
-    Ok((ctx.exact.as_output(vals), trs))
+    Ok(ctx.exact.as_output(vals))
 }

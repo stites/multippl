@@ -99,7 +99,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("    # Steps: {}", strstep);
     println!("       Seed: {:?}", args.rng);
     println!("Debug level: {:?}", lvl);
-    println!("Print stats: {}", args.stats);
+    println!(" report BDD: {}", args.stats);
     setup_tracing(lvl);
 
     let pth = PathBuf::from(args.file);
