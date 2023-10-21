@@ -1,0 +1,9 @@
+exact fn network(obs: Bool) -> Bool {
+  let distA = flip 0.5 in
+  let _ = observe (distA == obs) in
+  distA
+}
+
+exact {
+   network(true)
+}

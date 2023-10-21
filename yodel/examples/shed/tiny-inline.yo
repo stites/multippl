@@ -1,0 +1,50 @@
+sample {
+  pb ~ beta(1.0, 1.0);
+  pb <- 0.5;
+  pn <- 0.0;
+  bs <- exact {
+    let b1 = flip pb in
+    let _ = observe (b1 == false) in
+    let b2 = flip pb in
+    let _ = observe (b2 == false) in
+    let b3 = flip pb in
+    let _ = observe (b3 == true) in
+    let b4 = flip pb in
+    let _ = observe (b4 == true) in
+    let b5 = flip pb in
+    let _ = observe (b5 == false) in
+    let b6 = flip pb in
+    let _ = observe (b6 == false) in
+    let b7 = flip pb in
+    let _ = observe (b7 == true) in
+    let b8 = flip pb in
+    let _ = observe (b8 == true) in
+    (b1, b2, b3, b4, b5, b6, b7, b8)
+  };
+  b1 <- if bs[0] then 0.0 else 5.0;
+  b2 <- if bs[1] then 0.0 else 5.0;
+  b3 <- if bs[2] then 0.0 else 5.0;
+  b4 <- if bs[3] then 0.0 else 5.0;
+  b5 <- if bs[4] then 0.0 else 5.0;
+  b6 <- if bs[5] then 0.0 else 5.0;
+  b7 <- if bs[6] then 0.0 else 5.0;
+  b8 <- if bs[7] then 0.0 else 5.0;
+
+  n1 <- normal(pn + b1, 1.0);
+  n2 <- normal(pn + b2, 1.0);
+  n3 <- normal(pn + b3, 1.0);
+  n4 <- normal(pn + b4, 1.0);
+  n5 <- normal(pn + b5, 1.0);
+  n6 <- normal(pn + b6, 1.0);
+  n7 <- normal(pn + b7, 1.0);
+  n8 <- normal(pn + b8, 1.0);
+  _ <- observe 3.06945432 in n1;
+  _ <- observe 2.75329064 in n2;
+  _ <- observe 7.77713371 in n3;
+  _ <- observe 6.23358278 in n4;
+  _ <- observe 2.35924191 in n5;
+  _ <- observe 2.85756214 in n6;
+  _ <- observe 6.49240322 in n7;
+  _ <- observe 5.57371947 in n8;
+  (pb, pn)
+}
