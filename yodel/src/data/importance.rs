@@ -13,10 +13,47 @@ impl PQ {
     pub fn render(&self) -> String {
         format!("{:.6} / {:.6}", self.p, self.q)
     }
+    pub fn ln(&self) -> LPQ {
+        LPQ {
+            lp: self.p.ln(),
+            lq: self.q.ln(),
+        }
+    }
 }
 impl Default for PQ {
     fn default() -> Self {
         PQ { p: 1.0, q: 1.0 }
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct LPQ {
+    pub lp: f64,
+    pub lq: f64,
+}
+impl LPQ {
+    pub fn weight(&self) -> f64 {
+        self.log_weight().exp()
+    }
+    pub fn log_weight(&self) -> f64 {
+        self.lp - self.lq
+    }
+    pub fn render(&self) -> String {
+        format!("{:.6} / {:.6}", self.lp.exp(), self.lq.exp())
+    }
+    pub fn log_render(&self) -> String {
+        format!("{:.3} - {:.3}", self.lp, self.lq)
+    }
+    pub fn exp(&self) -> PQ {
+        PQ {
+            p: self.lp.exp(),
+            q: self.lq.exp(),
+        }
+    }
+}
+impl Default for LPQ {
+    fn default() -> Self {
+        LPQ { lp: 0.0, lq: 0.0 }
     }
 }
 

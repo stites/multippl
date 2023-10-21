@@ -38,7 +38,7 @@ pub struct SamplingResult {
     pub stats: WmcStats,
     pub expectations: Expectations,
     pub duration: Duration,
-    pub weight: PQ,
+    pub weight: LPQ,
 }
 
 impl Iterator for SamplingIter {

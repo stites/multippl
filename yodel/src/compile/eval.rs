@@ -170,7 +170,7 @@ pub struct State<'a> {
     pub mgr: &'a mut Mgr,
     pub rng: Option<&'a mut StdRng>, // None will use the thread rng
     pub funs: &'a HashMap<FnId, Fun>,
-    log_pq: PQ,
+    log_pq: LPQ,
     pub fnctx: Option<FnCall>,
 }
 
@@ -190,10 +190,7 @@ impl<'a> State<'a> {
             opts,
             mgr,
             rng,
-            log_pq: PQ {
-                p: 0.0,
-                q: 0.0,
-            },
+            log_pq: LPQ::default(),
             funs,
             fnctx: None,
         }
@@ -215,14 +212,15 @@ impl<'a> State<'a> {
         self.pq().q
     }
     pub fn pq(&self) -> PQ {
-        let p = self.log_pq.p;
-        let q = self.log_pq.p;
-        PQ { p: p.exp(), q: q.exp() }
+        self.log_pq.exp()
+    }
+    pub fn log_pq(&self) -> LPQ {
+        self.log_pq
     }
     pub fn mult_pq(&mut self, p: f64, q: f64) {
         // if !(p == q) {
-            self.log_pq.p += p.ln();
-            self.log_pq.q += q.ln();
+            self.log_pq.lp += p.ln();
+            self.log_pq.lq += q.ln();
             info!("{:?}", self.log_pq);
         // }
     }
@@ -792,7 +790,7 @@ impl<'a> State<'a> {
                 info!("  dist: {:?}", d);
                 info!("sample: {:?}", v);
                 info!("  prob: {}", q);
-                self.mult_pq(q, q);
+                // self.mult_pq(q, q);
 
                 out.sample
                     .trace

@@ -77,12 +77,12 @@ pub struct ROut {
     pub out: Output,
     pub rng: Option<StdRng>,
     pub mgr: Mgr,
-    pub pq: PQ,
+    pub pq: LPQ,
 }
 
 pub struct PartialROut {
     pub out: Output,
-    pub pq: PQ,
+    pub pq: LPQ,
     pub rng: Option<StdRng>,
 }
 impl PartialROut {
@@ -135,7 +135,7 @@ pub fn runner(mgr: &mut Mgr, rng: &mut StdRng, opt: &Options, p:&Program<crate::
 
     Ok(PartialROut {
         out,
-        pq: state.pq(),
+        pq: state.log_pq(),
         rng: state.rng.cloned(),
     })
 }

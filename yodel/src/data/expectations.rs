@@ -1,5 +1,5 @@
 use crate::utils::render::*;
-use crate::PQ;
+use crate::LPQ;
 use itertools::*;
 use std::iter::Sum;
 
@@ -21,7 +21,7 @@ impl Expectations {
             cached_variance: None,
         }
     }
-    pub fn new(pq: PQ, prs: Vec<f64>) -> Self {
+    pub fn new(pq: LPQ, prs: Vec<f64>) -> Self {
         let (exp, expw, expw2) = prs.into_iter().fold(
             (vec![], vec![], vec![]),
             |(mut exp, mut expw, mut expw2), pr| {
