@@ -126,7 +126,13 @@ pub fn run(code: &str, opt: &Options) -> Result<ROut> {
     Ok(r.to_rout(mgr))
 }
 
-pub fn runner(mgr: &mut Mgr, rng: &mut StdRng, opt: &Options, p:&Program<crate::annotate::grammar::Annotated>, lenv:&LabelEnv) -> Result<PartialROut> {
+pub fn runner(
+    mgr: &mut Mgr,
+    rng: &mut StdRng,
+    opt: &Options,
+    p: &Program<crate::annotate::grammar::Annotated>,
+    lenv: &LabelEnv,
+) -> Result<PartialROut> {
     let sample_pruning = opt.opt;
 
     let mut state = State::new(mgr, Some(rng), sample_pruning, &lenv.funs);
@@ -173,7 +179,9 @@ pub fn make_mgr(code: &str) -> Result<Mgr> {
     Ok(Mgr::new_default_order(maxlbl as usize))
 }
 
-pub fn make_mgr_and_ir(code: &str) -> Result<(Mgr, Program<crate::annotate::grammar::Annotated>, LabelEnv)> {
+pub fn make_mgr_and_ir(
+    code: &str,
+) -> Result<(Mgr, Program<crate::annotate::grammar::Annotated>, LabelEnv)> {
     tracing::info!("compiling code:\n{code}");
     tracing::trace!("making manager");
     let p = crate::parser::program::parse(code)?;

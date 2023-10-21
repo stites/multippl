@@ -219,9 +219,9 @@ impl<'a> State<'a> {
     }
     pub fn mult_pq(&mut self, p: f64, q: f64) {
         // if !(p == q) {
-            self.log_pq.lp += p.ln();
-            self.log_pq.lq += q.ln();
-            info!("{:?}", self.log_pq);
+        self.log_pq.lp += p.ln();
+        self.log_pq.lq += q.ln();
+        info!("{:?}", self.log_pq);
         // }
     }
     pub fn eval_program(&mut self, prog: &Program<Annotated>) -> Result<Output> {
@@ -495,12 +495,10 @@ impl<'a> State<'a> {
                         let mut callix = 0;
                         while niters > 0 {
                             let anfarg = Anf::AVal((), arg.clone());
-                            let o = self
-                                .eval_eexpr(
-                                    ctx.clone(),
-                                    &EApp(FnCall(*fid, callix), fname.clone(), vec![anfarg]),
-                                )?
-                                ;
+                            let o = self.eval_eexpr(
+                                ctx.clone(),
+                                &EApp(FnCall(*fid, callix), fname.clone(), vec![anfarg]),
+                            )?;
                             out = Some(o.clone());
                             ctx = ctx.new_from_eoutput(&o.exact);
                             arg = if o.exact.out.len() == 1 {

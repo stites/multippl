@@ -281,19 +281,18 @@ pub fn eval_sanf_vec(
     anfs: &[AnfAnn<SVal>],
     op: impl Fn(Vec<AnfTr<SVal>>) -> AnfTr<SVal>,
 ) -> Result<Output> {
-    let outs: Vec<SVal> =
-        anfs.iter().fold(Ok(vec![]), |acc, a| match acc {
-            Ok(mut vs) => {
-                let aout = eval_sanf(state, ctx, a)?;
-                if aout.sample.out.len() > 1 {
-                    return errors::generic("nested vector not (yet) supported");
-                } else {
-                    vs.extend(aout.sample.out);
-                }
-                Ok(vs)
+    let outs: Vec<SVal> = anfs.iter().fold(Ok(vec![]), |acc, a| match acc {
+        Ok(mut vs) => {
+            let aout = eval_sanf(state, ctx, a)?;
+            if aout.sample.out.len() > 1 {
+                return errors::generic("nested vector not (yet) supported");
+            } else {
+                vs.extend(aout.sample.out);
             }
-            Err(e) => Err(e),
-        })?;
+            Ok(vs)
+        }
+        Err(e) => Err(e),
+    })?;
     tracing::debug!("sanf_vec: {outs:?}");
     let o = ctx.sample.as_output(vec![SVal::SVec(outs)]);
     let o = ctx.mk_soutput(o);
@@ -645,19 +644,18 @@ pub fn eval_eanf<'a>(
         ),
 
         AnfProd(anfs) => {
-            let outs: Vec<EVal> =
-                anfs.iter().fold(Ok(vec![]), |acc, a| match acc {
-                    Ok(mut vs) => {
-                        let aout = eval_eanf(state, ctx, a)?;
-                        if aout.out.len() > 1 {
-                            return errors::generic("nested vector not (yet) supported");
-                        } else {
-                            vs.extend(aout.out);
-                        }
-                        Ok(vs)
+            let outs: Vec<EVal> = anfs.iter().fold(Ok(vec![]), |acc, a| match acc {
+                Ok(mut vs) => {
+                    let aout = eval_eanf(state, ctx, a)?;
+                    if aout.out.len() > 1 {
+                        return errors::generic("nested vector not (yet) supported");
+                    } else {
+                        vs.extend(aout.out);
                     }
-                    Err(e) => Err(e),
-                })?;
+                    Ok(vs)
+                }
+                Err(e) => Err(e),
+            })?;
             Ok(ctx.exact.as_output(outs))
         }
         AnfPrj(var, ix) => {
