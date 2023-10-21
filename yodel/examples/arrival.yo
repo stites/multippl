@@ -32,6 +32,6 @@ exact fn diamond_arrival (npackets: Int) -> Int {
   destination_received_left + destination_received_right
 }
 sample {
-  p ~ poisson(10);
+  p ~ poisson(4096);
   exact (diamond_arrival(p))
 }
