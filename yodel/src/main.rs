@@ -74,16 +74,6 @@ fn setup_tracing(lvl: Level) {
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
-    println!("          /\\                                       ");
-    println!("         /**\\           The Yodel compiler         ");
-    println!("        /****\\   /\\                                ");
-    println!("       /      \\ /**\\                               ");
-    println!("      /  /\\    /    \\        /\\    /\\  /\\      /\\  ");
-    println!("     /  /  \\  /      \\      /  \\/\\/  \\/  \\  /\\/  \\ ");
-    println!("    /  /    \\/ /\\     \\    /    \\ \\  /    \\/ /   / ");
-    println!("   /  /      \\/  \\/\\   \\  /      \\    /   /    \\   ");
-    println!("__/__/_______/___/__\\___\\______________(art by jgs)");
-    println!("---------------------------------------------------");
     let strstep = args
         .steps
         .to_string()
@@ -95,11 +85,22 @@ fn main() -> Result<(), Box<dyn Error>> {
         .unwrap()
         .join(",");
     let lvl = verbosity_to_tracing(args.verbose.log_level_filter());
-    println!("       File: {}", args.file);
-    println!("    # Steps: {}", strstep);
-    println!("       Seed: {:?}", args.rng);
-    println!("Debug level: {:?}", lvl);
-    println!(" report BDD: {}", args.stats);
+
+    info!("          /\\                                       ");
+    info!("         /**\\           The Yodel compiler         ");
+    info!("        /****\\   /\\                                ");
+    info!("       /      \\ /**\\                               ");
+    info!("      /  /\\    /    \\        /\\    /\\  /\\      /\\  ");
+    info!("     /  /  \\  /      \\      /  \\/\\/  \\/  \\  /\\/  \\ ");
+    info!("    /  /    \\/ /\\     \\    /    \\ \\  /    \\/ /   / ");
+    info!("   /  /      \\/  \\/\\   \\  /      \\    /   /    \\   ");
+    info!("__/__/_______/___/__\\___\\______________(art by jgs)");
+    info!("---------------------------------------------------");
+    info!("       File: {}", args.file);
+    info!("    # Steps: {}", strstep);
+    info!("       Seed: {:?}", args.rng);
+    info!("Debug level: {:?}", lvl);
+    info!(" report BDD: {}", args.stats);
     setup_tracing(lvl);
 
     let pth = PathBuf::from(args.file);
@@ -123,10 +124,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("Computed:\n{:?}", query);
     }
 
-    if elapsed_time.as_secs() > 10 {
-        println!("Took {}s", elapsed_time.as_secs());
-    } else {
-        println!("Took {}ms", elapsed_time.as_millis());
-    }
+    // if elapsed_time.as_secs() > 10 {
+    //     println!("Took {}s", elapsed_time.as_secs());
+    // } else {
+    println!("Took {}ms", elapsed_time.as_millis());
+    // }
     Ok(())
 }

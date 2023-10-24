@@ -18,38 +18,36 @@ pub fn eval_sanf_var(
     nv: &NamedVar,
     s: &str,
 ) -> Result<Output> {
-    let sout = ctx.sample.as_output(vec![]);
+    let sout = ctx.sample.as_output(None);
     let mut out = ctx.mk_soutput(sout);
 
-    match out.sample.substitutions.get(&nv.id()).map(Subst::val) {
+    match out.sample.substitutions.get(&nv.id()) {
         Some(vs) => {
-            out.sample.out = vs;
+            out.sample.out = Some(vs.clone());
             Ok(out)
         }
-        None => match out.exact.substitutions.get(&nv.id()).map(Subst::val) {
+        None => match out.clone().exact.substitutions.get(&nv.id()) {
             None => Err(Generic(format!(
                 "variable {} does not reference known substitution in: s{:?}, e{:?}",
                 nv.name, out.sample.substitutions, out.exact.substitutions
             ))),
-            Some(vs) => match &vs[..] {
-                [EVal::EBdd(dist)] => {
+            Some(vs) => match vs {
+                EVal::EBdd(dist) => {
                     let sample = super::sample::exact2sample_bdd_eff(state, &mut out, dist);
-                    out.sample.out.push(SVal::SBool(sample));
+                    out.sample.out = Some(SVal::SBool(sample));
                     out.sample.substitutions.insert(
                         nv.id(),
-                        Subst::mk(vec![SVal::SBool(sample)], Some(Var::Named(nv.clone()))),
+                        SVal::SBool(sample), // ], Some(Var::Named(nv.clone()))),
                     );
                     Ok(out)
                 }
                 _ => {
-                    let embedding = vs
-                        .iter()
-                        .map(SExpr::<Trace>::embed)
-                        .collect::<Result<Vec<_>>>()?;
-                    out.sample.out = embedding.clone();
+                    let embedding = SExpr::<Trace>::embed(vs)?;
+                    out.sample.out = Some(embedding.clone());
                     out.sample
                         .substitutions
-                        .insert(nv.id(), Subst::mk(embedding, Some(Var::Named(nv.clone()))));
+                        // .insert(nv.id(), Subst::mk(embedding, Some(Var::Named(nv.clone()))));
+                        .insert(nv.id(), embedding);
                     Ok(out)
                 }
             },
@@ -63,26 +61,28 @@ pub fn eval_eanf_var(
     nv: &NamedVar,
     s: &str,
 ) -> Result<EOutput> {
-    let mut eout = ctx.exact.as_output(vec![]);
+    let mut eout = ctx.exact.as_output(None);
 
-    match ctx.exact.substitutions.get(&nv.id()).map(Subst::val) {
+    match ctx.exact.substitutions.get(&nv.id()) {
         Some(vs) => {
-            eout.out = vs;
+            eout.out = Some(vs.clone());
             Ok(eout)
         }
-        None => match ctx.sample.substitutions.get(&nv.id()).map(Subst::val) {
+        None => match ctx.sample.substitutions.get(&nv.id()) {
             None => Err(Generic(format!(
                 "variable {} does not reference known substitution in: s{:?}, e{:?}",
                 nv.name, ctx.sample.substitutions, ctx.exact.substitutions
             ))),
             Some(vs) => {
-                let embedding = vs
-                    .iter()
-                    .map(EExpr::<Trace>::embed)
-                    .collect::<Result<Vec<_>>>()?;
-                eout.out = embedding.clone();
+                let embedding = EExpr::<Trace>::embed(vs)?;
+                // let embedding = vs
+                //     .iter()
+                //     .map(EExpr::<Trace>::embed)
+                //     .collect::<Result<Vec<_>>>()?;
+                eout.out = Some(embedding.clone());
                 eout.substitutions
-                    .insert(nv.id(), Subst::mk(embedding, Some(Var::Named(nv.clone()))));
+                    // .insert(nv.id(), Subst::mk(embedding, Some(Var::Named(nv.clone()))));
+                    .insert(nv.id(), embedding.clone());
                 Ok(eout)
             }
         },
@@ -100,14 +100,14 @@ pub fn eval_sanf_numop<'a>(
 ) -> Result<Output> {
     let ol = eval_sanf(state, ctx, &bl)?;
     let or = eval_sanf(state, ctx, &br)?;
-    match (&ol.sample.out[..], &or.sample.out[..]) {
-        ([SVal::SFloat(l)], [SVal::SFloat(r)]) => {
-            let out = ctx.sample.as_output(vec![SVal::SFloat(fop(*l, *r))]);
+    match (&ol.sample.out, &or.sample.out) {
+        (Some(SVal::SFloat(l)), Some(SVal::SFloat(r))) => {
+            let out = ctx.sample.as_output(Some(SVal::SFloat(fop(*l, *r))));
             let out = ctx.mk_soutput(out);
             Ok(out)
         }
-        ([SVal::SInt(l)], [SVal::SInt(r)]) => {
-            let out = ctx.sample.as_output(vec![SVal::SInt(iop(*l, *r))]);
+        (Some(SVal::SInt(l)), Some(SVal::SInt(r))) => {
+            let out = ctx.sample.as_output(Some(SVal::SInt(iop(*l, *r))));
             let out = ctx.mk_soutput(out);
             Ok(out)
         }
@@ -127,24 +127,24 @@ pub fn eval_eanf_numop<'a>(
     let _enter = span.enter();
     let ol = eval_eanf(state, ctx, &bl)?;
     let or = eval_eanf(state, ctx, &br)?;
-    match (&ol.out[..], &or.out[..]) {
-        ([EVal::EFloat(l)], [EVal::EFloat(r)]) => {
+    match (&ol.out, &or.out) {
+        (Some(EVal::EFloat(l)), Some(EVal::EFloat(r))) => {
             let x = fop(*l, *r);
             tracing::debug!("{l} <fop> {r} = {x}");
-            let out = ctx.exact.as_output(vec![EVal::EFloat(x)]);
+            let out = ctx.exact.as_output(Some(EVal::EFloat(x)));
             Ok(out)
         }
-        ([EVal::EInteger(l)], [EVal::EInteger(r)]) => {
+        (Some(EVal::EInteger(l)), Some(EVal::EInteger(r))) => {
             // let l = integers::from_prod(l)?;
             // let r = integers::from_prod(r)?;
             let x = iop(*l, *r);
             tracing::debug!("{l} <iop> {r} = {x}");
-            // let out = ctx.exact.as_output(vec![integers::as_onehot(x)]);
-            let out = ctx.exact.as_output(vec![EVal::EInteger(x)]);
+            // let out = ctx.exact.as_output(Some(integers::as_onehot(x)));
+            let out = ctx.exact.as_output(Some(EVal::EInteger(x)));
             Ok(out)
         }
-        // ([EVal::EInteger(l)], _) => return errors::erased(),
-        // (_, [EVal::EInteger(r)]) => return errors::erased(),
+        // (Some(EVal::EInteger(l)], _) => return errors::erased(),
+        // (_, [EVal::EInteger(r))) => return errors::erased(),
         (l, r) => {
             return errors::typecheck_failed(&format!(
                 "eanf numop. Arguments:\nleft: {:?}\nright: {:?}",
@@ -163,9 +163,9 @@ pub fn eval_sanf_bop<'a>(
 ) -> Result<Output> {
     let ol = eval_sanf(state, ctx, &bl)?;
     let or = eval_sanf(state, ctx, &br)?;
-    match (&ol.sample.out[..], &or.sample.out[..]) {
-        ([SVal::SBool(l)], [SVal::SBool(r)]) => {
-            let out = ctx.sample.as_output(vec![SVal::SBool(bop(*l, *r))]);
+    match (&ol.sample.out, &or.sample.out) {
+        (Some(SVal::SBool(l)), Some(SVal::SBool(r))) => {
+            let out = ctx.sample.as_output(Some(SVal::SBool(bop(*l, *r))));
             let out = ctx.mk_soutput(out);
             Ok(out)
         }
@@ -191,13 +191,13 @@ pub fn eval_eanf_bop(
 
     let ol = eval_eanf(state, ctx, &bl)?;
     let or = eval_eanf(state, ctx, &br)?;
-    match (&ol.out[..], &or.out[..]) {
-        ([EVal::EBdd(l)], [EVal::EBdd(r)]) => {
-            let out = ctx.exact.as_output(vec![EVal::EBdd(bop(
+    match (&ol.out, &or.out) {
+        (Some(EVal::EBdd(l)), Some(EVal::EBdd(r))) => {
+            let out = ctx.exact.as_output(Some(EVal::EBdd(bop(
                 &mut state.mgr,
                 Box::new(l.clone()),
                 Box::new(r.clone()),
-            ))]);
+            ))));
             Ok(out)
         }
         _ => return errors::typecheck_failed("eanf boolop"),
@@ -216,19 +216,19 @@ pub fn eval_sanf_cop(
 ) -> Result<Output> {
     let ol = eval_sanf(state, ctx, &bl)?;
     let or = eval_sanf(state, ctx, &br)?;
-    match (&ol.sample.out[..], &or.sample.out[..]) {
-        ([SVal::SBool(l)], [SVal::SBool(r)]) => {
-            let out = ctx.sample.as_output(vec![SVal::SBool(bop(l, r))]);
+    match (&ol.sample.out, &or.sample.out) {
+        (Some(SVal::SBool(l)), Some(SVal::SBool(r))) => {
+            let out = ctx.sample.as_output(Some(SVal::SBool(bop(l, r))));
             let out = ctx.mk_soutput(out);
             Ok(out)
         }
-        ([SVal::SFloat(l)], [SVal::SFloat(r)]) => {
-            let out = ctx.sample.as_output(vec![SVal::SBool(fop(l, r))]);
+        (Some(SVal::SFloat(l)), Some(SVal::SFloat(r))) => {
+            let out = ctx.sample.as_output(Some(SVal::SBool(fop(l, r))));
             let out = ctx.mk_soutput(out);
             Ok(out)
         }
-        ([SVal::SInt(l)], [SVal::SInt(r)]) => {
-            let out = ctx.sample.as_output(vec![SVal::SBool(iop(l, r))]);
+        (Some(SVal::SInt(l)), Some(SVal::SInt(r))) => {
+            let out = ctx.sample.as_output(Some(SVal::SBool(iop(l, r))));
             let out = ctx.mk_soutput(out);
             Ok(out)
         }
@@ -248,28 +248,28 @@ pub fn eval_eanf_cop(
 ) -> Result<EOutput> {
     let ol = eval_eanf(state, ctx, &bl)?;
     let or = eval_eanf(state, ctx, &br)?;
-    match (&ol.out[..], &or.out[..]) {
-        ([EVal::EBdd(l)], [EVal::EBdd(r)]) => match bop {
+    match (&ol.out, &or.out) {
+        (Some(EVal::EBdd(l)), Some(EVal::EBdd(r))) => match bop {
             None => return errors::typecheck_failed("eanf compare op invalid"),
             Some(mut bop) => {
-                let out = ctx.exact.as_output(vec![EVal::EBdd(bop(
+                let out = ctx.exact.as_output(Some(EVal::EBdd(bop(
                     &mut state.mgr,
                     Box::new(l.clone()),
                     Box::new(r.clone()),
-                ))]);
+                ))));
                 Ok(out)
             }
         },
-        ([EVal::EFloat(l)], [EVal::EFloat(r)]) => {
+        (Some(EVal::EFloat(l)), Some(EVal::EFloat(r))) => {
             let out = ctx
                 .exact
-                .as_output(vec![EVal::EBdd(BddPtr::from_bool(fop(l, r)))]);
+                .as_output(Some(EVal::EBdd(BddPtr::from_bool(fop(l, r)))));
             Ok(out)
         }
-        ([EVal::EInteger(l)], [EVal::EInteger(r)]) => {
+        (Some(EVal::EInteger(l)), Some(EVal::EInteger(r))) => {
             let out = ctx
                 .exact
-                .as_output(vec![EVal::EBdd(BddPtr::from_bool(iop(l, r)))]);
+                .as_output(Some(EVal::EBdd(BddPtr::from_bool(iop(l, r)))));
             Ok(out)
         }
         _ => return errors::typecheck_failed("eanf compare op"),
@@ -281,20 +281,13 @@ pub fn eval_sanf_vec(
     anfs: &[AnfAnn<SVal>],
     op: impl Fn(Vec<AnfTr<SVal>>) -> AnfTr<SVal>,
 ) -> Result<Output> {
-    let outs: Vec<SVal> = anfs.iter().fold(Ok(vec![]), |acc, a| match acc {
-        Ok(mut vs) => {
-            let aout = eval_sanf(state, ctx, a)?;
-            if aout.sample.out.len() > 1 {
-                return errors::generic("nested vector not (yet) supported");
-            } else {
-                vs.extend(aout.sample.out);
-            }
-            Ok(vs)
-        }
-        Err(e) => Err(e),
-    })?;
+    let outs: Vec<SVal> = anfs.iter().map(|a| {
+        let aout = eval_sanf(state, ctx, a)?;
+        let ov = aout.sample.out.unwrap();
+        Ok(ov)
+    }).collect::<Result<Vec<SVal>>>()?;
     tracing::debug!("sanf_vec: {outs:?}");
-    let o = ctx.sample.as_output(vec![SVal::SVec(outs)]);
+    let o = ctx.sample.as_output(Some(SVal::SVec(outs)));
     let o = ctx.mk_soutput(o);
     Ok(o)
 }
@@ -309,9 +302,9 @@ fn eval_sanf_dist2(
 ) -> Result<Output> {
     let o0 = eval_sanf(state, ctx, p0)?;
     let o1 = eval_sanf(state, ctx, p1)?;
-    match (&o0.sample.out[..], &o1.sample.out[..]) {
-        ([SVal::SFloat(l)], [SVal::SFloat(r)]) => {
-            let out = ctx.sample.as_output(vec![SVal::SDist(mkdist(*l, *r))]);
+    match (&o0.sample.out, &o1.sample.out) {
+        (Some(SVal::SFloat(l)), Some(SVal::SFloat(r))) => {
+            let out = ctx.sample.as_output(Some(SVal::SDist(mkdist(*l, *r))));
 
             let out = ctx.mk_soutput(out);
             let ext = (sv.clone(), out.sample.clone());
@@ -342,10 +335,10 @@ fn eval_sanf_dist_vec(
     mkanf: impl Fn((SampledVar, SOutput), Vec<AnfTr<SVal>>) -> AnfTr<SVal>,
 ) -> Result<Output> {
     let o = eval_sanfs(state, ctx, ps)?;
-    match &o.sample.out[..] {
-        [SVal::SVec(vs)] => {
+    match &o.sample.out {
+        Some(SVal::SVec(vs)) => {
             let vs = vals2vec_params(&vs)?;
-            let out = ctx.sample.as_output(vec![SVal::SDist(mkdist(vs))]);
+            let out = ctx.sample.as_output(Some(SVal::SDist(mkdist(vs))));
             let out = ctx.mk_soutput(out);
             let ext = (sv.clone(), out.sample.clone());
             Ok(out)
@@ -364,7 +357,7 @@ pub fn eval_sanf<'a>(
     match a {
         AVal(_, v) => {
             tracing::debug!("aval in: {v:?}");
-            let out = ctx.sample.as_output(vec![v.clone()]);
+            let out = ctx.sample.as_output(Some(v.clone()));
             let out = ctx.mk_soutput(out);
             tracing::debug!("aval ot: {out:?}");
             Ok(out)
@@ -376,9 +369,9 @@ pub fn eval_sanf<'a>(
         }
         Neg(bl) => {
             let ol = eval_sanf(state, ctx, &bl)?;
-            match &ol.sample.out[..] {
-                [SVal::SBool(l)] => {
-                    let out = ctx.sample.as_output(vec![SVal::SBool(!*l)]);
+            match &ol.sample.out {
+                Some(SVal::SBool(l)) => {
+                    let out = ctx.sample.as_output(Some(SVal::SBool(!*l)));
                     let out = ctx.mk_soutput(out);
                     Ok(out)
                 }
@@ -449,19 +442,14 @@ pub fn eval_sanf<'a>(
         AnfPrj(var, ix) => {
             let ovar = eval_sanf(state, ctx, var)?;
             let oix = eval_sanf(state, ctx, ix)?;
-            match (&ovar.sample.out[..], &oix.sample.out[..]) {
-                ([SVal::SProd(vs)], [SVal::SInt(i)]) => {
-                    let out = ctx.sample.as_output(vec![vs[*i as usize].clone()]);
+            match (&ovar.sample.out, &oix.sample.out) {
+                (Some(SVal::SProd(vs)), Some(SVal::SInt(i))) => {
+                    let out = ctx.sample.as_output(Some(vs[*i as usize].clone()));
                     let out = ctx.mk_soutput(out);
                     Ok(out)
                 }
-                ([SVal::SVec(vs)], [SVal::SInt(i)]) => {
-                    let out = ctx.sample.as_output(vec![vs[*i as usize].clone()]);
-                    let out = ctx.mk_soutput(out);
-                    Ok(out)
-                }
-                (xs, [SVal::SInt(i)]) => {
-                    let out = ctx.sample.as_output(vec![xs[*i as usize].clone()]);
+                (Some(SVal::SVec(vs)), Some(SVal::SInt(i))) => {
+                    let out = ctx.sample.as_output(Some(vs[*i as usize].clone()));
                     let out = ctx.mk_soutput(out);
                     Ok(out)
                 }
@@ -470,9 +458,9 @@ pub fn eval_sanf<'a>(
         }
         AnfBernoulli(sv, p) => {
             let o = eval_sanf(state, ctx, p)?;
-            match &o.sample.out[..] {
-                [SVal::SFloat(f)] => {
-                    let out = ctx.sample.as_output(vec![SVal::SDist(Dist::Bern(*f))]);
+            match &o.sample.out {
+                Some(SVal::SFloat(f)) => {
+                    let out = ctx.sample.as_output(Some(SVal::SDist(Dist::Bern(*f))));
                     let out = ctx.mk_soutput(out);
                     let ext = (sv.clone(), out.sample.clone());
                     Ok(out)
@@ -482,17 +470,17 @@ pub fn eval_sanf<'a>(
         }
         AnfPoisson(sv, p) => {
             let o = eval_sanf(state, ctx, p)?;
-            match &o.sample.out[..] {
-                [SVal::SInt(i)] => {
+            match &o.sample.out {
+                Some(SVal::SInt(i)) => {
                     let out = ctx
                         .sample
-                        .as_output(vec![SVal::SDist(Dist::Poisson(*i as f64))]);
+                        .as_output(Some(SVal::SDist(Dist::Poisson(*i as f64))));
                     let out = ctx.mk_soutput(out);
                     let ext = (sv.clone(), out.sample.clone());
                     Ok(out)
                 }
-                [SVal::SFloat(f)] => {
-                    let out = ctx.sample.as_output(vec![SVal::SDist(Dist::Poisson(*f))]);
+                Some(SVal::SFloat(f)) => {
+                    let out = ctx.sample.as_output(Some(SVal::SDist(Dist::Poisson(*f))));
                     let out = ctx.mk_soutput(out);
                     let ext = (sv.clone(), out.sample.clone());
                     Ok(out)
@@ -517,13 +505,12 @@ pub fn eval_sanfs(
     ctx: &Ctx,
     anfs: &[AnfAnn<SVal>],
 ) -> Result<Output> {
-    let svals = anfs.iter().fold(Ok(vec![]), |res, a| {
-        let svals_fin = res?;
+    let svals = anfs.iter().map(|a| {
         let o = eval_sanf(state, ctx, a)?;
-        let svals = svals_fin.iter().chain(&o.sample.out).cloned().collect_vec();
+        let svals = o.sample.out.unwrap();
         Ok(svals)
-    })?;
-    let out = ctx.sample.as_output(svals);
+    }).collect::<Result<Vec<_>>>()?;
+    let out = ctx.sample.as_output(Some(SVal::SVec(svals)));
     let out = ctx.mk_soutput(out);
     Ok(out)
 }
@@ -540,7 +527,7 @@ pub fn eval_eanf<'a>(
             let _enter = span.enter();
             tracing::debug!("val");
 
-            let out = ctx.exact.as_output(vec![v.clone()]);
+            let out = ctx.exact.as_output(Some(v.clone()));
             Ok(out)
         }
         AVar(d, s) => {
@@ -557,9 +544,9 @@ pub fn eval_eanf<'a>(
             tracing::debug!("neg");
 
             let ol = eval_eanf(state, ctx, &bl)?;
-            match &ol.out[..] {
-                [EVal::EBdd(bdd)] => {
-                    let out = ctx.exact.as_output(vec![EVal::EBdd(bdd.neg())]);
+            match &ol.out {
+                Some(EVal::EBdd(bdd)) => {
+                    let out = ctx.exact.as_output(Some(EVal::EBdd(bdd.neg())));
                     Ok(out)
                 }
                 _ => return errors::typecheck_failed("anf negation"),
@@ -644,34 +631,21 @@ pub fn eval_eanf<'a>(
         ),
 
         AnfProd(anfs) => {
-            let outs: Vec<EVal> = anfs.iter().fold(Ok(vec![]), |acc, a| match acc {
-                Ok(mut vs) => {
-                    let aout = eval_eanf(state, ctx, a)?;
-                    if aout.out.len() > 1 {
-                        return errors::generic("nested vector not (yet) supported");
-                    } else {
-                        vs.extend(aout.out);
-                    }
-                    Ok(vs)
-                }
-                Err(e) => Err(e),
-            })?;
-            Ok(ctx.exact.as_output(outs))
+            let outs: Vec<EVal> = anfs.iter().map(|a| {
+                let aout = eval_eanf(state, ctx, a)?;
+                Ok(aout.out.unwrap())
+            }).collect::<Result<Vec<_>>>()?;
+            Ok(ctx.exact.as_output(Some(EVal::EProd(outs))))
         }
         AnfPrj(var, ix) => {
             let ovar = eval_eanf(state, ctx, var)?;
             let oix = eval_eanf(state, ctx, ix)?;
 
-            match (&ovar.out[..], &oix.out[..]) {
-                ([EVal::EProd(vs)], [EVal::EInteger(i)]) => {
-                    let out = ctx.exact.as_output(vec![vs[*i].clone()]);
+            match (&ovar.out, &oix.out) {
+                (Some(EVal::EProd(vs)), Some(EVal::EInteger(i))) => {
+                    let out = ctx.exact.as_output(Some(vs[*i].clone()));
                     Ok(out)
                 }
-                (vs, [EVal::EInteger(i)]) => {
-                    let out = ctx.exact.as_output(vec![vs[*i].clone()]);
-                    Ok(out)
-                }
-
                 (l, r) => {
                     return errors::typecheck_failed(&format!(
                         "anf projection:\nprod: {:?}\nindex: {:?}",
@@ -696,11 +670,10 @@ pub fn eval_eanfs(
     ctx: &Ctx,
     anfs: &[AnfAnn<EVal>],
 ) -> Result<EOutput> {
-    let vals = anfs.iter().fold(Ok(vec![]), |res, a| {
-        let vals_fin = res?;
+    let vals = anfs.iter().map(|a| {
         let o = eval_eanf(state, ctx, a)?;
-        let vals = vals_fin.iter().chain(&o.out).cloned().collect_vec();
+        let vals = o.out.unwrap();
         Ok(vals)
-    })?;
-    Ok(ctx.exact.as_output(vals))
+    }).collect::<Result<Vec<_>>>()?;
+    Ok(ctx.exact.as_output(Some(EVal::EProd(vals))))
 }

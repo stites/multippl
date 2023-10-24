@@ -35,7 +35,7 @@ where
     }
 }
 
-pub type SubstMap<V> = HashMap<UniqueId, Subst<V>>;
+pub type SubstMap<V> = HashMap<UniqueId, V>;
 pub type Tr = Vec<(SVal, Dist, Probability, Option<UniqueId>)>;
 
 /// exact compilation context
@@ -109,7 +109,7 @@ impl From<&EOutput> for ECtx {
 // }
 
 impl ECtx {
-    pub fn as_output(&self, out: Vec<EVal>) -> EOutput {
+    pub fn as_output(&self, out: Option<EVal>) -> EOutput {
         EOutput {
             out,
             accept: self.accept.clone(),
@@ -124,7 +124,7 @@ impl ECtx {
 #[derive(Debug, Clone, PartialEq)]
 pub struct EOutput {
     /// compiled distributions
-    pub out: Vec<EVal>,
+    pub out: Option<EVal>,
     /// acceptance criteria
     pub accept: BddPtr,
     /// sample consistency
@@ -139,8 +139,21 @@ impl GetSamples for EOutput {
         _all_samples(&self.samples, mgr)
     }
 }
+pub fn as_dists(outs: Vec<EVal>) -> Vec<BddPtr> {
+    outs.iter().cloned()
+        .filter(|v| match v {
+            EVal::EBdd(b) => true,
+            a => false,
+        })
+        .map(|v| match v {
+            EVal::EBdd(b) => Ok(b),
+            a => errors::typecheck_failed(&format!("eoutput projection into bdds got {a:?}")),
+        })
+        .collect::<Result<Vec<_>>>()
+        .unwrap()
+}
 impl EOutput {
-    pub fn from_anf_out(ctx: &ECtx, out: Vec<EVal>) -> Self {
+    pub fn from_anf_out(ctx: &ECtx, out: Option<EVal>) -> Self {
         EOutput {
             out,
             accept: ctx.accept.clone(),
@@ -161,16 +174,13 @@ impl EOutput {
             })
     }
     pub fn dists(&self) -> Vec<BddPtr> {
-        self.out
-            .iter()
-            .cloned()
-            .map(|v| match v {
-                EVal::EBdd(b) => Ok(b),
-                a => errors::typecheck_failed(&format!("eoutput projection into bdds got {a:?}")),
-            })
-            .collect::<Result<Vec<_>>>()
-            .unwrap()
+        match &self.out {
+            Some(EVal::EBdd(b)) => vec![*b],
+            Some(EVal::EProd(bs)) => as_dists(bs.to_vec()),
+           a => errors::typecheck_failed(&format!("eoutput projection into bdds got {a:?}")).unwrap(),
+        }
     }
+
 }
 impl Default for EOutput {
     fn default() -> Self {
@@ -197,7 +207,7 @@ impl Default for SCtx {
     }
 }
 impl SCtx {
-    pub fn as_output(&self, out: Vec<SVal>) -> SOutput {
+    pub fn as_output(&self, out: Option<SVal>) -> SOutput {
         SOutput {
             out,
             trace: self.trace.clone(),
@@ -209,7 +219,7 @@ impl SCtx {
 #[derive(Default, Debug, Clone, PartialEq)]
 pub struct SOutput {
     /// compiled output
-    pub out: Vec<SVal>,
+    pub out: Option<SVal>,
     /// sampling substitutions
     pub substitutions: SubstMap<SVal>,
     // sampled values traces (and ids)
@@ -217,7 +227,7 @@ pub struct SOutput {
 }
 impl SOutput {
     pub fn head(&self) -> SVal {
-        self.out[0].clone()
+        self.out.clone().unwrap().clone()
     }
     pub fn pkg(&self) -> Output {
         Output::sample(self.clone())
@@ -249,12 +259,12 @@ impl Ctx {
     pub fn mk_eoutput(&self, exact: EOutput) -> Output {
         Output {
             exact,
-            sample: self.sample.as_output(vec![]),
+            sample: self.sample.as_output(None),
         }
     }
     pub fn mk_soutput(&self, sample: SOutput) -> Output {
         Output {
-            exact: self.exact.as_output(vec![]),
+            exact: self.exact.as_output(None),
             sample,
         }
     }

@@ -35,8 +35,13 @@ pub fn renderfloats(fs: &[f64], high_prec: bool) -> String {
     rendervec(&fs.iter().map(|x| fmt_f64(high_prec)(*x)).collect_vec())
 }
 
-pub fn renderbdds<V: std::fmt::Debug>(fs: &[V]) -> String {
-    rendervec(&fs.iter().map(|b| format!("{:?}", b)).collect_vec())
+pub fn renderbdds<V: std::fmt::Debug>(fs: &Option<V>) -> String {
+    format!("{:?}", fs)
+    // match fs {
+    //     Some(f) =>format!("{:?}", b),
+    //     None =>format!("", b),
+    // }
+    // rendervec(&fs.map(|b| format!("{:?}", b)))
 }
 
 pub fn rendervar(var: &Var) -> String {
@@ -48,13 +53,14 @@ pub fn rendervar(var: &Var) -> String {
     )
 }
 pub fn rendersubs(fs: &HashMap<UniqueId, (Vec<EVal>, Var)>) -> String {
-    format!(
-        "[{}]",
-        &fs.iter()
-            .map(|(k, (b, var))| format!("{:?}@{}: {}", k, rendervar(var), renderbdds(b)))
-            .collect_vec()
-            .join(" ,")
-    )
+    // format!(
+    //     "[{}]",
+    //     &fs.iter()
+    //         .map(|(k, (b, var))| format!("{:?}@{}: {}", k, rendervar(var), renderbdds(b)))
+    //         .collect_vec()
+    //         .join(" ,")
+    // )
+    panic!()
 }
 pub fn fmt_f64(high_precision: bool) -> impl Fn(f64) -> String {
     if high_precision {
@@ -90,9 +96,10 @@ pub fn renderw(ws: &WeightMap) -> String {
         .join(", ")
 }
 pub fn renderp<V: std::fmt::Debug + Clone + PartialEq>(ps: &SubstMap<V>) -> String {
-    ps.iter()
-        .map(|(k, v)| format!("{k}: {}", renderbdds(&v.val())))
-        .join(", ")
+    String::new()
+    // ps.iter()
+    //     .map(|(k, v)| format!("{k}: {}", renderbdds(&v.val())))
+    //     .join(", ")
 }
 pub fn renderssubs(ps: &SubstMap<SVal>) -> String {
     ps.iter().map(|(k, x)| format!("{k}: {:?}", x)).join(", ")
