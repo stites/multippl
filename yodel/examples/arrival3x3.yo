@@ -1,0 +1,14 @@
+exact fn arrival (tpl: (Bool, Int)) -> Int {
+  let prev = tpl[0] in
+  let npackets = tpl[1] in
+
+  let noise = 0.0001 in
+  let x00 = flip 0.5 in
+  let left00 = x00 in
+  let down00 = !x00 in
+
+  let x22 = down00 in
+  (x22 && prev, 1)
+
+}
+exact {iterate(arrival, true, 1) }

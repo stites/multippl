@@ -176,6 +176,7 @@
             fontconfig
 
             hunspellDicts.en_US-large
+            (python3.withPackages (ps: [ ps.numpy ]))
           ]
           ++ [
             lldb

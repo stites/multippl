@@ -87,6 +87,28 @@ fn program04_approx() {
     // check_invariant("p04", None, None, &mk(&allmarg("y", "x")));
 }
 
+#[test]
+// #[traced_test]
+fn program05_approx() {
+    let mk = |ret: &str| {
+        r#"sample {
+    exact {
+        let x = flip 1.0 / 3.0 in
+        let y = flip 1.0 / 4.0 in
+        let _ = observe x || y in
+    "#
+        .to_owned()
+            + ret
+            + "\n  }\n}"
+    };
+    let n = 5000;
+    // check_approx1("p04s/y  ", 3.0 / 6.0, &mk("y"), n);
+    check_approx1("p04s/x  ", 4.0 / 6.0, &mk("x"), n);
+    check_approx1("p04s/x|y", 6.0 / 6.0, &mk("x || y"), n);
+    check_approx1("p04s/x&y", 1.0 / 6.0, &mk("x && y"), n);
+    // check_invariant("p04", None, None, &mk(&allmarg("y", "x")));
+}
+
 // #[test]
 // #[ignore]
 // #[traced_test]

@@ -1,34 +1,309 @@
 sample {
   pb ~ beta(1.0, 1.0);
-  pb <- 0.5;
-  pn <- 0.0;
+  pn ~ normal(0.0, 1.0);
   bs <- exact {
-    let b1 = flip pb in
-    let _ = observe (b1 == false) in
-    let b2 = flip pb in
-    let _ = observe (b2 == false) in
-    let b3 = flip pb in
-    let _ = observe (b3 == true) in
-    let b4 = flip pb in
-    let _ = observe (b4 == true) in
-    let b5 = flip pb in
-    let _ = observe (b5 == false) in
-    let b6 = flip pb in
-    let _ = observe (b6 == false) in
-    let b7 = flip pb in
-    let _ = observe (b7 == true) in
-    let b8 = flip pb in
-    let _ = observe (b8 == true) in
-    (b1, b2, b3, b4, b5, b6, b7, b8)
+    let b1 = flip pb in let _ = observe (b1 == false) in
+    let b2 = flip pb in let _ = observe (b2 == false) in
+    let b3 = flip pb in let _ = observe (b3 == false) in
+    let b4 = flip pb in let _ = observe (b4 == true) in
+    let b5 = flip pb in let _ = observe (b5 == true) in
+    let b6 = flip pb in let _ = observe (b6 == false) in
+    let b7 = flip pb in let _ = observe (b7 == false) in
+    let b8 = flip pb in let _ = observe (b8 == true) in
+    let b9 = flip pb in let _ = observe (b9 == true) in
+    let b10 = flip pb in let _ = observe (b10 == false) in
+    let b11 = flip pb in let _ = observe (b11 == true) in
+    let b12 = flip pb in let _ = observe (b12 == true) in
+    let b13 = flip pb in let _ = observe (b13 == false) in
+    let b14 = flip pb in let _ = observe (b14 == true) in
+    let b15 = flip pb in let _ = observe (b15 == false) in
+    let b16 = flip pb in let _ = observe (b16 == false) in
+    let b17 = flip pb in let _ = observe (b17 == false) in
+    let b18 = flip pb in let _ = observe (b18 == false) in
+    let b19 = flip pb in let _ = observe (b19 == false) in
+    let b20 = flip pb in let _ = observe (b20 == false) in
+    let b21 = flip pb in let _ = observe (b21 == false) in
+    let b22 = flip pb in let _ = observe (b22 == false) in
+    let b23 = flip pb in let _ = observe (b23 == false) in
+    let b24 = flip pb in let _ = observe (b24 == false) in
+    let b25 = flip pb in let _ = observe (b25 == false) in
+    let b26 = flip pb in let _ = observe (b26 == false) in
+    let b27 = flip pb in let _ = observe (b27 == false) in
+    let b28 = flip pb in let _ = observe (b28 == true) in
+    let b29 = flip pb in let _ = observe (b29 == false) in
+    let b30 = flip pb in let _ = observe (b30 == false) in
+    let b31 = flip pb in let _ = observe (b31 == false) in
+    let b32 = flip pb in let _ = observe (b32 == false) in
+    let b33 = flip pb in let _ = observe (b33 == false) in
+    let b34 = flip pb in let _ = observe (b34 == false) in
+    let b35 = flip pb in let _ = observe (b35 == false) in
+    let b36 = flip pb in let _ = observe (b36 == false) in
+    let b37 = flip pb in let _ = observe (b37 == false) in
+    let b38 = flip pb in let _ = observe (b38 == true) in
+    let b39 = flip pb in let _ = observe (b39 == false) in
+    let b40 = flip pb in let _ = observe (b40 == false) in
+    let b41 = flip pb in let _ = observe (b41 == false) in
+    let b42 = flip pb in let _ = observe (b42 == true) in
+    let b43 = flip pb in let _ = observe (b43 == false) in
+    let b44 = flip pb in let _ = observe (b44 == false) in
+    let b45 = flip pb in let _ = observe (b45 == false) in
+    let b46 = flip pb in let _ = observe (b46 == false) in
+    let b47 = flip pb in let _ = observe (b47 == false) in
+    let b48 = flip pb in let _ = observe (b48 == false) in
+    let b49 = flip pb in let _ = observe (b49 == false) in
+    let b50 = flip pb in let _ = observe (b50 == false) in
+    let b51 = flip pb in let _ = observe (b51 == false) in
+    let b52 = flip pb in let _ = observe (b52 == false) in
+    let b53 = flip pb in let _ = observe (b53 == false) in
+    let b54 = flip pb in let _ = observe (b54 == true) in
+    let b55 = flip pb in let _ = observe (b55 == false) in
+    let b56 = flip pb in let _ = observe (b56 == true) in
+    let b57 = flip pb in let _ = observe (b57 == false) in
+    let b58 = flip pb in let _ = observe (b58 == false) in
+    let b59 = flip pb in let _ = observe (b59 == false) in
+    let b60 = flip pb in let _ = observe (b60 == false) in
+    let b61 = flip pb in let _ = observe (b61 == false) in
+    let b62 = flip pb in let _ = observe (b62 == true) in
+    let b63 = flip pb in let _ = observe (b63 == false) in
+    let b64 = flip pb in let _ = observe (b64 == false) in
+    let b65 = flip pb in let _ = observe (b65 == false) in
+    let b66 = flip pb in let _ = observe (b66 == false) in
+    let b67 = flip pb in let _ = observe (b67 == false) in
+    let b68 = flip pb in let _ = observe (b68 == true) in
+    let b69 = flip pb in let _ = observe (b69 == false) in
+    let b70 = flip pb in let _ = observe (b70 == true) in
+    let b71 = flip pb in let _ = observe (b71 == false) in
+    let b72 = flip pb in let _ = observe (b72 == false) in
+    let b73 = flip pb in let _ = observe (b73 == false) in
+    let b74 = flip pb in let _ = observe (b74 == false) in
+    let b75 = flip pb in let _ = observe (b75 == false) in
+    let b76 = flip pb in let _ = observe (b76 == false) in
+    let b77 = flip pb in let _ = observe (b77 == false) in
+    let b78 = flip pb in let _ = observe (b78 == true) in
+    let b79 = flip pb in let _ = observe (b79 == true) in
+    let b80 = flip pb in let _ = observe (b80 == false) in
+    let b81 = flip pb in let _ = observe (b81 == false) in
+    let b82 = flip pb in let _ = observe (b82 == false) in
+    let b83 = flip pb in let _ = observe (b83 == true) in
+    let b84 = flip pb in let _ = observe (b84 == true) in
+    let b85 = flip pb in let _ = observe (b85 == true) in
+    let b86 = flip pb in let _ = observe (b86 == false) in
+    let b87 = flip pb in let _ = observe (b87 == true) in
+    let b88 = flip pb in let _ = observe (b88 == false) in
+    let b89 = flip pb in let _ = observe (b89 == false) in
+    let b90 = flip pb in let _ = observe (b90 == false) in
+    let b91 = flip pb in let _ = observe (b91 == false) in
+    let b92 = flip pb in let _ = observe (b92 == false) in
+    let b93 = flip pb in let _ = observe (b93 == false) in
+    let b94 = flip pb in let _ = observe (b94 == true) in
+    let b95 = flip pb in let _ = observe (b95 == true) in
+    let b96 = flip pb in let _ = observe (b96 == false) in
+    let b97 = flip pb in let _ = observe (b97 == false) in
+    let b98 = flip pb in let _ = observe (b98 == true) in
+    let b99 = flip pb in let _ = observe (b99 == false) in
+    let b100 = flip pb in let _ = observe (b100 == false) in
+    let b101 = flip pb in let _ = observe (b101 == false) in
+    let b102 = flip pb in let _ = observe (b102 == false) in
+    let b103 = flip pb in let _ = observe (b103 == false) in
+    let b104 = flip pb in let _ = observe (b104 == false) in
+    let b105 = flip pb in let _ = observe (b105 == false) in
+    let b106 = flip pb in let _ = observe (b106 == true) in
+    let b107 = flip pb in let _ = observe (b107 == false) in
+    let b108 = flip pb in let _ = observe (b108 == false) in
+    let b109 = flip pb in let _ = observe (b109 == false) in
+    let b110 = flip pb in let _ = observe (b110 == true) in
+    let b111 = flip pb in let _ = observe (b111 == false) in
+    let b112 = flip pb in let _ = observe (b112 == false) in
+    let b113 = flip pb in let _ = observe (b113 == false) in
+    let b114 = flip pb in let _ = observe (b114 == true) in
+    let b115 = flip pb in let _ = observe (b115 == true) in
+    let b116 = flip pb in let _ = observe (b116 == false) in
+    let b117 = flip pb in let _ = observe (b117 == false) in
+    let b118 = flip pb in let _ = observe (b118 == true) in
+    let b119 = flip pb in let _ = observe (b119 == false) in
+    let b120 = flip pb in let _ = observe (b120 == false) in
+    let b121 = flip pb in let _ = observe (b121 == false) in
+    let b122 = flip pb in let _ = observe (b122 == false) in
+    let b123 = flip pb in let _ = observe (b123 == false) in
+    let b124 = flip pb in let _ = observe (b124 == false) in
+    let b125 = flip pb in let _ = observe (b125 == false) in
+    let b126 = flip pb in let _ = observe (b126 == false) in
+    let b127 = flip pb in let _ = observe (b127 == false) in
+    let b128 = flip pb in let _ = observe (b128 == false) in
+    let b129 = flip pb in let _ = observe (b129 == false) in
+    let b130 = flip pb in let _ = observe (b130 == true) in
+    let b131 = flip pb in let _ = observe (b131 == false) in
+    let b132 = flip pb in let _ = observe (b132 == false) in
+    let b133 = flip pb in let _ = observe (b133 == false) in
+    let b134 = flip pb in let _ = observe (b134 == false) in
+    let b135 = flip pb in let _ = observe (b135 == true) in
+    let b136 = flip pb in let _ = observe (b136 == false) in
+    let b137 = flip pb in let _ = observe (b137 == false) in
+    let b138 = flip pb in let _ = observe (b138 == false) in
+    let b139 = flip pb in let _ = observe (b139 == true) in
+    let b140 = flip pb in let _ = observe (b140 == false) in
+    let b141 = flip pb in let _ = observe (b141 == false) in
+    let b142 = flip pb in let _ = observe (b142 == false) in
+    let b143 = flip pb in let _ = observe (b143 == false) in
+    let b144 = flip pb in let _ = observe (b144 == false) in
+    let b145 = flip pb in let _ = observe (b145 == false) in
+    let b146 = flip pb in let _ = observe (b146 == false) in
+    let b147 = flip pb in let _ = observe (b147 == false) in
+    let b148 = flip pb in let _ = observe (b148 == false) in
+    let b149 = flip pb in let _ = observe (b149 == false) in
+    let b150 = flip pb in let _ = observe (b150 == false) in
+    (b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36, b37, b38, b39, b40, b41, b42, b43, b44, b45, b46, b47, b48, b49, b50, b51, b52, b53, b54, b55, b56, b57, b58, b59, b60, b61, b62, b63, b64, b65, b66, b67, b68, b69, b70, b71, b72, b73, b74, b75, b76, b77, b78, b79, b80, b81, b82, b83, b84, b85, b86, b87, b88, b89, b90, b91, b92, b93, b94, b95, b96, b97, b98, b99, b100, b101, b102, b103, b104, b105, b106, b107, b108, b109, b110, b111, b112, b113, b114, b115, b116, b117, b118, b119, b120, b121, b122, b123, b124, b125, b126, b127, b128, b129, b130, b131, b132, b133, b134, b135, b136, b137, b138, b139, b140, b141, b142, b143, b144, b145, b146, b147, b148, b149, b150)
   };
-  b1 <- if bs[0] then 0.0 else 5.0;
-  b2 <- if bs[1] then 0.0 else 5.0;
-  b3 <- if bs[2] then 0.0 else 5.0;
-  b4 <- if bs[3] then 0.0 else 5.0;
-  b5 <- if bs[4] then 0.0 else 5.0;
-  b6 <- if bs[5] then 0.0 else 5.0;
-  b7 <- if bs[6] then 0.0 else 5.0;
-  b8 <- if bs[7] then 0.0 else 5.0;
+  b0 <- if bs[0] then 0.0 else 5.0;
+  b1 <- if bs[1] then 0.0 else 5.0;
+  b2 <- if bs[2] then 0.0 else 5.0;
+  b3 <- if bs[3] then 0.0 else 5.0;
+  b4 <- if bs[4] then 0.0 else 5.0;
+  b5 <- if bs[5] then 0.0 else 5.0;
+  b6 <- if bs[6] then 0.0 else 5.0;
+  b7 <- if bs[7] then 0.0 else 5.0;
+  b8 <- if bs[8] then 0.0 else 5.0;
+  b9 <- if bs[9] then 0.0 else 5.0;
+  b10 <- if bs[10] then 0.0 else 5.0;
+  b11 <- if bs[11] then 0.0 else 5.0;
+  b12 <- if bs[12] then 0.0 else 5.0;
+  b13 <- if bs[13] then 0.0 else 5.0;
+  b14 <- if bs[14] then 0.0 else 5.0;
+  b15 <- if bs[15] then 0.0 else 5.0;
+  b16 <- if bs[16] then 0.0 else 5.0;
+  b17 <- if bs[17] then 0.0 else 5.0;
+  b18 <- if bs[18] then 0.0 else 5.0;
+  b19 <- if bs[19] then 0.0 else 5.0;
+  b20 <- if bs[20] then 0.0 else 5.0;
+  b21 <- if bs[21] then 0.0 else 5.0;
+  b22 <- if bs[22] then 0.0 else 5.0;
+  b23 <- if bs[23] then 0.0 else 5.0;
+  b24 <- if bs[24] then 0.0 else 5.0;
+  b25 <- if bs[25] then 0.0 else 5.0;
+  b26 <- if bs[26] then 0.0 else 5.0;
+  b27 <- if bs[27] then 0.0 else 5.0;
+  b28 <- if bs[28] then 0.0 else 5.0;
+  b29 <- if bs[29] then 0.0 else 5.0;
+  b30 <- if bs[30] then 0.0 else 5.0;
+  b31 <- if bs[31] then 0.0 else 5.0;
+  b32 <- if bs[32] then 0.0 else 5.0;
+  b33 <- if bs[33] then 0.0 else 5.0;
+  b34 <- if bs[34] then 0.0 else 5.0;
+  b35 <- if bs[35] then 0.0 else 5.0;
+  b36 <- if bs[36] then 0.0 else 5.0;
+  b37 <- if bs[37] then 0.0 else 5.0;
+  b38 <- if bs[38] then 0.0 else 5.0;
+  b39 <- if bs[39] then 0.0 else 5.0;
+  b40 <- if bs[40] then 0.0 else 5.0;
+  b41 <- if bs[41] then 0.0 else 5.0;
+  b42 <- if bs[42] then 0.0 else 5.0;
+  b43 <- if bs[43] then 0.0 else 5.0;
+  b44 <- if bs[44] then 0.0 else 5.0;
+  b45 <- if bs[45] then 0.0 else 5.0;
+  b46 <- if bs[46] then 0.0 else 5.0;
+  b47 <- if bs[47] then 0.0 else 5.0;
+  b48 <- if bs[48] then 0.0 else 5.0;
+  b49 <- if bs[49] then 0.0 else 5.0;
+  b50 <- if bs[50] then 0.0 else 5.0;
+  b51 <- if bs[51] then 0.0 else 5.0;
+  b52 <- if bs[52] then 0.0 else 5.0;
+  b53 <- if bs[53] then 0.0 else 5.0;
+  b54 <- if bs[54] then 0.0 else 5.0;
+  b55 <- if bs[55] then 0.0 else 5.0;
+  b56 <- if bs[56] then 0.0 else 5.0;
+  b57 <- if bs[57] then 0.0 else 5.0;
+  b58 <- if bs[58] then 0.0 else 5.0;
+  b59 <- if bs[59] then 0.0 else 5.0;
+  b60 <- if bs[60] then 0.0 else 5.0;
+  b61 <- if bs[61] then 0.0 else 5.0;
+  b62 <- if bs[62] then 0.0 else 5.0;
+  b63 <- if bs[63] then 0.0 else 5.0;
+  b64 <- if bs[64] then 0.0 else 5.0;
+  b65 <- if bs[65] then 0.0 else 5.0;
+  b66 <- if bs[66] then 0.0 else 5.0;
+  b67 <- if bs[67] then 0.0 else 5.0;
+  b68 <- if bs[68] then 0.0 else 5.0;
+  b69 <- if bs[69] then 0.0 else 5.0;
+  b70 <- if bs[70] then 0.0 else 5.0;
+  b71 <- if bs[71] then 0.0 else 5.0;
+  b72 <- if bs[72] then 0.0 else 5.0;
+  b73 <- if bs[73] then 0.0 else 5.0;
+  b74 <- if bs[74] then 0.0 else 5.0;
+  b75 <- if bs[75] then 0.0 else 5.0;
+  b76 <- if bs[76] then 0.0 else 5.0;
+  b77 <- if bs[77] then 0.0 else 5.0;
+  b78 <- if bs[78] then 0.0 else 5.0;
+  b79 <- if bs[79] then 0.0 else 5.0;
+  b80 <- if bs[80] then 0.0 else 5.0;
+  b81 <- if bs[81] then 0.0 else 5.0;
+  b82 <- if bs[82] then 0.0 else 5.0;
+  b83 <- if bs[83] then 0.0 else 5.0;
+  b84 <- if bs[84] then 0.0 else 5.0;
+  b85 <- if bs[85] then 0.0 else 5.0;
+  b86 <- if bs[86] then 0.0 else 5.0;
+  b87 <- if bs[87] then 0.0 else 5.0;
+  b88 <- if bs[88] then 0.0 else 5.0;
+  b89 <- if bs[89] then 0.0 else 5.0;
+  b90 <- if bs[90] then 0.0 else 5.0;
+  b91 <- if bs[91] then 0.0 else 5.0;
+  b92 <- if bs[92] then 0.0 else 5.0;
+  b93 <- if bs[93] then 0.0 else 5.0;
+  b94 <- if bs[94] then 0.0 else 5.0;
+  b95 <- if bs[95] then 0.0 else 5.0;
+  b96 <- if bs[96] then 0.0 else 5.0;
+  b97 <- if bs[97] then 0.0 else 5.0;
+  b98 <- if bs[98] then 0.0 else 5.0;
+  b99 <- if bs[99] then 0.0 else 5.0;
+  b100 <- if bs[100] then 0.0 else 5.0;
+  b101 <- if bs[101] then 0.0 else 5.0;
+  b102 <- if bs[102] then 0.0 else 5.0;
+  b103 <- if bs[103] then 0.0 else 5.0;
+  b104 <- if bs[104] then 0.0 else 5.0;
+  b105 <- if bs[105] then 0.0 else 5.0;
+  b106 <- if bs[106] then 0.0 else 5.0;
+  b107 <- if bs[107] then 0.0 else 5.0;
+  b108 <- if bs[108] then 0.0 else 5.0;
+  b109 <- if bs[109] then 0.0 else 5.0;
+  b110 <- if bs[110] then 0.0 else 5.0;
+  b111 <- if bs[111] then 0.0 else 5.0;
+  b112 <- if bs[112] then 0.0 else 5.0;
+  b113 <- if bs[113] then 0.0 else 5.0;
+  b114 <- if bs[114] then 0.0 else 5.0;
+  b115 <- if bs[115] then 0.0 else 5.0;
+  b116 <- if bs[116] then 0.0 else 5.0;
+  b117 <- if bs[117] then 0.0 else 5.0;
+  b118 <- if bs[118] then 0.0 else 5.0;
+  b119 <- if bs[119] then 0.0 else 5.0;
+  b120 <- if bs[120] then 0.0 else 5.0;
+  b121 <- if bs[121] then 0.0 else 5.0;
+  b122 <- if bs[122] then 0.0 else 5.0;
+  b123 <- if bs[123] then 0.0 else 5.0;
+  b124 <- if bs[124] then 0.0 else 5.0;
+  b125 <- if bs[125] then 0.0 else 5.0;
+  b126 <- if bs[126] then 0.0 else 5.0;
+  b127 <- if bs[127] then 0.0 else 5.0;
+  b128 <- if bs[128] then 0.0 else 5.0;
+  b129 <- if bs[129] then 0.0 else 5.0;
+  b130 <- if bs[130] then 0.0 else 5.0;
+  b131 <- if bs[131] then 0.0 else 5.0;
+  b132 <- if bs[132] then 0.0 else 5.0;
+  b133 <- if bs[133] then 0.0 else 5.0;
+  b134 <- if bs[134] then 0.0 else 5.0;
+  b135 <- if bs[135] then 0.0 else 5.0;
+  b136 <- if bs[136] then 0.0 else 5.0;
+  b137 <- if bs[137] then 0.0 else 5.0;
+  b138 <- if bs[138] then 0.0 else 5.0;
+  b139 <- if bs[139] then 0.0 else 5.0;
+  b140 <- if bs[140] then 0.0 else 5.0;
+  b141 <- if bs[141] then 0.0 else 5.0;
+  b142 <- if bs[142] then 0.0 else 5.0;
+  b143 <- if bs[143] then 0.0 else 5.0;
+  b144 <- if bs[144] then 0.0 else 5.0;
+  b145 <- if bs[145] then 0.0 else 5.0;
+  b146 <- if bs[146] then 0.0 else 5.0;
+  b147 <- if bs[147] then 0.0 else 5.0;
+  b148 <- if bs[148] then 0.0 else 5.0;
+  b149 <- if bs[149] then 0.0 else 5.0;
 
   n1 <- normal(pn + b1, 1.0);
   n2 <- normal(pn + b2, 1.0);
