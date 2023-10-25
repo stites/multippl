@@ -36,7 +36,7 @@ crate::TTG!(
                     vs.iter().map(Self::embed).collect::<Result<Vec<_>>>()?,
                 )),
                 EInteger(i) => Ok(SInt(*i as u64)),
-                EBdd(_) => errors::semantics("sampling lang cannot compile a formula"),
+                EBdd(_) => errors::semantics("sampling lang cannot compile a formula indirectly"),
             }
         }
     }

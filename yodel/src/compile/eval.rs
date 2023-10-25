@@ -230,7 +230,7 @@ impl<'a> State<'a> {
         // if !(p == q) {
         self.log_pq.lp += p.ln();
         self.log_pq.lq += q.ln();
-        info!("{:?}", self.log_pq);
+        debug!("{:?}", self.log_pq);
         // }
     }
     pub fn eval_program(&mut self, prog: &Program<Annotated>) -> Result<Output> {
@@ -419,13 +419,14 @@ impl<'a> State<'a> {
                 tracing::debug!("let");
 
                 let bound = self.eval_eexpr(ctx.clone(), ebound)?;
+                debug!("ebound: {:?}", bound.exact.out);
 
                 // let mut newctx = ctx.new_from_eoutput(&bound);
                 let mut newctx = Ctx::from(&bound);
                 newctx.exact.substitutions.insert(
                     d.id(),
                     // Subst::mk(bound.exact.out.clone(), Some(Var::Named(d.clone()))),
-                    bound.exact.out.clone().unwrap().clone()
+                    bound.exact.out.clone().unwrap().clone(),
                 );
                 let body = self.eval_eexpr(newctx, ebody)?;
 
@@ -463,23 +464,21 @@ impl<'a> State<'a> {
                             ));
                         }
 
-                let mut subs = ctx.exact.substitutions.clone();
-                for (param, val) in params.iter().zip(argvals.iter()) {
-                    subs.insert(
-                        param.id(),
-                        // Subst::mk(vec![val.clone()], Some(Var::Named(param.clone()))),
-                        val.clone(), // Subst::mk(vec![val.clone()], Some(Var::Named(param.clone()))),
-                    );
-                }
-                let mut callerctx = ctx.clone();
-                callerctx.exact.substitutions = subs;
+                        let mut subs = ctx.exact.substitutions.clone();
+                        for (param, val) in params.iter().zip(argvals.iter()) {
+                            subs.insert(
+                                param.id(),
+                                // Subst::mk(vec![val.clone()], Some(Var::Named(param.clone()))),
+                                val.clone(), // Subst::mk(vec![val.clone()], Some(Var::Named(param.clone()))),
+                            );
+                        }
+                        let mut callerctx = ctx.clone();
+                        callerctx.exact.substitutions = subs;
 
-                let out = self.eval_eexpr(callerctx, &f.body)?;
-                Ok(out)
-
+                        let out = self.eval_eexpr(callerctx, &f.body)?;
+                        Ok(out)
                     }
-                    _ => panic!()
-
+                    _ => panic!(),
                 }
             }
             EIterate(fid, fname, init, k) => {
@@ -503,7 +502,7 @@ impl<'a> State<'a> {
                         let mut niters: usize = *i;
                         let mut ctx = ctx.clone();
                         let mut out = None;
-                        trace!("niters: {}", niters);
+                        debug!("niters: {}", niters);
                         let mut callix = 0;
                         while niters > 0 {
                             let anfarg = Anf::AVal((), arg.clone());
@@ -516,7 +515,7 @@ impl<'a> State<'a> {
                             arg = o.exact.out.unwrap();
                             niters -= 1;
                             callix += 1;
-                            trace!("niters: {}", niters);
+                            debug!("niters: {}", niters);
                         }
 
                         let fout = out.expect("k > 0");
@@ -530,9 +529,12 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 tracing::debug!("sample");
 
+                debug!("sample starting...");
                 let mut o = self.eval_sexpr(ctx, sexpr)?;
                 let sout = o.sample.out.clone().unwrap();
+                debug!("sample output: {:?}", sout);
                 let out = EExpr::<Trace>::embed(&sout)?;
+                debug!("sample embeded {:?}", out);
 
                 o.exact.out = Some(out);
                 Ok(o)
@@ -548,7 +550,6 @@ impl<'a> State<'a> {
             SAnf(_, a) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "sanf");
                 let _enter = span.enter();
-                debug!("anf: {:?}", a);
                 debug!("ast: {:?}", e);
 
                 let out = eval_sanf(self, &ctx, a)?;
@@ -560,6 +561,7 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 tracing::debug!("let");
                 let bound = self.eval_sexpr(ctx.clone(), bindee)?; // clone ctx purely for debug
+                debug!("sbound: {} = {:?}", name, bound.sample.out);
 
                 let mut newctx = Ctx::from(&bound);
                 newctx
@@ -799,9 +801,9 @@ if params.len() != argvals.len() {
                     },
                     _ => panic!("semantic error, see note on SObserve in SExpr enum"),
                 };
-                info!("  dist: {:?}", d);
-                info!("sample: {:?}", v);
-                info!("  prob: {}", q);
+                debug!("  dist: {:?}", d);
+                debug!("sample: {:?}", v);
+                debug!("  prob: {}", q);
                 // self.mult_pq(q, q);
 
                 out.sample
@@ -895,7 +897,7 @@ if params.len() != argvals.len() {
                 //     };
                 //     out.sample.out.push(val);
                 // }
-                info!("boundary sample: {:?}", out.sample.out);
+                debug!("boundary sample: {:?}", out.sample.out);
                 Ok(out)
             }
             SLetSample(_, _, _, _) => errors::erased(Trace, "let-sample"),

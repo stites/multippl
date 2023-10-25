@@ -17,9 +17,12 @@ pub fn exact2sample_bdd_eff(
     let wmc_params = out.exact.weightmap.as_params(state.opts.max_label);
     let var_order = state.opts.order.clone();
     let accept = out.exact.accept.clone();
-    info!("accepting: {}", accept.print_bdd());
     let ss = GetSamples::samples(&out.exact, state.mgr, state.opts.sample_pruning);
-    info!("samples: {:?}", out.exact.samples); // we're getting a state explosion here
+    debug!(" samples: {:?}", out.exact.samples);
+    debug!("csamples: {:?}", ss);
+    debug!("     dist: {:?}", dist.print_bdd());
+    debug!("accepting: {}", accept.print_bdd());
+    debug!("      wmc: {:?}", wmc_params);
     let theta_q = crate::inference::calculate_wmc_prob(
         state.mgr,
         &wmc_params,

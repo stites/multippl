@@ -11,30 +11,6 @@ use num_traits::identities::Zero;
 use rsdd::sample::probability::Probability;
 use std::collections::HashMap;
 
-#[derive(Debug, Clone, PartialEq)]
-pub enum Subst<V> {
-    Value(Vec<V>),
-    ValueWithVar(Vec<V>, Var),
-}
-
-impl<V> Subst<V>
-where
-    V: std::fmt::Debug + Clone + PartialEq,
-{
-    pub fn val(&self) -> Vec<V> {
-        match self {
-            Subst::Value(v) => v.to_vec(),
-            Subst::ValueWithVar(v, _) => v.to_vec(),
-        }
-    }
-    pub fn mk(val: Vec<V>, var: Option<Var>) -> Self {
-        match var {
-            None => Subst::Value(val),
-            Some(var) => Subst::ValueWithVar(val, var),
-        }
-    }
-}
-
 pub type SubstMap<V> = HashMap<UniqueId, V>;
 pub type Tr = Vec<(SVal, Dist, Probability, Option<UniqueId>)>;
 
@@ -140,7 +116,8 @@ impl GetSamples for EOutput {
     }
 }
 pub fn as_dists(outs: Vec<EVal>) -> Vec<BddPtr> {
-    outs.iter().cloned()
+    outs.iter()
+        .cloned()
         .filter(|v| match v {
             EVal::EBdd(b) => true,
             a => false,
@@ -177,10 +154,10 @@ impl EOutput {
         match &self.out {
             Some(EVal::EBdd(b)) => vec![*b],
             Some(EVal::EProd(bs)) => as_dists(bs.to_vec()),
-           a => errors::typecheck_failed(&format!("eoutput projection into bdds got {a:?}")).unwrap(),
+            a => errors::typecheck_failed(&format!("eoutput projection into bdds got {a:?}"))
+                .unwrap(),
         }
     }
-
 }
 impl Default for EOutput {
     fn default() -> Self {
