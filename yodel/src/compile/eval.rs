@@ -711,30 +711,29 @@ impl<'a> State<'a> {
                 let argvals = argvals.sample.out.unwrap();
                 match argvals {
                     SVal::SVec(argvals) => {
-if params.len() != argvals.len() {
-                    tracing::debug!("params: {params:?}");
-                    tracing::debug!("argvals: {argvals:?}");
-                    return errors::generic(&format!(
-                        "function {:?} arguments mismatch. Got {}, expected {}",
-                        fname,
-                        params.len(),
-                        argvals.len()
-                    ));
-                }
-                let mut subs = ctx.sample.substitutions.clone();
-                for (param, val) in params.iter().zip(argvals.iter()) {
-                    // subs.insert(param.id(), Subst::mk(vec![val.clone()], None));
-                    subs.insert(param.id(), val.clone());
-                }
-                let mut callerctx = ctx.clone();
-                callerctx.sample.substitutions = subs;
+                        if params.len() != argvals.len() {
+                            tracing::debug!("params: {params:?}");
+                            tracing::debug!("argvals: {argvals:?}");
+                            return errors::generic(&format!(
+                                "function {:?} arguments mismatch. Got {}, expected {}",
+                                fname,
+                                params.len(),
+                                argvals.len()
+                            ));
+                        }
+                        let mut subs = ctx.sample.substitutions.clone();
+                        for (param, val) in params.iter().zip(argvals.iter()) {
+                            // subs.insert(param.id(), Subst::mk(vec![val.clone()], None));
+                            subs.insert(param.id(), val.clone());
+                        }
+                        let mut callerctx = ctx.clone();
+                        callerctx.sample.substitutions = subs;
 
-                let out = self.eval_sexpr(callerctx, &f.body)?;
-                Ok(out)
+                        let out = self.eval_sexpr(callerctx, &f.body)?;
+                        Ok(out)
                     }
                     _ => panic!(),
                 }
-
             }
             SLambda(_, _, _) => errors::TODO(),
 
@@ -880,10 +879,25 @@ if params.len() != argvals.len() {
                 let val = match (&eval, SExpr::<Trace>::embed(&eval)) {
                     (_, Ok(sv)) => sv,
                     (EVal::EBdd(dist), Err(_)) => {
-                            let sample = exact2sample_bdd_eff(self, &mut out, dist);
-                            SVal::SBool(sample)
-                        }
-                        _ => panic!("typecheck_failed"),
+                        let sample = exact2sample_bdd_eff(self, &mut out, dist);
+                        SVal::SBool(sample)
+                    }
+                    // best effort for prods
+                    (EVal::EProd(vs), Err(e)) => SVal::SProd(
+                        vs.iter()
+                            .map(|v| {
+                                Ok(match (&v, SExpr::<Trace>::embed(&v)) {
+                                    (EVal::EBdd(dist), Err(_)) => {
+                                        let sample = exact2sample_bdd_eff(self, &mut out, dist);
+                                        SVal::SBool(sample)
+                                    }
+                                    (_, Ok(v)) => v,
+                                    (_, Err(e)) => return Err(e),
+                                })
+                            })
+                            .collect::<Result<Vec<_>>>()?,
+                    ),
+                    (_, Err(e)) => return Err(e),
                 };
                 out.sample.out = Some(val);
                 // for eval in eouts.iter() {
