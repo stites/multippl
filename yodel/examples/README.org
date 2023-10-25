@@ -1,3 +1,4 @@
 #+title: examples for the yodel codebase
 
 * Arrival problem
+* directed Ising with collapsed diagonal

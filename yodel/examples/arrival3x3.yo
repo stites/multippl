@@ -1,0 +1,16 @@
+exact fn arrival (tpl: (Int, Bool)) -> Int {
+  let npackets = tpl[0] in
+
+  let noise = 0.0001 in
+  let x00 = flip 0.5 in
+  let left00 = x00 in
+  let down00 = !x00 in
+
+  let x22 = down00 in
+  let nxt = sample { g <- exact(x22); if g then npackets + 1 else npackets } in
+  (nxt, x00, x22)
+}
+
+sample {
+  exact { iterate(arrival, (1, true), 5) }
+}
