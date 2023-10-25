@@ -60,7 +60,7 @@ fn verbosity_to_tracing(lvl: VerbLevel) -> Level {
 fn setup_tracing(lvl: Level) {
     let format = fmt::format()
         .with_level(true)
-        // .with_target(false)
+        .with_target(false)
         .with_thread_ids(false)
         .with_thread_names(false)
         .without_time()

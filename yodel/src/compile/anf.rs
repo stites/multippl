@@ -281,11 +281,14 @@ pub fn eval_sanf_vec(
     anfs: &[AnfAnn<SVal>],
     op: impl Fn(Vec<AnfTr<SVal>>) -> AnfTr<SVal>,
 ) -> Result<Output> {
-    let outs: Vec<SVal> = anfs.iter().map(|a| {
-        let aout = eval_sanf(state, ctx, a)?;
-        let ov = aout.sample.out.unwrap();
-        Ok(ov)
-    }).collect::<Result<Vec<SVal>>>()?;
+    let outs: Vec<SVal> = anfs
+        .iter()
+        .map(|a| {
+            let aout = eval_sanf(state, ctx, a)?;
+            let ov = aout.sample.out.unwrap();
+            Ok(ov)
+        })
+        .collect::<Result<Vec<SVal>>>()?;
     tracing::debug!("sanf_vec: {outs:?}");
     let o = ctx.sample.as_output(Some(SVal::SVec(outs)));
     let o = ctx.mk_soutput(o);
@@ -505,11 +508,14 @@ pub fn eval_sanfs(
     ctx: &Ctx,
     anfs: &[AnfAnn<SVal>],
 ) -> Result<Output> {
-    let svals = anfs.iter().map(|a| {
-        let o = eval_sanf(state, ctx, a)?;
-        let svals = o.sample.out.unwrap();
-        Ok(svals)
-    }).collect::<Result<Vec<_>>>()?;
+    let svals = anfs
+        .iter()
+        .map(|a| {
+            let o = eval_sanf(state, ctx, a)?;
+            let svals = o.sample.out.unwrap();
+            Ok(svals)
+        })
+        .collect::<Result<Vec<_>>>()?;
     let out = ctx.sample.as_output(Some(SVal::SVec(svals)));
     let out = ctx.mk_soutput(out);
     Ok(out)
@@ -631,10 +637,13 @@ pub fn eval_eanf<'a>(
         ),
 
         AnfProd(anfs) => {
-            let outs: Vec<EVal> = anfs.iter().map(|a| {
-                let aout = eval_eanf(state, ctx, a)?;
-                Ok(aout.out.unwrap())
-            }).collect::<Result<Vec<_>>>()?;
+            let outs: Vec<EVal> = anfs
+                .iter()
+                .map(|a| {
+                    let aout = eval_eanf(state, ctx, a)?;
+                    Ok(aout.out.unwrap())
+                })
+                .collect::<Result<Vec<_>>>()?;
             Ok(ctx.exact.as_output(Some(EVal::EProd(outs))))
         }
         AnfPrj(var, ix) => {
@@ -670,10 +679,13 @@ pub fn eval_eanfs(
     ctx: &Ctx,
     anfs: &[AnfAnn<EVal>],
 ) -> Result<EOutput> {
-    let vals = anfs.iter().map(|a| {
-        let o = eval_eanf(state, ctx, a)?;
-        let vals = o.out.unwrap();
-        Ok(vals)
-    }).collect::<Result<Vec<_>>>()?;
+    let vals = anfs
+        .iter()
+        .map(|a| {
+            let o = eval_eanf(state, ctx, a)?;
+            let vals = o.out.unwrap();
+            Ok(vals)
+        })
+        .collect::<Result<Vec<_>>>()?;
     Ok(ctx.exact.as_output(Some(EVal::EProd(vals))))
 }

@@ -425,7 +425,7 @@ impl<'a> State<'a> {
                 newctx.exact.substitutions.insert(
                     d.id(),
                     // Subst::mk(bound.exact.out.clone(), Some(Var::Named(d.clone()))),
-                    bound.exact.out.clone().unwrap().clone()
+                    bound.exact.out.clone().unwrap().clone(),
                 );
                 let body = self.eval_eexpr(newctx, ebody)?;
 
@@ -463,23 +463,21 @@ impl<'a> State<'a> {
                             ));
                         }
 
-                let mut subs = ctx.exact.substitutions.clone();
-                for (param, val) in params.iter().zip(argvals.iter()) {
-                    subs.insert(
-                        param.id(),
-                        // Subst::mk(vec![val.clone()], Some(Var::Named(param.clone()))),
-                        val.clone(), // Subst::mk(vec![val.clone()], Some(Var::Named(param.clone()))),
-                    );
-                }
-                let mut callerctx = ctx.clone();
-                callerctx.exact.substitutions = subs;
+                        let mut subs = ctx.exact.substitutions.clone();
+                        for (param, val) in params.iter().zip(argvals.iter()) {
+                            subs.insert(
+                                param.id(),
+                                // Subst::mk(vec![val.clone()], Some(Var::Named(param.clone()))),
+                                val.clone(), // Subst::mk(vec![val.clone()], Some(Var::Named(param.clone()))),
+                            );
+                        }
+                        let mut callerctx = ctx.clone();
+                        callerctx.exact.substitutions = subs;
 
-                let out = self.eval_eexpr(callerctx, &f.body)?;
-                Ok(out)
-
+                        let out = self.eval_eexpr(callerctx, &f.body)?;
+                        Ok(out)
                     }
-                    _ => panic!()
-
+                    _ => panic!(),
                 }
             }
             EIterate(fid, fname, init, k) => {
@@ -496,7 +494,6 @@ impl<'a> State<'a> {
                 match &niters.out {
                     Some(EVal::EInteger(0)) => {
                         let fout = ctx.mk_eoutput(argoutput);
-
                         Ok(fout)
                     }
                     Some(EVal::EInteger(i)) => {
@@ -518,7 +515,6 @@ impl<'a> State<'a> {
                             callix += 1;
                             trace!("niters: {}", niters);
                         }
-
                         let fout = out.expect("k > 0");
                         Ok(fout)
                     }
@@ -709,30 +705,29 @@ impl<'a> State<'a> {
                 let argvals = argvals.sample.out.unwrap();
                 match argvals {
                     SVal::SVec(argvals) => {
-if params.len() != argvals.len() {
-                    tracing::debug!("params: {params:?}");
-                    tracing::debug!("argvals: {argvals:?}");
-                    return errors::generic(&format!(
-                        "function {:?} arguments mismatch. Got {}, expected {}",
-                        fname,
-                        params.len(),
-                        argvals.len()
-                    ));
-                }
-                let mut subs = ctx.sample.substitutions.clone();
-                for (param, val) in params.iter().zip(argvals.iter()) {
-                    // subs.insert(param.id(), Subst::mk(vec![val.clone()], None));
-                    subs.insert(param.id(), val.clone());
-                }
-                let mut callerctx = ctx.clone();
-                callerctx.sample.substitutions = subs;
+                        if params.len() != argvals.len() {
+                            tracing::debug!("params: {params:?}");
+                            tracing::debug!("argvals: {argvals:?}");
+                            return errors::generic(&format!(
+                                "function {:?} arguments mismatch. Got {}, expected {}",
+                                fname,
+                                params.len(),
+                                argvals.len()
+                            ));
+                        }
+                        let mut subs = ctx.sample.substitutions.clone();
+                        for (param, val) in params.iter().zip(argvals.iter()) {
+                            // subs.insert(param.id(), Subst::mk(vec![val.clone()], None));
+                            subs.insert(param.id(), val.clone());
+                        }
+                        let mut callerctx = ctx.clone();
+                        callerctx.sample.substitutions = subs;
 
-                let out = self.eval_sexpr(callerctx, &f.body)?;
-                Ok(out)
+                        let out = self.eval_sexpr(callerctx, &f.body)?;
+                        Ok(out)
                     }
                     _ => panic!(),
                 }
-
             }
             SLambda(_, _, _) => errors::TODO(),
 
@@ -878,10 +873,10 @@ if params.len() != argvals.len() {
                 let val = match (&eval, SExpr::<Trace>::embed(&eval)) {
                     (_, Ok(sv)) => sv,
                     (EVal::EBdd(dist), Err(_)) => {
-                            let sample = exact2sample_bdd_eff(self, &mut out, dist);
-                            SVal::SBool(sample)
-                        }
-                        _ => panic!("typecheck_failed"),
+                        let sample = exact2sample_bdd_eff(self, &mut out, dist);
+                        SVal::SBool(sample)
+                    }
+                    a => panic!("typecheck failed at boundary with {:?}", a),
                 };
                 out.sample.out = Some(val);
                 // for eval in eouts.iter() {

@@ -1,6 +1,6 @@
 exact fn arrival (tpl: (Bool, Int)) -> Int {
-  let prev = tpl[0] in
   let npackets = tpl[1] in
+  let prev = tpl[0] in
 
   let noise = 0.0001 in
   let x00 = flip 0.5 in
@@ -8,7 +8,15 @@ exact fn arrival (tpl: (Bool, Int)) -> Int {
   let down00 = !x00 in
 
   let x22 = down00 in
-  (x22 && prev, 1)
+  let newpackets = sample ( if x22 then npackets + 1 else npackets) in
+  (x22 && prev, newpackets )
 
 }
-exact {iterate(arrival, true, 1) }
+sample {
+  p ~ poisson(3.0);
+  exact {
+    let t = iterate(arrival, (true, 0), p) in
+    let r = t[1] in
+    r
+  }
+}

@@ -140,7 +140,8 @@ impl GetSamples for EOutput {
     }
 }
 pub fn as_dists(outs: Vec<EVal>) -> Vec<BddPtr> {
-    outs.iter().cloned()
+    outs.iter()
+        .cloned()
         .filter(|v| match v {
             EVal::EBdd(b) => true,
             a => false,
@@ -177,10 +178,10 @@ impl EOutput {
         match &self.out {
             Some(EVal::EBdd(b)) => vec![*b],
             Some(EVal::EProd(bs)) => as_dists(bs.to_vec()),
-           a => errors::typecheck_failed(&format!("eoutput projection into bdds got {a:?}")).unwrap(),
+            a => errors::typecheck_failed(&format!("eoutput projection into bdds got {a:?}"))
+                .unwrap(),
         }
     }
-
 }
 impl Default for EOutput {
     fn default() -> Self {

@@ -38,8 +38,8 @@ pub fn importance_weighting_h(
             Ok(o) => {
                 trace!("{:?}", o.out.exact.out);
                 let (out, pq) = (o.out, o.pq);
-                // info!("sample output : {}", rendersvals(vec![out.sample.out.unwrap()]));
-                // info!("exact output  : {}", renderbdds(vec![&out.exact.out.unwrap()]));
+                info!("sample output : {:?}", out.sample.out);
+                info!("exact output  : {:?}", &out.exact.out);
                 info!("accepting     : {:?}", out.exact.accept);
                 // info!("computed probs: {:?}", ps);
                 info!("weight        : {} = {}", pq.render(), pq.weight());
