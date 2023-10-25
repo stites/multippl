@@ -45,6 +45,14 @@ struct Args {
 
     // #[clap(short, long, value_parser)]
     // stats_window: u64, // use optimizations
+
+    // string delimited list of variables to append query that are not in the return
+    #[clap(short, long, value_parser)]
+    post: Option<String>,
+
+    // placeholder
+    #[clap(short, long, value_parser)]
+    data: Option<String>,
 }
 
 fn verbosity_to_tracing(lvl: VerbLevel) -> Level {
@@ -60,7 +68,7 @@ fn verbosity_to_tracing(lvl: VerbLevel) -> Level {
 fn setup_tracing(lvl: Level) {
     let format = fmt::format()
         .with_level(true)
-        // .with_target(false)
+        .with_target(true)
         .with_thread_ids(false)
         .with_thread_names(false)
         .without_time()
@@ -101,6 +109,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("       Seed: {:?}", args.rng);
     info!("Debug level: {:?}", lvl);
     info!(" report BDD: {}", args.stats);
+    info!("!!   +query: {:?}", args.post); // FIXME: unused
+    info!("!!data file: {:?}", args.data); // FIXME: unused
     setup_tracing(lvl);
 
     let pth = PathBuf::from(args.file);
