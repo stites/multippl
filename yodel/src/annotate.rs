@@ -13,7 +13,10 @@ use std::hash::Hash;
 use tracing::*;
 
 pub type InvMap<T> = HashMap<NamedVar, HashSet<T>>;
+
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct MaxVarLabel(pub u64);
+
 pub struct AnnotateResult {
     pub program: ProgramAnn,
     pub order: VarOrder,
@@ -322,7 +325,7 @@ impl LabelEnv {
         }
     }
     pub fn max_varlabel_val(&self) -> MaxVarLabel {
-        MaxVarLabel(self.lblsym)
+        MaxVarLabel(self.lblsym * 10)
     }
 
     pub fn linear_var_order(&self) -> rsdd::repr::var_order::VarOrder {
@@ -795,8 +798,8 @@ impl LabelEnv {
                 let mx = new_bdds
                     + self
                         .fun_stats
-                        .iter()
-                        .map(|(_, ctr)| ctr.num_calls * ctr.num_uids)
+                        .values()
+                        .map(|ctr| (ctr.num_calls + 1) * ctr.num_uids)
                         .sum::<u64>();
 
                 Ok(AnnotateResult::new(
@@ -817,9 +820,8 @@ impl LabelEnv {
                     + self
                         .fun_stats
                         .values()
-                        .map(|ctr| ctr.num_calls * ctr.num_uids)
+                        .map(|ctr| (ctr.num_calls + 1) * ctr.num_uids)
                         .sum::<u64>();
-
                 Ok(AnnotateResult::new(
                     Program::EBody(eann),
                     order,
@@ -842,7 +844,6 @@ impl LabelEnv {
                 ctr.num_uids = end_bdds.0 - start_bdds.0;
                 // reserve the next #fncalls-worth of bdd ptrs
                 self.lblsym += ctr.num_uids * ctr.num_calls;
-
                 let r = self.annotate(p)?;
                 Ok(AnnotateResult::new(
                     Program::EDefine(f, Box::new(r.program)),
