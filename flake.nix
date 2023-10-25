@@ -155,6 +155,7 @@
             command = "${pkgs.evcxr}/bin/evcxr";
           }
         ];
+        devshells.default.devshell.startup.install-pre-commit-hooks.text = config.pre-commit.devShell.shellHook;
         devshells.default.env = [
           # apparently this makes the pre-commit hooks cry :' (
           #{
@@ -176,6 +177,7 @@
             fontconfig
 
             hunspellDicts.en_US-large
+            (python3.withPackages (ps: [ps.numpy]))
           ]
           ++ [
             lldb
