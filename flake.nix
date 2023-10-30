@@ -207,6 +207,7 @@
             cargo-outdated # find out outdated dependencies
             cargo-udeps # find out unused dependencies
             cargo-audit # search for security vulnerabilities
+            cargo-flamegraph # flamegraph profiling
             bacon
             # cargo-pants # search for security vulnerabilities (by sonatype )
           ]
