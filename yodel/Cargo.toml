@@ -57,3 +57,4 @@ quickcheck_macros = "1"
 [features]
 plots = ["dep:plotters", "dep:csv", "dep:spinoff", "dep:rayon", "dep:serde"]
 long_tests = []
+debug_samples = []

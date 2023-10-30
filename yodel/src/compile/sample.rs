@@ -8,7 +8,22 @@ pub fn sample_from<D: Distribution<V>, V>(state: &mut super::eval::State, dist: 
         None => dist.sample(&mut rand::thread_rng()),
     }
 }
-
+#[cfg(feature = "debug_samples")]
+fn mk_output_samples(
+    mgr: &mut Mgr,
+    prev_samples: &HashMap<BddPtr, bool>,
+    dist: BddPtr,
+    sample: bool,
+) -> HashMap<BddPtr, bool> {
+    let mut samples = prev_samples.clone();
+    samples.insert(dist.clone(), s);
+    samples
+}
+#[cfg(not(feature = "debug_samples"))]
+fn mk_output_samples(mgr: &mut Mgr, prev_samples: BddPtr, dist: BddPtr, sample: bool) -> BddPtr {
+    let new_sample = mgr.iff(dist, BddPtr::from_bool(sample));
+    mgr.and(prev_samples, new_sample)
+}
 pub fn exact2sample_bdd_eff(
     state: &mut super::eval::State,
     out: &mut Output,
@@ -49,6 +64,6 @@ pub fn exact2sample_bdd_eff(
     // sample in sequence. A smarter sample would compile
     // all samples of a multi-rooted BDD, but I need to futz
     // with rsdd's fold
-    out.exact.samples.insert(dist.clone(), s);
+    out.exact.samples = mk_output_samples(state.mgr, out.exact.samples, *dist, s);
     s
 }

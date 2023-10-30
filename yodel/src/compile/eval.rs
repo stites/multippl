@@ -72,6 +72,32 @@ pub fn eval_eite_predicate(
     let wmc_false = wmc_opt_h(pred_dist.neg());
     Ok((pred_dist, (wmc_true, wmc_false)))
 }
+#[cfg(feature = "debug_samples")]
+fn mk_ite_output_samples(
+    opt: &Opts,
+    state: &mut super::eval::State,
+    truthy_samples: &HashMap<BddPtr, bool>,
+    falsy_samples: &HashMap<BddPtr, bool>,
+) -> HashMap<BddPtr, bool> {
+    let mut samples = HashMap::new();
+    if !opts.sample_pruning {
+        samples.extend(truthy_samples);
+        samples.extend(falsy_samples);
+    };
+    samples
+}
+#[cfg(not(feature = "debug_samples"))]
+fn mk_ite_output_samples(
+    opts: &Opts,
+    state: &mut super::eval::State,
+    truthy_samples: BddPtr,
+    falsy_samples: BddPtr,
+) -> BddPtr {
+    if !opts.sample_pruning {
+        return state.mgr.and(truthy_samples, falsy_samples);
+    };
+    BddPtr::PtrTrue
+}
 pub fn eval_eite_output(
     state: &mut super::eval::State,
     ctx: &Ctx,
@@ -101,12 +127,7 @@ pub fn eval_eite_output(
     //     })
     //     .collect_vec();
 
-    let tsamples = GetSamples::samples(&truthy.exact, state.mgr, opts.sample_pruning);
-    let mut samples = HashMap::new();
-    if !opts.sample_pruning {
-        samples.extend(truthy.exact.samples);
-        samples.extend(falsey.exact.samples);
-    };
+    let samples = mk_ite_output_samples(opts, state, truthy.exact.samples, falsey.exact.samples);
 
     let accept_l = state.mgr.and(pred_dist, truthy.exact.accept);
     let accept_r = state.mgr.and(pred_dist.neg(), falsey.exact.accept);
@@ -142,6 +163,32 @@ pub fn eval_eite_output(
     })
 }
 
+#[cfg(feature = "debug_samples")]
+fn mk_elet_output_samples(
+    opt: &Opts,
+    mgr: &mut Mgr,
+    bindee_samples: &HashMap<BddPtr, bool>,
+    body_samples: &HashMap<BddPtr, bool>,
+) -> HashMap<BddPtr, bool> {
+    if !opts.sample_pruning {
+        let mut samples = bindee_samples.clone();
+        samples.extend(body.exact.samples);
+        return samples;
+    };
+    Default::default()
+}
+#[cfg(not(feature = "debug_samples"))]
+fn mk_elet_output_samples(
+    opts: &Opts,
+    mgr: &mut Mgr,
+    bindee_samples: BddPtr,
+    body_samples: BddPtr,
+) -> BddPtr {
+    if !opts.sample_pruning {
+        return mgr.and(bindee_samples, body_samples);
+    };
+    BddPtr::PtrTrue
+}
 pub fn eval_elet_output(
     mgr: &mut Mgr,
     ctx: &Ctx,
@@ -150,8 +197,7 @@ pub fn eval_elet_output(
     opts: &Opts,
 ) -> Result<EOutput> {
     let accept = mgr.and(body.exact.accept, ctx.exact.accept);
-    let mut samples = ctx.exact.samples.clone();
-    samples.extend(body.exact.samples);
+    let samples = mk_elet_output_samples(opts, mgr, ctx.exact.samples, body.exact.samples);
 
     // let probabilities = izip!(bound.probabilities.clone(), body.probabilities)
     //     .map(|(p1, p2)| p1 * p2)
@@ -534,7 +580,7 @@ impl<'a> State<'a> {
                 let sout = o.sample.out.clone().unwrap();
                 debug!("sample output: {:?}", sout);
                 let out = EExpr::<Trace>::embed(&sout)?;
-                debug!("sample embeded {:?}", out);
+                debug!("sample embedded {:?}", out);
 
                 o.exact.out = Some(out);
                 Ok(o)

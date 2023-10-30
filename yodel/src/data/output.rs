@@ -18,7 +18,10 @@ pub type Tr = Vec<(SVal, Dist, Probability, Option<UniqueId>)>;
 #[derive(Debug, Clone, PartialEq)]
 pub struct ECtx {
     pub accept: BddPtr,
+    #[cfg(feature = "debug_samples")]
     pub samples: HashMap<BddPtr, bool>,
+    #[cfg(not(feature = "debug_samples"))]
+    pub samples: BddPtr,
     pub substitutions: SubstMap<EVal>,
     pub weightmap: WeightMap,
 }
@@ -35,16 +38,32 @@ pub trait GetSamples {
     }
 }
 
+#[cfg(feature = "debug_samples")]
 fn _all_samples(samples: &HashMap<BddPtr, bool>, mgr: &mut Mgr) -> BddPtr {
     samples.iter().fold(BddPtr::PtrTrue, |ss, (dist, s)| {
         let nxt = mgr.iff(dist.clone(), BddPtr::from_bool(*s));
         mgr.and(ss, nxt)
     })
 }
+
 impl GetSamples for ECtx {
+    #[cfg(feature = "debug_samples")]
     fn compile_samples(&self, mgr: &mut Mgr) -> BddPtr {
         _all_samples(&self.samples, mgr)
     }
+    #[cfg(not(feature = "debug_samples"))]
+    fn compile_samples(&self, mgr: &mut Mgr) -> BddPtr {
+        self.samples
+    }
+}
+
+#[cfg(feature = "debug_samples")]
+fn default_samples() -> HashMap<BddPtr, bool> {
+    Default::default()
+}
+#[cfg(not(feature = "debug_samples"))]
+fn default_samples() -> BddPtr {
+    BddPtr::PtrTrue
 }
 impl GetSamples for Ctx {
     fn compile_samples(&self, mgr: &mut Mgr) -> BddPtr {
@@ -56,7 +75,7 @@ impl Default for ECtx {
     fn default() -> Self {
         ECtx {
             accept: BddPtr::PtrTrue,
-            samples: Default::default(),
+            samples: default_samples(),
             substitutions: Default::default(),
             weightmap: Default::default(),
         }
@@ -104,15 +123,23 @@ pub struct EOutput {
     /// acceptance criteria
     pub accept: BddPtr,
     /// sample consistency
+    #[cfg(feature = "debug_samples")]
     pub samples: HashMap<BddPtr, bool>,
+    #[cfg(not(feature = "debug_samples"))]
+    pub samples: BddPtr,
     /// compiled weightmap
     pub weightmap: WeightMap,
     /// substitution environment
     pub substitutions: SubstMap<EVal>,
 }
 impl GetSamples for EOutput {
+    #[cfg(feature = "debug_samples")]
     fn compile_samples(&self, mgr: &mut Mgr) -> BddPtr {
         _all_samples(&self.samples, mgr)
+    }
+    #[cfg(not(feature = "debug_samples"))]
+    fn compile_samples(&self, mgr: &mut Mgr) -> BddPtr {
+        self.samples
     }
 }
 pub fn as_dists(outs: Vec<EVal>) -> Vec<BddPtr> {
@@ -142,6 +169,7 @@ impl EOutput {
     pub fn pkg(&self) -> Output {
         Output::exact(self.clone())
     }
+    #[cfg(feature = "debug_samples")]
     pub fn samples(&self, mgr: &mut Mgr) -> BddPtr {
         self.samples
             .iter()
@@ -150,6 +178,11 @@ impl EOutput {
                 mgr.and(acc, s)
             })
     }
+    #[cfg(not(feature = "debug_samples"))]
+    pub fn samples(&self, mgr: &mut Mgr) -> BddPtr {
+        self.samples
+    }
+
     pub fn dists(&self) -> Vec<BddPtr> {
         match &self.out {
             Some(EVal::EBdd(b)) => vec![*b],
@@ -164,7 +197,7 @@ impl Default for EOutput {
         EOutput {
             out: Default::default(),
             accept: BddPtr::PtrTrue,
-            samples: Default::default(),
+            samples: default_samples(),
             weightmap: Default::default(),
             substitutions: Default::default(),
         }
