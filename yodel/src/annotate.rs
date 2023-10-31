@@ -17,11 +17,18 @@ pub type InvMap<T> = HashMap<NamedVar, HashSet<T>>;
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct MaxVarLabel(pub u64);
 
+#[derive(Clone, Copy, Debug, Hash, Eq, PartialEq)]
+pub enum QueryType {
+    Exact,
+    Sample,
+}
 pub struct AnnotateResult {
     pub program: ProgramAnn,
     pub order: VarOrder,
     pub idmap: HashMap<UniqueId, Var>,
     pub maxbdd: MaxVarLabel,
+    pub query_type: QueryType,
+    pub does_sample: bool,
     // this is now a lower bound since we can call
     // iterate dynamically now. It's fine since RSDD will grow the number of
     // variables and the order will be linear
@@ -32,12 +39,16 @@ impl AnnotateResult {
         order: VarOrder,
         idmap: HashMap<UniqueId, Var>,
         maxbdd: MaxVarLabel,
+        query_type: QueryType,
+        does_sample: bool,
     ) -> Self {
         AnnotateResult {
             program,
             order,
             idmap,
             maxbdd,
+            query_type,
+            does_sample,
         }
     }
 }
@@ -244,6 +255,7 @@ pub struct LabelEnv {
     pub fids: HashMap<String, FnId>,
     pub fun_stats: HashMap<FnId, FnCounts>,
     pub funs: HashMap<FnId, Fun>,
+    pub does_sample: bool,
 }
 
 pub fn insert_inv<T: Hash + Eq + Clone>(inv: &mut InvMap<T>, v: &T, provenance: &Option<NamedVar>) {
@@ -322,6 +334,7 @@ impl LabelEnv {
                 })
                 .collect(),
             funs: HashMap::new(),
+            does_sample: false,
         }
     }
     pub fn max_varlabel_val(&self) -> MaxVarLabel {
@@ -655,6 +668,7 @@ impl LabelEnv {
         }
     }
     pub fn annotate_sexpr(&mut self, e: &SExprUnq) -> Result<SExprAnn> {
+        self.does_sample = true;
         use crate::grammar::SExpr::*;
         match e {
             SAnf(_, a) => Ok(SAnf((), Box::new(self.annotate_sanf(a)?))),
@@ -809,6 +823,8 @@ impl LabelEnv {
                     order,
                     self.subst_var.clone(),
                     MaxVarLabel(mx),
+                    QueryType::Sample,
+                    true,
                 ))
             }
             Program::EBody(e) => {
@@ -829,6 +845,8 @@ impl LabelEnv {
                     order,
                     self.subst_var.clone(),
                     MaxVarLabel(mx),
+                    QueryType::Exact,
+                    self.does_sample,
                 ))
             }
             Program::EDefine(f, p) => {
@@ -852,6 +870,8 @@ impl LabelEnv {
                     r.order,
                     r.idmap,
                     r.maxbdd,
+                    r.query_type,
+                    r.does_sample,
                 ))
             }
             Program::SDefine(f, p) => {
@@ -876,6 +896,8 @@ impl LabelEnv {
                     r.order,
                     r.idmap,
                     r.maxbdd,
+                    r.query_type,
+                    r.does_sample,
                 ))
             }
         }
