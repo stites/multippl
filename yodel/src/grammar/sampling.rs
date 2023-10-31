@@ -200,6 +200,7 @@ TTG!(
             <SObserveExt as ξ<X>>::Ext,
             Box<Anf<X, SVal>>, // value
             Box<Anf<X, SVal>>, // in distribution (also a value)
+            Box<SExpr<X>>,     // for <rest of the program>
         ),
 
         // Multi-language boundary

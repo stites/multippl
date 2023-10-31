@@ -362,7 +362,7 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             let fbranch = parse_sexpr(src, c, &fbranch);
             SExpr::SIte(None, Box::new(pred), Box::new(tbranch), Box::new(fbranch))
         }
-        "sobs" => {
+        "sobserve" => {
             tracing::debug!("parsing sobs: {} >>> {}", n.to_sexp(), parse_str(src, &n));
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
@@ -373,7 +373,10 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             let adist = cs.next().unwrap();
             let adist = parse_sanf(src, c, adist);
 
-            SExpr::SObserve((), Box::new(aval), Box::new(adist))
+            let body = cs.next().unwrap();
+            let body = parse_sexpr(src, c, &body);
+
+            SExpr::SObserve((), Box::new(aval), Box::new(adist), Box::new(body))
         }
         "sseq" => {
             tracing::debug!("parsing sseq: {} >>> {}", n.to_sexp(), parse_str(src, &n));

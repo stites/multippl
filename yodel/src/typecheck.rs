@@ -71,7 +71,7 @@ pub mod grammar {
                 ELetIn(t, _, _, _) => t.body.clone(),
                 EIte(t, _, _, _) => t.clone(),
                 EFlip(_, _) => ETy::EBool,
-                EObserve(_, _) => ETy::EBool,
+                EObserve(_, _, _) => ETy::EBool,
                 ESample(_, e) => todo!("natural_embedding_s(e.as_type())"),
                 _ => todo!(),
             }
@@ -223,7 +223,11 @@ fn typecheck_eexpr(e: &grammar::EExprTyped) -> Result<EExprUD> {
             Box::new(typecheck_eexpr(f)?),
         )),
         EFlip(_, param) => Ok(EFlip((), Box::new(typecheck_anf(param)?))),
-        EObserve(_, a) => Ok(EObserve((), Box::new(typecheck_anf(a)?))),
+        EObserve(_, a, e) => Ok(EObserve(
+            (),
+            Box::new(typecheck_anf(a)?),
+            Box::new(typecheck_eexpr(e)?),
+        )),
         ESample(_, e) => Ok(ESample((), Box::new(typecheck_sexpr(e)?))),
 
         EApp(_, f, args) => Ok(EApp((), f.clone(), typecheck_anfs(args)?)),
@@ -282,10 +286,11 @@ fn typecheck_sexpr(e: &grammar::SExprTyped) -> Result<SExprUD> {
         SLambda(_, args, body) => Ok(SLambda((), args.clone(), Box::new(typecheck_sexpr(body)?))),
 
         SSample(_, dist) => Ok(SSample((), Box::new(typecheck_sexpr(dist)?))),
-        SObserve(_, val, dist) => Ok(SObserve(
+        SObserve(_, val, dist, e) => Ok(SObserve(
             (),
             Box::new(typecheck_anf(val)?),
             Box::new(typecheck_anf(dist)?),
+            Box::new(typecheck_sexpr(e)?),
         )),
 
         // Multi-language boundary

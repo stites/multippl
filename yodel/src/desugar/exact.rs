@@ -102,7 +102,11 @@ pub fn desugar_eexpr(e: &grammar::EExprUD) -> Result<EExprUD> {
             Box::new(desugar_eexpr(f)?),
         )),
         EFlip(_, param) => Ok(EFlip((), Box::new(desugar_eanf(param)?))),
-        EObserve(_, a) => Ok(EObserve((), Box::new(desugar_eanf(a)?))),
+        EObserve(_, a, e) => Ok(EObserve(
+            (),
+            Box::new(desugar_eanf(a)?),
+            Box::new(desugar_eexpr(e)?),
+        )),
 
         EApp(_, f, args) => Ok(EApp((), f.clone(), desugar_eanf_vec(args)?)),
         EIterate(_, f, init, times) => Ok(EIterate(

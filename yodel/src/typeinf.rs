@@ -171,9 +171,10 @@ fn typeinference_eexpr(e: &grammar::EExprInferable) -> Result<EExprTyped> {
             (),
             Box::new(typeinference_anf(&ignored_etype(), param)?),
         )),
-        EObserve(_, a) => Ok(EObserve(
+        EObserve(_, a, rst) => Ok(EObserve(
             (),
             Box::new(typeinference_anf(&ignored_etype(), a)?),
+            Box::new(typeinference_eexpr(rst)?),
         )),
         ESample(_, e) => Ok(ESample((), Box::new(typeinference_sexpr(e)?))),
 
@@ -248,10 +249,11 @@ fn typeinference_sexpr(e: &grammar::SExprInferable) -> Result<SExprTyped> {
         )),
 
         SSample(_, dist) => Ok(SSample((), Box::new(typeinference_sexpr(dist)?))),
-        SObserve(_, val, dist) => Ok(SObserve(
+        SObserve(_, val, dist, rst) => Ok(SObserve(
             (),
             Box::new(typeinference_anf(&ignored_stype(), val)?),
             Box::new(typeinference_anf(&ignored_stype(), dist)?),
+            Box::new(typeinference_sexpr(rst)?),
         )),
 
         // Multi-language boundary

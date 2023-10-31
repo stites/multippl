@@ -3,388 +3,388 @@ sample {
   _ <- exact {
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     let d1 = flip p in
     let d2 = flip p in
-    let _ = observe d1 == false in
-    let _ = observe d2 == true in
+    observe d1 == false in
+    observe d2 == true in
     let d3 = flip p in
     let d4 = flip p in
-    let _ = observe d3 == false in
-    let _ = observe d4 == true in
+    observe d3 == false in
+    observe d4 == true in
     (d1, d2)
   };
 

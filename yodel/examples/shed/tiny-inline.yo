@@ -2,156 +2,156 @@ sample {
   pb ~ beta(1.0, 1.0);
   pn ~ normal(0.0, 1.0);
   bs <- exact {
-    let b1 = flip pb in let _ = observe (b1 == false) in
-    let b2 = flip pb in let _ = observe (b2 == false) in
-    let b3 = flip pb in let _ = observe (b3 == false) in
-    let b4 = flip pb in let _ = observe (b4 == true) in
-    let b5 = flip pb in let _ = observe (b5 == true) in
-    let b6 = flip pb in let _ = observe (b6 == false) in
-    let b7 = flip pb in let _ = observe (b7 == false) in
-    let b8 = flip pb in let _ = observe (b8 == true) in
-    let b9 = flip pb in let _ = observe (b9 == true) in
-    let b10 = flip pb in let _ = observe (b10 == false) in
-    let b11 = flip pb in let _ = observe (b11 == true) in
-    let b12 = flip pb in let _ = observe (b12 == true) in
-    let b13 = flip pb in let _ = observe (b13 == false) in
-    let b14 = flip pb in let _ = observe (b14 == true) in
-    let b15 = flip pb in let _ = observe (b15 == false) in
-    let b16 = flip pb in let _ = observe (b16 == false) in
-    let b17 = flip pb in let _ = observe (b17 == false) in
-    let b18 = flip pb in let _ = observe (b18 == false) in
-    let b19 = flip pb in let _ = observe (b19 == false) in
-    let b20 = flip pb in let _ = observe (b20 == false) in
-    let b21 = flip pb in let _ = observe (b21 == false) in
-    let b22 = flip pb in let _ = observe (b22 == false) in
-    let b23 = flip pb in let _ = observe (b23 == false) in
-    let b24 = flip pb in let _ = observe (b24 == false) in
-    let b25 = flip pb in let _ = observe (b25 == false) in
-    let b26 = flip pb in let _ = observe (b26 == false) in
-    let b27 = flip pb in let _ = observe (b27 == false) in
-    let b28 = flip pb in let _ = observe (b28 == true) in
-    let b29 = flip pb in let _ = observe (b29 == false) in
-    let b30 = flip pb in let _ = observe (b30 == false) in
-    let b31 = flip pb in let _ = observe (b31 == false) in
-    let b32 = flip pb in let _ = observe (b32 == false) in
-    let b33 = flip pb in let _ = observe (b33 == false) in
-    let b34 = flip pb in let _ = observe (b34 == false) in
-    let b35 = flip pb in let _ = observe (b35 == false) in
-    let b36 = flip pb in let _ = observe (b36 == false) in
-    let b37 = flip pb in let _ = observe (b37 == false) in
-    let b38 = flip pb in let _ = observe (b38 == true) in
-    let b39 = flip pb in let _ = observe (b39 == false) in
-    let b40 = flip pb in let _ = observe (b40 == false) in
-    let b41 = flip pb in let _ = observe (b41 == false) in
-    let b42 = flip pb in let _ = observe (b42 == true) in
-    let b43 = flip pb in let _ = observe (b43 == false) in
-    let b44 = flip pb in let _ = observe (b44 == false) in
-    let b45 = flip pb in let _ = observe (b45 == false) in
-    let b46 = flip pb in let _ = observe (b46 == false) in
-    let b47 = flip pb in let _ = observe (b47 == false) in
-    let b48 = flip pb in let _ = observe (b48 == false) in
-    let b49 = flip pb in let _ = observe (b49 == false) in
-    let b50 = flip pb in let _ = observe (b50 == false) in
-    let b51 = flip pb in let _ = observe (b51 == false) in
-    let b52 = flip pb in let _ = observe (b52 == false) in
-    let b53 = flip pb in let _ = observe (b53 == false) in
-    let b54 = flip pb in let _ = observe (b54 == true) in
-    let b55 = flip pb in let _ = observe (b55 == false) in
-    let b56 = flip pb in let _ = observe (b56 == true) in
-    let b57 = flip pb in let _ = observe (b57 == false) in
-    let b58 = flip pb in let _ = observe (b58 == false) in
-    let b59 = flip pb in let _ = observe (b59 == false) in
-    let b60 = flip pb in let _ = observe (b60 == false) in
-    let b61 = flip pb in let _ = observe (b61 == false) in
-    let b62 = flip pb in let _ = observe (b62 == true) in
-    let b63 = flip pb in let _ = observe (b63 == false) in
-    let b64 = flip pb in let _ = observe (b64 == false) in
-    let b65 = flip pb in let _ = observe (b65 == false) in
-    let b66 = flip pb in let _ = observe (b66 == false) in
-    let b67 = flip pb in let _ = observe (b67 == false) in
-    let b68 = flip pb in let _ = observe (b68 == true) in
-    let b69 = flip pb in let _ = observe (b69 == false) in
-    let b70 = flip pb in let _ = observe (b70 == true) in
-    let b71 = flip pb in let _ = observe (b71 == false) in
-    let b72 = flip pb in let _ = observe (b72 == false) in
-    let b73 = flip pb in let _ = observe (b73 == false) in
-    let b74 = flip pb in let _ = observe (b74 == false) in
-    let b75 = flip pb in let _ = observe (b75 == false) in
-    let b76 = flip pb in let _ = observe (b76 == false) in
-    let b77 = flip pb in let _ = observe (b77 == false) in
-    let b78 = flip pb in let _ = observe (b78 == true) in
-    let b79 = flip pb in let _ = observe (b79 == true) in
-    let b80 = flip pb in let _ = observe (b80 == false) in
-    let b81 = flip pb in let _ = observe (b81 == false) in
-    let b82 = flip pb in let _ = observe (b82 == false) in
-    let b83 = flip pb in let _ = observe (b83 == true) in
-    let b84 = flip pb in let _ = observe (b84 == true) in
-    let b85 = flip pb in let _ = observe (b85 == true) in
-    let b86 = flip pb in let _ = observe (b86 == false) in
-    let b87 = flip pb in let _ = observe (b87 == true) in
-    let b88 = flip pb in let _ = observe (b88 == false) in
-    let b89 = flip pb in let _ = observe (b89 == false) in
-    let b90 = flip pb in let _ = observe (b90 == false) in
-    let b91 = flip pb in let _ = observe (b91 == false) in
-    let b92 = flip pb in let _ = observe (b92 == false) in
-    let b93 = flip pb in let _ = observe (b93 == false) in
-    let b94 = flip pb in let _ = observe (b94 == true) in
-    let b95 = flip pb in let _ = observe (b95 == true) in
-    let b96 = flip pb in let _ = observe (b96 == false) in
-    let b97 = flip pb in let _ = observe (b97 == false) in
-    let b98 = flip pb in let _ = observe (b98 == true) in
-    let b99 = flip pb in let _ = observe (b99 == false) in
-    let b100 = flip pb in let _ = observe (b100 == false) in
-    let b101 = flip pb in let _ = observe (b101 == false) in
-    let b102 = flip pb in let _ = observe (b102 == false) in
-    let b103 = flip pb in let _ = observe (b103 == false) in
-    let b104 = flip pb in let _ = observe (b104 == false) in
-    let b105 = flip pb in let _ = observe (b105 == false) in
-    let b106 = flip pb in let _ = observe (b106 == true) in
-    let b107 = flip pb in let _ = observe (b107 == false) in
-    let b108 = flip pb in let _ = observe (b108 == false) in
-    let b109 = flip pb in let _ = observe (b109 == false) in
-    let b110 = flip pb in let _ = observe (b110 == true) in
-    let b111 = flip pb in let _ = observe (b111 == false) in
-    let b112 = flip pb in let _ = observe (b112 == false) in
-    let b113 = flip pb in let _ = observe (b113 == false) in
-    let b114 = flip pb in let _ = observe (b114 == true) in
-    let b115 = flip pb in let _ = observe (b115 == true) in
-    let b116 = flip pb in let _ = observe (b116 == false) in
-    let b117 = flip pb in let _ = observe (b117 == false) in
-    let b118 = flip pb in let _ = observe (b118 == true) in
-    let b119 = flip pb in let _ = observe (b119 == false) in
-    let b120 = flip pb in let _ = observe (b120 == false) in
-    let b121 = flip pb in let _ = observe (b121 == false) in
-    let b122 = flip pb in let _ = observe (b122 == false) in
-    let b123 = flip pb in let _ = observe (b123 == false) in
-    let b124 = flip pb in let _ = observe (b124 == false) in
-    let b125 = flip pb in let _ = observe (b125 == false) in
-    let b126 = flip pb in let _ = observe (b126 == false) in
-    let b127 = flip pb in let _ = observe (b127 == false) in
-    let b128 = flip pb in let _ = observe (b128 == false) in
-    let b129 = flip pb in let _ = observe (b129 == false) in
-    let b130 = flip pb in let _ = observe (b130 == true) in
-    let b131 = flip pb in let _ = observe (b131 == false) in
-    let b132 = flip pb in let _ = observe (b132 == false) in
-    let b133 = flip pb in let _ = observe (b133 == false) in
-    let b134 = flip pb in let _ = observe (b134 == false) in
-    let b135 = flip pb in let _ = observe (b135 == true) in
-    let b136 = flip pb in let _ = observe (b136 == false) in
-    let b137 = flip pb in let _ = observe (b137 == false) in
-    let b138 = flip pb in let _ = observe (b138 == false) in
-    let b139 = flip pb in let _ = observe (b139 == true) in
-    let b140 = flip pb in let _ = observe (b140 == false) in
-    let b141 = flip pb in let _ = observe (b141 == false) in
-    let b142 = flip pb in let _ = observe (b142 == false) in
-    let b143 = flip pb in let _ = observe (b143 == false) in
-    let b144 = flip pb in let _ = observe (b144 == false) in
-    let b145 = flip pb in let _ = observe (b145 == false) in
-    let b146 = flip pb in let _ = observe (b146 == false) in
-    let b147 = flip pb in let _ = observe (b147 == false) in
-    let b148 = flip pb in let _ = observe (b148 == false) in
-    let b149 = flip pb in let _ = observe (b149 == false) in
-    let b150 = flip pb in let _ = observe (b150 == false) in
+    let b1 = flip pb in observe (b1 == false) in
+    let b2 = flip pb in observe (b2 == false) in
+    let b3 = flip pb in observe (b3 == false) in
+    let b4 = flip pb in observe (b4 == true) in
+    let b5 = flip pb in observe (b5 == true) in
+    let b6 = flip pb in observe (b6 == false) in
+    let b7 = flip pb in observe (b7 == false) in
+    let b8 = flip pb in observe (b8 == true) in
+    let b9 = flip pb in observe (b9 == true) in
+    let b10 = flip pb in observe (b10 == false) in
+    let b11 = flip pb in observe (b11 == true) in
+    let b12 = flip pb in observe (b12 == true) in
+    let b13 = flip pb in observe (b13 == false) in
+    let b14 = flip pb in observe (b14 == true) in
+    let b15 = flip pb in observe (b15 == false) in
+    let b16 = flip pb in observe (b16 == false) in
+    let b17 = flip pb in observe (b17 == false) in
+    let b18 = flip pb in observe (b18 == false) in
+    let b19 = flip pb in observe (b19 == false) in
+    let b20 = flip pb in observe (b20 == false) in
+    let b21 = flip pb in observe (b21 == false) in
+    let b22 = flip pb in observe (b22 == false) in
+    let b23 = flip pb in observe (b23 == false) in
+    let b24 = flip pb in observe (b24 == false) in
+    let b25 = flip pb in observe (b25 == false) in
+    let b26 = flip pb in observe (b26 == false) in
+    let b27 = flip pb in observe (b27 == false) in
+    let b28 = flip pb in observe (b28 == true) in
+    let b29 = flip pb in observe (b29 == false) in
+    let b30 = flip pb in observe (b30 == false) in
+    let b31 = flip pb in observe (b31 == false) in
+    let b32 = flip pb in observe (b32 == false) in
+    let b33 = flip pb in observe (b33 == false) in
+    let b34 = flip pb in observe (b34 == false) in
+    let b35 = flip pb in observe (b35 == false) in
+    let b36 = flip pb in observe (b36 == false) in
+    let b37 = flip pb in observe (b37 == false) in
+    let b38 = flip pb in observe (b38 == true) in
+    let b39 = flip pb in observe (b39 == false) in
+    let b40 = flip pb in observe (b40 == false) in
+    let b41 = flip pb in observe (b41 == false) in
+    let b42 = flip pb in observe (b42 == true) in
+    let b43 = flip pb in observe (b43 == false) in
+    let b44 = flip pb in observe (b44 == false) in
+    let b45 = flip pb in observe (b45 == false) in
+    let b46 = flip pb in observe (b46 == false) in
+    let b47 = flip pb in observe (b47 == false) in
+    let b48 = flip pb in observe (b48 == false) in
+    let b49 = flip pb in observe (b49 == false) in
+    let b50 = flip pb in observe (b50 == false) in
+    let b51 = flip pb in observe (b51 == false) in
+    let b52 = flip pb in observe (b52 == false) in
+    let b53 = flip pb in observe (b53 == false) in
+    let b54 = flip pb in observe (b54 == true) in
+    let b55 = flip pb in observe (b55 == false) in
+    let b56 = flip pb in observe (b56 == true) in
+    let b57 = flip pb in observe (b57 == false) in
+    let b58 = flip pb in observe (b58 == false) in
+    let b59 = flip pb in observe (b59 == false) in
+    let b60 = flip pb in observe (b60 == false) in
+    let b61 = flip pb in observe (b61 == false) in
+    let b62 = flip pb in observe (b62 == true) in
+    let b63 = flip pb in observe (b63 == false) in
+    let b64 = flip pb in observe (b64 == false) in
+    let b65 = flip pb in observe (b65 == false) in
+    let b66 = flip pb in observe (b66 == false) in
+    let b67 = flip pb in observe (b67 == false) in
+    let b68 = flip pb in observe (b68 == true) in
+    let b69 = flip pb in observe (b69 == false) in
+    let b70 = flip pb in observe (b70 == true) in
+    let b71 = flip pb in observe (b71 == false) in
+    let b72 = flip pb in observe (b72 == false) in
+    let b73 = flip pb in observe (b73 == false) in
+    let b74 = flip pb in observe (b74 == false) in
+    let b75 = flip pb in observe (b75 == false) in
+    let b76 = flip pb in observe (b76 == false) in
+    let b77 = flip pb in observe (b77 == false) in
+    let b78 = flip pb in observe (b78 == true) in
+    let b79 = flip pb in observe (b79 == true) in
+    let b80 = flip pb in observe (b80 == false) in
+    let b81 = flip pb in observe (b81 == false) in
+    let b82 = flip pb in observe (b82 == false) in
+    let b83 = flip pb in observe (b83 == true) in
+    let b84 = flip pb in observe (b84 == true) in
+    let b85 = flip pb in observe (b85 == true) in
+    let b86 = flip pb in observe (b86 == false) in
+    let b87 = flip pb in observe (b87 == true) in
+    let b88 = flip pb in observe (b88 == false) in
+    let b89 = flip pb in observe (b89 == false) in
+    let b90 = flip pb in observe (b90 == false) in
+    let b91 = flip pb in observe (b91 == false) in
+    let b92 = flip pb in observe (b92 == false) in
+    let b93 = flip pb in observe (b93 == false) in
+    let b94 = flip pb in observe (b94 == true) in
+    let b95 = flip pb in observe (b95 == true) in
+    let b96 = flip pb in observe (b96 == false) in
+    let b97 = flip pb in observe (b97 == false) in
+    let b98 = flip pb in observe (b98 == true) in
+    let b99 = flip pb in observe (b99 == false) in
+    let b100 = flip pb in observe (b100 == false) in
+    let b101 = flip pb in observe (b101 == false) in
+    let b102 = flip pb in observe (b102 == false) in
+    let b103 = flip pb in observe (b103 == false) in
+    let b104 = flip pb in observe (b104 == false) in
+    let b105 = flip pb in observe (b105 == false) in
+    let b106 = flip pb in observe (b106 == true) in
+    let b107 = flip pb in observe (b107 == false) in
+    let b108 = flip pb in observe (b108 == false) in
+    let b109 = flip pb in observe (b109 == false) in
+    let b110 = flip pb in observe (b110 == true) in
+    let b111 = flip pb in observe (b111 == false) in
+    let b112 = flip pb in observe (b112 == false) in
+    let b113 = flip pb in observe (b113 == false) in
+    let b114 = flip pb in observe (b114 == true) in
+    let b115 = flip pb in observe (b115 == true) in
+    let b116 = flip pb in observe (b116 == false) in
+    let b117 = flip pb in observe (b117 == false) in
+    let b118 = flip pb in observe (b118 == true) in
+    let b119 = flip pb in observe (b119 == false) in
+    let b120 = flip pb in observe (b120 == false) in
+    let b121 = flip pb in observe (b121 == false) in
+    let b122 = flip pb in observe (b122 == false) in
+    let b123 = flip pb in observe (b123 == false) in
+    let b124 = flip pb in observe (b124 == false) in
+    let b125 = flip pb in observe (b125 == false) in
+    let b126 = flip pb in observe (b126 == false) in
+    let b127 = flip pb in observe (b127 == false) in
+    let b128 = flip pb in observe (b128 == false) in
+    let b129 = flip pb in observe (b129 == false) in
+    let b130 = flip pb in observe (b130 == true) in
+    let b131 = flip pb in observe (b131 == false) in
+    let b132 = flip pb in observe (b132 == false) in
+    let b133 = flip pb in observe (b133 == false) in
+    let b134 = flip pb in observe (b134 == false) in
+    let b135 = flip pb in observe (b135 == true) in
+    let b136 = flip pb in observe (b136 == false) in
+    let b137 = flip pb in observe (b137 == false) in
+    let b138 = flip pb in observe (b138 == false) in
+    let b139 = flip pb in observe (b139 == true) in
+    let b140 = flip pb in observe (b140 == false) in
+    let b141 = flip pb in observe (b141 == false) in
+    let b142 = flip pb in observe (b142 == false) in
+    let b143 = flip pb in observe (b143 == false) in
+    let b144 = flip pb in observe (b144 == false) in
+    let b145 = flip pb in observe (b145 == false) in
+    let b146 = flip pb in observe (b146 == false) in
+    let b147 = flip pb in observe (b147 == false) in
+    let b148 = flip pb in observe (b148 == false) in
+    let b149 = flip pb in observe (b149 == false) in
+    let b150 = flip pb in observe (b150 == false) in
     (b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12, b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23, b24, b25, b26, b27, b28, b29, b30, b31, b32, b33, b34, b35, b36, b37, b38, b39, b40, b41, b42, b43, b44, b45, b46, b47, b48, b49, b50, b51, b52, b53, b54, b55, b56, b57, b58, b59, b60, b61, b62, b63, b64, b65, b66, b67, b68, b69, b70, b71, b72, b73, b74, b75, b76, b77, b78, b79, b80, b81, b82, b83, b84, b85, b86, b87, b88, b89, b90, b91, b92, b93, b94, b95, b96, b97, b98, b99, b100, b101, b102, b103, b104, b105, b106, b107, b108, b109, b110, b111, b112, b113, b114, b115, b116, b117, b118, b119, b120, b121, b122, b123, b124, b125, b126, b127, b128, b129, b130, b131, b132, b133, b134, b135, b136, b137, b138, b139, b140, b141, b142, b143, b144, b145, b146, b147, b148, b149, b150)
   };
   b0 <- if bs[0] then 0.0 else 5.0;
@@ -313,13 +313,13 @@ sample {
   n6 <- normal(pn + b6, 1.0);
   n7 <- normal(pn + b7, 1.0);
   n8 <- normal(pn + b8, 1.0);
-  _ <- observe 3.06945432 in n1;
-  _ <- observe 2.75329064 in n2;
-  _ <- observe 7.77713371 in n3;
-  _ <- observe 6.23358278 in n4;
-  _ <- observe 2.35924191 in n5;
-  _ <- observe 2.85756214 in n6;
-  _ <- observe 6.49240322 in n7;
-  _ <- observe 5.57371947 in n8;
+  observe 3.06945432 in n1;
+  observe 2.75329064 in n2;
+  observe 7.77713371 in n3;
+  observe 6.23358278 in n4;
+  observe 2.35924191 in n5;
+  observe 2.85756214 in n6;
+  observe 6.49240322 in n7;
+  observe 5.57371947 in n8;
   (pb, pn)
 }

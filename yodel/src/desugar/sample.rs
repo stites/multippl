@@ -58,7 +58,12 @@ pub fn desugar_sexpr(e: &grammar::SExprUD) -> Result<SExprUD> {
         SLambda(_, args, body) => Ok(SLambda((), args.clone(), Box::new(desugar_sexpr(body)?))),
 
         SSample(_, dist) => Ok(SSample((), Box::new(desugar_sexpr(dist)?))),
-        SObserve(_, _, _) => Ok(e.clone()),
+        SObserve(_, a, b, c) => Ok(SObserve(
+            (),
+            a.clone(),
+            b.clone(),
+            Box::new(desugar_sexpr(c)?),
+        )),
 
         SExact(_, e) => Ok(SExact((), Box::new(desugar_eexpr(e)?))),
 

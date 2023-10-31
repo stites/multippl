@@ -146,7 +146,7 @@ TTG!(
             Box<EExpr<X>>,
         ),
         EFlip(<EFlipExt as ξ<X>>::Ext, Box<Anf<X, EVal>>),
-        EObserve(<EObserveExt as ξ<X>>::Ext, Box<Anf<X, EVal>>),
+        EObserve(<EObserveExt as ξ<X>>::Ext, Box<Anf<X, EVal>>, Box<EExpr<X>>),
         ESample(<ESampleExt as ξ<X>>::Ext, Box<SExpr<X>>),
 
         // sugar: integer support

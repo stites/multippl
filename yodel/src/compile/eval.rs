@@ -357,7 +357,7 @@ impl<'a> State<'a> {
                 let out = ctx.mk_eoutput(o);
                 Ok(out)
             }
-            EObserve(_, a) => {
+            EObserve(_, a, rest) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "observe");
                 let _enter = span.enter();
                 tracing::debug!("observe");
@@ -418,8 +418,9 @@ impl<'a> State<'a> {
                 };
 
                 debug_step_ng!("observe", ctx, o);
-                let out = ctx.mk_eoutput(o);
-                Ok(out)
+                // let ctx = ctx.mk_eoutput(o);
+                let newctx = Ctx::from(&ctx.mk_eoutput(o));
+                self.eval_eexpr(newctx, rest)
             }
             EIte(_, cond, t, f) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "ite");
@@ -858,7 +859,7 @@ impl<'a> State<'a> {
                 Ok(out)
             }
 
-            SObserve(_, a, dist) => {
+            SObserve(_, a, dist, rst) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "sample-observe");
                 let _enter = span.enter();
                 tracing::debug!("observe");
@@ -911,8 +912,8 @@ impl<'a> State<'a> {
                 };
                 self.mult_pq(1.0, q);
 
-                //let a_out = ctx.mk_soutput(a_out);
-                Ok(a_out)
+                let newctx = Ctx::from(&a_out);
+                self.eval_sexpr(newctx, rst)
             }
             // Multi-language boundary / natural embedding.
             SExact(_, eexpr) => {

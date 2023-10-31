@@ -363,10 +363,11 @@ impl SymEnv {
                 let fid = self.call_function_iter(f);
                 Ok(EIterate(fid, f.clone(), Box::new(init), Box::new(k)))
             }
-            EObserve(_, a) => {
-                let anf = self.uniquify_anf(a)?;
-                Ok(EObserve((), Box::new(anf)))
-            }
+            EObserve(_, a, rst) => Ok(EObserve(
+                (),
+                Box::new(self.uniquify_anf(a)?),
+                Box::new(self.uniquify_eexpr(rst)?),
+            )),
             ESample(_, e) => Ok(ESample((), Box::new(self.uniquify_sexpr(e)?))),
             EDiscrete(_, _) => errors::erased(Uniquify, "discrete"),
         }
@@ -408,10 +409,11 @@ impl SymEnv {
                 Box::new(self.uniquify_sexpr(t)?),
                 Box::new(self.uniquify_sexpr(f)?),
             )),
-            SObserve(_, a, e) => Ok(SObserve(
+            SObserve(_, a, e, rst) => Ok(SObserve(
                 (),
                 Box::new(self.uniquify_anf(a)?),
                 Box::new(self.uniquify_anf(e)?),
+                Box::new(self.uniquify_sexpr(rst)?),
             )),
 
             SExact(_, e) => Ok(SExact((), Box::new(self.uniquify_eexpr(e)?))),

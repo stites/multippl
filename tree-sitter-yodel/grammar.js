@@ -97,7 +97,7 @@ module.exports = grammar({
     ediscrete: $ => seq('discrete', '(', repeat(seq($.eanf, ',')), $.eanf,  ')'),
     eiterate: $ => seq('iterate', '(', $.identifier, ',',$.eanf, ',', $.eanf,  ')'),
     eobserve: $ => choice(
-      seq('observe', $.eanf),
+      seq('observe', $.eanf, 'in', $.eexpr),
     ),
     esample: $ => choice(
       seq('sample', '(', $.sexpr, ')' ),
@@ -157,7 +157,7 @@ module.exports = grammar({
       $.swhile,
       $.sfold,
       $.slam,
-      $.sobs,
+      $.sobserve,
       $.sexact,
       $.site,
       $.ssample,
@@ -209,7 +209,7 @@ module.exports = grammar({
       seq('(\\', $.identifier, '->', $.sexpr, ')'),
       seq('(\\', repeat(seq($.identifier, ',')), $.identifier, '->', $.sexpr, ')'),
     ),
-    sobs: $ => seq('observe', $.sanf, 'in', $.sanf),
+    sobserve: $ => seq('observe', $.sanf, 'in', $.sanf, ';', $.sexpr),
     sexact: $ => choice(
       seq('exact', '(', $.eexpr, ')' ),
       seq('exact', '{', $.eexpr, '}' ),

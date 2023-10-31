@@ -128,7 +128,11 @@ pub fn upcast_eexpr(e: &grammar::EExprUD) -> Result<EExprInferable> {
             Box::new(upcast_eexpr(f)?),
         )),
         EFlip(_, param) => Ok(EFlip((), Box::new(upcast_anf(param)?))),
-        EObserve(_, a) => Ok(EObserve((), Box::new(upcast_anf(a)?))),
+        EObserve(_, a, e) => Ok(EObserve(
+            (),
+            Box::new(upcast_anf(a)?),
+            Box::new(upcast_eexpr(e)?),
+        )),
         ESample(_, e) => Ok(ESample((), Box::new(upcast_sexpr(e)?))),
 
         EApp(_, f, args) => Ok(EApp(None, f.clone(), upcast_anfs(args)?)),
@@ -187,10 +191,11 @@ fn upcast_sexpr(e: &grammar::SExprUD) -> Result<SExprInferable> {
         SLambda(_, args, body) => Ok(SLambda((), args.clone(), Box::new(upcast_sexpr(body)?))),
 
         SSample(_, dist) => Ok(SSample((), Box::new(upcast_sexpr(dist)?))),
-        SObserve(_, val, dist) => Ok(SObserve(
+        SObserve(_, val, dist, rst) => Ok(SObserve(
             (),
             Box::new(upcast_anf(val)?),
             Box::new(upcast_anf(dist)?),
+            Box::new(upcast_sexpr(rst)?),
         )),
 
         // Multi-language boundary

@@ -1,5 +1,5 @@
 exact {
   let distA = flip 0.5 in
-  let _ = observe (distA == true) in
+  observe (distA == true) in
   distA
 }

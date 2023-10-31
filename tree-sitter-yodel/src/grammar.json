@@ -898,6 +898,14 @@
             {
               "type": "SYMBOL",
               "name": "eanf"
+            },
+            {
+              "type": "STRING",
+              "value": "in"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "eexpr"
             }
           ]
         }
@@ -1245,7 +1253,7 @@
         },
         {
           "type": "SYMBOL",
-          "name": "sobs"
+          "name": "sobserve"
         },
         {
           "type": "SYMBOL",
@@ -1865,7 +1873,7 @@
         }
       ]
     },
-    "sobs": {
+    "sobserve": {
       "type": "SEQ",
       "members": [
         {
@@ -1883,6 +1891,14 @@
         {
           "type": "SYMBOL",
           "name": "sanf"
+        },
+        {
+          "type": "STRING",
+          "value": ";"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sexpr"
         }
       ]
     },

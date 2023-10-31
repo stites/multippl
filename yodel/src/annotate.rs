@@ -645,10 +645,11 @@ impl LabelEnv {
                     .collect::<Result<Vec<AnfAnn<EVal>>>>()?;
                 Ok(EApp(*i, f.clone(), args.clone()))
             }
-            EObserve(_, a) => {
-                let anf = self.annotate_eanf(a)?;
-                Ok(EObserve((), Box::new(anf)))
-            }
+            EObserve(_, a, rst) => Ok(EObserve(
+                (),
+                Box::new(self.annotate_eanf(a)?),
+                Box::new(self.annotate_eexpr(rst)?),
+            )),
             ESample(_, e) => Ok(ESample((), Box::new(self.annotate_sexpr(e)?))),
             EDiscrete(_, _) => errors::erased(Annotated, "discrete"),
         }
@@ -683,10 +684,11 @@ impl LabelEnv {
                 Box::new(self.annotate_sexpr(t)?),
                 Box::new(self.annotate_sexpr(f)?),
             )),
-            SObserve(_, a, e) => Ok(SObserve(
+            SObserve(_, a, e, rst) => Ok(SObserve(
                 (),
                 Box::new(self.annotate_sanf(a)?),
                 Box::new(self.annotate_sanf(e)?),
+                Box::new(self.annotate_sexpr(rst)?),
             )),
             SMap(arg_id, arg, body, xs) => {
                 let nvar = NamedVar {

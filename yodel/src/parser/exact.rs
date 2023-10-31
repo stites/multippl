@@ -298,7 +298,10 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
             let anf = cs.next().unwrap();
             let anf = parse_eanf(src, c, anf);
 
-            EExpr::EObserve((), Box::new(anf))
+            let body = cs.next().unwrap();
+            let body = parse_eexpr(src, c, &body);
+
+            EExpr::EObserve((), Box::new(anf), Box::new(body))
         }
         "esample" => {
             //println!("{}", n.to_sexp());

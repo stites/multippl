@@ -10,12 +10,12 @@ sample fn network(params: (Float, Float), obs: (Bool, Float) ) -> (Float, Float)
 
   A <- exact {
     let distA = flip paramA in
-    let _ = observe (distA == obsA) in
+    observe (distA == obsA) in
     distA
   };
   modA <- if A then 0 else 5;
   B <- normal(paramB + modA, 1);
-  _ <- observe obsB in B;
+  observe obsB in B;
   (paramA, paramB)
 }
 
@@ -107,18 +107,15 @@ sample {
                                           (eanf
                                             (identifier))))
                                       (eexpr
-                                        (elet
-                                          (identifier)
-                                          (eexpr
-                                            (eobserve
-                                              (eanf
+                                        (eobserve
+                                          (eanf
+                                            (eanf
+                                              (eanfbinop
                                                 (eanf
-                                                  (eanfbinop
-                                                    (eanf
-                                                      (identifier))
-                                                    (compare_op)
-                                                    (eanf
-                                                      (identifier)))))))
+                                                  (identifier))
+                                                (compare_op)
+                                                (eanf
+                                                  (identifier)))))
                                           (eexpr
                                             (eanf
                                               (identifier)))))))))
@@ -154,14 +151,11 @@ sample {
                                               (svalue
                                                 (int))))))
                                       (sexpr
-                                        (slet
-                                          (identifier)
-                                          (sexpr
-                                            (sobs
-                                              (sanf
-                                                (identifier))
-                                              (sanf
-                                                (identifier))))
+                                        (sobserve
+                                          (sanf
+                                            (identifier))
+                                          (sanf
+                                            (identifier))
                                           (sexpr
                                             (sanf
                                               (sanfprod
@@ -181,7 +175,7 @@ sample {
                         (float)))
                     (sanf
                       (svalue
-                        (int))))))
+                        (float))))))
               (sexpr
                 (slet
                   (identifier)
