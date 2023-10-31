@@ -467,7 +467,7 @@ mod tests {
     ///
     /// let x = flip 0.3333 in
     /// let y = flip 1/4 in
-    /// let _ = observe (x || y) in
+    /// observe (x || y) in
     /// x
     ///
     /// ---
@@ -489,7 +489,7 @@ mod tests {
         let code = r#"exact {
           let x = flip 0.3333 in
           let y = flip 1/4 in
-          let _ = observe (x || y) in
+          observe (x || y) in
           x
         }"#;
         let expr = parse(code);
@@ -498,8 +498,8 @@ mod tests {
             program!(lets![
                 "x" ;= flip!(0.3333);
                 "y" ;= flip!(1/4);
-                "_" ;= observe!(b!("x" || "y"));
-                ...? b!("x")])
+                ...? observe!(b!("x" || "y")
+                => b!("x"))])
         );
     }
 
@@ -509,7 +509,7 @@ mod tests {
     ///
     /// let x = sample (flip 1/3) in
     /// let y = flip 1/4 in
-    /// let _ = observe (x || y) in
+    /// observe (x || y) in
     /// x
     ///
     /// ---
@@ -530,7 +530,7 @@ mod tests {
         let code = r#"exact {
           let x = sample { bern(1/3) } in
           let y = flip 1/4 in
-          let _ = observe (x || y) in
+          observe (x || y) in
           x
         }"#;
 
@@ -540,8 +540,8 @@ mod tests {
             program!(lets![
                 "x" ;= sample!(~ bern!(1/3));
                 "y" ;= flip!(1/4);
-                "_" ;= observe!(b!("x" || "y"));
-                ...? b!("x")])
+                ...? observe!(b!("x" || "y")
+                => b!("x"))])
         );
     }
 

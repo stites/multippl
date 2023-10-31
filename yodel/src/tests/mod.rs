@@ -53,7 +53,7 @@ fn program03() {
         r#" exact {
     let x = flip 1.0 / 3.0 in
     let y = flip 1.0 / 4.0 in
-    let _ = observe x || y in
+    observe x || y in
     "#
         .to_owned()
             + ret
@@ -72,7 +72,7 @@ fn program04_approx() {
         r#"exact {
     let x = sample { ~bern(1.0 / 3.0) } in
     let y = flip 1.0 / 4.0 in
-    let _ = observe x || y in
+    observe x || y in
     "#
         .to_owned()
             + ret

@@ -275,9 +275,13 @@ macro_rules! exact {
 }
 #[macro_export]
 macro_rules! observe {
-    ( $x:expr ) => {{
+    ( $x:expr => $rst:expr ) => {{
         if let EExpr::<$crate::typeinf::grammar::Inferable>::EAnf(_, a) = $x {
-            $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EObserve((), a)
+            $crate::grammar::EExpr::<$crate::typeinf::grammar::Inferable>::EObserve(
+                (),
+                a,
+                Box::new($rst),
+            )
         } else {
             panic!("passed in a non-anf expression!");
         }

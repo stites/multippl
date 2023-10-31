@@ -78,7 +78,7 @@ fn ite_2() {
         let y = if ( x )
                 then flip 1.0 / 4.0
                 else flip 1.0 / 5.0 in
-        let _ = observe x || y in
+        observe x || y in
         "#
         .to_owned()
             + ret
@@ -320,7 +320,7 @@ fn ite_3_with_one_sample_easy_x() {
         r#"exact {
         let x = flip 2.0 / 3.0 in
         let y = if x then sample { ~ bern(1.0 / 4.0)} else flip 1.0 / 5.0 in
-        let _ = observe ( x || y ) in
+        observe ( x || y ) in
         "#
         .to_owned()
             + ret
@@ -335,7 +335,7 @@ fn ite_3_with_one_sample_hard1() {
         r#"exact {
         let x = flip 2.0 / 3.0 in
         let y = if x then sample { ~ bern(1.0 / 4.0)} else flip 1.0 / 5.0 in
-        let _ = observe ( x || y ) in
+        observe ( x || y ) in
         "#
         .to_owned()
             + ret
@@ -363,7 +363,7 @@ fn ite_3_with_one_sample_easy_x_or_y() {
         r#"exact {
         let x = flip 2.0 / 3.0 in
         let y = if x then sample { ~ bern(1.0 / 4.0) } else flip 1.0 / 5.0 in
-        let _ = observe ( x || y ) in
+        observe ( x || y ) in
         "#
         .to_owned()
             + ret
@@ -382,12 +382,12 @@ fn ite_3_with_one_sample_hard1_extra() {
         let w = flip 2.0 / 7.0 in
         let y = if x then (
             let q = sample { ~ bern(1.0 / 4.0)} in
-            let _ = observe ( q || w ) in
+            observe ( q || w ) in
             q
         ) else (
             flip 0.2
         ) in
-        let _ = observe ( x || y ) in
+        observe ( x || y ) in
         "#
         .to_owned()
             + ret

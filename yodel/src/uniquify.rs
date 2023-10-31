@@ -548,20 +548,19 @@ mod tests {
     #[traced_test]
     fn invalid_observe() {
         println!("----------------------------------------------------");
-        let res = SymEnv::default().uniquify(&pipeline(&program!(observe!(b!("x")))).unwrap());
+        let res =
+            SymEnv::default().uniquify(&pipeline(&program!(observe!(b!("x") => b!("y")))).unwrap());
         assert!(res.is_err());
         println!("----------------------------------------------------");
         let mk = |ret: EExprInferable| {
             Program::EBody(lets![
-                "x" ; b!() ;= flip!(1/3);
-                "y" ; b!() ;= sample!(
+                "x" ; b!() ;= flip!(1/3); // x = 1, flip = 2
+                "y" ; b!() ;= sample!(    // y = 3
                     lets![
-                        "x0" ; b!() ;= flip!(1/5);
+                        "x0" ; b!() ;= flip!(1/5); // x0 = 4, flip = 5
                         ...? b!("x0" || "x") ; b!()
                     ]);
-               "_" ; b!() ;= observe!(b!("x" || "y")); // is this a problem?
-
-               ...? ret ; b!()
+               ...? observe!(b!("x" || "y") => ret.clone()) ; b!()
             ])
         };
         let res = SymEnv::default().uniquify(&pipeline(&mk(b!("l"))).unwrap());
@@ -570,6 +569,6 @@ mod tests {
         let mut senv = SymEnv::default();
         let res = senv.uniquify(&pipeline(&mk(b!("x"))).unwrap());
         assert!(res.is_ok());
-        assert!(senv.gensym == 6);
+        assert_eq!(senv.gensym, 5);
     }
 }

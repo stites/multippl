@@ -48,7 +48,7 @@ fn free_variable_2_inv() {
         (r#"exact {
   let x = flip (1.0/3.0) in
   let y = (let x0 = flip 1.0 / 5.0 in x0 || x) in
-  let _ = observe (x || y) in
+  observe (x || y) in
   "#
         .to_owned()
             + ret
@@ -74,7 +74,7 @@ fn free_variables_1() {
     exact {
       let x = flip 1.0 / 3.0 in
       let l = sample { exact(x) } in
-      let _ = observe x in
+      observe x in
       l
     }"#
     .to_owned()
@@ -91,7 +91,7 @@ fn free_variable_2_exact() {
     let x0 = x in
     let x1 = flip(0.2) in
     let y = x0 || x1 in
-    let _ = observe x || y in
+    observe x || y in
     "#
         .to_owned()
             + ret
@@ -115,7 +115,7 @@ fn free_variable_2_approx() {
             x1 ~ bern (0.2);
             x0 || x1
         } in
-        let _ = observe x || y in
+        observe x || y in
         "#
         .to_owned()
             + ret
@@ -173,7 +173,7 @@ fn free_variable_2_approx_again() {
         r#"exact {
         let x = flip 1.0 / 3.0 in
         let y = sample { x0 ~ bern 1.0 / 5.0; x <- exact ( x ); x0 || x } in
-        let _ = observe ( x || y ) in
+        observe ( x || y ) in
         "#
         .to_owned()
             + ret
