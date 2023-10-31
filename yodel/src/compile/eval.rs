@@ -331,7 +331,7 @@ impl<'a> State<'a> {
                 let out = ctx.mk_eoutput(o);
                 Ok(out)
             }
-            EFlip(d, param) => {
+            EFlip(_, param) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "flip");
                 let _enter = span.enter();
                 tracing::debug!("flip: {:?}", e);
@@ -340,8 +340,8 @@ impl<'a> State<'a> {
                 let o = match &o.out {
                     Some(EVal::EFloat(param)) => {
                         let mut weightmap = ctx.exact.weightmap.clone();
-                        weightmap.insert(d.label, *param);
-                        let var = self.mgr.var(d.label, true);
+                        let (lbl, var) = self.mgr.new_var(true);
+                        weightmap.insert(lbl, *param);
                         Ok(EOutput {
                             out: Some(EVal::EBdd(var)),
                             accept: ctx.exact.accept.clone(),

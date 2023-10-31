@@ -1,5 +1,6 @@
 use crate::*;
 use rand::distributions::Distribution;
+use rsdd::builder::bdd_builder::DDNNFPtr;
 use tracing::*;
 
 pub fn sample_from<D: Distribution<V>, V>(state: &mut super::eval::State, dist: D) -> V {
@@ -35,18 +36,12 @@ pub fn exact2sample_bdd_eff(
     let ss = GetSamples::samples(&out.exact, state.mgr, state.opts.sample_pruning);
     debug!(" samples: {:?}", out.exact.samples);
     debug!("csamples: {:?}", ss);
-    debug!("     dist: {:?}", dist.print_bdd());
-    debug!("accepting: {}", accept.print_bdd());
-    debug!("      wmc: {:?}", wmc_params);
-    let theta_q = crate::inference::calculate_wmc_prob(
-        state.mgr,
-        &wmc_params,
-        &var_order,
-        dist.clone(),
-        accept.clone(),
-        ss,
-    )
-    .0;
+    debug!("  dist size: {}", dist.count_nodes());
+    debug!("accept size: {}", accept.count_nodes());
+    let theta_q =
+        crate::inference::calculate_wmc_prob(state.mgr, &wmc_params, &var_order, *dist, accept, ss)
+            .0;
+    debug!(" #rec calls: {}", state.mgr.num_recursive_calls());
 
     let bern = statrs::distribution::Bernoulli::new(theta_q).unwrap();
     let s = sample_from(state, bern) == 1.0;

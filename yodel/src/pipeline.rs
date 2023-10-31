@@ -213,5 +213,6 @@ pub fn make_mgr_and_ir(
     tracing::debug!("(annotated)");
     let maxlbl = ar.maxbdd.0;
     tracing::trace!("(manager created with max label: {maxlbl})");
-    Ok((Mgr::new_default_order(maxlbl as usize), p, lenv))
+    // Ok((Mgr::new_default_order(maxlbl as usize), p, lenv))
+    Ok((Mgr::new_default_order(0), p, lenv))
 }
