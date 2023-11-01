@@ -47,7 +47,7 @@ pub fn exact2sample_bdd_eff(
     let s = sample_from(state, bern) == 1.0;
 
     let weight = if s { theta_q } else { 1.0 - theta_q };
-    state.mult_pq(weight, weight);
+    // state.mult_pq(weight, weight);
 
     out.sample.trace.push((
         SVal::SBool(s),
@@ -59,6 +59,7 @@ pub fn exact2sample_bdd_eff(
     // sample in sequence. A smarter sample would compile
     // all samples of a multi-rooted BDD, but I need to futz
     // with rsdd's fold
-    out.exact.samples = mk_output_samples(state.mgr, out.exact.samples, *dist, s);
+    let new_samples = mk_output_samples(state.mgr, out.exact.samples, *dist, s);
+    out.exact.samples = new_samples;
     s
 }

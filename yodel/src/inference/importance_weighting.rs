@@ -5,7 +5,9 @@ use crate::utils::render::*;
 use crate::*;
 use itertools::*;
 use std::collections::HashMap;
+use rsdd::builder::bdd_builder::DDNNFPtr;
 use tracing::*;
+use rsdd::repr::wmc::RealSemiring;
 
 pub fn importance_weighting(steps: usize, p: &str) -> Vec<f64> {
     importance_weighting_h(
@@ -26,8 +28,7 @@ pub fn importance_weighting_h(
 ) -> (Vec<f64>, Option<WmcStats>) {
     let (mut mgr, p, lenv) = make_mgr_and_ir(code).unwrap();
     let mut rng = opt.rng();
-    let mut e = Expectations::empty();
-    let mut stats_max = None;
+    let mut e = Exp1::empty();
 
     debug!("running with options: {:#?}", opt);
     for step in 1..=steps {
@@ -38,31 +39,35 @@ pub fn importance_weighting_h(
             Ok(o) => {
                 trace!("{:?}", o.out.exact.out);
                 let (out, pq) = (o.out, o.pq);
-                // info!("sample output : {}", rendersvals(vec![out.sample.out.unwrap()]));
-                // info!("exact output  : {}", renderbdds(vec![&out.exact.out.unwrap()]));
-                info!("accepting     : {:?}", out.exact.accept);
-                // info!("computed probs: {:?}", ps);
-                info!("weight        : {} = {}", pq.render(), pq.weight());
-                let (query, stats): (Vec<f64>, Option<WmcStats>) = match p.query() {
-                    Query::EQuery(_) => wmc_prob(&mut mgr, &out.exact),
-                    Query::SQuery(_) => (
-                        out.sample.out.iter().fold(vec![], |mut acc, v| {
+                debug!("sample output : {:?}", out.sample.out);
+                debug!("sample trace  : {:?}", out.sample.trace);
+                debug!("exact output  : {:?}", out.exact.out);
+                debug!("accepting     : {:?}", out.exact.accept);
+                let (query, w): (Vec<f64>, f64) = match p.query() { // TODO drop this traversal, pre-compute during eval
+                    Query::EQuery(_) => {
+                        let qs = numerators(&mut mgr, &out.exact);
+                        debug!("         query: {:?}", qs);
+                        let var_order = mgr.get_order().clone();
+                        let params = out.exact.weightmap.as_params(mgr.get_order().num_vars() as u64);
+
+                        let final_samples = out.exact.samples(&mut mgr);
+                        let final_accept = mgr.and(final_samples, out.exact.accept);
+                        let RealSemiring(wmc_accept) = final_accept.wmc(&var_order, &params);
+                        debug!("wmc accept / w: {:?}", wmc_accept);
+                        (qs, wmc_accept )
+                    },
+                    Query::SQuery(_) => {
+                        let qs = out.sample.out.iter().fold(vec![], |mut acc, v| {
                             let vs: Vec<f64> = From::<&SVal>::from(v);
                             acc.extend(vs);
                             acc
-                        }),
-                        None,
-                    ),
+                        });
+                        debug!("         query: {:?}", qs);
+                        debug!("weight        : {} = {}", pq.render(), pq.weight());
+                        (qs, pq.weight())
+                    }
                 };
-                info!("query: {query:?}");
-                let exp_cur = Expectations::new(pq, query);
-                e = Expectations::add(e.clone(), exp_cur);
-                stats_max = stats_max
-                    .as_ref()
-                    .map(|prv: &WmcStats| {
-                        prv.largest_of(&stats.expect("some exact compilation should occur"))
-                    })
-                    .or_else(|| stats);
+                e.add(Exp1::new(w, query));
             }
             Err(e) => panic!(
                 "Error type: {}{}",
@@ -74,14 +79,15 @@ pub fn importance_weighting_h(
         }
     }
 
-    let exp = e.exp.clone();
-    let expw = e.expw.clone();
-    info!("E[.]: {}", renderfloats(&exp, false));
-    info!("E[w]: {}", renderfloats(&expw, false));
+    // let exp = e.exp.clone();
+    // let expw = e.expw.clone();
+    debug!("∑[w * f(-)]: {:?}", e.wquery_sums);
+    debug!("       ∑[w]: {}", e.sum_w);
 
-    // debug_importance_weighting(true, steps, &ws, &[], &prs, &sss, &exp, &expw);
+    // // debug_importance_weighting(true, steps, &ws, &[], &prs, &sss, &exp, &expw);
 
-    let x = e.query();
-    info!("E[q]: {}", renderfloats(&x, false));
-    (x, stats_max)
+    // let x = e.query();
+    // info!("E[q]: {}", renderfloats(&x, false));
+    // (x, stats_max)
+    (e.query(), None)
 }

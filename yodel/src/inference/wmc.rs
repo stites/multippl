@@ -65,6 +65,7 @@ pub fn calculate_wmc_prob(
     calculate_wmc_prob_hf64(mgr, params, var_order, dist, accept)
 }
 
+
 pub fn wmc_prob(mgr: &mut Mgr, c: &EOutput) -> (Vec<f64>, Option<WmcStats>) {
     let span = tracing::span!(tracing::Level::DEBUG, "wmc_prob");
     let _enter = span.enter();
@@ -87,4 +88,25 @@ pub fn wmc_prob(mgr: &mut Mgr, c: &EOutput) -> (Vec<f64>, Option<WmcStats>) {
         })
         .collect_vec();
     (probs, last_stats)
+}
+
+
+pub fn numerators(mgr: &mut Mgr, c: &EOutput) -> Vec<f64> {
+    let span = tracing::span!(tracing::Level::DEBUG, "numerators");
+    let _enter = span.enter();
+
+    let ss = c.samples(mgr);
+    let accept = mgr.and(ss, c.accept);
+    let params = c.weightmap.as_params(mgr.get_order().num_vars() as u64);
+
+    let probs = c
+        .dists()
+        .iter()
+        .map(|dist| {
+            let numerator_formula = mgr.and(*dist, accept);
+            let RealSemiring(num) = numerator_formula.wmc(&mgr.get_order(), &params);
+            num
+        })
+        .collect_vec();
+    probs
 }

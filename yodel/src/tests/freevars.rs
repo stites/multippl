@@ -68,7 +68,7 @@ fn free_variable_2_inv() {
 }
 
 #[test]
-#[traced_test]
+// #[traced_test]
 fn free_variables_1() {
     let problem = r#"
     exact {

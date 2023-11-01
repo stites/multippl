@@ -331,7 +331,7 @@ impl<'a> State<'a> {
                 let out = ctx.mk_eoutput(o);
                 Ok(out)
             }
-            EFlip(_, param) => {
+            EFlip(d, param) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "flip");
                 let _enter = span.enter();
                 tracing::debug!("flip: {:?}", e);
@@ -340,8 +340,8 @@ impl<'a> State<'a> {
                 let o = match &o.out {
                     Some(EVal::EFloat(param)) => {
                         let mut weightmap = ctx.exact.weightmap.clone();
-                        let (lbl, var) = self.mgr.new_var(true);
-                        weightmap.insert(lbl, *param);
+                        weightmap.insert(d.label, *param);
+                        let var = self.mgr.var(d.label, true);
                         Ok(EOutput {
                             out: Some(EVal::EBdd(var)),
                             accept: ctx.exact.accept.clone(),
@@ -374,40 +374,40 @@ impl<'a> State<'a> {
                         self.mgr.and(global, cur)
                     });
 
-                let var_order = self.opts.order.clone();
-                let wmc_params = ctx.exact.weightmap.as_params(self.opts.max_label);
-                let avars = crate::utils::variables(dist);
-                for (i, var) in avars.iter().enumerate() {
-                    debug!("{}@{:?}: {:?}", i, var, wmc_params.get_var_weight(*var));
-                }
-                debug!("WMCParams  {:?}", wmc_params);
-                debug!("VarOrder   {:?}", var_order);
-                debug!("Accept     {:?}", &dist);
-                // FIXME: should be aggregating these stats somewhere
-                debug!("using optimizations: {}", self.opts.sample_pruning);
+                // let var_order = self.opts.order.clone();
+                // let wmc_params = ctx.exact.weightmap.as_params(self.opts.max_label);
+                // let avars = crate::utils::variables(dist);
+                // for (i, var) in avars.iter().enumerate() {
+                //     debug!("{}@{:?}: {:?}", i, var, wmc_params.get_var_weight(*var));
+                // }
+                // debug!("WMCParams  {:?}", wmc_params);
+                // debug!("VarOrder   {:?}", var_order);
+                // debug!("Accept     {:?}", &dist);
+                // // FIXME: should be aggregating these stats somewhere
+                // debug!("using optimizations: {}", self.opts.sample_pruning);
 
-                // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-                // TODO Need to talk to review the semantics in detail and talk
-                // to steven about this if it doesn't get resolved. the issue is
-                // that weighting should be a /clean separation/ from exact
-                // compilation (which also saves us a WMC count) the fix is that
-                // we need to compile this at the _end_ of the program and
-                // weight the distribution accordingly. this amounts to the
-                // partially collapsed importance sampling of bayesian networks
-                // as documented in (Koller & Friedman, 2009). As-is we are kind of cheating.
-                // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-                let ss = ctx.exact.samples(self.mgr, self.opts.sample_pruning);
-                let (wmc, _) = crate::inference::calculate_wmc_prob(
-                    self.mgr,
-                    &wmc_params,
-                    &var_order,
-                    dist.clone(),
-                    ctx.exact.accept.clone(),
-                    ss,
-                );
+                // // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                // // TODO Need to talk to review the semantics in detail and talk
+                // // to steven about this if it doesn't get resolved. the issue is
+                // // that weighting should be a /clean separation/ from exact
+                // // compilation (which also saves us a WMC count) the fix is that
+                // // we need to compile this at the _end_ of the program and
+                // // weight the distribution accordingly. this amounts to the
+                // // partially collapsed importance sampling of bayesian networks
+                // // as documented in (Koller & Friedman, 2009). As-is we are kind of cheating.
+                // // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                // let ss = ctx.exact.samples(self.mgr, self.opts.sample_pruning);
+                // let (wmc, _) = crate::inference::calculate_wmc_prob(
+                //     self.mgr,
+                //     &wmc_params,
+                //     &var_order,
+                //     dist.clone(),
+                //     ctx.exact.accept.clone(),
+                //     ss,
+                // );
 
-                self.mult_pq(wmc, 1.0);
-                // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                // self.mult_pq(wmc, 1.0);
+                // // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
                 let o = EOutput {
                     out: Some(EVal::EBdd(BddPtr::PtrTrue)),
