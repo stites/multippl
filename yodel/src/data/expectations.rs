@@ -57,7 +57,6 @@ impl Exp1 {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub struct Exp2 {
     pub wquery_sums: Vec<f64>, // queries *already* multiplied by the weight
@@ -78,9 +77,7 @@ impl Exp2 {
         Self {
             wquery_sums: prs,
             sum_w: w.clone(),
-            sum_w2: w.into_iter()
-                .map(|w| w * w)
-                .collect_vec(),
+            sum_w2: w.into_iter().map(|w| w * w).collect_vec(),
             count: 1,
         }
     }

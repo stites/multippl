@@ -377,9 +377,7 @@ impl<'a> State<'a> {
                 let dist = comp
                     .dists()
                     .into_iter()
-                    .fold(accept, |global, cur| {
-                        self.mgr.and(global, cur)
-                    });
+                    .fold(accept, |global, cur| self.mgr.and(global, cur));
 
                 // let var_order = self.opts.order.clone();
                 // let wmc_params = ctx.exact.weightmap.as_params(self.opts.max_label);

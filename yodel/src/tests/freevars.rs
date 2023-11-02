@@ -128,7 +128,7 @@ fn free_variable_2_approx() {
         vec![0.714285714],
         &mk(&"x"),
         15,
-        Some(2)
+        Some(2),
     );
 }
 
@@ -145,17 +145,16 @@ fn free_variable_2_approx_simple() {
             + "\n}"
     };
     check_approx_h(
-    // check_exact(
+        // check_exact(
         "free_2/x*y",
         // vec![0.714285714, 1.0, 1.0, 0.714285714],
         // &mk(&allmarg("x", "(x || y)")),
         vec![0.714285714],
         &mk(&"x"),
         15,
-        Some(2)
+        Some(2),
     );
 }
-
 
 #[test]
 fn free_variables_shared_seq() {
@@ -174,7 +173,7 @@ fn free_variables_shared_seq() {
         vec![1.0 / 3.0; 4],
         &mk(&allmarg("l", "r")),
         3,
-        Some(0)
+        Some(0),
     );
 }
 

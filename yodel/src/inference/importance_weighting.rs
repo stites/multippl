@@ -72,14 +72,21 @@ pub fn importance_weighting_h(
                         // debug!("    w / accept: {:?}", ws);
 
                         // let's just stick to what I /thought/ should work:
-                        let ws = nums.iter().map(|_| {
-                            // if wmc_accept == 0.0 { 0.0 } else { wmc_accept / denom }
-                            // when we observe we _do_ want to weight by the
-                            // accepting criteria, even if we already compute it
-                            // in the query. Why is this not double-counting?
-                            // if wmc_accept == 0.0 { 0.0 } else { wmc_accept }
-                            if denom == 0.0 { 0.0 } else { denom }
-                        }).collect_vec();
+                        let ws = nums
+                            .iter()
+                            .map(|_| {
+                                // if wmc_accept == 0.0 { 0.0 } else { wmc_accept / denom }
+                                // when we observe we _do_ want to weight by the
+                                // accepting criteria, even if we already compute it
+                                // in the query. Why is this not double-counting?
+                                // if wmc_accept == 0.0 { 0.0 } else { wmc_accept }
+                                if denom == 0.0 {
+                                    0.0
+                                } else {
+                                    denom
+                                }
+                            })
+                            .collect_vec();
                         let full_wmc = wmc_prob(&mut mgr, &out.exact).0;
 
                         // (full_wmc, ws)

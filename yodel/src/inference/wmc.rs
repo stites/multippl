@@ -89,7 +89,7 @@ pub fn wmc_prob(mgr: &mut Mgr, c: &EOutput) -> (Vec<f64>, Option<WmcStats>) {
     (probs, last_stats)
 }
 
-pub fn numerators(mgr: &mut Mgr, c: &EOutput, fold_in_samples:bool) -> Vec<f64> {
+pub fn numerators(mgr: &mut Mgr, c: &EOutput, fold_in_samples: bool) -> Vec<f64> {
     let span = tracing::span!(tracing::Level::DEBUG, "numerators");
     let _enter = span.enter();
 
@@ -112,7 +112,6 @@ pub fn numerators(mgr: &mut Mgr, c: &EOutput, fold_in_samples:bool) -> Vec<f64> 
         .collect_vec();
     probs
 }
-
 
 pub fn queries(mgr: &mut Mgr, c: &EOutput) -> Vec<f64> {
     let span = tracing::span!(tracing::Level::DEBUG, "queries");
