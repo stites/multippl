@@ -74,7 +74,7 @@ pub fn eval_eite_predicate(
 }
 #[cfg(feature = "debug_samples")]
 fn mk_ite_output_samples(
-    opt: &Opts,
+    opts: &Opts,
     state: &mut super::eval::State,
     truthy_samples: &HashMap<BddPtr, bool>,
     falsy_samples: &HashMap<BddPtr, bool>,
@@ -90,11 +90,11 @@ fn mk_ite_output_samples(
 fn mk_ite_output_samples(
     opts: &Opts,
     state: &mut super::eval::State,
-    truthy_samples: BddPtr,
-    falsy_samples: BddPtr,
+    truthy_samples: &BddPtr,
+    falsy_samples: &BddPtr,
 ) -> BddPtr {
     if !opts.sample_pruning {
-        return state.mgr.and(truthy_samples, falsy_samples);
+        return state.mgr.and(*truthy_samples, *falsy_samples);
     };
     BddPtr::PtrTrue
 }
@@ -127,7 +127,7 @@ pub fn eval_eite_output(
     //     })
     //     .collect_vec();
 
-    let samples = mk_ite_output_samples(opts, state, truthy.exact.samples, falsey.exact.samples);
+    let samples = mk_ite_output_samples(opts, state, &truthy.exact.samples, &falsey.exact.samples);
 
     let accept_l = state.mgr.and(pred_dist, truthy.exact.accept);
     let accept_r = state.mgr.and(pred_dist.neg(), falsey.exact.accept);
@@ -165,14 +165,14 @@ pub fn eval_eite_output(
 
 #[cfg(feature = "debug_samples")]
 fn mk_elet_output_samples(
-    opt: &Opts,
+    opts: &Opts,
     mgr: &mut Mgr,
     bindee_samples: &HashMap<BddPtr, bool>,
     body_samples: &HashMap<BddPtr, bool>,
 ) -> HashMap<BddPtr, bool> {
     if !opts.sample_pruning {
         let mut samples = bindee_samples.clone();
-        samples.extend(body.exact.samples);
+        samples.extend(body_samples);
         return samples;
     };
     Default::default()
@@ -181,11 +181,11 @@ fn mk_elet_output_samples(
 fn mk_elet_output_samples(
     opts: &Opts,
     mgr: &mut Mgr,
-    bindee_samples: BddPtr,
-    body_samples: BddPtr,
+    bindee_samples: &BddPtr,
+    body_samples: &BddPtr,
 ) -> BddPtr {
     if !opts.sample_pruning {
-        return mgr.and(bindee_samples, body_samples);
+        return mgr.and(*bindee_samples, *body_samples);
     };
     BddPtr::PtrTrue
 }
@@ -197,7 +197,7 @@ pub fn eval_elet_output(
     opts: &Opts,
 ) -> Result<EOutput> {
     let accept = mgr.and(body.exact.accept, ctx.exact.accept);
-    let samples = mk_elet_output_samples(opts, mgr, ctx.exact.samples, body.exact.samples);
+    let samples = mk_elet_output_samples(opts, mgr, &ctx.exact.samples, &body.exact.samples);
 
     // let probabilities = izip!(bound.probabilities.clone(), body.probabilities)
     //     .map(|(p1, p2)| p1 * p2)

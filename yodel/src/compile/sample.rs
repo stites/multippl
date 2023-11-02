@@ -1,6 +1,7 @@
 use crate::*;
 use rand::distributions::Distribution;
 use rsdd::builder::bdd_builder::DDNNFPtr;
+use std::collections::HashMap;
 use tracing::*;
 
 pub fn sample_from<D: Distribution<V>, V>(state: &mut super::eval::State, dist: D) -> V {
@@ -17,13 +18,13 @@ fn mk_output_samples(
     sample: bool,
 ) -> HashMap<BddPtr, bool> {
     let mut samples = prev_samples.clone();
-    samples.insert(dist.clone(), s);
+    samples.insert(dist.clone(), sample);
     samples
 }
 #[cfg(not(feature = "debug_samples"))]
-fn mk_output_samples(mgr: &mut Mgr, prev_samples: BddPtr, dist: BddPtr, sample: bool) -> BddPtr {
+fn mk_output_samples(mgr: &mut Mgr, prev_samples: &BddPtr, dist: BddPtr, sample: bool) -> BddPtr {
     let new_sample = mgr.iff(dist, BddPtr::from_bool(sample));
-    mgr.and(prev_samples, new_sample)
+    mgr.and(*prev_samples, new_sample)
 }
 pub fn exact2sample_bdd_eff(
     state: &mut super::eval::State,
@@ -59,7 +60,7 @@ pub fn exact2sample_bdd_eff(
     // sample in sequence. A smarter sample would compile
     // all samples of a multi-rooted BDD, but I need to futz
     // with rsdd's fold
-    let new_samples = mk_output_samples(state.mgr, out.exact.samples, *dist, s);
+    let new_samples = mk_output_samples(state.mgr, &out.exact.samples, *dist, s);
     out.exact.samples = new_samples;
     s
 }
