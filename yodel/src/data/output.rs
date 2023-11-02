@@ -71,12 +71,12 @@ impl GetSamples for Ctx {
     }
 }
 
-impl Default for ECtx {
-    fn default() -> Self {
+impl ECtx {
+    pub fn default_with_data(dv: &DataView1) -> Self {
         ECtx {
             accept: BddPtr::PtrTrue,
             samples: default_samples(),
-            substitutions: Default::default(),
+            substitutions: dv.exact.clone(),
             weightmap: Default::default(),
         }
     }
@@ -208,14 +208,6 @@ pub struct SCtx {
     pub substitutions: SubstMap<SVal>,
     pub trace: Tr,
 }
-impl Default for SCtx {
-    fn default() -> Self {
-        SCtx {
-            substitutions: Default::default(),
-            trace: Default::default(),
-        }
-    }
-}
 impl SCtx {
     pub fn as_output(&self, out: Option<SVal>) -> SOutput {
         SOutput {
@@ -224,6 +216,13 @@ impl SCtx {
             substitutions: self.substitutions.clone(),
         }
     }
+    pub fn default_with_data(dv: &DataView1) -> Self {
+        SCtx {
+            substitutions: dv.sampling.clone(),
+            trace: Default::default(),
+        }
+    }
+
 }
 
 #[derive(Default, Debug, Clone, PartialEq)]
@@ -257,11 +256,12 @@ pub struct Ctx {
     pub exact: ECtx,
     pub sample: SCtx,
 }
-impl Default for Ctx {
-    fn default() -> Self {
+
+impl Ctx {
+    pub fn default_with_data(dv: &DataView1) -> Self {
         Ctx {
-            exact: Default::default(),
-            sample: Default::default(),
+            exact: ECtx::default_with_data(dv),
+            sample: SCtx::default_with_data(dv),
         }
     }
 }

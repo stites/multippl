@@ -11,6 +11,7 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use tracing::*;
+use crate::DataView;
 
 pub type InvMap<T> = HashMap<NamedVar, HashSet<T>>;
 
@@ -73,7 +74,7 @@ pub mod grammar {
                     "BddVar(#{}, L{}, from:{})",
                     self.id.0,
                     self.label.value(),
-                    n.name
+                    n.name()
                 )),
             }
         }
@@ -100,8 +101,9 @@ pub mod grammar {
 
     #[derive(Clone, Hash, Eq, PartialEq)]
     pub struct NamedVar {
-        pub id: UniqueId,
-        pub name: String,
+        id: UniqueId,
+        name: String,
+        is_data: bool,
     }
     impl Debug for NamedVar {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -115,9 +117,19 @@ pub mod grammar {
         pub fn id(&self) -> UniqueId {
             self.id
         }
-        pub fn new(id: UniqueId, name: String) -> Self {
-            NamedVar { id, name }
+        pub fn name(&self) -> &str {
+            &self.name
         }
+        pub fn is_data(&self) -> bool {
+            self.is_data
+        }
+        pub fn new(id: UniqueId, name: String) -> Self {
+            NamedVar { id, name, is_data: false }
+        }
+        pub fn datavar(id: UniqueId, name: String) -> Self {
+            NamedVar { id, name, is_data: true }
+        }
+
     }
 
     #[derive(PartialEq, Eq, Clone, Hash, Debug)]
@@ -578,10 +590,7 @@ impl LabelEnv {
         use crate::grammar::Anf::*;
         match a {
             AVar(id, s) => {
-                let nvar = NamedVar {
-                    id: *id,
-                    name: s.to_string(),
-                };
+                let nvar = NamedVar::new(*id, s.to_string());
                 let var = Var::Named(nvar.clone());
                 self.subst_var.insert(*id, var.clone());
                 Ok(AVar(nvar, s.to_string()))
@@ -618,10 +627,7 @@ impl LabelEnv {
             // )),
             // EProd(_, anfs) => Ok(EProd((), self.annotate_eanfs(anfs)?)),
             ELetIn(id, s, ebound, ebody) => {
-                let nvar = NamedVar {
-                    id: *id,
-                    name: s.to_string(),
-                };
+                let nvar = NamedVar::new(*id, s.to_string());
                 let var = Var::Named(nvar.clone());
                 self.letpos = Some(nvar.clone());
                 // self.weights.insert(var.clone(), Weight::constant());
@@ -678,10 +684,7 @@ impl LabelEnv {
                 Box::new(self.annotate_sexpr(e1)?),
             )),
             SLetIn(id, s, ebound, ebody) => {
-                let nvar = NamedVar {
-                    id: *id,
-                    name: s.to_string(),
-                };
+                let nvar = NamedVar::new(*id, s.to_string());
                 let var = Var::Named(nvar.clone());
                 self.letpos = Some(nvar.clone());
                 self.subst_var.insert(*id, var.clone());
@@ -705,10 +708,7 @@ impl LabelEnv {
                 Box::new(self.annotate_sexpr(rst)?),
             )),
             SMap(arg_id, arg, body, xs) => {
-                let nvar = NamedVar {
-                    id: *arg_id,
-                    name: arg.to_string(),
-                };
+                let nvar = NamedVar::new(*arg_id, arg.to_string());
                 let var = Var::Named(nvar.clone());
                 self.subst_var.insert(*arg_id, var.clone());
                 Ok(SMap(
@@ -719,16 +719,10 @@ impl LabelEnv {
                 ))
             }
             SFold((acc_id, arg_id), init, acc, arg, body, xs) => {
-                let acc_nvar = NamedVar {
-                    id: *acc_id,
-                    name: acc.to_string(),
-                };
+                let acc_nvar = NamedVar::new(*acc_id, acc.to_string());
                 let acc_var = Var::Named(acc_nvar.clone());
                 self.subst_var.insert(*acc_id, acc_var.clone());
-                let arg_nvar = NamedVar {
-                    id: *arg_id,
-                    name: arg.to_string(),
-                };
+                let arg_nvar = NamedVar::new(*arg_id, arg.to_string());
                 let arg_var = Var::Named(arg_nvar.clone());
                 self.subst_var.insert(*arg_id, arg_var.clone());
 
@@ -751,10 +745,7 @@ impl LabelEnv {
                 let nvars: Vec<NamedVar> = args
                     .iter()
                     .zip(ids.iter())
-                    .map(|(a, id)| NamedVar {
-                        id: *id,
-                        name: a.to_string(),
-                    })
+                    .map(|(a, id)| NamedVar::new(*id, a.to_string()))
                     .collect();
                 Ok(SLambda(
                     nvars,
@@ -801,6 +792,21 @@ impl LabelEnv {
         })
     }
 
+    pub fn annotate_with_data(&mut self, p: &ProgramUnq, ds:&DataView) -> Result<AnnotateResult> {
+        println!("here");
+        for (s, _, id) in &ds.keys {
+            match id {
+                Some(id) => {
+                    let nvar = NamedVar::new(*id, s.to_string());
+                    let var = Var::Named(nvar.clone());
+                    self.subst_var.insert(*id, var.clone());
+                    println!("here with {s}:{id:?}, maps to {var:?}");
+                },
+                None => panic!("should be impossible..."),
+            }
+        }
+        self.annotate(p)
+    }
     #[allow(clippy::type_complexity)]
     pub fn annotate(&mut self, p: &ProgramUnq) -> Result<AnnotateResult> {
         match p {

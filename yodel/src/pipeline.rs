@@ -8,10 +8,12 @@ use crate::typecheck::{
 };
 use crate::typeinf::grammar::ProgramInferable;
 use crate::typeinf::typeinference;
-use crate::uniquify::SymEnv;
+use crate::uniquify::{SymEnv, grammar::UniqueId};
+use itertools::*;
 use crate::*;
 use rand::rngs::StdRng;
 use tracing::debug;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct Options {
@@ -73,6 +75,109 @@ impl Options {
     }
 }
 
+// for now, only limited support for data points... Ideally this just turns into
+// a for-loop in the language, but for now we can hack it as a PoC
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum Datum {
+    Float(f64), // will turn into SVals
+    Bool(bool), // will turn into EVals
+    // Int(u64),
+}
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum DTy {
+    SFloat, // will turn into SVals
+    EBool, // will turn into EVals
+}
+
+pub type DataPoints = HashMap<String, Vec<Datum>>;
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct DataSet {
+    ds: DataPoints,
+    size: usize,
+}
+impl DataSet {
+    pub fn empty() -> Self {
+        DataSet {
+            ds: Default::default(),
+            size: 0
+        }
+    }
+    pub fn new(ds: DataPoints) -> Self {
+        let mut size = 0;
+        for col in ds.values() {
+            if size == 0 {
+                size = col.len();
+            } else  {
+                assert_eq!(size, col.len(), "data set has jagged lengths, please check your json file");
+            }
+        }
+        Self { ds, size }
+    }
+}
+
+#[derive(Clone, PartialEq, Debug)]
+pub struct DataView1 {
+    pub sampling: SubstMap<SVal>,
+    pub exact: SubstMap<EVal>,
+    pub keys: HashMap<String, UniqueId>
+}
+#[derive(Clone, PartialEq, Debug)]
+pub struct DataView {
+    pub sampling: HashMap<String, Vec<SVal>>,
+    pub exact: HashMap<String, Vec<EVal>>,
+    pub size: usize,
+    pub keys: Vec<(String, DTy, Option<UniqueId>)>
+}
+impl DataView {
+    pub fn empty() -> Self {
+        Self::new(DataSet::empty())
+    }
+    pub fn new(data: DataSet) -> Self {
+        let mut sampling = HashMap::new();
+        let mut exact = HashMap::new();
+        let mut keys = vec![];
+        for (k, vs) in data.ds {
+            if vs.is_empty() {
+                break
+            } else {
+                let is_sample = match vs[0] {
+                    Datum::Float(_) => true,
+                    Datum::Bool(_) => false,
+                };
+                if is_sample {
+                    let ss = vs.into_iter().map(|v| match v {
+                       Datum::Float(f) => SVal::SFloat(f),
+                       Datum::Bool(_) => panic!(""),
+                    }).collect_vec();
+                    sampling.insert(k.clone(), ss);
+                    keys.push((k, DTy::SFloat, None));
+                } else {
+                    let bs = vs.into_iter().map(|v| match v {
+                       Datum::Float(_) => panic!(""),
+                       Datum::Bool(b) => EVal::from_bool(b),
+                    }).collect_vec();
+                    exact.insert(k.clone(), bs);
+                    keys.push((k, DTy::EBool, None));
+                }
+            }
+        }
+        Self { sampling, exact, size: data.size, keys }
+    }
+    pub fn view(&self, step: usize) -> DataView1 {
+        if self.size == 0 {
+            DataView1 { sampling: Default::default(), exact: Default::default(), keys: Default::default() }
+        } else {
+            let ix = step % self.size;
+            let keys : HashMap<String, UniqueId> = self.keys.iter().map(|(s, ty, id)| (s.clone(), id.unwrap()) ).collect();
+            let sampling: HashMap<UniqueId, SVal> = self.sampling.iter().map(|(k, vs)| (*keys.get(k).unwrap(), vs[ix].clone())).collect();
+            let exact: HashMap<UniqueId, EVal> = self.exact.iter().map(|(k, vs)| (*keys.get(k).unwrap(), vs[ix].clone())).collect();
+            DataView1 { sampling, exact, keys }
+        }
+    }
+}
+
+
 pub struct ROut {
     pub out: Output,
     pub rng: Option<StdRng>,
@@ -133,10 +238,24 @@ pub fn runner(
     p: &Program<crate::annotate::grammar::Annotated>,
     lenv: &LabelEnv,
 ) -> Result<PartialROut> {
+    runner_with_data(mgr, rng, opt, p, lenv, 0, &DataView::empty())
+}
+
+
+
+pub fn runner_with_data(
+    mgr: &mut Mgr,
+    rng: &mut StdRng,
+    opt: &Options,
+    p: &Program<crate::annotate::grammar::Annotated>,
+    lenv: &LabelEnv,
+    step: usize,
+    dv: &DataView
+) -> Result<PartialROut> {
     let sample_pruning = opt.opt;
 
     let mut state = State::new(mgr, Some(rng), sample_pruning, &lenv.funs);
-    let out = state.eval_program(&p)?;
+    let out = state.eval_program_with_data(&p, &dv.view(step))?;
     tracing::debug!("program... compiled!");
 
     Ok(PartialROut {
@@ -146,42 +265,51 @@ pub fn runner(
     })
 }
 
-pub fn make_mgr(code: &str) -> Result<Mgr> {
-    tracing::trace!("making manager");
-    let p = crate::parser::program::parse(code)?;
-    tracing::debug!("(parsed)");
-    tracing::debug!("(parsed) >>> {p:?}");
-    tracing::debug!("(parsed)");
-    let p = crate::typeinf::typeinference(&p)?;
-    tracing::debug!("(inferred)");
-    tracing::debug!("(inferred) >>> {p:?}");
-    tracing::debug!("(inferred)");
-    let p = crate::typecheck::typecheck(&p)?;
-    tracing::debug!("(checked)");
-    tracing::debug!("(checked) >>> {p:?}");
-    tracing::debug!("(checked)");
-    let p = crate::desugar::desugar(&p)?;
-    tracing::debug!("(desugared)");
-    tracing::debug!("(desugared) >>> {p:?}");
-    tracing::debug!("(desugared)");
-    let mut env = SymEnv::default();
-    let p = env.uniquify(&p)?.0;
-    tracing::debug!("(uniquifyed)");
-    tracing::debug!("(uniquifyed) >>> {p:?}");
-    tracing::debug!("(uniquifyed)");
-    let ar = LabelEnv::new(env.functions, env.fun_stats).annotate(&p)?;
-    let p = ar.program;
-    tracing::debug!("(annotated)");
-    tracing::debug!("(annotated) >>> {p:?}");
-    tracing::debug!("(annotated)");
-    let maxlbl = ar.maxbdd.0;
-    tracing::trace!("(manager created with max label: {maxlbl})");
-    Ok(Mgr::new_default_order(maxlbl as usize))
-}
 
+
+// pub fn make_mgr(code: &str) -> Result<Mgr> {
+//     tracing::trace!("making manager");
+//     let p = crate::parser::program::parse(code)?;
+//     tracing::debug!("(parsed)");
+//     tracing::debug!("(parsed) >>> {p:?}");
+//     tracing::debug!("(parsed)");
+//     let p = crate::typeinf::typeinference(&p)?;
+//     tracing::debug!("(inferred)");
+//     tracing::debug!("(inferred) >>> {p:?}");
+//     tracing::debug!("(inferred)");
+//     let p = crate::typecheck::typecheck(&p)?;
+//     tracing::debug!("(checked)");
+//     tracing::debug!("(checked) >>> {p:?}");
+//     tracing::debug!("(checked)");
+//     let p = crate::desugar::desugar(&p)?;
+//     tracing::debug!("(desugared)");
+//     tracing::debug!("(desugared) >>> {p:?}");
+//     tracing::debug!("(desugared)");
+//     let mut env = SymEnv::default();
+//     let p = env.uniquify(&p)?.0;
+//     tracing::debug!("(uniquifyed)");
+//     tracing::debug!("(uniquifyed) >>> {p:?}");
+//     tracing::debug!("(uniquifyed)");
+//     let ar = LabelEnv::new(env.functions, env.fun_stats).annotate(&p)?;
+//     let p = ar.program;
+//     tracing::debug!("(annotated)");
+//     tracing::debug!("(annotated) >>> {p:?}");
+//     tracing::debug!("(annotated)");
+//     let maxlbl = ar.maxbdd.0;
+//     tracing::trace!("(manager created with max label: {maxlbl})");
+//     Ok(Mgr::new_default_order(maxlbl as usize))
+// }
 pub fn make_mgr_and_ir(
     code: &str,
 ) -> Result<(Mgr, Program<crate::annotate::grammar::Annotated>, LabelEnv)> {
+    let (m, p, l, _) = make_mgr_and_ir_with_data(code, DataSet::empty())?;
+    Ok((m, p, l))
+}
+
+pub fn make_mgr_and_ir_with_data(
+    code: &str,
+    ds: DataSet,
+) -> Result<(Mgr, Program<crate::annotate::grammar::Annotated>, LabelEnv, DataView)> {
     tracing::info!("compiling code:\n{code}");
     tracing::trace!("making manager");
     let p = crate::parser::program::parse(code)?;
@@ -201,18 +329,18 @@ pub fn make_mgr_and_ir(
     tracing::debug!("(desugared) >>> {p:?}");
     tracing::debug!("(desugared)");
     let mut env = SymEnv::default();
-    let p = env.uniquify(&p)?.0;
+    let mut dv = DataView::new(ds);
+    let p = env.uniquify_with_data(&p, &mut dv)?.0;
     tracing::debug!("(uniquifyed)");
     tracing::debug!("(uniquifyed) >>> {p:?}");
     tracing::debug!("(uniquifyed)");
     let mut lenv = LabelEnv::new(env.functions, env.fun_stats);
-    let ar = lenv.annotate(&p)?;
+    let ar = lenv.annotate_with_data(&p, &dv)?;
     let p = ar.program;
     tracing::debug!("(annotated)");
     tracing::debug!("(annotated) >>> {p:?}");
     tracing::debug!("(annotated)");
     let maxlbl = ar.maxbdd.0;
     tracing::trace!("(manager created with max label: {maxlbl})");
-    Ok((Mgr::new_default_order(maxlbl as usize), p, lenv))
-    // Ok((Mgr::new_default_order(0), p, lenv))
+    Ok((Mgr::new_default_order(maxlbl as usize), p, lenv, dv))
 }

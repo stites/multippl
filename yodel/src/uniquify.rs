@@ -4,6 +4,7 @@ use grammar::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
 use tracing::*;
+use crate::DataView;
 
 pub mod grammar {
     use super::*;
@@ -487,6 +488,15 @@ impl SymEnv {
         })
     }
 
+    pub fn uniquify_with_data(&mut self, p: &ProgramUD, ds:&mut DataView) -> Result<(ProgramUnq, MaxUniqueId)> {
+        let mut unique_keys = vec![];
+        for (k, ty, _) in &ds.keys {
+            let uid = self._fresh(Some(k.clone()));
+            unique_keys.push((k.clone(), ty.clone(), Some(uid)));
+        }
+        ds.keys = unique_keys;
+        self.uniquify(p)
+    }
     pub fn uniquify(&mut self, p: &ProgramUD) -> Result<(ProgramUnq, MaxUniqueId)> {
         // tracing::debug!("uniquify-ing");
         match p {

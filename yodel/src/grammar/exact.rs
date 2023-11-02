@@ -98,6 +98,13 @@ impl EVal {
             _ => None,
         }
     }
+    pub fn from_bool(b: bool) -> Self {
+        if b {
+            Self::EBdd(BddPtr::PtrTrue)
+        } else {
+            Self::EBdd(BddPtr::PtrFalse)
+        }
+    }
     // pub fn is_true(&self) -> bool {
     //     use EVal::*;
     //     match self {

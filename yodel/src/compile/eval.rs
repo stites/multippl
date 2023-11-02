@@ -279,18 +279,18 @@ impl<'a> State<'a> {
         debug!("{:?}", self.log_pq);
         // }
     }
-    pub fn eval_program(&mut self, prog: &Program<Annotated>) -> Result<Output> {
+    pub fn eval_program_with_data(&mut self, prog: &Program<Annotated>, dview: &DataView1) -> Result<Output> {
         match prog {
             Program::SBody(e) => {
                 tracing::trace!("compiling sbody...");
                 tracing::debug!("ast: {e:?}");
-                let c = self.eval_sexpr(Ctx::default(), e)?;
+                let c = self.eval_sexpr(Ctx::default_with_data(dview), e)?;
                 Ok(c)
             }
             Program::EBody(e) => {
                 tracing::trace!("compiling ebody...");
                 tracing::debug!("ast: {e:?}");
-                let c = self.eval_eexpr(Ctx::default(), e)?;
+                let c = self.eval_eexpr(Ctx::default_with_data(dview), e)?;
                 Ok(c)
             }
             Program::SDefine(f, e) => {
@@ -301,7 +301,7 @@ impl<'a> State<'a> {
                 //     .name
                 //     .expect("all defined functions must have a name");
                 // self.fns.insert(name, Fn::Sample(f.clone()));
-                self.eval_program(e)
+                self.eval_program_with_data(e, dview)
             }
             Program::EDefine(f, e) => {
                 tracing::trace!("skipping edefine... (collected in annotate)");
@@ -311,7 +311,7 @@ impl<'a> State<'a> {
                 //     .name
                 //     .expect("all defined functions must have a name");
                 // self.fns.insert(name, Fn::Exact(f.clone()));
-                self.eval_program(e)
+                self.eval_program_with_data(e, dview)
             }
         }
     }
@@ -377,7 +377,12 @@ impl<'a> State<'a> {
                 let dist = comp
                     .dists()
                     .into_iter()
-                    .fold(accept, |global, cur| self.mgr.and(global, cur));
+                    .fold(accept, |global, cur| {
+                        println!("compile dist: {}", cur.print_bdd());
+                        let r = self.mgr.and(global, cur);
+                        println!("observe dist: {}", cur.print_bdd());
+                        r
+                    });
 
                 // let var_order = self.opts.order.clone();
                 // let wmc_params = ctx.exact.weightmap.as_params(self.opts.max_label);
@@ -963,7 +968,7 @@ impl<'a> State<'a> {
                 //     };
                 //     out.sample.out.push(val);
                 // }
-                debug!("boundary sample: {:?}", out.sample.out);
+                println!("boundary sample: {:?}", out.sample.out);
                 Ok(out)
             }
             SLetSample(_, _, _, _) => errors::erased(Trace, "let-sample"),

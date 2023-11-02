@@ -20,13 +20,22 @@ pub fn importance_weighting(steps: usize, p: &str) -> Vec<f64> {
     )
     .0
 }
-
 pub fn importance_weighting_h(
     steps: usize,
     code: &str,
     opt: &crate::Options,
 ) -> (Vec<f64>, Option<WmcStats>) {
-    let (mut mgr, p, lenv) = make_mgr_and_ir(code).unwrap();
+    importance_weighting_h_h(steps, code, opt, Default::default())
+}
+
+pub fn importance_weighting_h_h(
+    steps: usize,
+    code: &str,
+    opt: &crate::Options,
+    data: DataPoints,
+) -> (Vec<f64>, Option<WmcStats>) {
+    let ds = DataSet::new(data);
+    let (mut mgr, p, lenv, dview) = make_mgr_and_ir_with_data(code, ds).unwrap();
     let mut rng = opt.rng();
     let mut e = Exp2::empty();
 
@@ -35,7 +44,7 @@ pub fn importance_weighting_h(
         if step % 100 == 1 {
             debug!("step: {step}");
         }
-        match crate::runner(&mut mgr, &mut rng, &opt, &p, &lenv) {
+        match crate::runner_with_data(&mut mgr, &mut rng, &opt, &p, &lenv, step, &dview) {
             Ok(o) => {
                 trace!("{:?}", o.out.exact.out);
                 let (out, pq) = (o.out, o.pq);

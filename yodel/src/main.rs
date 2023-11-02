@@ -4,14 +4,14 @@ extern crate yodel;
 use clap::Parser;
 use clap_verbosity_flag::LevelFilter as VerbLevel;
 use clap_verbosity_flag::Verbosity;
+use serde_json::Value;
 use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
 use std::time::*;
 use tracing::*;
+use yodel::pipeline::{Datum, DataPoints};
 use tracing_subscriber::fmt;
-use serde_json::{Value};
-use std::collections::HashMap;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -81,29 +81,29 @@ fn setup_tracing(lvl: Level) {
         .event_format(format)
         .init();
 }
-#[derive(Clone, Copy, PartialEq, Debug)]
-enum Datum {
-    Float(f64),
-    Bool(bool),
-    Int(u64),
-}
 
-fn read_data(ofp: Option<String>) -> HashMap<String, Vec<Datum>> {
+fn read_data(ofp: Option<String>) -> DataPoints {
     ofp.and_then(|fp| {
         let datafile = fs::read_to_string(fp).ok()?;
         let parsed: Value = serde_json::from_str(&datafile).ok()?;
-        parsed.as_object()?.into_iter()
-             .map(|(k, v)| {
-                 let v = serde_json::from_value::<Vec<Value>>(v.clone()).ok()?.into_iter().map(|v|{
-                     match &v {
-                         Value::Bool(x) => Some(Datum::Bool(*x)),
-                         Value::Number(x) => Some(Datum::Float(x.as_f64()?)),
-                         _ => None
-                     }
-                 }).collect::<Option<_>>()?;
-                 Some((k.clone(), v))
-             }).collect::<Option<_>>()
-    }).unwrap_or_else(|| Default::default())
+        parsed
+            .as_object()?
+            .into_iter()
+            .map(|(k, v)| {
+                let v = serde_json::from_value::<Vec<Value>>(v.clone())
+                    .ok()?
+                    .into_iter()
+                    .map(|v| match &v {
+                        Value::Bool(x) => Some(Datum::Bool(*x)),
+                        Value::Number(x) => Some(Datum::Float(x.as_f64()?)),
+                        _ => None,
+                    })
+                    .collect::<Option<_>>()?;
+                Some((k.clone(), v))
+            })
+            .collect::<Option<_>>()
+    })
+    .unwrap_or_else(|| Default::default())
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -151,7 +151,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     debug!("compilation options: {:?}", options);
     let now = Instant::now();
-    let (query, stats) = yodel::inference::importance_weighting_h(args.steps, &src, &options);
+    let (query, stats) = yodel::inference::importance_weighting_h_h(args.steps, &src, &options, datapoints);
     let elapsed_time = now.elapsed();
     if args.stats {
         println!("{:?}", stats);
