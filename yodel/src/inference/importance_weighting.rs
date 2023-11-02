@@ -4,10 +4,10 @@ use crate::uniquify::grammar::*;
 use crate::utils::render::*;
 use crate::*;
 use itertools::*;
-use std::collections::HashMap;
 use rsdd::builder::bdd_builder::DDNNFPtr;
-use tracing::*;
 use rsdd::repr::wmc::RealSemiring;
+use std::collections::HashMap;
+use tracing::*;
 
 pub fn importance_weighting(steps: usize, p: &str) -> Vec<f64> {
     importance_weighting_h(
@@ -28,7 +28,7 @@ pub fn importance_weighting_h(
 ) -> (Vec<f64>, Option<WmcStats>) {
     let (mut mgr, p, lenv) = make_mgr_and_ir(code).unwrap();
     let mut rng = opt.rng();
-    let mut e = Exp1::empty();
+    let mut e = Exp2::empty();
 
     debug!("running with options: {:#?}", opt);
     for step in 1..=steps {
@@ -43,20 +43,50 @@ pub fn importance_weighting_h(
                 debug!("sample trace  : {:?}", out.sample.trace);
                 debug!("exact output  : {:?}", out.exact.out);
                 debug!("accepting     : {:?}", out.exact.accept);
-                let (query, w): (Vec<f64>, f64) = match p.query() { // TODO drop this traversal, pre-compute during eval
+                let (query, ws): (Vec<f64>, Vec<f64>) = match p.query() {
+                    // TODO drop this traversal, pre-compute during eval
                     Query::EQuery(_) => {
-                        let qs = numerators(&mut mgr, &out.exact);
-                        debug!("         query: {:?}", qs);
+                        let nums = numerators(&mut mgr, &out.exact, true);
+                        debug!("          nums: {:?}", nums);
                         let var_order = mgr.get_order().clone();
-                        let params = out.exact.weightmap.as_params(mgr.get_order().num_vars() as u64);
+                        let params = out
+                            .exact
+                            .weightmap
+                            .as_params(mgr.get_order().num_vars() as u64);
 
                         let final_samples = out.exact.samples(&mut mgr);
                         let final_accept = mgr.and(final_samples, out.exact.accept);
-                        let RealSemiring(wmc_accept) = final_accept.wmc(&var_order, &params);
-                        debug!("wmc accept / w: {:?}", wmc_accept);
-                        (qs, wmc_accept )
-                    },
+                        let RealSemiring(denom) = final_accept.wmc(&var_order, &params);
+
+                        let RealSemiring(wmc_accept) = out.exact.accept.wmc(&var_order, &params);
+                        debug!("    wmc accept: {:?}", wmc_accept);
+                        // let qs = queries(&mut mgr, &out.exact);
+                        // debug!("            qs: {:?}", qs);
+                        // let ws = izip!(qs, &nums).map(|(q, num)| {
+                        //     if q == 0.0 { 0.0 } else { *num / q }
+                        // }).collect_vec();
+                        // debug!("      num / qs: {:?}", ws);
+                        // let ws = ws.into_iter().map(|w| {
+                        //     w / wmc_accept
+                        // }).collect_vec();
+                        // debug!("    w / accept: {:?}", ws);
+
+                        // let's just stick to what I /thought/ should work:
+                        let ws = nums.iter().map(|_| {
+                            // if wmc_accept == 0.0 { 0.0 } else { wmc_accept / denom }
+                            // when we observe we _do_ want to weight by the
+                            // accepting criteria, even if we already compute it
+                            // in the query. Why is this not double-counting?
+                            // if wmc_accept == 0.0 { 0.0 } else { wmc_accept }
+                            if denom == 0.0 { 0.0 } else { denom }
+                        }).collect_vec();
+                        let full_wmc = wmc_prob(&mut mgr, &out.exact).0;
+
+                        // (full_wmc, ws)
+                        (nums, ws)
+                    }
                     Query::SQuery(_) => {
+                        // FIXME: ensure that you're not missing something about incorporating the accepting criteria into the weight!
                         let qs = out.sample.out.iter().fold(vec![], |mut acc, v| {
                             let vs: Vec<f64> = From::<&SVal>::from(v);
                             acc.extend(vs);
@@ -64,10 +94,11 @@ pub fn importance_weighting_h(
                         });
                         debug!("         query: {:?}", qs);
                         debug!("weight        : {} = {}", pq.render(), pq.weight());
-                        (qs, pq.weight())
+                        let ws = qs.iter().map(|_| pq.weight()).collect_vec();
+                        (qs, ws)
                     }
                 };
-                e.add(Exp1::new(w, query));
+                e.add(Exp2::new(ws, query));
             }
             Err(e) => panic!(
                 "Error type: {}{}",
@@ -82,7 +113,7 @@ pub fn importance_weighting_h(
     // let exp = e.exp.clone();
     // let expw = e.expw.clone();
     debug!("∑[w * f(-)]: {:?}", e.wquery_sums);
-    debug!("       ∑[w]: {}", e.sum_w);
+    debug!("       ∑[w]: {:?}", e.sum_w);
 
     // // debug_importance_weighting(true, steps, &ws, &[], &prs, &sss, &exp, &expw);
 

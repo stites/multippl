@@ -367,10 +367,17 @@ impl<'a> State<'a> {
                 // debug!("In. Accept {}", &ctx.accept.print_bdd());
                 // debug!("Comp. dist {}", renderbdds(&comp.dists));
                 // debug!("weightmap  {:?}", ctx.weightmap);
+
+                // except everything up to this point
+                let accept = ctx.exact.accept.clone();
+                // and include any sample consistency that is necessary
+                let ss = ctx.exact.samples(self.mgr, self.opts.sample_pruning);
+                let accept = self.mgr.and(accept, ss);
+
                 let dist = comp
                     .dists()
                     .into_iter()
-                    .fold(ctx.exact.accept.clone(), |global, cur| {
+                    .fold(accept, |global, cur| {
                         self.mgr.and(global, cur)
                     });
 

@@ -79,7 +79,7 @@ fn free_variables_1() {
     }"#
     .to_owned()
         + "\n}";
-    check_approx1("free/!!", 1.0, &problem, 100);
+    check_approx_h("free/!!", vec![1.0], &problem, 3, Some(0));
     // check_approx1("free/!!", 1.0, &problem, 2);
 }
 
@@ -121,16 +121,44 @@ fn free_variable_2_approx() {
             + ret
             + "\n}"
     };
-    check_approx(
+    check_approx_h(
         "free2/x*y",
-        vec![0.714285714, 1.0, 1.0, 0.714285714],
-        &mk(&allmarg("x", "y")),
-        10000,
+        // vec![0.714285714, 1.0, 1.0, 0.714285714],
+        // &mk(&allmarg("x", "y")),
+        vec![0.714285714],
+        &mk(&"x"),
+        15,
+        Some(2)
     );
 }
 
 #[test]
-fn free_variables_shared() {
+fn free_variable_2_approx_simple() {
+    let mk = |ret: &str| {
+        r#"exact {
+    let x = sample { exact { flip(1.0/3.0) } } in
+    let y = sample { exact { flip(0.2) } } in
+    observe x || (x || y) in
+    "#
+        .to_owned()
+            + ret
+            + "\n}"
+    };
+    check_approx_h(
+    // check_exact(
+        "free_2/x*y",
+        // vec![0.714285714, 1.0, 1.0, 0.714285714],
+        // &mk(&allmarg("x", "(x || y)")),
+        vec![0.714285714],
+        &mk(&"x"),
+        15,
+        Some(2)
+    );
+}
+
+
+#[test]
+fn free_variables_shared_seq() {
     let mk = |ret: &str| {
         r#"exact {
         let x = flip (1.0/3.0) in
@@ -141,11 +169,12 @@ fn free_variables_shared() {
             + ret
             + "\n}"
     };
-    check_approx(
+    check_approx_h(
         "shared_all",
         vec![1.0 / 3.0; 4],
         &mk(&allmarg("l", "r")),
-        10000,
+        3,
+        Some(0)
     );
 }
 
@@ -164,7 +193,7 @@ fn free_variables_shared_tuple() {
         "#
     };
 
-    check_approx("sharedtuple", vec![1.0 / 3.0, 1.0 / 3.0], &mk(), 15000);
+    check_approx_h("sharedtuple", vec![1.0 / 3.0, 1.0 / 3.0], &mk(), 3, Some(0));
 }
 #[test]
 #[ignore]

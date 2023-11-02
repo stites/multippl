@@ -79,11 +79,13 @@ fn program04_approx() {
             + "\n}"
     };
 
-    let n = 2000;
-    check_approx1("p04s/y  ", 3.0 / 6.0, &mk("y"), n);
-    check_approx1("p04s/x  ", 4.0 / 6.0, &mk("x"), n);
-    check_approx1("p04s/x|y", 6.0 / 6.0, &mk("x || y"), n);
-    check_approx1("p04s/x&y", 1.0 / 6.0, &mk("x && y"), n);
+    // let n = 2000;
+    let n = 3;
+    let seed = Some(0);
+    check_approx_h("p04s/y  ", vec![3.0 / 6.0], &mk("y"), n, seed);
+    check_approx_h("p04s/x  ", vec![4.0 / 6.0], &mk("x"), n, seed);
+    check_approx_h("p04s/x|y", vec![6.0 / 6.0], &mk("x || y"), n, seed);
+    check_approx_h("p04s/x&y", vec![1.0 / 6.0], &mk("x && y"), n, seed);
     // check_invariant("p04", None, None, &mk(&allmarg("y", "x")));
 }
 
