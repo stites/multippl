@@ -48,6 +48,7 @@ paste = "1.0.12"
 
 test-log = { version = "0.2.12", features = ["trace"] }
 clap-verbosity-flag = "2.0.1"
+serde_json = "1.0.108"
 
 [dev-dependencies]
 formula = { path = "../formula" }

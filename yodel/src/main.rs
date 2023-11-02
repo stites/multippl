@@ -10,6 +10,8 @@ use std::path::PathBuf;
 use std::time::*;
 use tracing::*;
 use tracing_subscriber::fmt;
+use serde_json::{Value};
+use std::collections::HashMap;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -79,6 +81,31 @@ fn setup_tracing(lvl: Level) {
         .event_format(format)
         .init();
 }
+#[derive(Clone, Copy, PartialEq, Debug)]
+enum Datum {
+    Float(f64),
+    Bool(bool),
+    Int(u64),
+}
+
+fn read_data(ofp: Option<String>) -> HashMap<String, Vec<Datum>> {
+    ofp.and_then(|fp| {
+        let datafile = fs::read_to_string(fp).ok()?;
+        let parsed: Value = serde_json::from_str(&datafile).ok()?;
+        parsed.as_object()?.into_iter()
+             .map(|(k, v)| {
+                 let v = serde_json::from_value::<Vec<Value>>(v.clone()).ok()?.into_iter().map(|v|{
+                     match &v {
+                         Value::Bool(x) => Some(Datum::Bool(*x)),
+                         Value::Number(x) => Some(Datum::Float(x.as_f64()?)),
+                         _ => None
+                     }
+                 }).collect::<Option<_>>()?;
+                 Some((k.clone(), v))
+             }).collect::<Option<_>>()
+    }).unwrap_or_else(|| Default::default())
+}
+
 fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
@@ -110,7 +137,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("Debug level: {:?}", lvl);
     info!(" report BDD: {}", args.stats);
     info!("!!   +query: {:?}", args.post); // FIXME: unused
-    info!("!!data file: {:?}", args.data); // FIXME: unused
+    info!("!!data file: {:?}", args.data);
     setup_tracing(lvl);
 
     let pth = PathBuf::from(args.file);
@@ -120,6 +147,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     debug!("program:\n{}\n", src);
 
     let options = yodel::pipeline::Options::new(args.rng, false, false, false, 0);
+    let datapoints = read_data(args.data); // FIXME unused
 
     debug!("compilation options: {:?}", options);
     let now = Instant::now();
