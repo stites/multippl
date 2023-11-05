@@ -254,6 +254,7 @@ pub fn runner_with_data(
 ) -> Result<PartialROut> {
     let sample_pruning = opt.opt;
 
+    tracing::debug!("program running...");
     let mut state = State::new(mgr, Some(rng), sample_pruning, &lenv.funs);
     let out = state.eval_program_with_data(&p, &dv.view(step))?;
     tracing::debug!("program... compiled!");
@@ -341,6 +342,6 @@ pub fn make_mgr_and_ir_with_data(
     tracing::debug!("(annotated) >>> {p:?}");
     tracing::debug!("(annotated)");
     let maxlbl = ar.maxbdd.0;
-    tracing::trace!("(manager created with max label: {maxlbl})");
+    tracing::debug!("(manager created with max label: {maxlbl})");
     Ok((Mgr::new_default_order(maxlbl as usize), p, lenv, dv))
 }

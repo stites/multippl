@@ -79,7 +79,6 @@ fn program04_approx() {
             + "\n}"
     };
 
-    // let n = 2000;
     let n = 3;
     let seed = Some(0);
     check_approx_h("p04s/y  ", vec![3.0 / 6.0], &mk("y"), n, seed);

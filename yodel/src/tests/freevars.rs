@@ -62,10 +62,33 @@ fn free_variable_2_inv() {
     (|p: String| check_approx("---------", vec![0.714285714, 1.0, 1.0, 0.714285714], &p, n))(mk(
         &allmarg("x", "y"),
     ));
-    // (|p| debug_approx("free2/x*y", vec![0.714285714, 1.0, 1.0, 0.714285714], &p, 5))(mk(
-    //     q!("x" x "y"),
+}
+
+#[test]
+// #[traced_test]
+fn free_variable_2_inv_small() {
+    let mk = |ret: &str| {
+        (r#"exact {
+  let x = flip (1.0/3.0) in
+  let y = (let x0 = flip 1.0 / 2.0 in x0 || x) in
+  observe (x || y) in
+  "#
+        .to_owned()
+            + ret
+            + "\n}")
+            .to_string()
+    };
+    check_approx_h("freevars2_inv", vec![0.5], &mk(&"x"), 3, Some(0));
+
+    // let n = 500;
+    // (|p: String| check_invariant("free2/x*y ", None, None, &p))(mk(&allmarg("x", "y")));
+    // (|p: String| check_approx("free2/x*y", vec![0.714285714], &p, n))(mk(&"x"));
+    // (|p: String| check_approx("---------", vec![1.000000000], &p, n))(mk(&"y"));
+    // (|p: String| check_approx("---------", vec![0.714285714, 1.0, 1.0, 0.714285714], &p, n))(mk(
+    //     &allmarg("x", "y"),
     // ));
 }
+
 
 #[test]
 // #[traced_test]
@@ -132,12 +155,17 @@ fn free_variable_2_approx() {
     );
 }
 
+// let x = flip (1/3)  in
+// let y = flip (1/2)      in
+// let _ = observe x || (x || y) in
+// // P(x) 0.5
+// // P(y) 0.75
 #[test]
 fn free_variable_2_approx_simple() {
     let mk = |ret: &str| {
         r#"exact {
     let x = sample { exact { flip(1.0/3.0) } } in
-    let y = sample { exact { flip(0.2) } } in
+    let y = sample { exact { flip(1.0/2.0) } } in
     observe x || (x || y) in
     "#
         .to_owned()
@@ -149,10 +177,10 @@ fn free_variable_2_approx_simple() {
         "free_2/x*y",
         // vec![0.714285714, 1.0, 1.0, 0.714285714],
         // &mk(&allmarg("x", "(x || y)")),
-        vec![0.714285714],
-        &mk(&"x"),
-        15,
-        Some(2),
+        vec![0.5, 0.75],
+        &mk(&"(x, y)"),
+        6000,
+        Some(1),
     );
 }
 
@@ -191,11 +219,10 @@ fn free_variables_shared_tuple() {
         }
         "#
     };
-
     check_approx_h("sharedtuple", vec![1.0 / 3.0, 1.0 / 3.0], &mk(), 3, Some(0));
 }
 #[test]
-#[ignore]
+#[ignore = "type-checking error? not a problem with the current functionality"]
 fn free_variable_2_approx_again() {
     let mk = |ret: &str| {
         r#"exact {

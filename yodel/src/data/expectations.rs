@@ -19,9 +19,9 @@ impl Exp1 {
             count: 0,
         }
     }
-    pub fn new(w: f64, prs: Vec<f64>) -> Self {
+    pub fn new(w: f64, qs: Vec<f64>) -> Self {
         Self {
-            wquery_sums: prs,
+            wquery_sums: qs.into_iter().map(|q| w * q).collect_vec(),
             sum_w: w,
             sum_w2: w * w,
             count: 1,
@@ -73,13 +73,14 @@ impl Exp2 {
             count: 0,
         }
     }
-    pub fn new(w: Vec<f64>, prs: Vec<f64>) -> Self {
-        Self {
-            wquery_sums: prs,
-            sum_w: w.clone(),
-            sum_w2: w.into_iter().map(|w| w * w).collect_vec(),
-            count: 1,
-        }
+    pub fn new(w: Vec<f64>, qs: Vec<f64>) -> Self {
+        todo!()
+        // Self {
+        //     wquery_sums: qs.into_iter().map(|q| w * q).collect_vec(),
+        //     sum_w: w.clone(),
+        //     sum_w2: w.into_iter().map(|w| w * w).collect_vec(),
+        //     count: 1,
+        // }
     }
     pub fn add(&mut self, o: Self) {
         if self.count == 0 {
