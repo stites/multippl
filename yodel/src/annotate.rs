@@ -793,14 +793,12 @@ impl LabelEnv {
     }
 
     pub fn annotate_with_data(&mut self, p: &ProgramUnq, ds:&DataView) -> Result<AnnotateResult> {
-        println!("here");
         for (s, _, id) in &ds.keys {
             match id {
                 Some(id) => {
                     let nvar = NamedVar::new(*id, s.to_string());
                     let var = Var::Named(nvar.clone());
                     self.subst_var.insert(*id, var.clone());
-                    println!("here with {s}:{id:?}, maps to {var:?}");
                 },
                 None => panic!("should be impossible..."),
             }

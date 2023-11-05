@@ -378,9 +378,7 @@ impl<'a> State<'a> {
                     .dists()
                     .into_iter()
                     .fold(accept, |global, cur| {
-                        println!("compile dist: {}", cur.print_bdd());
                         let r = self.mgr.and(global, cur);
-                        println!("observe dist: {}", cur.print_bdd());
                         r
                     });
 
