@@ -2,6 +2,7 @@ use crate::data::{errors, CompileError, Result};
 use crate::grammar::*;
 use crate::typeinf::grammar::ProgramInferable;
 use crate::uniquify::grammar::*;
+use crate::DataView;
 use grammar::*;
 use rsdd::repr::var_label::*;
 use rsdd::repr::var_order::VarOrder;
@@ -11,7 +12,6 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use tracing::*;
-use crate::DataView;
 
 pub type InvMap<T> = HashMap<NamedVar, HashSet<T>>;
 
@@ -124,12 +124,19 @@ pub mod grammar {
             self.is_data
         }
         pub fn new(id: UniqueId, name: String) -> Self {
-            NamedVar { id, name, is_data: false }
+            NamedVar {
+                id,
+                name,
+                is_data: false,
+            }
         }
         pub fn datavar(id: UniqueId, name: String) -> Self {
-            NamedVar { id, name, is_data: true }
+            NamedVar {
+                id,
+                name,
+                is_data: true,
+            }
         }
-
     }
 
     #[derive(PartialEq, Eq, Clone, Hash, Debug)]
@@ -792,14 +799,14 @@ impl LabelEnv {
         })
     }
 
-    pub fn annotate_with_data(&mut self, p: &ProgramUnq, ds:&DataView) -> Result<AnnotateResult> {
+    pub fn annotate_with_data(&mut self, p: &ProgramUnq, ds: &DataView) -> Result<AnnotateResult> {
         for (s, _, id) in &ds.keys {
             match id {
                 Some(id) => {
                     let nvar = NamedVar::new(*id, s.to_string());
                     let var = Var::Named(nvar.clone());
                     self.subst_var.insert(*id, var.clone());
-                },
+                }
                 None => panic!("should be impossible..."),
             }
         }

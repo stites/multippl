@@ -68,13 +68,18 @@ pub fn importance_weighting_h_h(
                         let RealSemiring(wmc_sample) = samples.wmc(&var_order, &params);
 
                         // the final accepting criteria is a & s. Normalize the query.
-                        let query = out.exact
+                        let query = out
+                            .exact
                             .dists()
                             .iter()
                             .map(|d| {
                                 let num = mgr.and(*d, final_accept);
                                 let RealSemiring(a) = num.wmc(&var_order, &params);
-                                if wmc_final_accept == 0.0 { 0.0 } else { a / wmc_final_accept }
+                                if wmc_final_accept == 0.0 {
+                                    0.0
+                                } else {
+                                    a / wmc_final_accept
+                                }
                             })
                             .collect_vec();
 

@@ -89,7 +89,6 @@ fn free_variable_2_inv_small() {
     // ));
 }
 
-
 #[test]
 // #[traced_test]
 fn free_variables_1() {

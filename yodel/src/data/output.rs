@@ -222,7 +222,6 @@ impl SCtx {
             trace: Default::default(),
         }
     }
-
 }
 
 #[derive(Default, Debug, Clone, PartialEq)]

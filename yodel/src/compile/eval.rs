@@ -279,7 +279,11 @@ impl<'a> State<'a> {
         debug!("{:?}", self.log_pq);
         // }
     }
-    pub fn eval_program_with_data(&mut self, prog: &Program<Annotated>, dview: &DataView1) -> Result<Output> {
+    pub fn eval_program_with_data(
+        &mut self,
+        prog: &Program<Annotated>,
+        dview: &DataView1,
+    ) -> Result<Output> {
         match prog {
             Program::SBody(e) => {
                 tracing::trace!("compiling sbody...");
@@ -374,13 +378,10 @@ impl<'a> State<'a> {
                 let ss = ctx.exact.samples(self.mgr, self.opts.sample_pruning);
                 let accept = self.mgr.and(accept, ss);
 
-                let dist = comp
-                    .dists()
-                    .into_iter()
-                    .fold(accept, |global, cur| {
-                        let r = self.mgr.and(global, cur);
-                        r
-                    });
+                let dist = comp.dists().into_iter().fold(accept, |global, cur| {
+                    let r = self.mgr.and(global, cur);
+                    r
+                });
 
                 // let var_order = self.opts.order.clone();
                 // let wmc_params = ctx.exact.weightmap.as_params(self.opts.max_label);

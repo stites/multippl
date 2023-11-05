@@ -8,12 +8,12 @@ use crate::typecheck::{
 };
 use crate::typeinf::grammar::ProgramInferable;
 use crate::typeinf::typeinference;
-use crate::uniquify::{SymEnv, grammar::UniqueId};
-use itertools::*;
+use crate::uniquify::{grammar::UniqueId, SymEnv};
 use crate::*;
+use itertools::*;
 use rand::rngs::StdRng;
-use tracing::debug;
 use std::collections::HashMap;
+use tracing::debug;
 
 #[derive(Debug, Clone)]
 pub struct Options {
@@ -81,12 +81,12 @@ impl Options {
 pub enum Datum {
     Float(f64), // will turn into SVals
     Bool(bool), // will turn into EVals
-    // Int(u64),
+                // Int(u64),
 }
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum DTy {
     SFloat, // will turn into SVals
-    EBool, // will turn into EVals
+    EBool,  // will turn into EVals
 }
 
 pub type DataPoints = HashMap<String, Vec<Datum>>;
@@ -100,7 +100,7 @@ impl DataSet {
     pub fn empty() -> Self {
         DataSet {
             ds: Default::default(),
-            size: 0
+            size: 0,
         }
     }
     pub fn new(ds: DataPoints) -> Self {
@@ -108,8 +108,12 @@ impl DataSet {
         for col in ds.values() {
             if size == 0 {
                 size = col.len();
-            } else  {
-                assert_eq!(size, col.len(), "data set has jagged lengths, please check your json file");
+            } else {
+                assert_eq!(
+                    size,
+                    col.len(),
+                    "data set has jagged lengths, please check your json file"
+                );
             }
         }
         Self { ds, size }
@@ -120,14 +124,14 @@ impl DataSet {
 pub struct DataView1 {
     pub sampling: SubstMap<SVal>,
     pub exact: SubstMap<EVal>,
-    pub keys: HashMap<String, UniqueId>
+    pub keys: HashMap<String, UniqueId>,
 }
 #[derive(Clone, PartialEq, Debug)]
 pub struct DataView {
     pub sampling: HashMap<String, Vec<SVal>>,
     pub exact: HashMap<String, Vec<EVal>>,
     pub size: usize,
-    pub keys: Vec<(String, DTy, Option<UniqueId>)>
+    pub keys: Vec<(String, DTy, Option<UniqueId>)>,
 }
 impl DataView {
     pub fn empty() -> Self {
@@ -139,44 +143,74 @@ impl DataView {
         let mut keys = vec![];
         for (k, vs) in data.ds {
             if vs.is_empty() {
-                break
+                break;
             } else {
                 let is_sample = match vs[0] {
                     Datum::Float(_) => true,
                     Datum::Bool(_) => false,
                 };
                 if is_sample {
-                    let ss = vs.into_iter().map(|v| match v {
-                       Datum::Float(f) => SVal::SFloat(f),
-                       Datum::Bool(_) => panic!(""),
-                    }).collect_vec();
+                    let ss = vs
+                        .into_iter()
+                        .map(|v| match v {
+                            Datum::Float(f) => SVal::SFloat(f),
+                            Datum::Bool(_) => panic!(""),
+                        })
+                        .collect_vec();
                     sampling.insert(k.clone(), ss);
                     keys.push((k, DTy::SFloat, None));
                 } else {
-                    let bs = vs.into_iter().map(|v| match v {
-                       Datum::Float(_) => panic!(""),
-                       Datum::Bool(b) => EVal::from_bool(b),
-                    }).collect_vec();
+                    let bs = vs
+                        .into_iter()
+                        .map(|v| match v {
+                            Datum::Float(_) => panic!(""),
+                            Datum::Bool(b) => EVal::from_bool(b),
+                        })
+                        .collect_vec();
                     exact.insert(k.clone(), bs);
                     keys.push((k, DTy::EBool, None));
                 }
             }
         }
-        Self { sampling, exact, size: data.size, keys }
+        Self {
+            sampling,
+            exact,
+            size: data.size,
+            keys,
+        }
     }
     pub fn view(&self, step: usize) -> DataView1 {
         if self.size == 0 {
-            DataView1 { sampling: Default::default(), exact: Default::default(), keys: Default::default() }
+            DataView1 {
+                sampling: Default::default(),
+                exact: Default::default(),
+                keys: Default::default(),
+            }
         } else {
             let ix = step % self.size;
-            let keys : HashMap<String, UniqueId> = self.keys.iter().map(|(s, ty, id)| (s.clone(), id.unwrap()) ).collect();
-            let sampling: HashMap<UniqueId, SVal> = self.sampling.iter().map(|(k, vs)| (*keys.get(k).unwrap(), vs[ix].clone())).collect();
-            let exact: HashMap<UniqueId, EVal> = self.exact.iter().map(|(k, vs)| (*keys.get(k).unwrap(), vs[ix].clone())).collect();
-            DataView1 { sampling, exact, keys }
+            let keys: HashMap<String, UniqueId> = self
+                .keys
+                .iter()
+                .map(|(s, ty, id)| (s.clone(), id.unwrap()))
+                .collect();
+            let sampling: HashMap<UniqueId, SVal> = self
+                .sampling
+                .iter()
+                .map(|(k, vs)| (*keys.get(k).unwrap(), vs[ix].clone()))
+                .collect();
+            let exact: HashMap<UniqueId, EVal> = self
+                .exact
+                .iter()
+                .map(|(k, vs)| (*keys.get(k).unwrap(), vs[ix].clone()))
+                .collect();
+            DataView1 {
+                sampling,
+                exact,
+                keys,
+            }
         }
     }
 }
-
 
 pub struct ROut {
     pub out: Output,
@@ -241,8 +275,6 @@ pub fn runner(
     runner_with_data(mgr, rng, opt, p, lenv, 0, &DataView::empty())
 }
 
-
-
 pub fn runner_with_data(
     mgr: &mut Mgr,
     rng: &mut StdRng,
@@ -250,7 +282,7 @@ pub fn runner_with_data(
     p: &Program<crate::annotate::grammar::Annotated>,
     lenv: &LabelEnv,
     step: usize,
-    dv: &DataView
+    dv: &DataView,
 ) -> Result<PartialROut> {
     let sample_pruning = opt.opt;
 
@@ -265,8 +297,6 @@ pub fn runner_with_data(
         rng: state.rng.cloned(),
     })
 }
-
-
 
 // pub fn make_mgr(code: &str) -> Result<Mgr> {
 //     tracing::trace!("making manager");
@@ -310,7 +340,12 @@ pub fn make_mgr_and_ir(
 pub fn make_mgr_and_ir_with_data(
     code: &str,
     ds: DataSet,
-) -> Result<(Mgr, Program<crate::annotate::grammar::Annotated>, LabelEnv, DataView)> {
+) -> Result<(
+    Mgr,
+    Program<crate::annotate::grammar::Annotated>,
+    LabelEnv,
+    DataView,
+)> {
     tracing::info!("compiling code:\n{code}");
     tracing::trace!("making manager");
     let p = crate::parser::program::parse(code)?;

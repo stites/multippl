@@ -10,8 +10,8 @@ use std::fs;
 use std::path::PathBuf;
 use std::time::*;
 use tracing::*;
-use yodel::pipeline::{Datum, DataPoints};
 use tracing_subscriber::fmt;
+use yodel::pipeline::{DataPoints, Datum};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -151,7 +151,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     debug!("compilation options: {:?}", options);
     let now = Instant::now();
-    let (query, stats) = yodel::inference::importance_weighting_h_h(args.steps, &src, &options, datapoints);
+    let (query, stats) =
+        yodel::inference::importance_weighting_h_h(args.steps, &src, &options, datapoints);
     let elapsed_time = now.elapsed();
     if args.stats {
         println!("{:?}", stats);

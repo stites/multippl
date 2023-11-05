@@ -30,7 +30,9 @@ pub fn eval_sanf_var(
             match out.clone().exact.substitutions.get(&nv.id()) {
                 None => Err(Generic(format!(
                     "variable {} does not reference known substitution in: s{:?}, e{:?}",
-                    nv.name(), out.sample.substitutions, out.exact.substitutions
+                    nv.name(),
+                    out.sample.substitutions,
+                    out.exact.substitutions
                 ))),
                 Some(vs) => match vs {
                     EVal::EBdd(dist) => {
@@ -73,7 +75,9 @@ pub fn eval_eanf_var(
         None => match ctx.sample.substitutions.get(&nv.id()) {
             None => Err(Generic(format!(
                 "variable {} does not reference known substitution in: s{:?}, e{:?}",
-                nv.name(), ctx.sample.substitutions, ctx.exact.substitutions
+                nv.name(),
+                ctx.sample.substitutions,
+                ctx.exact.substitutions
             ))),
             Some(vs) => {
                 let embedding = EExpr::<Trace>::embed(vs)?;
@@ -361,10 +365,10 @@ pub fn eval_sanf<'a>(
     let _enter = span.enter();
     match a {
         AVal(_, v) => {
-            tracing::debug!("aval in: {v:?}");
+            tracing::debug!("aval  in: {v:?}");
             let out = ctx.sample.as_output(Some(v.clone()));
             let out = ctx.mk_soutput(out);
-            tracing::debug!("aval ot: {out:?}");
+            tracing::debug!("aval out: {out:?}");
             Ok(out)
         }
         AVar(d, s) => {

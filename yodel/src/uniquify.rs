@@ -1,10 +1,10 @@
 use crate::data::{errors, CompileError, Result};
 use crate::grammar::*;
+use crate::DataView;
 use grammar::*;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::fmt::Debug;
 use tracing::*;
-use crate::DataView;
 
 pub mod grammar {
     use super::*;
@@ -488,7 +488,11 @@ impl SymEnv {
         })
     }
 
-    pub fn uniquify_with_data(&mut self, p: &ProgramUD, ds:&mut DataView) -> Result<(ProgramUnq, MaxUniqueId)> {
+    pub fn uniquify_with_data(
+        &mut self,
+        p: &ProgramUD,
+        ds: &mut DataView,
+    ) -> Result<(ProgramUnq, MaxUniqueId)> {
         let mut unique_keys = vec![];
         for (k, ty, _) in &ds.keys {
             let uid = self._fresh(Some(k.clone()));
