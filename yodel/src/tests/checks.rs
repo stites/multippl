@@ -91,7 +91,40 @@ pub fn check_inference_h(
         }
     });
 }
-
+pub fn check_inference_h_h(
+    infname: &str,
+    inf: &dyn Fn(&str, DataPoints) -> (Vec<f64>, Option<WmcStats>),
+    precision: f64,
+    s: &str,
+    fs: Vec<f64>,
+    p: &str,
+    do_assert: bool,
+    dp: DataPoints,
+) {
+    let prs = inf(p, dp).0;
+    assert_eq!(
+        prs.len(),
+        fs.len(),
+        "[check_{infname}][{s}] check_inference compiled queries {}, tests expect results {}",
+        renderfloats(&prs, false),
+        renderfloats(&fs, false),
+    );
+    // println!("query: {:?}", p.query());
+    println!("expecting: {}", renderfloats(&fs, false));
+    println!("computed:  {}", renderfloats(&prs, false));
+    izip!(prs, fs).enumerate().for_each(|(i, (pr, f))| {
+        let ret = (f - pr).abs() < precision;
+        let i = i + 1;
+        if do_assert {
+            assert!(
+                ret,
+                "[check_{infname}][{s}#{i}][err]((expected: {f}) - (actual: {pr})).abs < {precision}"
+            );
+        } else {
+            debug!("[check_{infname}][{s}#{i}][{ret}]((expected: {f}) - (actual: {pr})).abs < {precision}: {ret}");
+        }
+    });
+}
 pub fn check_exact(s: &str, f: Vec<f64>, p: &str) {
     debug!("program:\n{}", &p);
     check_inference("exact", &inference::exact_with_h, 0.000001, s, f, &p);
@@ -99,6 +132,28 @@ pub fn check_exact(s: &str, f: Vec<f64>, p: &str) {
 pub fn check_exact1(s: &str, f: f64, p: &str) {
     check_exact(s, vec![f], p)
 }
+pub fn check_approx_h_with_data(
+    s: &str,
+    f: Vec<f64>,
+    p: &str,
+    n: usize,
+    seed: Option<u64>,
+    dp: DataPoints,
+) {
+    check_inference_h_h(
+        "approx",
+        &|p, d| {
+            importance_weighting_h_h(n, p, &Options::new(seed, false, USE_DEBUG, USE_OPT, 0), d)
+        },
+        0.01,
+        s,
+        f,
+        p,
+        true,
+        dp,
+    );
+}
+
 pub fn check_approx_h(s: &str, f: Vec<f64>, p: &str, n: usize, seed: Option<u64>) {
     check_inference(
         "approx",

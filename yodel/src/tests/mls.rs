@@ -126,7 +126,7 @@ pub mod networks {
 fn healthcare() {}
 
 #[test]
-fn diamond_router() {
+fn arrival_router() {
     let mk = || {
         r#"
 exact fn diamond (s1: Bool) -> Bool {
@@ -149,24 +149,114 @@ sample {
 }
 
 #[test]
-fn arrival_router() {
+// #[traced_test]
+fn beta_3_1_flip_returns_true() {
+    // notably, this will not work if extra samples are passed through the boundary and are unused. See (1)
     let mk = || {
-        r#"
-exact fn diamond (s1: Bool) -> Bool {
-  let route = flip 0.5 in
-  let s2 = if route then s1 else false in
-  let s3 = if route then false else s1 in
-  let drop = flip 0.0001 in
-  s2 || (s3 && !drop)
-}
-sample {
-  p ~ poisson(0.4);
-  exact (iterate(diamond, true, p + 1))
-}"#
+        r#"sample {
+      p ~ beta(1.0, 1.0);
+      _ <- exact {
+    "#.to_owned() + &(0..10).map(|i| {
+        let obs = |d, ix| format!("let d{}_{} = flip p in observe d{}_{} == {} in ", i, ix, i, ix, d);
+        let observes : [String; 4] = [obs(true, 0), obs(true, 1), obs(true, 2), obs(false, 3)];
+        observes.into_iter().collect_vec().join("\n").to_owned()
+    }).collect_vec().join("\n") +
+        // (1) here is the return of our exact program. It must not produce samples which effect the weight. without needing to be pruned.
+        " true\n    };" +
+    r#"
+      p
+    }"#
     };
+    let (n, s) = (1_000, 1);
+    let seed = Some(s);
+    check_approx_h("beta_3_1_flip", vec![3.0 / 4.0], &mk(), n, seed);
+}
 
-    let n = 100;
-
-    let _ = crate::inference::importance_weighting_h(1, mk(), &Default::default());
-    // crate::tests::check_approx("proto_arrival", vec![1.0 / 3.0, 1.0 / 3.0], mk(), n);
+#[test]
+fn beta_2_2_flip_followed_by_1_3_or_3_1() {
+    // x = flips(0.5, 20)
+    // y = conditional_flips((1./4, 3./4), x)
+    let data = [
+        (true, false),
+        (true, true),
+        (false, true),
+        (true, false),
+        (false, true),
+        (true, false),
+        (true, true),
+        (false, true),
+        (true, false),
+        (true, true),
+        (true, false),
+        (true, false),
+        (true, false),
+        (false, true),
+        (true, false),
+        (true, false),
+        (false, false),
+        (false, true),
+        (false, true),
+        (true, false),
+        (false, true),
+        (true, false),
+        (false, false),
+        (true, false),
+        (true, false),
+        (true, false),
+        (true, false),
+        (false, true),
+        (true, false),
+        (false, true),
+        (false, true),
+        (true, false),
+        (false, false),
+        (true, true),
+        (true, false),
+        (true, false),
+        (false, false),
+        (true, false),
+        (true, false),
+        (false, false),
+        (true, false),
+        (true, false),
+        (false, true),
+        (false, true),
+        (true, false),
+        (false, true),
+        (false, false),
+        (false, false),
+        (false, true),
+        (true, true),
+        (false, false),
+        (false, true),
+        (true, false),
+        (true, false),
+    ];
+    let mk = || {
+        r#"sample {
+      p  ~ beta(1.0, 1.0);
+      pt ~ beta(1.0, 1.0);
+      pf ~ beta(1.0, 1.0);
+    "#.to_owned() + &(0..3).map(|i| {
+        let ix = |j| format!("{}_{}", i, j);
+        let obs = |j, dx, dy| format!(r#"
+      s{j} <- exact ( let x{j} = flip p in observe x{j} == {dx} in x{j} );
+      _{j} <- exact ( let y{j} = if s{j} then flip pt else flip pf in observe y{j} == {dy} in true );
+        "#, j=j, dx=dx, dy=dy);
+        let observes : Vec<String> = data.iter().enumerate().map(|(j, (dx, dy))| obs(ix(j), dx, dy)).collect_vec();
+        observes.join("").to_owned()
+    }).collect_vec().join("\n") +
+    r#"
+      (p, pt, pf)
+    }"#
+    };
+    let (n, s) = (100, 1);
+    let seed = Some(s);
+    check_approx_h(
+        "beta_2_2_flip_followed_by_1_3_or_3_1",
+        vec![0.60, 0.19, 0.63], // this is good enough for the test
+        &mk(),
+        n,
+        seed,
+    );
 }

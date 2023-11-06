@@ -15,8 +15,8 @@ impl PQ {
     }
     pub fn ln(&self) -> LPQ {
         LPQ {
-            lp: self.p.ln(),
-            lq: self.q.ln(),
+            lp: LW::new(self.p),
+            lq: LW::new(self.q),
         }
     }
 }
@@ -26,23 +26,55 @@ impl Default for PQ {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct LPQ {
-    pub lp: f64,
-    pub lq: f64,
-}
-impl LPQ {
-    pub fn weight(&self) -> f64 {
-        self.log_weight().exp()
+#[derive(PartialEq, Copy, Clone, Debug)]
+pub struct LW(pub f64);
+impl LW {
+    pub fn val(&self) -> f64 {
+        self.0
     }
-    pub fn log_weight(&self) -> f64 {
-        self.lp - self.lq
+    pub fn exp(&self) -> f64 {
+        self.val().exp()
+    }
+    pub fn new(p: f64) -> Self {
+        Self(p.ln())
+    }
+    pub fn add(&self, o: Self) -> Self {
+        Self(self.0 + o.0)
+    }
+    pub fn sub(&self, o: Self) -> Self {
+        Self(self.0 - o.0)
     }
     pub fn render(&self) -> String {
-        format!("{:.6} / {:.6}", self.lp.exp(), self.lq.exp())
+        format!("LW(weight={:.6})", self.exp())
     }
     pub fn log_render(&self) -> String {
-        format!("{:.3} - {:.3}", self.lp, self.lq)
+        format!("LW(log_weight={:.6})", self.val())
+    }
+}
+impl Default for LW {
+    fn default() -> Self {
+        LW(0.0)
+    }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct LPQ {
+    pub lp: LW,
+    pub lq: LW,
+}
+impl LPQ {
+    pub fn log_weight(&self) -> LW {
+        self.lp.sub(self.lq)
+    }
+    pub fn render(&self) -> String {
+        format!("LPQ(p={}, q={})", self.lp.render(), self.lq.render())
+    }
+    pub fn log_render(&self) -> String {
+        format!(
+            "LPQ(p={}, q={})",
+            self.lp.log_render(),
+            self.lq.log_render()
+        )
     }
     pub fn exp(&self) -> PQ {
         PQ {
@@ -53,7 +85,10 @@ impl LPQ {
 }
 impl Default for LPQ {
     fn default() -> Self {
-        LPQ { lp: 0.0, lq: 0.0 }
+        LPQ {
+            lp: LW::default(),
+            lq: LW::default(),
+        }
     }
 }
 

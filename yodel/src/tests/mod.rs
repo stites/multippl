@@ -19,6 +19,7 @@ mod grids;
 mod ite;
 mod mls;
 mod nested;
+mod sample;
 mod tuples;
 
 #[test]

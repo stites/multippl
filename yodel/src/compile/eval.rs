@@ -116,7 +116,11 @@ pub fn eval_eite_output(
             let fin = state.mgr.or(dist_l, dist_r);
             EVal::EBdd(fin)
         }
-        _ => panic!(),
+        (t, f) => panic!(
+            "typecheck failed to catch EIte with\ntruthy: {t:?}\nfalsey: {f:?}",
+            t = t,
+            f = f
+        ),
     };
     // let dists = izip!(&truthy.exact.dists(), &falsey.exact.dists())
     //     .map(|(tdist, fdist)| {
@@ -250,33 +254,13 @@ impl<'a> State<'a> {
             fnctx: None,
         }
     }
-    pub fn new_from<'b>(&self) -> State<'b> {
-        todo!()
-        // State {
-        //     opts: self.opts.clone(),
-        //     mgr,
-        //     rng,
-        //     pq: Default::default(),
-        // }
-    }
-
-    pub fn p(&self) -> f64 {
-        self.pq().p
-    }
-    pub fn q(&self) -> f64 {
-        self.pq().q
-    }
-    pub fn pq(&self) -> PQ {
-        self.log_pq.exp()
-    }
     pub fn log_pq(&self) -> LPQ {
         self.log_pq
     }
     pub fn mult_pq(&mut self, p: f64, q: f64) {
         // if !(p == q) {
-        self.log_pq.lp += p.ln();
-        self.log_pq.lq += q.ln();
-        debug!("{:?}", self.log_pq);
+        self.log_pq.lp = self.log_pq.lp.add(LW::new(p));
+        self.log_pq.lq = self.log_pq.lq.add(LW::new(q));
         // }
     }
     pub fn eval_program_with_data(
@@ -856,10 +840,9 @@ impl<'a> State<'a> {
                     },
                     _ => panic!("semantic error, see note on SObserve in SExpr enum"),
                 };
-                debug!("  dist: {:?}", d);
-                debug!("sample: {:?}", v);
-                debug!("  prob: {}", q);
-                // self.mult_pq(q, q);
+                trace!("  dist: {:?}", d);
+                trace!("sample: {:?}", v);
+                trace!("  prob: {}", q);
 
                 out.sample
                     .trace
@@ -886,10 +869,9 @@ impl<'a> State<'a> {
                             statrs::distribution::Discrete::pmf(&dist, *i as u64)
                         }
                         (Dist::Dirichlet(ps), _) => todo!("punted"),
-                        // FIXME: Punt-- might nee a different library to preform this integration.
+                        // FIXME: Punt-- might need a different library to preform this integration.
                         // (Dist::Dirichlet(ps), SVal::SVec(vs)) => {
                         //     let dist = statrs::distribution::Dirichlet::new(ps.to_vec()).unwrap();
-
                         //     let vs = vs
                         //         .iter()
                         //         .map(|v| match v {
@@ -919,7 +901,7 @@ impl<'a> State<'a> {
                     },
                     _ => panic!("semantic error, see note on SObserve in SExpr enum"),
                 };
-                self.mult_pq(1.0, q);
+                self.mult_pq(q, 1.0);
 
                 let newctx = Ctx::from(&a_out);
                 self.eval_sexpr(newctx, rst)
@@ -955,19 +937,8 @@ impl<'a> State<'a> {
                     ),
                     (_, Err(e)) => return Err(e),
                 };
+                trace!("boundary sample: {:?}", val);
                 out.sample.out = Some(val);
-                // for eval in eouts.iter() {
-                //     let val = match (eval, SExpr::<Trace>::embed(eval)) {
-                //         (_, Ok(sv)) => sv,
-                //         (EVal::EBdd(dist), Err(_)) => {
-                //             let sample = exact2sample_bdd_eff(self, &mut out, dist);
-                //             SVal::SBool(sample)
-                //         }
-                //         _ => panic!("typecheck_failed"),
-                //     };
-                //     out.sample.out.push(val);
-                // }
-                println!("boundary sample: {:?}", out.sample.out);
                 Ok(out)
             }
             SLetSample(_, _, _, _) => errors::erased(Trace, "let-sample"),

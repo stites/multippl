@@ -1,6 +1,7 @@
 use crate::*;
 use rand::distributions::Distribution;
 use rsdd::builder::bdd_builder::DDNNFPtr;
+use rsdd::repr::wmc::RealSemiring;
 use std::collections::HashMap;
 use tracing::*;
 
