@@ -177,10 +177,10 @@
             fontconfig
 
             hunspellDicts.en_US-large
-            (python3.withPackages (ps: [ps.numpy]))
+            (python3.withPackages (p: [p.pyro-ppl] ++ p.pyro-ppl.optional-dependencies.extras))
           ]
           ++ [
-            lldb
+            #lldb # version of six conflicts with pyro's dependency
 
             cargo
             clippy
