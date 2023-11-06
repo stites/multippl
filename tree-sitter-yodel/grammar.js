@@ -14,11 +14,13 @@ module.exports = grammar({
     ),
     sarg: $ => seq( $.identifier, ':', $.sty ),
     sargs: $ => choice(
+      seq('(', ')'),
       seq('(', $.sarg, ')'),
       seq('(', repeat(seq($.sarg, ',')), $.sarg, ')')
     ),
     earg: $ => seq($.identifier, ':', $.ety),
     eargs: $ => choice(
+      seq('(', ')'),
       seq('(', $.earg, ')'),
       seq('(', repeat(seq($.earg, ',')), $.earg, ')')
     ),
@@ -49,6 +51,7 @@ module.exports = grammar({
     tyFloat: $ => 'Float',
 
     eapp: $ => choice(
+      seq($.identifier, '(', ')'),
       seq($.identifier, '(', $.eanf, ')'),
       seq($.identifier, '(', repeat(seq($.eanf,  ',')), $.eanf, ')'),
     ),
@@ -180,6 +183,7 @@ module.exports = grammar({
     ),
 
     sapp: $ => choice(
+      seq($.identifier, '(', ')'),
       seq($.identifier, '(', $.sanf, ')'),
       seq($.identifier, '(', repeat(seq($.sanf,  ',')), $.sanf, ')'),
     ),
@@ -209,7 +213,7 @@ module.exports = grammar({
       seq('(\\', $.identifier, '->', $.sexpr, ')'),
       seq('(\\', repeat(seq($.identifier, ',')), $.identifier, '->', $.sexpr, ')'),
     ),
-    sobserve: $ => seq('observe', $.sanf, 'in', $.sanf, ';', $.sexpr),
+    sobserve: $ => seq('observe', $.sanf, 'from', $.sanf, ';', $.sexpr),
     sexact: $ => choice(
       seq('exact', '(', $.eexpr, ')' ),
       seq('exact', '{', $.eexpr, '}' ),

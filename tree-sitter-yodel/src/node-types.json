@@ -200,7 +200,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": true,
+      "required": false,
       "types": [
         {
           "type": "earg",
@@ -885,7 +885,7 @@
     "fields": {},
     "children": {
       "multiple": true,
-      "required": true,
+      "required": false,
       "types": [
         {
           "type": "sarg",
@@ -1590,6 +1590,10 @@
   },
   {
     "type": "fold",
+    "named": false
+  },
+  {
+    "type": "from",
     "named": false
   },
   {
