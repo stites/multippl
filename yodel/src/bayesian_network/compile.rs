@@ -49,7 +49,7 @@ fn _to_statements(
         .into_iter()
         .map(|f| Anf::AVal((), EVal::EFloat(f)))
         .collect::<Vec<_>>();
-    let (es, fin) = crate::desugar::exact::discrete::params2named_statements(&v, &vars, &ps);
+    let (es, fin, _) = crate::desugar::discrete::params2named_statements(&v, &vars, &ps);
     let es = es
         .into_iter()
         .map(|(s, e)| Ok((s, upcast_eexpr(&e)?)))

@@ -63,19 +63,9 @@ fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVal> {
             Anf::AnfPoisson((), Box::new(parse_sanf(src, c, node)))
         }
         "sanfdirichlet" => {
-            let mut _c = c.clone();
-            let mut cs = n.named_children(&mut _c);
-            let node = cs.next().unwrap();
-
-            Anf::AnfDirichlet((), parse_vec(src, c, node, |a, b, c| parse_sanf(a, b, c)))
+            Anf::AnfDirichlet((), parse_vec(src, c, n, |a, b, c| parse_sanf(a, b, c)))
         }
-        "sanfdiscrete" => {
-            let mut _c = c.clone();
-            let mut cs = n.named_children(&mut _c);
-            let node = cs.next().unwrap();
-
-            Anf::AnfDiscrete((), parse_vec(src, c, node, |a, b, c| parse_sanf(a, b, c)))
-        }
+        "sanfdiscrete" => Anf::AnfDiscrete((), parse_vec(src, c, n, |a, b, c| parse_sanf(a, b, c))),
         "sanfunop" => {
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);

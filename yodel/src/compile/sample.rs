@@ -51,12 +51,9 @@ pub fn exact2sample_bdd_eff(
     let weight = if s { theta_q } else { 1.0 - theta_q };
     // state.mult_pq(weight, weight);
 
-    out.sample.trace.push((
-        SVal::SBool(s),
-        Dist::Bern(theta_q),
-        Probability::new(weight),
-        None,
-    ));
+    out.sample
+        .trace
+        .push((SVal::SBool(s), Dist::Bern(theta_q), weight, None));
 
     // sample in sequence. A smarter sample would compile
     // all samples of a multi-rooted BDD, but I need to futz

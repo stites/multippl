@@ -788,52 +788,52 @@ impl<'a> State<'a> {
                         Dist::Bern(param) => {
                             let dist = statrs::distribution::Bernoulli::new(*param).unwrap();
                             let v = sample_from(self, &dist);
-                            let q = statrs::distribution::Discrete::pmf(&dist, v as u64);
+                            let q = dist.pmf(v as u64);
                             let v = SVal::SBool(v == 1.0);
                             (q, v, d)
                         }
                         Dist::Discrete(ps) => {
                             let dist = statrs::distribution::Categorical::new(&ps).unwrap();
                             let v = sample_from(self, &dist);
-                            let q = statrs::distribution::Discrete::pmf(&dist, v as u64);
+                            let q = dist.pmf(v as u64);
                             let v = SVal::SInt(v as u64);
                             (q, v, d)
                         }
-                        Dist::Dirichlet(ps) => todo!("punted"),
-                        // Dist::Dirichlet(ps) => {
-                        //     let dist = statrs::distribution::Dirichlet::new(ps.to_vec()).unwrap();
-                        //     let vs = sample_from(self, &dist);
-                        //     let q = statrs::distribution::ContinuousCDF::cdf(&dist, &vs);
-                        //     let vs = SVal::SVec(
-                        //         vs.into_iter().map(|x: &f64| SVal::SFloat(*x)).collect_vec(),
-                        //     );
-                        //     (q, vs, d)
-                        // }
+                        Dist::Dirichlet(ps) => {
+                            let dist = statrs::distribution::Dirichlet::new(ps.to_vec()).unwrap();
+                            let vs = sample_from(self, &dist);
+                            let q = dist.pdf(&vs);
+                            println!("{:?}", vs);
+                            let vs = SVal::SVec(
+                                vs.into_iter().map(|x: &f64| SVal::SFloat(*x)).collect_vec(),
+                            );
+                            (q, vs, d)
+                        }
                         Dist::Uniform(lo, hi) => {
                             let dist = statrs::distribution::Uniform::new(*lo, *hi).unwrap();
                             let v = sample_from(self, dist);
-                            let q = statrs::distribution::ContinuousCDF::cdf(&dist, v);
+                            let q = dist.pdf(v);
                             let v = SVal::SFloat(v);
                             (q, v, d)
                         }
                         Dist::Normal(mn, sd) => {
                             let dist = statrs::distribution::Normal::new(*mn, *sd).unwrap();
                             let v = sample_from(self, dist);
-                            let q = statrs::distribution::ContinuousCDF::cdf(&dist, v);
+                            let q = dist.pdf(v);
                             let v = SVal::SFloat(v);
                             (q, v, d)
                         }
                         Dist::Beta(a, b) => {
                             let dist = statrs::distribution::Beta::new(*a, *b).unwrap();
                             let v = sample_from(self, dist);
-                            let q = statrs::distribution::ContinuousCDF::cdf(&dist, v);
+                            let q = dist.pdf(v);
                             let v = SVal::SFloat(v);
                             (q, v, d)
                         }
                         Dist::Poisson(p) => {
                             let dist = statrs::distribution::Poisson::new(*p).unwrap();
                             let v = sample_from(self, dist) as u64;
-                            let q = statrs::distribution::Discrete::pmf(&dist, v);
+                            let q = dist.pmf(v);
                             let v = SVal::SInt(v);
                             (q, v, d)
                         }
@@ -844,9 +844,7 @@ impl<'a> State<'a> {
                 trace!("sample: {:?}", v);
                 trace!("  prob: {}", q);
 
-                out.sample
-                    .trace
-                    .push((v.clone(), d.clone(), Probability::new(q), None));
+                out.sample.trace.push((v.clone(), d.clone(), q, None));
                 out.sample.out = Some(v);
                 Ok(out)
             }

@@ -12,7 +12,7 @@ use rsdd::sample::probability::Probability;
 use std::collections::HashMap;
 
 pub type SubstMap<V> = HashMap<UniqueId, V>;
-pub type Tr = Vec<(SVal, Dist, Probability, Option<UniqueId>)>;
+pub type Tr = Vec<(SVal, Dist, f64, Option<UniqueId>)>;
 
 /// exact compilation context
 #[derive(Debug, Clone, PartialEq)]

@@ -1,4 +1,3 @@
-use crate::desugar::exact::integers;
 use crate::*;
 use core::fmt;
 use core::fmt::Debug;
@@ -36,7 +35,6 @@ crate::TTG!(
             match e {
                 SBool(b) => Ok(EBdd(BddPtr::from_bool(*b))),
                 SFloat(f) => Ok(EFloat(*f)),
-                // SInt(i) => Ok(integers::as_onehot(*i as usize)),
                 SInt(i) => Ok(EInteger(*i as usize)),
                 SVec(vs) => Ok(EProd(
                     vs.iter().map(Self::embed).collect::<Result<Vec<_>>>()?,

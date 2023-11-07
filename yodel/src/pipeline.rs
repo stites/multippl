@@ -360,7 +360,7 @@ pub fn make_mgr_and_ir_with_data(
     tracing::debug!("(checked)");
     tracing::debug!("(checked) >>> {p:?}");
     tracing::debug!("(checked)");
-    let p = crate::desugar::desugar(&p)?;
+    let p = crate::desugar::SugarMagicEnv::new().desugar(&p)?;
     tracing::debug!("(desugared)");
     tracing::debug!("(desugared) >>> {p:?}");
     tracing::debug!("(desugared)");

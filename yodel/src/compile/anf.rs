@@ -1,7 +1,6 @@
 use super::grammar::*;
 use crate::annotate::grammar::*;
 use crate::data::*;
-use crate::desugar::exact::integers;
 use crate::grammar::*;
 use crate::uniquify::grammar::*;
 use itertools::Itertools;
