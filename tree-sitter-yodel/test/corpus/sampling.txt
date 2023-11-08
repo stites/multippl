@@ -27,7 +27,7 @@ sample: typed trivial
 ======================
 
 sample {
-  x  <- true : Bool;
+  x <- true : Bool;
   x : Bool
 }
 

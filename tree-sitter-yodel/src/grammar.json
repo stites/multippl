@@ -1320,6 +1320,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "sseq"
+        },
+        {
+          "type": "SYMBOL",
           "name": "sanf"
         },
         {
@@ -1725,21 +1729,25 @@
       ]
     },
     "sseq": {
-      "type": "SEQ",
-      "members": [
-        {
-          "type": "SYMBOL",
-          "name": "sexpr"
-        },
-        {
-          "type": "STRING",
-          "value": ";"
-        },
-        {
-          "type": "SYMBOL",
-          "name": "sexpr"
-        }
-      ]
+      "type": "PREC_LEFT",
+      "value": -100,
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "SYMBOL",
+            "name": "sexpr"
+          },
+          {
+            "type": "STRING",
+            "value": ";"
+          },
+          {
+            "type": "SYMBOL",
+            "name": "sexpr"
+          }
+        ]
+      }
     },
     "smap": {
       "type": "SEQ",

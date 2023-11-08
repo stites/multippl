@@ -1030,6 +1030,10 @@
           "named": true
         },
         {
+          "type": "sseq",
+          "named": true
+        },
+        {
           "type": "swhile",
           "named": true
         }
@@ -1274,6 +1278,21 @@
     "fields": {},
     "children": {
       "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "sexpr",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sseq",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
       "required": true,
       "types": [
         {

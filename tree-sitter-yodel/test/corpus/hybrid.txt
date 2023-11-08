@@ -15,7 +15,7 @@ sample fn network(params: (Float, Float), obs: (Bool, Float) ) -> (Float, Float)
   };
   modA <- if A then 0 else 5;
   B <- normal(paramB + modA, 1);
-  observe obsB in B;
+  observe obsB from B;
   (paramA, paramB)
 }
 
@@ -194,3 +194,4 @@ sample {
                   (sexpr
                     (sanf
                       (identifier))))))))))
+

@@ -166,6 +166,7 @@ module.exports = grammar({
       $.ssample,
       $.slet,
       $.sletsample,
+      $.sseq,
       $.sanf,
       $.sapp,
       $.sann,
@@ -198,7 +199,7 @@ module.exports = grammar({
     sletsample: $ => choice(
       seq($.identifier, "~", $.sexpr, ';', $.sexpr),
     ),
-    sseq: $ => seq($.sexpr, ';', $.sexpr),
+    sseq: $ => prec.left(-100, seq($.sexpr, ';', $.sexpr)),
     // sseq_first: $ => seq($.sexpr, ';',),
     smap: $ => seq('map', '(', $.identifier, '->', $.sexpr, ')', $.sanf),
     swhile: $ => choice(
