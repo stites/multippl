@@ -287,7 +287,7 @@ pub fn runner_with_data(
     let sample_pruning = opt.opt;
 
     tracing::debug!("program running...");
-    let mut state = State::new(mgr, Some(rng), sample_pruning, &lenv.funs);
+    let mut state = State::new(mgr, Some(rng), sample_pruning, &lenv.funs, &lenv.fun_stats);
     let out = state.eval_program_with_data(&p, &dv.view(step))?;
     tracing::debug!("program... compiled!");
 

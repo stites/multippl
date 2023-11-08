@@ -1,7 +1,7 @@
 use crate::annotate::grammar::*;
 use crate::annotate::Fun;
 use crate::grammar::*;
-use crate::uniquify::grammar::{FnCall, FnId, UniqueId};
+use crate::uniquify::grammar::{FnCall, FnCounts, FnId, UniqueId};
 use crate::utils::render::*;
 use crate::*;
 use itertools::*;
@@ -229,22 +229,40 @@ pub struct State<'a> {
     pub mgr: &'a mut Mgr,
     pub rng: Option<&'a mut StdRng>, // None will use the thread rng
     pub funs: &'a HashMap<FnId, Fun>,
+    pub fun_stats: &'a HashMap<FnId, FnCounts>,
+    pub call_counter: HashMap<FnId, u64>,
     log_pq: LPQ,
     pub fnctx: Option<FnCall>,
 }
 
+fn calculate_label<'a>(
+    label: VarLabel,
+    offset: Option<FnCall>,
+    stats: &'a HashMap<FnId, FnCounts>,
+) -> VarLabel {
+    match offset {
+        None => label,
+        Some(FnCall(fid, fcall)) => {
+            let stats = stats.get(&fid).expect("all functions present");
+            let offset = stats.num_uids * (fcall - 1); // function calls are 1-indexed, offsets are 0-indexed
+            VarLabel::new(label.value() + offset)
+        }
+    }
+}
 impl<'a> State<'a> {
     pub fn new(
         mgr: &'a mut Mgr,
         rng: Option<&'a mut StdRng>, // None will use the thread rng
         sample_pruning: bool,
         funs: &'a HashMap<FnId, Fun>,
+        fun_stats: &'a HashMap<FnId, FnCounts>,
     ) -> State<'a> {
         let opts = Opts {
             order: mgr.get_order().clone(),
             max_label: mgr.get_order().num_vars() as u64,
             sample_pruning,
         };
+        let call_counter: HashMap<FnId, u64> = funs.iter().map(|(k, v)| (k.clone(), 0)).collect();
         State {
             opts,
             mgr,
@@ -252,6 +270,8 @@ impl<'a> State<'a> {
             log_pq: LPQ::default(),
             funs,
             fnctx: None,
+            fun_stats,
+            call_counter,
         }
     }
     pub fn log_pq(&self) -> LPQ {
@@ -328,8 +348,9 @@ impl<'a> State<'a> {
                 let o = match &o.out {
                     Some(EVal::EFloat(param)) => {
                         let mut weightmap = ctx.exact.weightmap.clone();
-                        weightmap.insert(d.label, *param);
-                        let var = self.mgr.var(d.label, true);
+                        let lbl = calculate_label(d.label, self.fnctx, self.fun_stats);
+                        weightmap.insert(lbl, *param);
+                        let var = self.mgr.var(lbl, true);
                         Ok(EOutput {
                             out: Some(EVal::EBdd(var)),
                             accept: ctx.exact.accept.clone(),
@@ -480,6 +501,7 @@ impl<'a> State<'a> {
                 let span = tracing::span!(Level::DEBUG, "app", f = fname);
                 let _enter = span.enter();
                 tracing::debug!("app");
+                self.fnctx = Some(fcall.clone());
 
                 let f = self
                     .funs
@@ -516,6 +538,7 @@ impl<'a> State<'a> {
                         callerctx.exact.substitutions = subs;
 
                         let out = self.eval_eexpr(callerctx, &f.body)?;
+                        self.fnctx = None;
                         Ok(out)
                     }
                     _ => panic!(),
@@ -543,7 +566,11 @@ impl<'a> State<'a> {
                         let mut ctx = ctx.clone();
                         let mut out = None;
                         debug!("niters: {}", niters);
-                        let mut callix = 0;
+                        let lastix = self
+                            .call_counter
+                            .get(&fid)
+                            .expect("all functions are initialized in call_counter");
+                        let mut callix = *lastix;
                         while niters > 0 {
                             let anfarg = Anf::AVal((), arg.clone());
                             let o = self.eval_eexpr(
@@ -557,6 +584,7 @@ impl<'a> State<'a> {
                             callix += 1;
                             debug!("niters: {}", niters);
                         }
+                        self.call_counter.insert(fid.clone(), callix);
 
                         let fout = out.expect("k > 0");
                         Ok(fout)
@@ -740,6 +768,7 @@ impl<'a> State<'a> {
                     .get(&fcall.0)
                     .expect("function is defined")
                     .sample()?;
+                self.fnctx = Some(fcall.clone());
                 let params = f.args2vars(|v| match v {
                     Anf::AVar(nv, _) => Ok(nv.clone()),
                     _ => errors::generic(&format!(
@@ -770,6 +799,7 @@ impl<'a> State<'a> {
                         callerctx.sample.substitutions = subs;
 
                         let out = self.eval_sexpr(callerctx, &f.body)?;
+                        self.fnctx = None;
                         Ok(out)
                     }
                     _ => panic!(),

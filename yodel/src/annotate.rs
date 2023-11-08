@@ -69,12 +69,18 @@ pub mod grammar {
     impl Debug for BddVar {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             match &self.provenance {
-                None => f.write_str(&format!("BddVar(#{}, L{})", self.id.0, self.label.value())),
-                Some(n) => f.write_str(&format!(
-                    "BddVar(#{}, L{}, from:{})",
+                None => f.write_str(&format!(
+                    "BddVar(#{}, L{}, fid:{:?})",
                     self.id.0,
                     self.label.value(),
-                    n.name()
+                    self.fid
+                )),
+                Some(n) => f.write_str(&format!(
+                    "BddVar(#{}, L{}, from:{}, fid:{:?})",
+                    self.id.0,
+                    self.label.value(),
+                    n.name(),
+                    self.fid
                 )),
             }
         }
