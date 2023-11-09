@@ -597,13 +597,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "distributions"
-version = "0.1.0"
-dependencies = [
- "rand 0.8.5",
-]
-
-[[package]]
 name = "dlib"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -743,19 +736,6 @@ name = "foreign-types-shared"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00b0228411908ca8685dba7fc2cdd70ec9990a6e753e89b6ac91a84c40fbaf4b"
-
-[[package]]
-name = "formula"
-version = "0.1.0"
-dependencies = [
- "clap 4.3.19",
- "rsdd",
- "tracing",
- "tracing-subscriber",
- "tracing-test",
- "tree-sitter",
- "tree-sitter-formula",
-]
 
 [[package]]
 name = "freetype"
@@ -1716,6 +1696,7 @@ dependencies = [
 [[package]]
 name = "rsgm_networks"
 version = "0.0.1"
+source = "git+ssh://git@github.com/stites/rsgm_networks.git#4d61a0daaf3e36ba590f8f8dae9862911e1d9029"
 dependencies = [
  "include-flate",
  "rsgm",
@@ -2169,14 +2150,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "tree-sitter-formula"
-version = "0.0.1"
-dependencies = [
- "cc",
- "tree-sitter",
-]
-
-[[package]]
 name = "tree-sitter-yodel"
 version = "0.0.1"
 dependencies = [
@@ -2484,7 +2457,6 @@ dependencies = [
  "clap-verbosity-flag",
  "criterion 0.4.0",
  "csv",
- "formula",
  "indexmap",
  "itertools",
  "nalgebra",
