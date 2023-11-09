@@ -2,15 +2,12 @@ module.exports = grammar({
   name: 'yodel',
   word: $ => $.identifier,
   rules: {
-
-    // source_file: $ => seq(repeat($._function), $._expr)
     source_file: $ => $.program,
-
     program: $ => choice(
-      seq("exact", '{', $.eexpr, '}'),
-      seq("sample", '{', $.sexpr, '}'),
-      seq($.sfun, $.program),
-      seq($.efun, $.program),
+      seq(optional($._comment), "exact", '{', $.eexpr, '}', optional($._comment),),
+      seq(optional($._comment), "sample", '{', $.sexpr, '}', optional($._comment),),
+      seq(optional($._comment), $.sfun, $.program),
+      seq(optional($._comment), $.efun, $.program),
     ),
     sarg: $ => seq( $.identifier, ':', $.sty ),
     sargs: $ => choice(
@@ -29,6 +26,7 @@ module.exports = grammar({
     efun: $ => seq('exact', 'fn', $.identifier, $.eargs, '->', $.ety, '{', $.eexpr, '}'),
 
     eexpr: $ => choice(
+      seq($._comment, $.eexpr),
       $.elet,
       $.eite,
       $.eflip,
@@ -115,7 +113,7 @@ module.exports = grammar({
     float: $ => /-?\d+\.(?:\d*|)/, // 0.3  0.3. 3. 0.
     // I think I need to disallow whitespace before continuing with this
     // https://gist.github.com/Aerijo/df27228d70c633e088b0591b8857eeef
-    // _comment: $ => token(/\/\/.*/), // like this
+    _comment: $ => token(seq('//', /.*/)), // like this
     // _comment: $ => token(seq('%', /.*/)),
     // _comment: $ => token(seq("//", /[^\n]*/)), // like this
 
@@ -154,6 +152,7 @@ module.exports = grammar({
     // _func: $ => seq('fun', $._function_name, '(', $.VAR, ')', ':', $._type, '{', $.eexpr, '}'),
 
     sexpr: $ => choice(
+      seq($._comment, $.sexpr),
       // $._comment,
       // $.sbinding_section,
       $.smap,

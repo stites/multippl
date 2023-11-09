@@ -1,4 +1,52 @@
 ======================
+exact: all the comments
+======================
+
+// comment here
+sample fn foo () -> Bool {
+  // comment
+  foof
+}
+// comment
+exact fn foo () -> Bool {
+  // comment
+  foof
+}
+// comment
+exact {
+  // comment
+  true
+}
+// last one??
+---
+(source_file
+  (program
+    (sfun
+      (identifier)
+      (sargs)
+      (sty
+        (tyBool))
+      (sexpr
+        (sexpr
+          (sanf
+            (identifier)))))
+    (program
+      (efun
+        (identifier)
+        (eargs)
+        (ety
+          (tyBool))
+        (eexpr
+          (eexpr
+            (eanf
+              (identifier)))))
+      (program
+        (eexpr
+          (eexpr
+            (eanf
+              (evalue
+                (bool)))))))))
+======================
 hybrid: tiny
 ======================
 

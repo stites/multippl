@@ -13,6 +13,18 @@
           "type": "SEQ",
           "members": [
             {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_comment"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
+            {
               "type": "STRING",
               "value": "exact"
             },
@@ -27,12 +39,36 @@
             {
               "type": "STRING",
               "value": "}"
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_comment"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
             }
           ]
         },
         {
           "type": "SEQ",
           "members": [
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_comment"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
             {
               "type": "STRING",
               "value": "sample"
@@ -48,12 +84,36 @@
             {
               "type": "STRING",
               "value": "}"
+            },
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_comment"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
             }
           ]
         },
         {
           "type": "SEQ",
           "members": [
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_comment"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
             {
               "type": "SYMBOL",
               "name": "sfun"
@@ -67,6 +127,18 @@
         {
           "type": "SEQ",
           "members": [
+            {
+              "type": "CHOICE",
+              "members": [
+                {
+                  "type": "SYMBOL",
+                  "name": "_comment"
+                },
+                {
+                  "type": "BLANK"
+                }
+              ]
+            },
             {
               "type": "SYMBOL",
               "name": "efun"
@@ -334,6 +406,19 @@
     "eexpr": {
       "type": "CHOICE",
       "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "_comment"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "eexpr"
+            }
+          ]
+        },
         {
           "type": "SYMBOL",
           "name": "elet"
@@ -1035,6 +1120,22 @@
       "type": "PATTERN",
       "value": "-?\\d+\\.(?:\\d*|)"
     },
+    "_comment": {
+      "type": "TOKEN",
+      "content": {
+        "type": "SEQ",
+        "members": [
+          {
+            "type": "STRING",
+            "value": "//"
+          },
+          {
+            "type": "PATTERN",
+            "value": ".*"
+          }
+        ]
+      }
+    },
     "int": {
       "type": "PATTERN",
       "value": "\\d+"
@@ -1278,6 +1379,19 @@
     "sexpr": {
       "type": "CHOICE",
       "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "SYMBOL",
+              "name": "_comment"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "sexpr"
+            }
+          ]
+        },
         {
           "type": "SYMBOL",
           "name": "smap"
