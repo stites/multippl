@@ -14,7 +14,8 @@
     devshell.url = "github:numtide/devshell";
 
     #nixlib.url = "github:stites/nixlib";
-    nixlib.url = "path:/home/stites/git/nix/nixlib";
+    #nixlib.url = "path:/home/stites/git/nix/nixlib";
+    cachix-push.url = "github:juspay/cachix-push";
 
     # clean up dependencies
     nixpkgs.follows = "crane/nixpkgs";
@@ -43,6 +44,7 @@
       imports = [
         inputs.pre-commit.flakeModule
         inputs.devshell.flakeModule
+        inputs.cachix-push.flakeModule
       ];
       flake = {};
       systems = ["x86_64-linux"];
@@ -130,10 +132,10 @@
           default = inputs.flake-utils.lib.mkApp {
             drv = my-crate;
           };
-          cachix-pull = pkgs.callPackage inputs.nixlib.lib.my.apps.cachix-pull {};
-          cachix-push = pkgs.callPackage inputs.nixlib.lib.my.apps.cachix-push {
-            cache = "stites";
-          };
+          # cachix-pull = pkgs.callPackage inputs.nixlib.lib.my.apps.cachix-pull {};
+          # cachix-push = pkgs.callPackage inputs.nixlib.lib.my.apps.cachix-push {
+          #   cache = "stites";
+          # };
         };
         #devShells.default = import ./nix/shell.nix {inherit inputs pkgs lib;};
         pre-commit.settings.hooks = {
@@ -148,6 +150,7 @@
         #devshells.default.languages.rust.enableDefaultToolchain = true;
         #devshells.default.languages.rust.packageSet = pkgs.rustPlatform;
         #devshells.default.languages.rust.tools = ["rustc" "cargo" "clippy" "rustfmt"];
+        cachix-push.cacheName = "stites";
         devshells.default.commands = [
           {
             name = "repl";
