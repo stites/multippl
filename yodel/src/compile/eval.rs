@@ -666,39 +666,36 @@ impl<'a> State<'a> {
                 }
             }
             SMap(d, argname, body, arg) => {
-                panic!()
-                // let span = tracing::span!(tracing::Level::DEBUG, "map");
-                // let _enter = span.enter();
-                // tracing::debug!("map");
-                // let argval = crate::compile::anf::eval_sanf(self, &ctx, arg)?;
-                // if argval.sample.out.len() != 1 {
-                //     errors::typecheck_failed("map args != 1")
-                // } else {
-                //     let vs = match &argval.sample.out {
-                //         Some(SVal::SProd(vs)) => Ok(vs),
-                //         Some(SVal::SVec(vs)) => Ok(vs),
-                //         _ => errors::typecheck_failed("map arg != prod or vec"),
-                //     }?;
-                //     let outs = vs
-                //         .iter()
-                //         .map(|v| {
-                //             let mut newctx = Ctx::from(&argval);
-                //             newctx
-                //                 .sample
-                //                 .substitutions
-                //                 .insert(d.id(), Subst::mk(vec![v.clone()], None));
-                //             let o = self.eval_sexpr(newctx, body)?;
-                //             if o.sample.out.len() != 1 {
-                //                 errors::typecheck_failed("map fn did not compile to a single value")
-                //             } else {
-                //                 Ok(o.sample.out[0].clone())
-                //             }
-                //         })
-                //         .collect::<Result<Vec<SVal>>>()?;
-                //     let sout = ctx.sample.as_output(outs);
-                //     let out = ctx.mk_soutput(sout);
-                //     Ok(out)
-                // }
+                let span = tracing::span!(tracing::Level::DEBUG, "map");
+                let _enter = span.enter();
+                tracing::debug!("map");
+                let xs = crate::compile::anf::eval_sanf(self, &ctx, arg)?;
+                let xvals = match &xs.sample.out {
+                    None => errors::typecheck_failed("mapped arg is null"),
+                    Some(SVal::SProd(xvals)) => Ok(xvals),
+                    Some(SVal::SVec(xvals)) => Ok(xvals),
+                    Some(o) => errors::typecheck_failed(&format!(
+                        "mapping over something that is not traversable! got: {:?}",
+                        o
+                    )),
+                }?;
+                let outs = xvals
+                    .iter()
+                    .map(|x| {
+                        let mut newctx = Ctx::from(&xs.clone());
+                        newctx
+                            .sample
+                            .substitutions
+                            .insert(d.id(), x.clone());
+                        self.eval_sexpr(newctx, body)?
+                            .sample
+                            .out
+                            .ok_or(CompileError::TypeError(format!("mapping function did not return a sample value from a sampling context!")))
+                    })
+                    .collect::<Result<Vec<SVal>>>()?;
+                let sout = ctx.sample.as_output(Some(SVal::SVec(outs)));
+                let out = ctx.mk_soutput(sout);
+                Ok(out)
             }
             SWhile(_, guard, body) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "while");
