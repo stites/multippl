@@ -4,10 +4,10 @@ module.exports = grammar({
   rules: {
     source_file: $ => $.program,
     program: $ => choice(
-      seq(optional($._comment), "exact", '{', $.eexpr, '}', optional($._comment),),
-      seq(optional($._comment), "sample", '{', $.sexpr, '}', optional($._comment),),
-      seq(optional($._comment), $.sfun, $.program),
-      seq(optional($._comment), $.efun, $.program),
+      seq(optional($.comment), "exact", '{', $.eexpr, '}', optional($.comment),),
+      seq(optional($.comment), "sample", '{', $.sexpr, '}', optional($.comment),),
+      seq(optional($.comment), $.sfun, $.program),
+      seq(optional($.comment), $.efun, $.program),
     ),
     sarg: $ => seq( $.identifier, ':', $.sty ),
     sargs: $ => choice(
@@ -22,11 +22,11 @@ module.exports = grammar({
       seq('(', repeat(seq($.earg, ',')), $.earg, ')')
     ),
 
-    sfun: $ => seq('sample', 'fn', $.identifier, $.sargs, '->', $.sty, '{', $.sexpr, '}'),
-    efun: $ => seq('exact', 'fn', $.identifier, $.eargs, '->', $.ety, '{', $.eexpr, '}'),
+    sfun: $ => seq('sample', 'fn', field("name", $.identifier), $.sargs, '->', $.sty, '{', $.sexpr, '}'),
+    efun: $ => seq('exact', 'fn', field("name", $.identifier), $.eargs, '->', $.ety, '{', $.eexpr, '}'),
 
     eexpr: $ => choice(
-      seq($._comment, $.eexpr),
+      seq($.comment, $.eexpr),
       $.elet,
       $.eite,
       $.eflip,
@@ -49,9 +49,9 @@ module.exports = grammar({
     tyFloat: $ => 'Float',
 
     eapp: $ => choice(
-      seq($.identifier, '(', ')'),
-      seq($.identifier, '(', $.eanf, ')'),
-      seq($.identifier, '(', repeat(seq($.eanf,  ',')), $.eanf, ')'),
+      seq(field("name", $.identifier), '(', ')'),
+      seq(field("name", $.identifier), '(', $.eanf, ')'),
+      seq(field("name", $.identifier), '(', repeat(seq($.eanf,  ',')), $.eanf, ')'),
     ),
 
     etyProd: $ => choice(
@@ -86,8 +86,8 @@ module.exports = grammar({
     ),
 
     elet: $ => choice(
-      seq('let', $.identifier, '=', $.eexpr, 'in', $.eexpr),
-      seq('let', $.identifier, ':', $.ety, '=', $.eexpr, 'in', $.eexpr),
+      seq('let', field('var', $.identifier), '=', $.eexpr, 'in', $.eexpr),
+      seq('let', field('var', $.identifier), ':', $.ety, '=', $.eexpr, 'in', $.eexpr),
       // seq('let', $.identifier, ':', $.ety, '=', $.eexpr,  ';', $.eexpr), // TODO
       // prec.left(10, seq('let', $.identifier, ':', $.ety, '=', $.eexpr, $.eexpr)), // TODO
     ),
@@ -113,9 +113,9 @@ module.exports = grammar({
     float: $ => /-?\d+\.(?:\d*|)/, // 0.3  0.3. 3. 0.
     // I think I need to disallow whitespace before continuing with this
     // https://gist.github.com/Aerijo/df27228d70c633e088b0591b8857eeef
-    _comment: $ => token(seq('//', /.*/)), // like this
-    // _comment: $ => token(seq('%', /.*/)),
-    // _comment: $ => token(seq("//", /[^\n]*/)), // like this
+    comment: $ => token(seq('//', /.*/)), // like this
+    // comment: $ => token(seq('%', /.*/)),
+    // comment: $ => token(seq("//", /[^\n]*/)), // like this
 
     int: $ => /\d+/,
     numeric_op: $ => choice('*', '/', '+', '-', '^'),
@@ -152,8 +152,8 @@ module.exports = grammar({
     // _func: $ => seq('fun', $._function_name, '(', $.VAR, ')', ':', $._type, '{', $.eexpr, '}'),
 
     sexpr: $ => choice(
-      seq($._comment, $.sexpr),
-      // $._comment,
+      seq($.comment, $.sexpr),
+      // $.comment,
       // $.sbinding_section,
       $.smap,
       $.swhile,
@@ -183,9 +183,9 @@ module.exports = grammar({
     ),
 
     sapp: $ => choice(
-      seq($.identifier, '(', ')'),
-      seq($.identifier, '(', $.sanf, ')'),
-      seq($.identifier, '(', repeat(seq($.sanf,  ',')), $.sanf, ')'),
+      seq(field("name", $.identifier), '(', ')'),
+      seq(field("name", $.identifier), '(', $.sanf, ')'),
+      seq(field("name", $.identifier), '(', repeat(seq($.sanf,  ',')), $.sanf, ')'),
     ),
 
 
@@ -193,10 +193,10 @@ module.exports = grammar({
     // sbinding_section: $ => seq("do", repeat(choice($.slet, $.sseq_first)), $.sexpr),
     slet: $ => choice(
       // seq($.identifier, ':', $.sty, "<-", $.sexpr, ';', $.sexpr),
-      seq($.identifier, "<-", $.sexpr, ';', $.sexpr),
+      seq(field("var", $.identifier), "<-", $.sexpr, ';', $.sexpr),
     ),
     sletsample: $ => choice(
-      seq($.identifier, "~", $.sexpr, ';', $.sexpr),
+      seq(field("var", $.identifier), "~", $.sexpr, ';', $.sexpr),
     ),
     sseq: $ => prec.left(-100, seq($.sexpr, ';', $.sexpr)),
     // sseq_first: $ => seq($.sexpr, ';',),

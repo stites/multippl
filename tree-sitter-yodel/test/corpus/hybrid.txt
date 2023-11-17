@@ -21,31 +21,38 @@ exact {
 ---
 (source_file
   (program
+    (comment)
     (sfun
       (identifier)
       (sargs)
       (sty
         (tyBool))
       (sexpr
+        (comment)
         (sexpr
           (sanf
             (identifier)))))
     (program
+      (comment)
       (efun
         (identifier)
         (eargs)
         (ety
           (tyBool))
         (eexpr
+          (comment)
           (eexpr
             (eanf
               (identifier)))))
       (program
+        (comment)
         (eexpr
+          (comment)
           (eexpr
             (eanf
               (evalue
-                (bool)))))))))
+                (bool)))))
+        (comment)))))
 ======================
 hybrid: tiny
 ======================
