@@ -141,7 +141,7 @@
         pre-commit.settings.hooks = {
           shellcheck.enable = true;
           clippy.enable = true;
-          hunspell.enable = true;
+          hunspell.enable = false;
           alejandra.enable = true; # nix formatter
           # statix.enable = true; # lints for nix, but apparently borked
           rustfmt.enable = true;
