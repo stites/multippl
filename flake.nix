@@ -157,6 +157,25 @@
             help = "rust repl with evcxr";
             command = "${pkgs.evcxr}/bin/evcxr";
           }
+          {
+            name = "ts2emacs";
+            help = "compile tree-sitter-yodel.so to ~/.emacs.d/tree-sitter/";
+            # https://github.com/tree-sitter/tree-sitter/discussions/1711
+            # https://github.com/tree-sitter/tree-sitter/discussions/1711
+            command = ''
+              echo "generating yodel.so"
+              cd tree-sitter-yodel
+              tree-sitter generate -b --libdir ~/.emacs.d/tree-sitter/
+              tree-sitter generate -b --libdir ~/.myemacs.d/tree-sitter/
+              echo "renaming yodel.so -> libtree-sitter-yodel.so"
+              mv ~/.emacs.d/tree-sitter/{,libtree-sitter-}yodel.so
+              mv ~/.myemacs.d/tree-sitter/{,libtree-sitter-}yodel.so
+              echo "ls ~/.emacs.d/tree-sitter/"
+              ls ~/.emacs.d/tree-sitter/
+              echo "ls ~/.myemacs.d/tree-sitter/"
+              ls ~/.myemacs.d/tree-sitter/
+            '';
+          }
         ];
         devshells.default.devshell.startup.install-pre-commit-hooks.text = config.pre-commit.devShell.shellHook;
         devshells.default.env = [
