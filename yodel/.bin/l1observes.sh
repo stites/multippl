@@ -2,6 +2,7 @@
 
 for gridsize in 3 4; do
     for clausesize in 2 3; do # this will never terminate, haha...
+        # shellcheck disable=SC2043
         for determinism in 0.0; do
             if cargo run --release --bin plot-grids --features=plots -- \
                   -v 1 \
