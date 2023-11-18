@@ -6,12 +6,21 @@ use crate::typeinf::grammar::Inferable;
 use crate::*;
 use tree_sitter::{Node, Tree, TreeCursor};
 
-pub fn parse_program(src: &[u8], c: &mut TreeCursor, n: &Node) -> Program<Inferable> {
+pub fn parse_program(
+    src: &[u8],
+    c: &mut TreeCursor,
+    n: &Node,
+    as_sibling: bool,
+) -> Program<Inferable> {
     let mut c_ = c.clone();
     let mut cs = n.named_children(&mut c_);
-    let n = cs.next().unwrap();
-    // println!("parsing program: {}", n.kind());
+    let n = if as_sibling { *n } else { cs.next().unwrap() };
     match n.kind() {
+        "comment" => {
+            let n = cs.next().unwrap();
+            // println!("{}>>> {}", n.kind(), n.to_sexp());
+            parse_program(src, c, &n, false)
+        }
         "eexpr" => {
             let e = parse_eexpr(src, c, &n);
             Program::EBody(e)
@@ -24,7 +33,7 @@ pub fn parse_program(src: &[u8], c: &mut TreeCursor, n: &Node) -> Program<Infera
             let f = parse_efunction(src, c, &n);
             let n = cs.next().unwrap();
             // println!("parsed function: {:?}", f);
-            let rest = parse_program(src, c, &n);
+            let rest = parse_program(src, c, &n, false);
 
             Program::EDefine(f, Box::new(rest))
         }
@@ -32,7 +41,7 @@ pub fn parse_program(src: &[u8], c: &mut TreeCursor, n: &Node) -> Program<Infera
             let f = parse_sfunction(src, c, &n);
             let n = cs.next().unwrap();
             // println!("parsed function: {:?}", f);
-            let rest = parse_program(src, c, &n);
+            let rest = parse_program(src, c, &n, false);
             Program::SDefine(f, Box::new(rest))
         }
         s => {
@@ -60,7 +69,7 @@ pub fn parse_tree(src: &[u8], t: Tree) -> Program<Inferable> {
     let mut c_ = c.clone();
     let mut cs = source.named_children(&mut c_);
     let root = cs.next().unwrap();
-    parse_program(src, &mut c, &root)
+    parse_program(src, &mut c, &root, false)
 }
 
 pub fn parse(code: &str) -> Result<Program<Inferable>> {

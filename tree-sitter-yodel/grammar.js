@@ -4,22 +4,23 @@ module.exports = grammar({
   rules: {
     source_file: $ => $.program,
     program: $ => choice(
-      seq(optional($.comment), "exact", '{', $.eexpr, '}', optional($.comment),),
-      seq(optional($.comment), "sample", '{', $.sexpr, '}', optional($.comment),),
-      seq(optional($.comment), $.sfun, $.program),
-      seq(optional($.comment), $.efun, $.program),
+      seq($.comment, $.program),
+      seq("exact", '{', $.eexpr, '}', repeat($.comment),),
+      seq("sample", '{', $.sexpr, '}', repeat($.comment),),
+      seq($.sfun, $.program),
+      seq($.efun, $.program),
     ),
     sarg: $ => seq( $.identifier, ':', $.sty ),
     sargs: $ => choice(
       seq('(', ')'),
       seq('(', $.sarg, ')'),
-      seq('(', repeat(seq($.sarg, ',')), $.sarg, ')')
+      seq('(', repeat(seq($.sarg, ',')), $.sarg, optional(','), ')')
     ),
     earg: $ => seq($.identifier, ':', $.ety),
     eargs: $ => choice(
       seq('(', ')'),
       seq('(', $.earg, ')'),
-      seq('(', repeat(seq($.earg, ',')), $.earg, ')')
+      seq('(', repeat(seq($.earg, ',')), $.earg, optional(','), ')')
     ),
 
     sfun: $ => seq('sample', 'fn', field("name", $.identifier), $.sargs, '->', $.sty, '{', $.sexpr, '}'),
@@ -51,12 +52,12 @@ module.exports = grammar({
     eapp: $ => choice(
       seq(field("name", $.identifier), '(', ')'),
       seq(field("name", $.identifier), '(', $.eanf, ')'),
-      seq(field("name", $.identifier), '(', repeat(seq($.eanf,  ',')), $.eanf, ')'),
-    ),
+      seq(field("name", $.identifier), '(', repeat(seq($.eanf,  ',')), $.eanf, optional(','), ')'),
+     ),
 
     etyProd: $ => choice(
       seq('(', $.ety, ',', $.ety, ')'),
-      seq('(', $.ety, ',', repeat(seq($.ety, ',')), $.ety, ')'),
+      seq('(', $.ety, ',', repeat(seq($.ety, ',')), $.ety, optional(','), ')'),
     ),
 
     efst: $ => seq('fst', $.eanf),
@@ -79,10 +80,10 @@ module.exports = grammar({
 
 
     eanfprod: $ => choice(
-      seq('(', $.evalue, ',', $.eanf, ')'),
-      seq('(', $.eanf, ',', $.eanf, ')'),
+      seq('(', $.evalue, ',', $.eanf, optional(','), ')'),
+      seq('(', $.eanf, ',', $.eanf, optional(','), ')'),
       // seq('(', $.eanf, ',', repeat(seq($.eanf, ',')), $.evalue, ')'),
-      seq('(', $.eanf, ',', repeat(seq($.eanf, ',')), $.eanf, ')'),
+      seq('(', $.eanf, ',', repeat(seq($.eanf, ',')), $.eanf, optional(','), ')'),
     ),
 
     elet: $ => choice(
@@ -184,8 +185,8 @@ module.exports = grammar({
 
     sapp: $ => choice(
       seq(field("name", $.identifier), '(', ')'),
-      seq(field("name", $.identifier), '(', $.sanf, ')'),
-      seq(field("name", $.identifier), '(', repeat(seq($.sanf,  ',')), $.sanf, ')'),
+      seq(field("name", $.identifier), '(', $.sanf, optional(','), ')'),
+      seq(field("name", $.identifier), '(', repeat(seq($.sanf,  ',')), $.sanf, optional(','), ')'),
     ),
 
 
@@ -269,19 +270,19 @@ module.exports = grammar({
     sanfprj: $ => seq($.identifier, '[', $.sanf, ']'), // vector access
     sanfvec: $ => choice(
       seq('[', $.sanf, ']'),
-      seq('[', repeat(seq($.sanf, ',')), $.sanf, ']'),
+      seq('[', repeat(seq($.sanf, ',')), $.sanf, optional(','), ']'),
     ),
     svec: $ => choice(
       seq('[', $.svalue, ']'),
-      seq('[', repeat(seq($.svalue, ',')), $.svalue, ']'),
+      seq('[', repeat(seq($.svalue, ',')), $.svalue, optional(','), ']'),
     ),
     sanfprod: $ => choice(
       seq('(', $.sanf, ',', $.sanf, ')'),
-      seq('(', $.sanf, ',', repeat(seq($.sanf, ',')), $.sanf, ')'),
+      seq('(', $.sanf, ',', repeat(seq($.sanf, ',')), $.sanf, optional(','), ')'),
     ),
     sprod: $ => choice(
       seq('(', $.svalue, ',', $.svalue, ')'),
-      seq('(', $.svalue, ',', repeat(seq($.svalue, ',')), $.svalue, ')'),
+      seq('(', $.svalue, ',', repeat(seq($.svalue, ',')), $.svalue, optional(','), ')'),
     ),
 
 
@@ -297,11 +298,11 @@ module.exports = grammar({
     sanfbeta: $ => seq('beta', '(', $.sanf, ',', $.sanf, ')'),
     sanfdiscrete: $ => choice(
       seq('discrete', '(', $.sanf, ')'),
-      seq('discrete', '(', repeat(seq($.sanf, ',')), $.sanf, ')'),
+      seq('discrete', '(', repeat(seq($.sanf, ',')), $.sanf, optional(','), ')'),
     ),
     sanfdirichlet: $ => choice(
       seq('dirichlet', '(', $.sanf, ')'),
-      seq('dirichlet', '(', repeat(seq($.sanf, ',')), $.sanf, ')'),
+      seq('dirichlet', '(', repeat(seq($.sanf, ',')), $.sanf, optional(','), ')'),
     ),
 
     /// value forms of distributions

@@ -3,56 +3,79 @@ exact: all the comments
 ======================
 
 // comment here
+// comment here
 sample fn foo () -> Bool {
+  // comment
   // comment
   foof
 }
+// comment
 // comment
 exact fn foo () -> Bool {
   // comment
+  // comment
   foof
 }
 // comment
+// comment
 exact {
+  // comment
   // comment
   true
 }
+// last one??
 // last one??
 ---
 (source_file
   (program
     (comment)
-    (sfun
-      (identifier)
-      (sargs)
-      (sty
-        (tyBool))
-      (sexpr
-        (comment)
-        (sexpr
-          (sanf
-            (identifier)))))
     (program
       (comment)
-      (efun
-        (identifier)
-        (eargs)
-        (ety
-          (tyBool))
-        (eexpr
-          (comment)
-          (eexpr
-            (eanf
-              (identifier)))))
       (program
-        (comment)
-        (eexpr
+        (sfun
+          (identifier)
+          (sargs)
+          (sty
+            (tyBool))
+          (sexpr
+            (comment)
+            (sexpr
+              (comment)
+              (sexpr
+                (sanf
+                  (identifier))))))
+        (program
           (comment)
-          (eexpr
-            (eanf
-              (evalue
-                (bool)))))
-        (comment)))))
+          (program
+            (comment)
+            (program
+              (efun
+                (identifier)
+                (eargs)
+                (ety
+                  (tyBool))
+                (eexpr
+                  (comment)
+                  (eexpr
+                    (comment)
+                    (eexpr
+                      (eanf
+                        (identifier))))))
+              (program
+                (comment)
+                (program
+                  (comment)
+                  (program
+                    (eexpr
+                      (comment)
+                      (eexpr
+                        (comment)
+                        (eexpr
+                          (eanf
+                            (evalue
+                              (bool))))))
+                    (comment)
+                    (comment)))))))))))
 ======================
 hybrid: tiny
 ======================
@@ -249,4 +272,8 @@ sample {
                   (sexpr
                     (sanf
                       (identifier))))))))))
-
+=================
+hmm0
+===================
+---
+(ERROR)

@@ -35,6 +35,7 @@ fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVal> {
     match n.kind() {
         "sanf" => parse_sanf(src, c, n),
         "sanfprod" => Anf::AnfProd(parse_vec(src, c, n, |a, b, c| parse_sanf(a, b, c))),
+        "sanfvec" => Anf::AnfVec(parse_vec(src, c, n, |a, b, c| parse_sanf(a, b, c))),
         "sanfprj" => {
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
@@ -294,6 +295,11 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
     match k {
         "sexpr" => {
             // made it to a nested paren! run again
+            parse_sexpr(src, c, &n)
+        }
+        "comment" => {
+            // println!("parsing sanf: {} >>> {}", n.to_sexp(), parse_str(src, &n));
+            let n = cs.next().unwrap();
             parse_sexpr(src, c, &n)
         }
         "sanf" => {
