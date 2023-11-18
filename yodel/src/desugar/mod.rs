@@ -270,16 +270,23 @@ impl SugarMagicEnv {
 
 pub mod integers {
     use super::*;
-    pub fn as_onehot(i: usize) -> EVal {
-        let ty = vec![ETy::EBool; i];
+    pub fn as_onehot_(i: usize) -> Vec<BddPtr> {
         match i {
-            0 => EVal::EProd(vec![EVal::EBdd(BddPtr::PtrFalse); 8]),
+            0 => vec![BddPtr::PtrFalse; 8],
             _ => {
-                let mut val = vec![EVal::EBdd(BddPtr::PtrFalse); i - 1];
-                val.push(EVal::EBdd(BddPtr::PtrTrue));
-                EVal::EProd(val)
+                let mut val = vec![BddPtr::PtrFalse; i - 1];
+                val.push(BddPtr::PtrTrue);
+                val
             }
         }
+    }
+    pub fn as_onehot(i: usize) -> EVal {
+        EVal::EProd(
+            self::as_onehot_(i)
+                .into_iter()
+                .map(EVal::EBdd)
+                .collect_vec(),
+        )
     }
     pub fn from_prod(vs: &[EVal]) -> Result<usize> {
         let (tot, int) = vs.iter().enumerate().fold(Ok((0, 0)), |acc, (ix, v)| {

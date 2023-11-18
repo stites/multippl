@@ -101,62 +101,42 @@ fn mk_ite_output_samples(
 pub fn eval_eite_output(
     state: &mut super::eval::State,
     ctx: &Ctx,
-    pred: BddPtr,
+    guard: BddPtr,
     truthy_branch: (Probability, Output),
     falsey_branch: (Probability, Output),
     opts: &Opts,
 ) -> Result<EOutput> {
-    let pred_dist = pred;
     let (wmc_true, truthy) = truthy_branch;
     let (wmc_false, falsey) = falsey_branch;
     let dist = match (&truthy.exact.out, &falsey.exact.out) {
         (Some(EVal::EBdd(tdist)), Some(EVal::EBdd(fdist))) => {
-            let dist_l = state.mgr.and(pred_dist, *tdist);
-            let dist_r = state.mgr.and(pred_dist.neg(), *fdist);
-            let fin = state.mgr.or(dist_l, dist_r);
-            EVal::EBdd(fin)
+            EVal::EBdd(state.mgr.ite(guard, *tdist, *fdist))
         }
+        (Some(EVal::EProd(ts)), Some(EVal::EProd(fs))) => EVal::EProd(
+            izip!(ts, fs)
+                .map(|tf| match tf {
+                    (EVal::EBdd(t), EVal::EBdd(f)) => EVal::EBdd(state.mgr.ite(guard, *t, *f)),
+                    _ => panic!("typecheck failed to unify ITE-statement with products of BDDs"),
+                })
+                .collect_vec(),
+        ),
         (t, f) => panic!(
             "typecheck failed to catch EIte with\ntruthy: {t:?}\nfalsey: {f:?}",
             t = t,
             f = f
         ),
     };
-    // let dists = izip!(&truthy.exact.dists(), &falsey.exact.dists())
-    //     .map(|(tdist, fdist)| {
-    //         let dist_l = state.mgr.and(pred_dist, *tdist);
-    //         let dist_r = state.mgr.and(pred_dist.neg(), *fdist);
-    //         let fin = state.mgr.or(dist_l, dist_r);
-    //         EVal::EBdd(fin)
-    //     })
-    //     .collect_vec();
-
     let samples = mk_ite_output_samples(opts, state, &truthy.exact.samples, &falsey.exact.samples);
 
-    let accept_l = state.mgr.and(pred_dist, truthy.exact.accept);
-    let accept_r = state.mgr.and(pred_dist.neg(), falsey.exact.accept);
-    let accept = state.mgr.or(accept_l, accept_r);
-    let accept = state.mgr.and(accept, ctx.exact.accept);
+    let accept = state
+        .mgr
+        .ite(guard, truthy.exact.accept, falsey.exact.accept);
+    let accept = state.mgr.and(ctx.exact.accept, accept);
 
     let mut substitutions = truthy.exact.substitutions.clone();
     substitutions.extend(falsey.exact.substitutions.clone());
     let mut weightmap = truthy.exact.weightmap.clone();
     weightmap.weights.extend(falsey.exact.weightmap.clone());
-
-    // let probabilities = izip!(&truthy.probabilities, &falsey.probabilities)
-    //     .map(|(t, f)| (*t * wmc_true + *f * wmc_false))
-    //     .collect_vec();
-
-    // debug!("=============================");
-    // let importance_true = truthy.importance.pr_mul(wmc_true);
-    // let importance_false = falsey.importance.pr_mul(wmc_false);
-    // debug!(
-    //     "importance_true {:?}, importance_false {:?}",
-    //     importance_true, importance_false
-    // );
-    // let importance = importance_true + importance_false;
-    // debug!("importance {:?}", importance);
-    // debug!("=============================");
 
     Ok(EOutput {
         out: Some(dist),
