@@ -912,7 +912,11 @@ impl LabelEnv {
     }
 }
 
-fn compute_max_varlabel(start_bdd: MaxVarLabel, fun_stats: &HashMap<FnId, FnCounts>, new_bdds: u64,) -> u64 {
+fn compute_max_varlabel(
+    start_bdd: MaxVarLabel,
+    fun_stats: &HashMap<FnId, FnCounts>,
+    new_bdds: u64,
+) -> u64 {
     let MaxVarLabel(start_bdd) = start_bdd;
     let function_block_sizes = fun_stats
         .values()
@@ -924,7 +928,7 @@ fn heuristic_bound() -> u64 {
     150
 }
 fn compute_function_block(ctr: &FnCounts) -> u64 {
-   ctr.num_uids * ctr.num_calls * heuristic_bound()
+    ctr.num_uids * ctr.num_calls * heuristic_bound()
 }
 pub fn pipeline(p: &ProgramInferable) -> Result<AnnotateResult> {
     let p = crate::uniquify::pipeline(p)?;

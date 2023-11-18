@@ -211,6 +211,7 @@ pub struct State<'a> {
     pub funs: &'a HashMap<FnId, Fun>,
     pub fun_stats: &'a HashMap<FnId, FnCounts>,
     pub call_counter: HashMap<FnId, u64>,
+    while_index: u64,
     log_pq: LPQ,
     pub fnctx: Option<FnCall>,
 }
@@ -218,13 +219,15 @@ pub struct State<'a> {
 fn calculate_label<'a>(
     label: VarLabel,
     offset: Option<FnCall>,
+    while_index: u64, // this one is brittle, requires some more static analysis
     stats: &'a HashMap<FnId, FnCounts>,
 ) -> VarLabel {
     match offset {
         None => label,
         Some(FnCall(fid, fcall)) => {
             let stats = stats.get(&fid).expect("all functions present");
-            let offset = stats.num_uids * (fcall - 1); // function calls are 1-indexed, offsets are 0-indexed
+            let offset = stats.num_uids * (fcall - 1 + while_index); // function calls are 1-indexed, offsets are 0-indexed,
+            let l = label.value() + offset;
             VarLabel::new(label.value() + offset)
         }
     }
@@ -250,6 +253,7 @@ impl<'a> State<'a> {
             log_pq: LPQ::default(),
             funs,
             fnctx: None,
+            while_index: 0,
             fun_stats,
             call_counter,
         }
@@ -328,7 +332,8 @@ impl<'a> State<'a> {
                 let o = match &o.out {
                     Some(EVal::EFloat(param)) => {
                         let mut weightmap = ctx.exact.weightmap.clone();
-                        let lbl = calculate_label(d.label, self.fnctx, self.fun_stats);
+                        let lbl =
+                            calculate_label(d.label, self.fnctx, self.while_index, self.fun_stats);
                         weightmap.insert(lbl, *param);
                         let var = self.mgr.var(lbl, true);
                         Ok(EOutput {
@@ -488,6 +493,7 @@ impl<'a> State<'a> {
                     .get(&fcall.0)
                     .expect("function is defined")
                     .exact()?;
+
                 let params = f.args2vars(|v| match v {
                     Anf::AVar(nv, _) => Ok(nv.clone()),
                     _ => errors::generic(&format!(
@@ -682,14 +688,18 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 tracing::debug!("while");
 
+                self.while_index = 0;
                 let mut loopctx = ctx.clone();
                 let guardout = loop {
                     let g = crate::compile::anf::eval_sanf(self, &loopctx, guard)?;
                     match &g.sample.out {
-                        Some(SVal::SBool(true)) => break Ok(g),
-                        Some(SVal::SBool(false)) => {
+                        Some(SVal::SBool(true)) => {
                             let out = self.eval_sexpr(loopctx, body)?;
+                            self.while_index += 1;
                             loopctx = Ctx::from(&out);
+                        }
+                        Some(SVal::SBool(false)) => {
+                            break Ok(g);
                         }
                         _ => break errors::typecheck_failed("while guard"),
                     }
@@ -810,7 +820,6 @@ impl<'a> State<'a> {
                             let dist = statrs::distribution::Dirichlet::new(ps.to_vec()).unwrap();
                             let vs = sample_from(self, &dist);
                             let q = dist.pdf(&vs);
-                            println!("{:?}", vs);
                             let vs = SVal::SVec(
                                 vs.into_iter().map(|x: &f64| SVal::SFloat(*x)).collect_vec(),
                             );
