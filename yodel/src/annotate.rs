@@ -818,6 +818,7 @@ impl LabelEnv {
         }
         self.annotate(p)
     }
+
     #[allow(clippy::type_complexity)]
     pub fn annotate(&mut self, p: &ProgramUnq) -> Result<AnnotateResult> {
         match p {
@@ -828,12 +829,7 @@ impl LabelEnv {
                 let end_bdd = self.max_varlabel_val();
                 let order = self.linear_var_order(); // FIXME this is the _worst_ order!!!
                 let new_bdds = end_bdd.0 - start_bdd.0;
-                let mx = new_bdds
-                    + self
-                        .fun_stats
-                        .values()
-                        .map(|ctr| (ctr.num_calls + 1) * ctr.num_uids)
-                        .sum::<u64>();
+                let mx = compute_max_varlabel(start_bdd, &self.fun_stats, new_bdds);
 
                 Ok(AnnotateResult::new(
                     Program::SBody(sann),
@@ -851,12 +847,7 @@ impl LabelEnv {
                 let end_bdd = self.max_varlabel_val();
                 let order = self.linear_var_order(); // FIXME this is the _worst_ order!!!
                 let new_bdds = end_bdd.0 - start_bdd.0;
-                let mx = new_bdds
-                    + self
-                        .fun_stats
-                        .values()
-                        .map(|ctr| (ctr.num_calls + 1) * ctr.num_uids)
-                        .sum::<u64>();
+                let mx = compute_max_varlabel(start_bdd, &self.fun_stats, new_bdds);
                 Ok(AnnotateResult::new(
                     Program::EBody(eann),
                     order,
@@ -880,7 +871,7 @@ impl LabelEnv {
                 let mut ctr = self.fun_stats.get_mut(&i).expect("it's 9L up there!");
                 ctr.num_uids = end_bdds.0 - start_bdds.0;
                 // reserve the next #fncalls-worth of bdd ptrs
-                self.lblsym += ctr.num_uids * ctr.num_calls;
+                self.lblsym += compute_function_block(&ctr);
                 let r = self.annotate(p)?;
                 Ok(AnnotateResult::new(
                     Program::EDefine(f, Box::new(r.program)),
@@ -905,7 +896,7 @@ impl LabelEnv {
                 let mut ctr = self.fun_stats.get_mut(&i).expect("it's 9L up there!");
                 ctr.num_uids = end_bdds.0 - start_bdds.0;
                 // reserve the next #fncalls-worth of bdd ptrs
-                self.lblsym += ctr.num_uids * ctr.num_calls;
+                self.lblsym += compute_function_block(&ctr);
 
                 let r = self.annotate(p)?;
                 Ok(AnnotateResult::new(
@@ -921,6 +912,20 @@ impl LabelEnv {
     }
 }
 
+fn compute_max_varlabel(start_bdd: MaxVarLabel, fun_stats: &HashMap<FnId, FnCounts>, new_bdds: u64,) -> u64 {
+    let MaxVarLabel(start_bdd) = start_bdd;
+    let function_block_sizes = fun_stats
+        .values()
+        .map(|ctr| (ctr.num_calls + 1) * ctr.num_uids)
+        .sum::<u64>();
+    start_bdd + new_bdds + function_block_sizes
+}
+fn heuristic_bound() -> u64 {
+    150
+}
+fn compute_function_block(ctr: &FnCounts) -> u64 {
+   ctr.num_uids * ctr.num_calls * heuristic_bound()
+}
 pub fn pipeline(p: &ProgramInferable) -> Result<AnnotateResult> {
     let p = crate::uniquify::pipeline(p)?;
     let mut lenv = LabelEnv::new(p.1.functions, p.1.fun_stats);

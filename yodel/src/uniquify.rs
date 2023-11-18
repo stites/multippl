@@ -167,7 +167,10 @@ impl SymEnv {
         id
     }
     fn call_function(&mut self, f: &str) -> FnCall {
-        let id = self.functions.get(f).expect("function {f} is not defined");
+        let id = self
+            .functions
+            .get(f)
+            .expect(&format!("function {} is not defined", f));
         let cs = self
             .fun_stats
             .get_mut(id)
