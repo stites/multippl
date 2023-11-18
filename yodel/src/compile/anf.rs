@@ -277,7 +277,31 @@ pub fn eval_eanf_cop(
                 .as_output(Some(EVal::EBdd(BddPtr::from_bool(iop(l, r)))));
             Ok(out)
         }
-        _ => return errors::typecheck_failed("eanf compare op"),
+        (Some(EVal::EProd(bdds)), Some(EVal::EInteger(r))) => match bop {
+            None => return errors::typecheck_failed("eanf compare op invalid"),
+            Some(mut bop) => {
+                // println!("comparing {:?} == {}", bdds, r);
+                let oh = crate::desugar::integers::as_onehot_(*r);
+                let fin = izip!(bdds, oh).fold(Ok(BddPtr::PtrTrue), |acc, (b, o)| match b {
+                    EVal::EBdd(b) => {
+                        let apply = bop(&mut state.mgr, Box::new(b.clone()), Box::new(o.clone()));
+                        Ok(state.mgr.and(acc?, apply))
+                    }
+                    _ => return errors::typecheck_failed("eanf compare op invalid"),
+                })?;
+                let out = ctx.exact.as_output(Some(EVal::EBdd(fin)));
+                Ok(out)
+            }
+        },
+        (Some(EVal::EInteger(r)), Some(EVal::EProd(bdds))) => {
+            todo!();
+        }
+        (l, r) => {
+            return errors::typecheck_failed(&format!(
+                "eanf compare op between:\n left: {:?}\nright: {:?}\n",
+                l, r
+            ))
+        }
     }
 }
 pub fn eval_sanf_vec(
