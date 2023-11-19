@@ -80,9 +80,11 @@ impl Options {
 #[derive(Clone, PartialEq, Debug)]
 pub enum Datum {
     Float(f64), // will turn into SVals
+    Int(u64), // will turn into SVals
     Bool(bool), // will turn into EVals
     Bools(Vec<bool>),
     Floats(Vec<f64>),
+    Ints(Vec<u64>),
 }
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum DTy {
@@ -148,19 +150,26 @@ impl DataView {
             } else {
                 let is_sample = match vs[0] {
                     Datum::Float(_) => true,
-                    Datum::Bool(_) => false,
                     Datum::Floats(_) => true,
+                    Datum::Bool(_) => false,
                     Datum::Bools(_) => false,
+                    Datum::Int(_) => true,
+                    Datum::Ints(_) => true,
+
                 };
                 if is_sample {
                     let ss = vs
                         .into_iter()
                         .map(|v| match v {
                             Datum::Float(f) => SVal::SFloat(f),
-                            Datum::Bool(_) => panic!(""),
+                            Datum::Int(f) => SVal::SInt(f),
                             Datum::Floats(fs) => {
                                 SVal::SVec(fs.into_iter().map(SVal::SFloat).collect_vec())
                             }
+                            Datum::Ints(fs) => {
+                                SVal::SVec(fs.into_iter().map(SVal::SInt).collect_vec())
+                            }
+                            Datum::Bool(_) => panic!(""),
                             Datum::Bools(_) => panic!(""),
                         })
                         .collect_vec();
@@ -170,12 +179,14 @@ impl DataView {
                     let bs = vs
                         .into_iter()
                         .map(|v| match v {
-                            Datum::Float(_) => panic!(""),
                             Datum::Bool(b) => EVal::from_bool(b),
-                            Datum::Floats(_) => panic!(""),
                             Datum::Bools(bs) => {
                                 EVal::EProd(bs.into_iter().map(EVal::from_bool).collect_vec())
                             }
+                            Datum::Float(f) => panic!(""),
+                            Datum::Int(f) =>  panic!(""),
+                            Datum::Floats(fs) => panic!(""),
+                            Datum::Ints(fs) => panic!(""),
                         })
                         .collect_vec();
                     exact.insert(k.clone(), bs);
