@@ -171,7 +171,7 @@ impl SymEnv {
             .functions
             .get(f)
             .expect(&format!("function {} is not defined", f));
-        let cs = self
+        let mut cs = self
             .fun_stats
             .get_mut(id)
             .expect("counters always  created at same time as ");

@@ -211,6 +211,7 @@ pub struct State<'a> {
     pub funs: &'a HashMap<FnId, Fun>,
     pub fun_stats: &'a HashMap<FnId, FnCounts>,
     pub call_counter: HashMap<FnId, u64>,
+    next: Option<VarLabel>,
     while_index: u64,
     log_pq: LPQ,
     pub fnctx: Option<FnCall>,
@@ -246,6 +247,7 @@ impl<'a> State<'a> {
             sample_pruning,
         };
         let call_counter: HashMap<FnId, u64> = funs.iter().map(|(k, v)| (k.clone(), 0)).collect();
+        let next = if mgr.num_vars() == 0 { None } else { Some(VarLabel::new(0)) };
         State {
             opts,
             mgr,
@@ -256,8 +258,29 @@ impl<'a> State<'a> {
             while_index: 0,
             fun_stats,
             call_counter,
+            next,
         }
     }
+    pub fn next_bdd(&mut self, flip : BddVar) -> (VarLabel, BddPtr) {
+        match self.next {
+            None => {
+                // let label = calculate_label(&self.call_stack, flip.label, self.fnctx, self.while_index, self.fun_stats);
+                // let ptr = self.mgr.var(label, true);
+                // (label, ptr)
+                self.mgr.new_var(true)
+            }
+            Some(lbl) => {
+                let label = lbl.clone();
+                self.next = Some(VarLabel::new(label.value() + 1));
+                if self.mgr.num_vars() < (label.value() as usize) {
+                    (label, self.mgr.var(label, true))
+                } else {
+                    self.mgr.new_var(true)
+                }
+            }
+        }
+    }
+
     pub fn log_pq(&self) -> LPQ {
         self.log_pq
     }
@@ -332,8 +355,7 @@ impl<'a> State<'a> {
                 let o = match &o.out {
                     Some(EVal::EFloat(param)) => {
                         let mut weightmap = ctx.exact.weightmap.clone();
-                        let lbl =
-                            calculate_label(d.label, self.fnctx, self.while_index, self.fun_stats);
+                        let (lbl, var) = self.next_bdd(d.clone());
                         weightmap.insert(lbl, *param);
                         let var = self.mgr.var(lbl, true);
                         Ok(EOutput {
