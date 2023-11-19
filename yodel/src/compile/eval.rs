@@ -247,7 +247,11 @@ impl<'a> State<'a> {
             sample_pruning,
         };
         let call_counter: HashMap<FnId, u64> = funs.iter().map(|(k, v)| (k.clone(), 0)).collect();
-        let next = if mgr.num_vars() == 0 { None } else { Some(VarLabel::new(0)) };
+        let next = if mgr.num_vars() == 0 {
+            None
+        } else {
+            Some(VarLabel::new(0))
+        };
         State {
             opts,
             mgr,
@@ -261,7 +265,7 @@ impl<'a> State<'a> {
             next,
         }
     }
-    pub fn next_bdd(&mut self, flip : BddVar) -> (VarLabel, BddPtr) {
+    pub fn next_bdd(&mut self, flip: BddVar) -> (VarLabel, BddPtr) {
         match self.next {
             None => {
                 // let label = calculate_label(&self.call_stack, flip.label, self.fnctx, self.while_index, self.fun_stats);

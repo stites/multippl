@@ -77,11 +77,12 @@ impl Options {
 
 // for now, only limited support for data points... Ideally this just turns into
 // a for-loop in the language, but for now we can hack it as a PoC
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub enum Datum {
     Float(f64), // will turn into SVals
     Bool(bool), // will turn into EVals
-                // Int(u64),
+    Bools(Vec<bool>),
+    Floats(Vec<f64>),
 }
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub enum DTy {
@@ -148,6 +149,8 @@ impl DataView {
                 let is_sample = match vs[0] {
                     Datum::Float(_) => true,
                     Datum::Bool(_) => false,
+                    Datum::Floats(_) => true,
+                    Datum::Bools(_) => false,
                 };
                 if is_sample {
                     let ss = vs
@@ -155,6 +158,10 @@ impl DataView {
                         .map(|v| match v {
                             Datum::Float(f) => SVal::SFloat(f),
                             Datum::Bool(_) => panic!(""),
+                            Datum::Floats(fs) => {
+                                SVal::SVec(fs.into_iter().map(SVal::SFloat).collect_vec())
+                            }
+                            Datum::Bools(_) => panic!(""),
                         })
                         .collect_vec();
                     sampling.insert(k.clone(), ss);
@@ -165,6 +172,10 @@ impl DataView {
                         .map(|v| match v {
                             Datum::Float(_) => panic!(""),
                             Datum::Bool(b) => EVal::from_bool(b),
+                            Datum::Floats(_) => panic!(""),
+                            Datum::Bools(bs) => {
+                                EVal::EProd(bs.into_iter().map(EVal::from_bool).collect_vec())
+                            }
                         })
                         .collect_vec();
                     exact.insert(k.clone(), bs);

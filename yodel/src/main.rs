@@ -96,6 +96,27 @@ fn read_data(ofp: Option<String>) -> DataPoints {
                     .map(|v| match &v {
                         Value::Bool(x) => Some(Datum::Bool(*x)),
                         Value::Number(x) => Some(Datum::Float(x.as_f64()?)),
+                        Value::Array(xs) => {
+                            if xs[0].is_number() {
+                                xs.iter()
+                                    .map(|x| match x {
+                                        Value::Number(x) => Some(x.as_f64()?),
+                                        _ => None,
+                                    })
+                                    .collect::<Option<Vec<_>>>()
+                                    .map(Datum::Floats)
+                            } else if xs[0].is_boolean() {
+                                xs.iter()
+                                    .map(|x| match x {
+                                        Value::Bool(x) => Some(*x),
+                                        _ => None,
+                                    })
+                                    .collect::<Option<Vec<_>>>()
+                                    .map(Datum::Bools)
+                            } else {
+                                None
+                            }
+                        }
                         _ => None,
                     })
                     .collect::<Option<_>>()?;
