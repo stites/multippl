@@ -237,7 +237,26 @@ pub fn eval_sanf_cop(
             let out = ctx.mk_soutput(out);
             Ok(out)
         }
-        _ => return errors::typecheck_failed("sanf compare op"),
+        (Some(SVal::SInt(l)), Some(SVal::SFloat(r))) => {
+            let out = ctx
+                .sample
+                .as_output(Some(SVal::SBool(fop(&(*l as f64), r))));
+            let out = ctx.mk_soutput(out);
+            Ok(out)
+        }
+        (Some(SVal::SFloat(l)), Some(SVal::SInt(r))) => {
+            let out = ctx
+                .sample
+                .as_output(Some(SVal::SBool(fop(l, &(*r as f64)))));
+            let out = ctx.mk_soutput(out);
+            Ok(out)
+        }
+        (l, r) => {
+            return errors::typecheck_failed(&format!(
+                "sanf compare op:\nleft: {:?}\nright: {:?}",
+                l, r
+            ))
+        }
     }
 }
 
