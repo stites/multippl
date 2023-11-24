@@ -45,7 +45,7 @@ pub fn importance_weighting_h_h(
             debug!("step: {step}");
         }
         let step0ix = step - 1; // fix off-by-one for data view
-        match crate::runner_with_data(&mut mgr, &mut rng, &opt, &p, &lenv, step0ix, &dview) {
+        match crate::runner_with_data(&mut mgr, &mut rng, opt, &p, &lenv, step0ix, &dview) {
             Ok(o) => {
                 let (out, pq) = (o.out, o.pq);
                 trace!("sample output : {:?}", out.sample.out);
@@ -105,7 +105,8 @@ pub fn importance_weighting_h_h(
                                 acc
                             })
                             .into_iter()
-                            .map(|x| LW::new(x))
+                            // .map(|x| LW::new(x))
+                            .map(LW::new)
                             .collect_vec();
                         // let ws = qs.iter().map(|_| pq.weight()).collect_vec();
                         let w = LW::new(wmc_final_accept).sub(LW::new(wmc_sample));

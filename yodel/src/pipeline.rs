@@ -15,7 +15,7 @@ use rand::rngs::StdRng;
 use std::collections::HashMap;
 use tracing::debug;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Options {
     // pub seed: Option<u64>,
     pub seed: Option<StdRng>,
@@ -24,17 +24,17 @@ pub struct Options {
     pub opt: bool,         // use optimizations
     pub stats_window: u64, // remove this?
 }
-impl Default for Options {
-    fn default() -> Self {
-        Options {
-            seed: None,
-            exact_only: false,
-            debug: false,
-            opt: false,
-            stats_window: 0,
-        }
-    }
-}
+// impl Default for Options {
+//     fn default() -> Self {
+//         Options {
+//             seed: None,
+//             exact_only: false,
+//             debug: false,
+//             opt: false,
+//             stats_window: 0,
+//         }
+//     }
+// }
 impl Options {
     pub fn rng(&self) -> StdRng {
         match &self.seed {
@@ -66,7 +66,7 @@ impl Options {
         stats_window: u64, // use optimizations
     ) -> Self {
         Self {
-            seed: seed.map(|s| rand::SeedableRng::seed_from_u64(s)),
+            seed: seed.map(rand::SeedableRng::seed_from_u64),
             debug,
             opt,
             stats_window,
@@ -80,7 +80,7 @@ impl Options {
 #[derive(Clone, PartialEq, Debug)]
 pub enum Datum {
     Float(f64), // will turn into SVals
-    Int(u64), // will turn into SVals
+    Int(u64),   // will turn into SVals
     Bool(bool), // will turn into EVals
     Bools(Vec<bool>),
     Floats(Vec<f64>),
@@ -155,7 +155,6 @@ impl DataView {
                     Datum::Bools(_) => false,
                     Datum::Int(_) => true,
                     Datum::Ints(_) => true,
-
                 };
                 if is_sample {
                     let ss = vs
@@ -184,7 +183,7 @@ impl DataView {
                                 EVal::EProd(bs.into_iter().map(EVal::from_bool).collect_vec())
                             }
                             Datum::Float(f) => panic!(""),
-                            Datum::Int(f) =>  panic!(""),
+                            Datum::Int(f) => panic!(""),
                             Datum::Floats(fs) => panic!(""),
                             Datum::Ints(fs) => panic!(""),
                         })
@@ -283,7 +282,7 @@ pub fn run(code: &str, opt: &Options) -> Result<ROut> {
     tracing::debug!(",====================================.");
     tracing::debug!("| manager compiled! building program |");
     tracing::debug!("`===================================='");
-    let r = runner(&mut mgr, &mut opt.rng(), &opt, &p, &lenv)?;
+    let r = runner(&mut mgr, &mut opt.rng(), opt, &p, &lenv)?;
     Ok(r.to_rout(mgr))
 }
 
@@ -310,7 +309,7 @@ pub fn runner_with_data(
 
     tracing::debug!("program running...");
     let mut state = State::new(mgr, Some(rng), sample_pruning, &lenv.funs, &lenv.fun_stats);
-    let out = state.eval_program_with_data(&p, &dv.view(step))?;
+    let out = state.eval_program_with_data(p, &dv.view(step))?;
     tracing::debug!("program... compiled!");
 
     Ok(PartialROut {
@@ -401,6 +400,6 @@ pub fn make_mgr_and_ir_with_data(
     let maxlbl = ar.maxbdd.0;
     tracing::debug!("(manager created with max label: {maxlbl})");
     // let mgr = Mgr::new_default_order(maxlbl as usize);
-    let mgr = Mgr::new_default_order(0 as usize);
+    let mgr = Mgr::new_default_order(0_usize);
     Ok((mgr, p, lenv, dv))
 }

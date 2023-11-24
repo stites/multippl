@@ -41,14 +41,14 @@ pub fn eval_eite_predicate(
     cond: &AnfAnn<EVal>,
     opts: &Opts,
 ) -> Result<(BddPtr, (Probability, Probability))> {
-    let pred = eval_eanf(state, &ctx, cond)?;
+    let pred = eval_eanf(state, ctx, cond)?;
     let pred_dist = pred.dists();
     if !pred_dist.len() == 1 {
         return Err(TypeError(format!(
             "Expected EBool for ITE condition\nGot: {cond:?}\n{ctx:?}",
         )));
     }
-    let pred_dist = pred_dist[0].clone();
+    let pred_dist = pred_dist[0];
     let var_order = opts.order.clone();
     let wmc_params = ctx.exact.weightmap.as_params(opts.max_label);
 
@@ -61,7 +61,7 @@ pub fn eval_eite_predicate(
                 &wmc_params,
                 &var_order,
                 pred_dist,
-                ctx.exact.accept.clone(),
+                ctx.exact.accept,
                 // TODO if switching to samples_opt, no need to use ctx.
                 ss,
             )
@@ -217,11 +217,11 @@ pub struct State<'a> {
     pub fnctx: Option<FnCall>,
 }
 
-fn calculate_label<'a>(
+fn calculate_label(
     label: VarLabel,
     offset: Option<FnCall>,
     while_index: u64, // this one is brittle, requires some more static analysis
-    stats: &'a HashMap<FnId, FnCounts>,
+    stats: &HashMap<FnId, FnCounts>,
 ) -> VarLabel {
     match offset {
         None => label,
@@ -246,7 +246,7 @@ impl<'a> State<'a> {
             max_label: mgr.get_order().num_vars() as u64,
             sample_pruning,
         };
-        let call_counter: HashMap<FnId, u64> = funs.iter().map(|(k, v)| (k.clone(), 0)).collect();
+        let call_counter: HashMap<FnId, u64> = funs.iter().map(|(k, v)| (*k, 0)).collect();
         let next = if mgr.num_vars() == 0 {
             None
         } else {
@@ -274,7 +274,7 @@ impl<'a> State<'a> {
                 self.mgr.new_var(true)
             }
             Some(lbl) => {
-                let label = lbl.clone();
+                let label = lbl;
                 self.next = Some(VarLabel::new(label.value() + 1));
                 if self.mgr.num_vars() < (label.value() as usize) {
                     (label, self.mgr.var(label, true))
@@ -364,8 +364,8 @@ impl<'a> State<'a> {
                         let var = self.mgr.var(lbl, true);
                         Ok(EOutput {
                             out: Some(EVal::EBdd(var)),
-                            accept: ctx.exact.accept.clone(),
-                            samples: ctx.exact.samples.clone(),
+                            accept: ctx.exact.accept,
+                            samples: ctx.exact.samples,
                             weightmap,
                             substitutions: ctx.exact.substitutions.clone(),
                         })
@@ -389,15 +389,15 @@ impl<'a> State<'a> {
                 // debug!("weightmap  {:?}", ctx.weightmap);
 
                 // except everything up to this point
-                let accept = ctx.exact.accept.clone();
+                let accept = ctx.exact.accept;
                 // and include any sample consistency that is necessary
                 let ss = ctx.exact.samples(self.mgr, self.opts.sample_pruning);
                 let accept = self.mgr.and(accept, ss);
 
-                let dist = comp.dists().into_iter().fold(accept, |global, cur| {
-                    let r = self.mgr.and(global, cur);
-                    r
-                });
+                let dist = comp
+                    .dists()
+                    .into_iter()
+                    .fold(accept, |global, cur| self.mgr.and(global, cur));
 
                 // let var_order = self.opts.order.clone();
                 // let wmc_params = ctx.exact.weightmap.as_params(self.opts.max_label);
@@ -436,8 +436,8 @@ impl<'a> State<'a> {
 
                 let o = EOutput {
                     out: Some(EVal::EBdd(BddPtr::PtrTrue)),
-                    accept: dist.clone(),
-                    samples: ctx.exact.samples.clone(),
+                    accept: dist,
+                    samples: ctx.exact.samples,
                     weightmap: ctx.exact.weightmap.clone(),
                     substitutions: ctx.exact.substitutions.clone(),
                 };
@@ -477,7 +477,7 @@ impl<'a> State<'a> {
                     self,
                     &ctx,
                     pred_dist,
-                    (wmc_true, truthy.clone()),
+                    (wmc_true, truthy),
                     (wmc_false, falsey),
                     opts,
                 )?;
@@ -498,11 +498,11 @@ impl<'a> State<'a> {
                 newctx.exact.substitutions.insert(
                     d.id(),
                     // Subst::mk(bound.exact.out.clone(), Some(Var::Named(d.clone()))),
-                    bound.exact.out.clone().unwrap().clone(),
+                    bound.exact.out.clone().unwrap(),
                 );
                 let body = self.eval_eexpr(newctx, ebody)?;
 
-                let o = eval_elet_output(self.mgr, &ctx, bound.clone(), body, &self.opts)?;
+                let o = eval_elet_output(self.mgr, &ctx, bound, body, &self.opts)?;
                 debug_step_ng!(format!("let-in {}", s), ctx, o);
 
                 let outs = ctx.mk_eoutput(o);
@@ -512,7 +512,7 @@ impl<'a> State<'a> {
                 let span = tracing::span!(Level::DEBUG, "app", f = fname);
                 let _enter = span.enter();
                 tracing::debug!("app");
-                self.fnctx = Some(fcall.clone());
+                self.fnctx = Some(*fcall);
 
                 let f = self
                     .funs
@@ -580,7 +580,7 @@ impl<'a> State<'a> {
                         debug!("niters: {}", niters);
                         let lastix = self
                             .call_counter
-                            .get(&fid)
+                            .get(fid)
                             .expect("all functions are initialized in call_counter");
                         let mut callix = *lastix;
                         while niters > 0 {
@@ -596,7 +596,7 @@ impl<'a> State<'a> {
                             callix += 1;
                             debug!("niters: {}", niters);
                         }
-                        self.call_counter.insert(fid.clone(), callix);
+                        self.call_counter.insert(*fid, callix);
 
                         let fout = out.expect("k > 0");
                         Ok(fout)
@@ -648,7 +648,7 @@ impl<'a> State<'a> {
                     .sample
                     .substitutions
                     // .insert(d.id(), Subst::mk(bound.sample.out.clone(), None));
-                    .insert(d.id(), bound.sample.out.unwrap().clone()); // Subst::mk(bound.sample.out.clone(), None));
+                    .insert(d.id(), bound.sample.out.unwrap()); // Subst::mk(bound.sample.out.clone(), None));
                 let out = self.eval_sexpr(newctx, body)?;
 
                 debug_step_ng!(format!("let-in {}", name), ctx, out; "sample");
@@ -702,7 +702,7 @@ impl<'a> State<'a> {
                         self.eval_sexpr(newctx, body)?
                             .sample
                             .out
-                            .ok_or(CompileError::TypeError(format!("mapping function did not return a sample value from a sampling context!")))
+                            .ok_or(CompileError::TypeError("mapping function did not return a sample value from a sampling context!".to_string()))
                     })
                     .collect::<Result<Vec<SVal>>>()?;
                 let sout = ctx.sample.as_output(Some(SVal::SVec(outs)));
@@ -781,7 +781,7 @@ impl<'a> State<'a> {
                     .get(&fcall.0)
                     .expect("function is defined")
                     .sample()?;
-                self.fnctx = Some(fcall.clone());
+                self.fnctx = Some(*fcall);
                 let params = f.args2vars(|v| match v {
                     Anf::AVar(nv, _) => Ok(nv.clone()),
                     _ => errors::generic(&format!(
@@ -824,19 +824,19 @@ impl<'a> State<'a> {
                 let span = tracing::span!(tracing::Level::DEBUG, "sample");
                 let _enter = span.enter();
                 tracing::debug!("sample");
-                let mut out = self.eval_sexpr(ctx, &dist)?;
+                let mut out = self.eval_sexpr(ctx, dist)?;
 
                 let (q, v, d) = match &out.sample.out {
                     Some(SVal::SDist(d)) => match d {
                         Dist::Bern(param) => {
                             let dist = statrs::distribution::Bernoulli::new(*param).unwrap();
-                            let v = sample_from(self, &dist);
+                            let v = sample_from(self, dist);
                             let q = dist.pmf(v as u64);
                             let v = SVal::SBool(v == 1.0);
                             (q, v, d)
                         }
                         Dist::Discrete(ps) => {
-                            let dist = statrs::distribution::Categorical::new(&ps).unwrap();
+                            let dist = statrs::distribution::Categorical::new(ps).unwrap();
                             let v = sample_from(self, &dist);
                             let q = dist.pmf(v as u64);
                             let v = SVal::SInt(v as u64);
@@ -905,8 +905,8 @@ impl<'a> State<'a> {
                             statrs::distribution::Discrete::pmf(&dist, *b as u64)
                         }
                         (Dist::Discrete(ps), SVal::SInt(i)) => {
-                            let dist = statrs::distribution::Categorical::new(&ps).unwrap();
-                            statrs::distribution::Discrete::pmf(&dist, *i as u64)
+                            let dist = statrs::distribution::Categorical::new(ps).unwrap();
+                            statrs::distribution::Discrete::pmf(&dist, *i)
                         }
                         (Dist::Dirichlet(ps), _) => todo!("punted"),
                         // FIXME: Punt-- might need a different library to preform this integration.
@@ -953,7 +953,7 @@ impl<'a> State<'a> {
                 tracing::debug!("exact");
 
                 let mut out = self.eval_eexpr(ctx.clone(), eexpr)?;
-                let eval = out.exact.out.clone().unwrap().clone();
+                let eval = out.exact.out.clone().unwrap();
                 let val = match (&eval, SExpr::<Trace>::embed(&eval)) {
                     (_, Ok(sv)) => sv,
                     (EVal::EBdd(dist), Err(_)) => {
@@ -964,7 +964,7 @@ impl<'a> State<'a> {
                     (EVal::EProd(vs), Err(e)) => SVal::SProd(
                         vs.iter()
                             .map(|v| {
-                                Ok(match (&v, SExpr::<Trace>::embed(&v)) {
+                                Ok(match (&v, SExpr::<Trace>::embed(v)) {
                                     (EVal::EBdd(dist), Err(_)) => {
                                         let sample = exact2sample_bdd_eff(self, &mut out, dist);
                                         SVal::SBool(sample)

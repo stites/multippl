@@ -87,7 +87,7 @@ pub fn eval_eanf_var(
                 eout.out = Some(embedding.clone());
                 eout.substitutions
                     // .insert(nv.id(), Subst::mk(embedding, Some(Var::Named(nv.clone()))));
-                    .insert(nv.id(), embedding.clone());
+                    .insert(nv.id(), embedding);
                 Ok(eout)
             }
         },
@@ -103,8 +103,8 @@ pub fn eval_sanf_numop<'a>(
     iop: impl Fn(u64, u64) -> u64,
     op: impl Fn(Box<AnfTr<SVal>>, Box<AnfTr<SVal>>) -> AnfTr<SVal>,
 ) -> Result<Output> {
-    let ol = eval_sanf(state, ctx, &bl)?;
-    let or = eval_sanf(state, ctx, &br)?;
+    let ol = eval_sanf(state, ctx, bl)?;
+    let or = eval_sanf(state, ctx, br)?;
     match (&ol.sample.out, &or.sample.out) {
         (Some(SVal::SFloat(l)), Some(SVal::SFloat(r))) => {
             let out = ctx.sample.as_output(Some(SVal::SFloat(fop(*l, *r))));
@@ -116,7 +116,7 @@ pub fn eval_sanf_numop<'a>(
             let out = ctx.mk_soutput(out);
             Ok(out)
         }
-        _ => return errors::typecheck_failed("sanf numop"),
+        _ => errors::typecheck_failed("sanf numop"),
     }
 }
 pub fn eval_eanf_numop<'a>(
@@ -130,8 +130,8 @@ pub fn eval_eanf_numop<'a>(
 ) -> Result<EOutput> {
     let span = tracing::span!(Level::DEBUG, "numop");
     let _enter = span.enter();
-    let ol = eval_eanf(state, ctx, &bl)?;
-    let or = eval_eanf(state, ctx, &br)?;
+    let ol = eval_eanf(state, ctx, bl)?;
+    let or = eval_eanf(state, ctx, br)?;
     match (&ol.out, &or.out) {
         (Some(EVal::EFloat(l)), Some(EVal::EFloat(r))) => {
             let x = fop(*l, *r);
@@ -150,12 +150,10 @@ pub fn eval_eanf_numop<'a>(
         }
         // (Some(EVal::EInteger(l)], _) => return errors::erased(),
         // (_, [EVal::EInteger(r))) => return errors::erased(),
-        (l, r) => {
-            return errors::typecheck_failed(&format!(
-                "eanf numop. Arguments:\nleft: {:?}\nright: {:?}",
-                l, r
-            ))
-        }
+        (l, r) => errors::typecheck_failed(&format!(
+            "eanf numop. Arguments:\nleft: {:?}\nright: {:?}",
+            l, r
+        )),
     }
 }
 pub fn eval_sanf_bop<'a>(
@@ -166,20 +164,18 @@ pub fn eval_sanf_bop<'a>(
     bop: impl Fn(bool, bool) -> bool,
     op: impl Fn(Box<AnfTr<SVal>>, Box<AnfTr<SVal>>) -> AnfTr<SVal>,
 ) -> Result<Output> {
-    let ol = eval_sanf(state, ctx, &bl)?;
-    let or = eval_sanf(state, ctx, &br)?;
+    let ol = eval_sanf(state, ctx, bl)?;
+    let or = eval_sanf(state, ctx, br)?;
     match (&ol.sample.out, &or.sample.out) {
         (Some(SVal::SBool(l)), Some(SVal::SBool(r))) => {
             let out = ctx.sample.as_output(Some(SVal::SBool(bop(*l, *r))));
             let out = ctx.mk_soutput(out);
             Ok(out)
         }
-        (l, r) => {
-            return errors::typecheck_failed(&format!(
-                "sanf boolop. Arguments:\nleft: {:?}\nright: {:?}",
-                l, r
-            ))
-        }
+        (l, r) => errors::typecheck_failed(&format!(
+            "sanf boolop. Arguments:\nleft: {:?}\nright: {:?}",
+            l, r
+        )),
     }
 }
 pub fn eval_eanf_bop(
@@ -194,21 +190,20 @@ pub fn eval_eanf_bop(
     let _enter = span.enter();
     tracing::debug!("binop");
 
-    let ol = eval_eanf(state, ctx, &bl)?;
-    let or = eval_eanf(state, ctx, &br)?;
+    let ol = eval_eanf(state, ctx, bl)?;
+    let or = eval_eanf(state, ctx, br)?;
     match (&ol.out, &or.out) {
         (Some(EVal::EBdd(l)), Some(EVal::EBdd(r))) => {
-            let out = ctx.exact.as_output(Some(EVal::EBdd(bop(
-                &mut state.mgr,
-                Box::new(l.clone()),
-                Box::new(r.clone()),
-            ))));
+            let out =
+                ctx.exact
+                    .as_output(Some(EVal::EBdd(bop(state.mgr, Box::new(*l), Box::new(*r)))));
             Ok(out)
         }
-        _ => return errors::typecheck_failed("eanf boolop"),
+        _ => errors::typecheck_failed("eanf boolop"),
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn eval_sanf_cop(
     state: &mut super::eval::State,
     ctx: &Ctx,
@@ -219,8 +214,8 @@ pub fn eval_sanf_cop(
     iop: impl Fn(&u64, &u64) -> bool,
     op: impl Fn(Box<AnfTr<SVal>>, Box<AnfTr<SVal>>) -> AnfTr<SVal>,
 ) -> Result<Output> {
-    let ol = eval_sanf(state, ctx, &bl)?;
-    let or = eval_sanf(state, ctx, &br)?;
+    let ol = eval_sanf(state, ctx, bl)?;
+    let or = eval_sanf(state, ctx, br)?;
     match (&ol.sample.out, &or.sample.out) {
         (Some(SVal::SBool(l)), Some(SVal::SBool(r))) => {
             let out = ctx.sample.as_output(Some(SVal::SBool(bop(l, r))));
@@ -252,14 +247,12 @@ pub fn eval_sanf_cop(
             Ok(out)
         }
         (l, r) => {
-            return errors::typecheck_failed(&format!(
-                "sanf compare op:\nleft: {:?}\nright: {:?}",
-                l, r
-            ))
+            errors::typecheck_failed(&format!("sanf compare op:\nleft: {:?}\nright: {:?}", l, r))
         }
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn eval_eanf_cop(
     state: &mut super::eval::State,
     ctx: &Ctx,
@@ -270,16 +263,16 @@ pub fn eval_eanf_cop(
     iop: impl Fn(&usize, &usize) -> bool,
     op: impl Fn(Box<AnfTr<EVal>>, Box<AnfTr<EVal>>) -> AnfTr<EVal>,
 ) -> Result<EOutput> {
-    let ol = eval_eanf(state, ctx, &bl)?;
-    let or = eval_eanf(state, ctx, &br)?;
+    let ol = eval_eanf(state, ctx, bl)?;
+    let or = eval_eanf(state, ctx, br)?;
     match (&ol.out, &or.out) {
         (Some(EVal::EBdd(l)), Some(EVal::EBdd(r))) => match bop {
-            None => return errors::typecheck_failed("eanf compare op invalid"),
+            None => errors::typecheck_failed("eanf compare op invalid"),
             Some(mut bop) => {
                 let out = ctx.exact.as_output(Some(EVal::EBdd(bop(
-                    &mut state.mgr,
-                    Box::new(l.clone()),
-                    Box::new(r.clone()),
+                    state.mgr,
+                    Box::new(*l),
+                    Box::new(*r),
                 ))));
                 Ok(out)
             }
@@ -297,16 +290,16 @@ pub fn eval_eanf_cop(
             Ok(out)
         }
         (Some(EVal::EProd(bdds)), Some(EVal::EInteger(r))) => match bop {
-            None => return errors::typecheck_failed("eanf compare op invalid"),
+            None => errors::typecheck_failed("eanf compare op invalid"),
             Some(mut bop) => {
                 // println!("comparing {:?} == {}", bdds, r);
                 let oh = crate::desugar::integers::as_onehot_(*r);
                 let fin = izip!(bdds, oh).fold(Ok(BddPtr::PtrTrue), |acc, (b, o)| match b {
                     EVal::EBdd(b) => {
-                        let apply = bop(&mut state.mgr, Box::new(b.clone()), Box::new(o.clone()));
+                        let apply = bop(state.mgr, Box::new(*b), Box::new(o));
                         Ok(state.mgr.and(acc?, apply))
                     }
-                    _ => return errors::typecheck_failed("eanf compare op invalid"),
+                    _ => errors::typecheck_failed("eanf compare op invalid"),
                 })?;
                 let out = ctx.exact.as_output(Some(EVal::EBdd(fin)));
                 Ok(out)
@@ -315,12 +308,10 @@ pub fn eval_eanf_cop(
         (Some(EVal::EInteger(r)), Some(EVal::EProd(bdds))) => {
             todo!();
         }
-        (l, r) => {
-            return errors::typecheck_failed(&format!(
-                "eanf compare op between:\n left: {:?}\nright: {:?}\n",
-                l, r
-            ))
-        }
+        (l, r) => errors::typecheck_failed(&format!(
+            "eanf compare op between:\n left: {:?}\nright: {:?}\n",
+            l, r
+        )),
     }
 }
 pub fn eval_sanf_vec(
@@ -365,7 +356,7 @@ fn eval_sanf_dist2(
             tracing::debug!(" left: {l:?}");
             tracing::debug!("right: {r:?}");
 
-            return errors::typecheck_failed("sanf dist with 2 args not given correct arguments.");
+            errors::typecheck_failed("sanf dist with 2 args not given correct arguments.")
         }
     }
 }
@@ -388,13 +379,13 @@ fn eval_sanf_dist_vec(
     let o = eval_sanfs(state, ctx, ps)?;
     match &o.sample.out {
         Some(SVal::SVec(vs)) => {
-            let vs = vals2vec_params(&vs)?;
+            let vs = vals2vec_params(vs)?;
             let out = ctx.sample.as_output(Some(SVal::SDist(mkdist(vs))));
             let out = ctx.mk_soutput(out);
             let ext = (sv.clone(), out.sample.clone());
             Ok(out)
         }
-        _ => return errors::typecheck_failed("sanf distribution was not vector args not given"),
+        _ => errors::typecheck_failed("sanf distribution was not vector args not given"),
     }
 }
 pub fn eval_sanf<'a>(
@@ -419,7 +410,7 @@ pub fn eval_sanf<'a>(
             Ok(out)
         }
         Neg(bl) => {
-            let ol = eval_sanf(state, ctx, &bl)?;
+            let ol = eval_sanf(state, ctx, bl)?;
             match &ol.sample.out {
                 Some(SVal::SBool(l)) => {
                     let out = ctx.sample.as_output(Some(SVal::SBool(!*l)));
@@ -504,7 +495,7 @@ pub fn eval_sanf<'a>(
                     let out = ctx.mk_soutput(out);
                     Ok(out)
                 }
-                a => return errors::typecheck_failed(&format!("anf projection got {a:?}")),
+                a => errors::typecheck_failed(&format!("anf projection got {a:?}")),
             }
         }
         AnfBernoulli(sv, p) => {
@@ -516,7 +507,7 @@ pub fn eval_sanf<'a>(
                     let ext = (sv.clone(), out.sample.clone());
                     Ok(out)
                 }
-                a => return errors::typecheck_failed(&format!("anf bernoulli got {a:?}")),
+                a => errors::typecheck_failed(&format!("anf bernoulli got {a:?}")),
             }
         }
         AnfPoisson(sv, p) => {
@@ -536,7 +527,7 @@ pub fn eval_sanf<'a>(
                     let ext = (sv.clone(), out.sample.clone());
                     Ok(out)
                 }
-                a => return errors::typecheck_failed(&format!("anf poisson got {a:?}")),
+                a => errors::typecheck_failed(&format!("anf poisson got {a:?}")),
             }
         }
         AnfUniform(sv, p0, p1) => {
@@ -597,13 +588,13 @@ pub fn eval_eanf<'a>(
             let _enter = span.enter();
             tracing::debug!("neg");
 
-            let ol = eval_eanf(state, ctx, &bl)?;
+            let ol = eval_eanf(state, ctx, bl)?;
             match &ol.out {
                 Some(EVal::EBdd(bdd)) => {
                     let out = ctx.exact.as_output(Some(EVal::EBdd(bdd.neg())));
                     Ok(out)
                 }
-                _ => return errors::typecheck_failed("anf negation"),
+                _ => errors::typecheck_failed("anf negation"),
             }
         }
         Or(bl, br) => eval_eanf_bop(state, ctx, bl, br, |mgr, l, r| mgr.or(*l, *r), Or),
@@ -703,12 +694,10 @@ pub fn eval_eanf<'a>(
                     let out = ctx.exact.as_output(Some(vs[*i].clone()));
                     Ok(out)
                 }
-                (l, r) => {
-                    return errors::typecheck_failed(&format!(
-                        "anf projection:\nprod: {:?}\nindex: {:?}",
-                        l, r
-                    ))
-                }
+                (l, r) => errors::typecheck_failed(&format!(
+                    "anf projection:\nprod: {:?}\nindex: {:?}",
+                    l, r
+                )),
             }
         }
         AnfVec(anfs) => errors::not_in_exact(),

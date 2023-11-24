@@ -107,7 +107,7 @@ pub fn plan_variables_h(bdd: &BddPlan, mut vs: HashSet<VarLabel>) -> HashSet<Var
         BddPlan::ConstTrue => vs,
         BddPlan::ConstFalse => vs,
         BddPlan::Literal(a, b) => {
-            vs.insert(a.clone());
+            vs.insert(*a);
             vs
         }
     }

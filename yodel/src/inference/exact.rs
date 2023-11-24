@@ -10,7 +10,7 @@ pub fn exact_with(p: &str) -> (Vec<f64>, WmcStats) {
 }
 
 pub fn exact_with_h(p: &str) -> (Vec<f64>, Option<WmcStats>) {
-    let o = crate::run!(&p; --split exact);
+    let o = crate::run!(p; --split exact);
     let (out, mut mgr, pq) = (o.out, o.mgr, o.pq);
     wmc_prob(&mut mgr, &out.exact)
 }

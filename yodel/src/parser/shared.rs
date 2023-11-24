@@ -95,9 +95,9 @@ pub fn parse_gval(src: &[u8], c: &mut TreeCursor, n: &Node) -> Option<GVal> {
         "bool" => {
             let utf8 = n.utf8_text(src).unwrap();
             let var = String::from_utf8(utf8.into()).unwrap();
-            let b = if var == "true".to_string() {
+            let b = if var == *"true" {
                 true
-            } else if var == "false".to_string() {
+            } else if var == *"false" {
                 false
             } else {
                 panic!("impossible")

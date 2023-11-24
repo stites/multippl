@@ -32,21 +32,21 @@ pub mod grammar {
     #[derive(Clone, Copy, Eq, Hash, PartialEq, Debug)]
     pub struct FnCall(pub FnId, pub u64);
 
-    #[derive(Debug, Clone, Hash, Eq, PartialEq)]
+    #[derive(Debug, Clone, Hash, Eq, PartialEq, Default)]
     pub struct FnCounts {
         pub num_calls: u64,
         pub num_uids: u64,
         pub iterates: bool,
     }
-    impl Default for FnCounts {
-        fn default() -> Self {
-            Self {
-                num_calls: 0,
-                num_uids: 0,
-                iterates: false,
-            }
-        }
-    }
+    // impl Default for FnCounts {
+    //     fn default() -> Self {
+    //         Self {
+    //             num_calls: 0,
+    //             num_uids: 0,
+    //             iterates: false,
+    //         }
+    //     }
+    // }
     impl fmt::Display for UniqueId {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(f, "#{}", self.0)
@@ -170,7 +170,7 @@ impl SymEnv {
         let id = self
             .functions
             .get(f)
-            .expect(&format!("function {} is not defined", f));
+            .unwrap_or_else(|| panic!("function {} is not defined", f));
         let mut cs = self
             .fun_stats
             .get_mut(id)
@@ -499,7 +499,7 @@ impl SymEnv {
         let mut unique_keys = vec![];
         for (k, ty, _) in &ds.keys {
             let uid = self._fresh(Some(k.clone()));
-            unique_keys.push((k.clone(), ty.clone(), Some(uid)));
+            unique_keys.push((k.clone(), *ty, Some(uid)));
         }
         ds.keys = unique_keys;
         self.uniquify(p)
@@ -518,9 +518,9 @@ impl SymEnv {
             Program::EDefine(f, p) => {
                 let id =
                     self.fresh_function(f.name.clone().expect("defined functions must be named"));
-                let start_ids = self.gensym.clone();
+                let start_ids = self.gensym;
                 let f = self.uniquify_efun(f)?;
-                let end_ids = self.gensym.clone();
+                let end_ids = self.gensym;
                 let cs = self.fun_stats.get_mut(&id).expect("I just made that!");
                 cs.num_uids = end_ids - start_ids;
                 let (p, mx) = self.uniquify(p)?;
@@ -529,9 +529,9 @@ impl SymEnv {
             Program::SDefine(f, p) => {
                 let id =
                     self.fresh_function(f.name.clone().expect("defined functions must be named"));
-                let start_ids = self.gensym.clone();
+                let start_ids = self.gensym;
                 let f = self.uniquify_sfun(f)?;
-                let end_ids = self.gensym.clone();
+                let end_ids = self.gensym;
                 let cs = self.fun_stats.get_mut(&id).expect("I just made that!");
                 cs.num_uids = end_ids - start_ids;
 

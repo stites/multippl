@@ -78,8 +78,8 @@ pub fn wmc_prob(mgr: &mut Mgr, c: &EOutput) -> (Vec<f64>, Option<WmcStats>) {
                 mgr,
                 &c.weightmap.as_params(mgr.get_order().num_vars() as u64),
                 &mgr.get_order().clone(),
-                d.clone(),
-                c.accept.clone(),
+                *d,
+                c.accept,
                 ss,
             );
             last_stats = Some(stats);
@@ -106,7 +106,7 @@ pub fn numerators(mgr: &mut Mgr, c: &EOutput, fold_in_samples: bool) -> Vec<f64>
         .iter()
         .map(|dist| {
             let numerator_formula = mgr.and(*dist, accept);
-            let RealSemiring(num) = numerator_formula.wmc(&mgr.get_order(), &params);
+            let RealSemiring(num) = numerator_formula.wmc(mgr.get_order(), &params);
             num
         })
         .collect_vec();
@@ -122,7 +122,7 @@ pub fn queries(mgr: &mut Mgr, c: &EOutput) -> Vec<f64> {
         .dists()
         .iter()
         .map(|dist| {
-            let RealSemiring(num) = dist.wmc(&mgr.get_order(), &params);
+            let RealSemiring(num) = dist.wmc(mgr.get_order(), &params);
             num
         })
         .collect_vec();

@@ -189,12 +189,7 @@ TTG!(
                 ELetIn(ex, s, x, body) => {
                     let body = match &**body {
                         ELetIn(_, _, _, _) => body.insert_observe(e),
-                        _ => ELetIn(
-                            ex.clone(),
-                            "_".to_string(),
-                            Box::new(e.clone()),
-                            body.clone(),
-                        ),
+                        _ => ELetIn(ex.clone(), "_".to_string(), Box::new(e), body.clone()),
                     };
                     ELetIn(
                         ex.clone(),

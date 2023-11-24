@@ -27,7 +27,7 @@ impl SExprInferable {
         use EExpr::*;
         use SExpr::*;
         match self {
-            SAnf(x, a) => Ok(EAnf(x.clone(), Box::new(a.strip_anf()?))),
+            SAnf(x, a) => Ok(EAnf((), Box::new(a.strip_anf()?))),
             // SBern(_, param) => match *param.clone() {
             //     Anf::AVal(_, SVal::SFloat(f)) => Ok(EFlip((), f)),
             //     a => Err(SemanticsError(format!(

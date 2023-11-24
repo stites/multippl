@@ -26,7 +26,7 @@ impl Default for PQ {
     }
 }
 
-#[derive(PartialEq, Copy, Clone, Debug)]
+#[derive(PartialEq, Copy, Clone, Debug, Default)]
 pub struct LW(pub f64);
 impl LW {
     pub fn val(&self) -> f64 {
@@ -51,13 +51,8 @@ impl LW {
         format!("LW(log_weight={:.6})", self.val())
     }
 }
-impl Default for LW {
-    fn default() -> Self {
-        LW(0.0)
-    }
-}
 
-#[derive(Copy, Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq, Default)]
 pub struct LPQ {
     pub lp: LW,
     pub lq: LW,
@@ -80,14 +75,6 @@ impl LPQ {
         PQ {
             p: self.lp.exp(),
             q: self.lq.exp(),
-        }
-    }
-}
-impl Default for LPQ {
-    fn default() -> Self {
-        LPQ {
-            lp: LW::default(),
-            lq: LW::default(),
         }
     }
 }

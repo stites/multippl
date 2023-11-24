@@ -18,12 +18,12 @@ fn var_label(var: &String, instantiation: &String) -> String {
 
 fn get_probs(
     bn: &BayesianNetwork,
-    v: &String,
+    v: &str,
     parents: &HashMap<String, String>,
     suffix: Option<String>,
 ) -> (Vec<f64>, Vec<String>) {
     bn.all_possible_assignments(v)
-        .into_iter()
+        .iter()
         .cloned()
         .map(|vassign| {
             (
@@ -34,6 +34,7 @@ fn get_probs(
         .unzip()
 }
 
+#[allow(clippy::type_complexity)]
 fn _to_statements(
     bn: &BayesianNetwork,
     v: &String,
@@ -49,7 +50,7 @@ fn _to_statements(
         .into_iter()
         .map(|f| Anf::AVal((), EVal::EFloat(f)))
         .collect::<Vec<_>>();
-    let (es, fin, _) = crate::desugar::discrete::params2named_statements(&v, &vars, &ps);
+    let (es, fin, _) = crate::desugar::discrete::params2named_statements(v, &vars, &ps);
     let es = es
         .into_iter()
         .map(|(s, e)| Ok((s, upcast_eexpr(&e)?)))
@@ -72,7 +73,7 @@ fn to_statements_returning(
     Ok((lbl_binds, body))
 }
 
-fn vars2prod(v: &String, params: &Vec<String>) -> EExprInferable {
+fn vars2prod(v: &String, params: &[String]) -> EExprInferable {
     let vec = params
         .iter()
         .map(|p| Anf::AVar(None, var_label(v, p)))
@@ -81,8 +82,8 @@ fn vars2prod(v: &String, params: &Vec<String>) -> EExprInferable {
     EExpr::EAnf((), Box::new(Anf::AnfProd(vec)))
 }
 
-pub fn ite_star(ifs: &Vec<Anf<Inferable, EVal>>, branches: &Vec<EExprInferable>) -> EExprInferable {
-    let mut ifs = ifs.clone();
+pub fn ite_star(ifs: &[Anf<Inferable, EVal>], branches: &Vec<EExprInferable>) -> EExprInferable {
+    let mut ifs = ifs.to_owned();
     if ifs.len() == branches.len() {
         ifs.pop();
     }
@@ -106,7 +107,7 @@ fn prod2vars(name: &String, p: &EExprInferable) -> Vec<(String, EExprInferable)>
     match p {
         EAnf(_, anf) => match &**anf {
             Anf::AnfProd(prod) => prod
-                .into_iter()
+                .iter()
                 .enumerate()
                 .map(|(ix, anf)| match anf {
                     AVar(_, inst) => (
@@ -114,7 +115,7 @@ fn prod2vars(name: &String, p: &EExprInferable) -> Vec<(String, EExprInferable)>
                         EAnf(
                             (),
                             Box::new(AnfPrj(
-                                Box::new(AVar(None, name.clone())),
+                                Box::new(AVar(None, name.to_owned())),
                                 Box::new(AVal((), EVal::EInteger(ix))),
                             )),
                         ),
@@ -135,8 +136,8 @@ fn parent_vars(passigns: &HashMap<String, String>) -> Vec<String> {
         .collect()
 }
 
-fn conjoin_vars(vars: &Vec<String>) -> Anf<Inferable, EVal> {
-    let mut vars = vars.clone();
+fn conjoin_vars(vars: &[String]) -> Anf<Inferable, EVal> {
+    let mut vars = vars.to_owned();
     vars.rotate_left(1);
     let hd = vars.pop().unwrap();
 
@@ -152,12 +153,12 @@ pub fn compile(bn: &BayesianNetwork, final_query: &EExprInferable) -> Result<Pro
     for (node_ix, v) in bn.topological_sort().into_iter().enumerate().rev() {
         let assigns = bn.all_possible_assignments(&v);
         let parents = bn.parents(&v);
-        if parents.len() == 0 {
-            for (label, stmnt) in independent_node(&bn, &v)?.into_iter().rev() {
+        if parents.is_empty() {
+            for (label, stmnt) in independent_node(bn, &v)?.into_iter().rev() {
                 program = EExpr::ELetIn(None, label, Box::new(stmnt), Box::new(program));
             }
         }
-        if parents.len() > 0 {
+        if !parents.is_empty() {
             let all_passigns = bn.parent_assignments(&v);
             let last_branch_ix = all_passigns.len() - 1;
             let mut consistent_return = None;
@@ -165,7 +166,7 @@ pub fn compile(bn: &BayesianNetwork, final_query: &EExprInferable) -> Result<Pro
             let mut branches = vec![];
             for (pix, passigns) in all_passigns.into_iter().enumerate() {
                 if consistent_return.is_none() {
-                    let vars = _to_statements(&bn, &v, &passigns, None)?.1;
+                    let vars = _to_statements(bn, &v, &passigns, None)?.1;
                     let query = vars2prod(&v, &vars);
                     consistent_return = Some(query.clone());
                 }
@@ -173,7 +174,7 @@ pub fn compile(bn: &BayesianNetwork, final_query: &EExprInferable) -> Result<Pro
 
                 guards.push(conjoin_vars(&pvar));
                 let (l_s, vars) =
-                    _to_statements(&bn, &v, &passigns, Some(format!("_{}", pix))).unwrap();
+                    _to_statements(bn, &v, &passigns, Some(format!("_{}", pix))).unwrap();
                 let query = vars2prod(&v, &vars);
 
                 let mut branch = query;
@@ -214,6 +215,6 @@ pub fn allmarg_query(bn: &BayesianNetwork) -> EExprInferable {
 }
 
 pub fn compile_allmarg(bn: &BayesianNetwork) -> Program<Inferable> {
-    let query = allmarg_query(&bn);
-    compile(&bn, &query).unwrap()
+    let query = allmarg_query(bn);
+    compile(bn, &query).unwrap()
 }

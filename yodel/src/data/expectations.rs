@@ -54,7 +54,7 @@ impl Exp1 {
             self.sum_w2 = o.sum_w2;
             self.count = o.count;
         } else {
-            self.sum_w = self.sum_w + o.sum_w;
+            self.sum_w += o.sum_w;
             self.query_sums = izip!(&self.query_sums, &o.query_sums)
                 .map(|(l, r)| l + r)
                 .collect_vec();
@@ -64,7 +64,7 @@ impl Exp1 {
             self.lwquery_sums = izip!(&self.lwquery_sums, &o.lwquery_sums)
                 .map(|(l, r)| log_space_add(*l, *r))
                 .collect_vec();
-            if o.sum_w == std::f64::NAN {
+            if o.sum_w.is_nan() {
                 panic!("nan!");
             }
 

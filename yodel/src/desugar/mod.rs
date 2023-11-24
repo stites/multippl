@@ -185,9 +185,9 @@ impl SugarMagicEnv {
                 Box::new(desugar_eanf(times)?),
             )),
             EDiscrete(_, args) => match &self.current_ebind {
-                None => from_params(&args),
+                None => from_params(args),
                 Some(s) => {
-                    let (vs, e) = from_default_named_params_h(s, &args)?;
+                    let (vs, e) = from_default_named_params_h(s, args)?;
                     let fs = vs
                         .into_iter()
                         .filter(|l| !l.ends_with("_flip"))
@@ -367,7 +367,7 @@ pub mod discrete {
     use tracing::*;
 
     /// assumes normalized probs
-    fn params2partitions(params: &Vec<AnfUD<EVal>>) -> Vec<AnfUD<EVal>> {
+    fn params2partitions(params: &[AnfUD<EVal>]) -> Vec<AnfUD<EVal>> {
         let mut parts = params
             .iter()
             .fold(vec![Anf::AVal((), EVal::EFloat(1.0))], |mut zs, p| {
@@ -378,28 +378,29 @@ pub mod discrete {
         parts.pop(); // last element is always 0.
         parts
     }
-    fn normalize(params: &Vec<AnfUD<EVal>>) -> Vec<AnfUD<EVal>> {
+    fn normalize(params: &[AnfUD<EVal>]) -> Vec<AnfUD<EVal>> {
         let z = params
             .iter()
             .fold(Anf::AVal((), EVal::EFloat(0.0)), |tot, p| {
-                Anf::Plus(Box::new(tot.clone()), Box::new(p.clone()))
+                Anf::Plus(Box::new(tot), Box::new(p.clone()))
             });
         params
             .iter()
             .map(|p| Anf::Div(Box::new(p.clone()), Box::new(z.clone())))
             .collect()
     }
-    fn params2probs(params: &Vec<AnfUD<EVal>>) -> Vec<AnfUD<EVal>> {
+    fn params2probs(params: &[AnfUD<EVal>]) -> Vec<AnfUD<EVal>> {
         // put this somewhere else
         let params = normalize(params);
         let partitions = params2partitions(&params);
         params
             .into_iter()
             .zip(partitions.into_iter())
-            .map(|(phat, z)| Anf::Div(Box::new(phat.clone()), Box::new(z.clone())))
+            .map(|(phat, z)| Anf::Div(Box::new(phat), Box::new(z)))
             .collect()
     }
-    fn hash_discrete(params: &Vec<AnfUD<EVal>>) -> String {
+    #[allow(clippy::needless_borrow)]
+    fn hash_discrete(params: &[AnfUD<EVal>]) -> String {
         let mut hasher = DefaultHasher::new();
         let s = params.iter().map(|p| format!("{:?}", p)).join("-");
         s.hash(&mut hasher);
@@ -424,7 +425,7 @@ pub mod discrete {
 
     fn mkdiscrete_var(flip_id: String, seen_ids: Vec<String>) -> Anf<UD, EVal> {
         let flip = mkvar(flip_id);
-        if seen_ids.len() == 0 {
+        if seen_ids.is_empty() {
             flip
         } else {
             let seen = mkguard(seen_ids);
@@ -433,7 +434,7 @@ pub mod discrete {
     }
 
     pub fn params2statements(
-        params: &Vec<AnfUD<EVal>>,
+        params: &[AnfUD<EVal>],
     ) -> (Vec<(String, EExprUD)>, EExprUD, Vec<String>) {
         let discrete_id = hash_discrete(params);
         let names = params
@@ -451,12 +452,12 @@ pub mod discrete {
         mk_final_conditional_int(finvars)
     }
 
-    pub fn mk_final_tuple(finvars: &Vec<String>) -> EExprUD {
+    pub fn mk_final_tuple(finvars: &[String]) -> EExprUD {
         EExpr::EAnf(
             (),
             Box::new(Anf::AnfProd(
                 finvars
-                    .into_iter()
+                    .iter()
                     .map(|s| Anf::AVar((), s.clone()))
                     .collect_vec(),
             )),
@@ -502,7 +503,7 @@ pub mod discrete {
     pub fn params2named_statements(
         namespace: &String,
         names: &Vec<String>,
-        params: &Vec<AnfUD<EVal>>,
+        params: &[AnfUD<EVal>],
     ) -> (Vec<(String, EExprUD)>, EExprUD, Vec<String>) {
         let n = params.len();
         assert_eq!(names.len(), n);
@@ -535,11 +536,11 @@ pub mod discrete {
         let lastlbl = format!("{}_{}", namespace, names.last().unwrap());
 
         vars.push((lastlbl.clone(), EExpr::EAnf((), Box::new(mkguard(seen)))));
-        finvec.push(lastlbl.clone());
+        finvec.push(lastlbl);
         (vars, mk_final_result(&finvec), finvec)
     }
 
-    pub fn from_params_h(params: &Vec<AnfUD<EVal>>) -> Result<(Vec<String>, EExprUD)> {
+    pub fn from_params_h(params: &[AnfUD<EVal>]) -> Result<(Vec<String>, EExprUD)> {
         let discrete_id = hash_discrete(params);
         let names = params
             .iter()
@@ -549,20 +550,20 @@ pub mod discrete {
         from_named_params_h(&discrete_id, &names, params)
     }
 
-    pub fn from_params(params: &Vec<AnfUD<EVal>>) -> Result<EExprUD> {
+    pub fn from_params(params: &[AnfUD<EVal>]) -> Result<EExprUD> {
         Ok(from_params_h(params)?.1)
     }
 
     pub fn from_named_params(
         namespace: &String,
         names: &Vec<String>,
-        params: &Vec<AnfUD<EVal>>,
+        params: &[AnfUD<EVal>],
     ) -> Result<EExprUD> {
         Ok(from_named_params_h(namespace, names, params)?.1)
     }
     pub fn from_default_named_params_h(
         namespace: &String,
-        params: &Vec<AnfUD<EVal>>,
+        params: &[AnfUD<EVal>],
     ) -> Result<(Vec<String>, EExprUD)> {
         let names = params
             .iter()
@@ -575,22 +576,24 @@ pub mod discrete {
     pub fn from_named_params_h(
         namespace: &String,
         names: &Vec<String>,
-        params: &Vec<AnfUD<EVal>>,
+        params: &[AnfUD<EVal>],
     ) -> Result<(Vec<String>, EExprUD)> {
-        if params.len() < 2 {
-            errors::generic("parameters must be normalized with cardinality of >1")
-        } else if params.len() == 2 {
-            Ok((
+        match params.len().cmp(&2) {
+            std::cmp::Ordering::Less => {
+                errors::generic("parameters must be normalized with cardinality of >1")
+            }
+            std::cmp::Ordering::Equal => Ok((
                 vec![],
                 EExpr::EFlip((), Box::new(normalize(params)[0].clone())),
-            ))
-        } else {
-            let (statements, ret, oh) = params2named_statements(namespace, names, params);
-            let mut binding = ret.clone();
-            for (label, bindee) in statements.into_iter().rev() {
-                binding = EExpr::ELetIn((), label, Box::new(bindee), Box::new(binding));
+            )),
+            std::cmp::Ordering::Greater => {
+                let (statements, ret, oh) = params2named_statements(namespace, names, params);
+                let mut binding = ret;
+                for (label, bindee) in statements.into_iter().rev() {
+                    binding = EExpr::ELetIn((), label, Box::new(bindee), Box::new(binding));
+                }
+                Ok((oh, binding))
             }
-            Ok((oh, binding))
         }
     }
 

@@ -93,7 +93,6 @@ pub fn _pprint(expr: &EExprInferable, depth: usize) {
             println!(" in");
             print!("{}", indent);
             _pprint(body, depth);
-            println!("");
         }
         EExpr::EIte(_, p, t, f) => {
             let indent = " ".repeat((depth + 2) * 2);

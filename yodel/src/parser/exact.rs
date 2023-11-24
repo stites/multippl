@@ -36,7 +36,7 @@ fn parse_eanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EVal> {
 
     match n.kind() {
         "eanf" => parse_eanf(src, c, n),
-        "eanfprod" => Anf::AnfProd(parse_vec(src, c, n, |a, b, c| parse_eanf(a, b, c))),
+        "eanfprod" => Anf::AnfProd(parse_vec(src, c, n, parse_eanf)),
         "eanfprj" => {
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
@@ -126,16 +126,16 @@ fn parse_eval(src: &[u8], c: &mut TreeCursor, n: Node) -> EVal {
         "evalue" => parse_eval(src, c, n),
         "evalueprod" => {
             let mut vs = vec![];
-            while let Some(n) = cs.next() {
+            for n in cs {
                 vs.push(parse_eval(src, c, n));
             }
             EVal::EProd(vs)
         }
         "bool" => {
             let var = parse_str(src, &n);
-            let b = if var == "true".to_string() {
+            let b = if var == *"true" {
                 true
-            } else if var == "false".to_string() {
+            } else if var == *"false" {
                 false
             } else {
                 panic!("impossible")
@@ -226,7 +226,7 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
             let fnname = cs.next().unwrap();
             let fnname = parse_str(src, &fnname);
 
-            let args = parse_vec_h(src, c, n, |a, b, c| parse_eanf(a, b, c), 1);
+            let args = parse_vec_h(src, c, n, parse_eanf, 1);
 
             EExpr::EApp(None, fnname, args)
         }

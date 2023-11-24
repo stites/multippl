@@ -230,7 +230,7 @@ where
 {
     Ok(Function {
         name: f.name.clone(),
-        arguments: upcast_anfs(&&f.arguments)?,
+        arguments: upcast_anfs(&f.arguments)?,
         body: upcast_expr(&f.body)?,
         returnty: f.returnty.clone(),
     })

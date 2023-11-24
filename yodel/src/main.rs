@@ -95,13 +95,11 @@ fn read_data(ofp: Option<String>) -> DataPoints {
                     .into_iter()
                     .map(|v| match &v {
                         Value::Bool(x) => Some(Datum::Bool(*x)),
-                        Value::Number(x) => {
-                            Some(if x.is_u64() {
-                                Datum::Int(x.as_u64()?)
-                            } else {
-                                Datum::Float(x.as_f64()?)
-                            })
-                        },
+                        Value::Number(x) => Some(if x.is_u64() {
+                            Datum::Int(x.as_u64()?)
+                        } else {
+                            Datum::Float(x.as_f64()?)
+                        }),
                         Value::Array(xs) => {
                             if xs[0].is_u64() {
                                 xs.iter()
@@ -139,7 +137,7 @@ fn read_data(ofp: Option<String>) -> DataPoints {
             })
             .collect::<Option<_>>()
     })
-    .unwrap_or_else(|| Default::default())
+    .unwrap_or_default()
 }
 
 fn main() -> Result<(), Box<dyn Error>> {

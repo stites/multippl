@@ -34,7 +34,7 @@ pub fn exact2sample_bdd_eff(
 ) -> bool {
     let wmc_params = out.exact.weightmap.as_params(state.opts.max_label);
     let var_order = state.opts.order.clone();
-    let accept = out.exact.accept.clone();
+    let accept = out.exact.accept;
     let ss = GetSamples::samples(&out.exact, state.mgr, state.opts.sample_pruning);
     debug!(" samples: {:?}", out.exact.samples);
     debug!("csamples: {:?}", ss);

@@ -84,8 +84,8 @@ impl ECtx {
 impl From<&EOutput> for ECtx {
     fn from(out: &EOutput) -> Self {
         ECtx {
-            accept: out.accept.clone(),
-            samples: out.samples.clone(),
+            accept: out.accept,
+            samples: out.samples,
             substitutions: out.substitutions.clone(),
             weightmap: out.weightmap.clone(),
         }
@@ -107,8 +107,8 @@ impl ECtx {
     pub fn as_output(&self, out: Option<EVal>) -> EOutput {
         EOutput {
             out,
-            accept: self.accept.clone(),
-            samples: self.samples.clone(),
+            accept: self.accept,
+            samples: self.samples,
             substitutions: self.substitutions.clone(),
             weightmap: self.weightmap.clone(),
         }
@@ -160,8 +160,8 @@ impl EOutput {
     pub fn from_anf_out(ctx: &ECtx, out: Option<EVal>) -> Self {
         EOutput {
             out,
-            accept: ctx.accept.clone(),
-            samples: ctx.samples.clone(),
+            accept: ctx.accept,
+            samples: ctx.samples,
             substitutions: ctx.substitutions.clone(),
             weightmap: ctx.weightmap.clone(),
         }
@@ -235,7 +235,7 @@ pub struct SOutput {
 }
 impl SOutput {
     pub fn head(&self) -> SVal {
-        self.out.clone().unwrap().clone()
+        self.out.clone().unwrap()
     }
     pub fn pkg(&self) -> Output {
         Output::sample(self.clone())
@@ -299,19 +299,12 @@ impl From<&Output> for Ctx {
 
 /// whole-program output, which can be one of: exact compilation, sampling
 /// compilation, MLS semantics
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct Output {
     pub exact: EOutput,
     pub sample: SOutput,
 }
-impl Default for Output {
-    fn default() -> Self {
-        Output {
-            exact: Default::default(),
-            sample: Default::default(),
-        }
-    }
-}
+
 impl Output {
     // pub fn new_from_eoutput(ctx: &Ctx, exact: &EOutput) -> Output {
     //     let mut ctx = ctx.clone();

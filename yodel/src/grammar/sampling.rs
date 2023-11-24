@@ -116,7 +116,7 @@ impl From<&SVal> for Vec<f64> {
     }
 }
 impl SVal {
-    pub fn from_bools(bs: &Vec<bool>) -> Vec<Self> {
+    pub fn from_bools(bs: &[bool]) -> Vec<Self> {
         bs.iter().cloned().map(SVal::SBool).collect()
     }
     pub fn as_bool(&self) -> bool {

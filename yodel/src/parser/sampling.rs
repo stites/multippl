@@ -34,8 +34,8 @@ fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVal> {
 
     match n.kind() {
         "sanf" => parse_sanf(src, c, n),
-        "sanfprod" => Anf::AnfProd(parse_vec(src, c, n, |a, b, c| parse_sanf(a, b, c))),
-        "sanfvec" => Anf::AnfVec(parse_vec(src, c, n, |a, b, c| parse_sanf(a, b, c))),
+        "sanfprod" => Anf::AnfProd(parse_vec(src, c, n, parse_sanf)),
+        "sanfvec" => Anf::AnfVec(parse_vec(src, c, n, parse_sanf)),
         "sanfprj" => {
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
@@ -63,10 +63,8 @@ fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVal> {
 
             Anf::AnfPoisson((), Box::new(parse_sanf(src, c, node)))
         }
-        "sanfdirichlet" => {
-            Anf::AnfDirichlet((), parse_vec(src, c, n, |a, b, c| parse_sanf(a, b, c)))
-        }
-        "sanfdiscrete" => Anf::AnfDiscrete((), parse_vec(src, c, n, |a, b, c| parse_sanf(a, b, c))),
+        "sanfdirichlet" => Anf::AnfDirichlet((), parse_vec(src, c, n, parse_sanf)),
+        "sanfdiscrete" => Anf::AnfDiscrete((), parse_vec(src, c, n, parse_sanf)),
         "sanfunop" => {
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
@@ -417,7 +415,7 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             let fnname = cs.next().unwrap();
             let fnname = parse_str(src, &fnname);
 
-            let args = parse_vec_h(src, c, n, |a, b, c| parse_sanf(a, b, c), 1);
+            let args = parse_vec_h(src, c, n, parse_sanf, 1);
 
             SExpr::SApp((), fnname, args)
         }

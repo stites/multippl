@@ -19,14 +19,14 @@ pub fn rendersval(s: &SVal) -> String {
         SVal::SBool(x) => format!("{}", x),
         SVal::SFloat(x) => format!("{}", x),
         SVal::SInt(x) => format!("{}", x),
-        SVal::SVec(xs) => rendersvals(&xs),
-        SVal::SProd(xs) => rendersvals(&xs),
+        SVal::SVec(xs) => rendersvals(xs),
+        SVal::SProd(xs) => rendersvals(xs),
         SVal::SDist(x) => format!("{:?}", x),
     }
 }
 
 pub fn rendersvals_h(s: &[SVal]) -> Vec<String> {
-    s.iter().map(|x| rendersval(x)).collect_vec()
+    s.iter().map(rendersval).collect_vec()
 }
 pub fn rendersvals(xs: &[SVal]) -> String {
     rendervec(&rendersvals_h(xs))

@@ -145,6 +145,7 @@ pub mod grammar {
         }
     }
 
+    #[allow(clippy::enum_variant_names)]
     #[derive(PartialEq, Eq, Clone, Hash, Debug)]
     pub enum SDist {
         SBernoulli,
@@ -349,7 +350,7 @@ impl LabelEnv {
                 .iter()
                 .map(|(k, v)| {
                     (
-                        k.clone(),
+                        *k,
                         FnCounts {
                             num_calls: v.num_calls,
                             num_uids: 0, // restart this counter
@@ -605,7 +606,7 @@ impl LabelEnv {
             AVar(id, s) => {
                 let nvar = NamedVar::new(*id, s.to_string());
                 let var = Var::Named(nvar.clone());
-                self.subst_var.insert(*id, var.clone());
+                self.subst_var.insert(*id, var);
                 Ok(AVar(nvar, s.to_string()))
             }
             _ => errors::generic("only run annotate_args on variables"),
@@ -644,7 +645,7 @@ impl LabelEnv {
                 let var = Var::Named(nvar.clone());
                 self.letpos = Some(nvar.clone());
                 // self.weights.insert(var.clone(), Weight::constant());
-                self.subst_var.insert(*id, var.clone());
+                self.subst_var.insert(*id, var);
                 Ok(ELetIn(
                     nvar,
                     s.clone(),
@@ -675,7 +676,7 @@ impl LabelEnv {
                     .iter()
                     .map(|a| self.annotate_eanf(a))
                     .collect::<Result<Vec<AnfAnn<EVal>>>>()?;
-                Ok(EApp(*i, f.clone(), args.clone()))
+                Ok(EApp(*i, f.clone(), args))
             }
             EObserve(_, a, rst) => Ok(EObserve(
                 (),
@@ -700,7 +701,7 @@ impl LabelEnv {
                 let nvar = NamedVar::new(*id, s.to_string());
                 let var = Var::Named(nvar.clone());
                 self.letpos = Some(nvar.clone());
-                self.subst_var.insert(*id, var.clone());
+                self.subst_var.insert(*id, var);
                 Ok(SLetIn(
                     nvar,
                     s.clone(),
@@ -723,7 +724,7 @@ impl LabelEnv {
             SMap(arg_id, arg, body, xs) => {
                 let nvar = NamedVar::new(*arg_id, arg.to_string());
                 let var = Var::Named(nvar.clone());
-                self.subst_var.insert(*arg_id, var.clone());
+                self.subst_var.insert(*arg_id, var);
                 Ok(SMap(
                     nvar,
                     arg.clone(),
@@ -734,10 +735,10 @@ impl LabelEnv {
             SFold((acc_id, arg_id), init, acc, arg, body, xs) => {
                 let acc_nvar = NamedVar::new(*acc_id, acc.to_string());
                 let acc_var = Var::Named(acc_nvar.clone());
-                self.subst_var.insert(*acc_id, acc_var.clone());
+                self.subst_var.insert(*acc_id, acc_var);
                 let arg_nvar = NamedVar::new(*arg_id, arg.to_string());
                 let arg_var = Var::Named(arg_nvar.clone());
-                self.subst_var.insert(*arg_id, arg_var.clone());
+                self.subst_var.insert(*arg_id, arg_var);
 
                 Ok(SFold(
                     (acc_nvar, arg_nvar),
@@ -858,11 +859,10 @@ impl LabelEnv {
                 ))
             }
             Program::EDefine(f, p) => {
-                let i = self
+                let i = *self
                     .fids
                     .get(&f.name.clone().expect("name defined"))
-                    .expect("function id created in previous pass")
-                    .clone();
+                    .expect("function id created in previous pass");
                 self.fnctx = Some(i);
                 let start_bdds = self.max_varlabel_val();
                 let f = self.annotate_efun(f)?;
@@ -871,7 +871,7 @@ impl LabelEnv {
                 let mut ctr = self.fun_stats.get_mut(&i).expect("it's 9L up there!");
                 ctr.num_uids = end_bdds.0 - start_bdds.0;
                 // reserve the next #fncalls-worth of bdd ptrs
-                self.lblsym += compute_function_block(&ctr);
+                self.lblsym += compute_function_block(ctr);
                 let r = self.annotate(p)?;
                 Ok(AnnotateResult::new(
                     Program::EDefine(f, Box::new(r.program)),
@@ -883,11 +883,10 @@ impl LabelEnv {
                 ))
             }
             Program::SDefine(f, p) => {
-                let i = self
+                let i = *self
                     .fids
                     .get(&f.name.clone().expect("name defined"))
-                    .expect("function id created in previous pass")
-                    .clone();
+                    .expect("function id created in previous pass");
                 self.fnctx = Some(i);
                 let start_bdds = self.max_varlabel_val();
                 let f = self.annotate_sfun(f)?;
@@ -896,7 +895,7 @@ impl LabelEnv {
                 let mut ctr = self.fun_stats.get_mut(&i).expect("it's 9L up there!");
                 ctr.num_uids = end_bdds.0 - start_bdds.0;
                 // reserve the next #fncalls-worth of bdd ptrs
-                self.lblsym += compute_function_block(&ctr);
+                self.lblsym += compute_function_block(ctr);
 
                 let r = self.annotate(p)?;
                 Ok(AnnotateResult::new(
