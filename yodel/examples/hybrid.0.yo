@@ -4,20 +4,7 @@ sample fn network (pa : Float, pbt : Float, pbf : Float, pc  :  Float, pd_ab : F
     let b = if a then flip pbt else flip pbf in observe b == b_data in
     (a_data, b_data)
   };
-  observe c_data from normal(pc, 1.0);
-  if ab[0] && ab[0] {
-    observe d_data from normal(c_data + pd_ab, 1.0); true
-  } else {
-    if ab[0] && !ab[0] {
-      observe d_data from normal(c_data + pd_anb, 1.0); true
-    } else {
-      if !ab[0] &&  ab[0] {
-        observe d_data from normal(c_data + pd_nab, 1.0); true
-      } else  {
-        observe d_data from normal(c_data + pd_nanb, 1.0); true
-      }
-    }
-  }
+  true
 }
 
 sample {
@@ -31,16 +18,11 @@ sample {
   pd_nab ~ normal(2.5, 1.5);
   pd_nanb ~ normal(2.5, 1.5);
 
-  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb,  true, false, 2.378471, 3.157225);
-  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, false,  true, 1.748215, 3.913320);
-  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb,  true, false, 2.141393, 2.894787);
-  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, false, false, 2.190831, 4.572945);
-  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, false,  true, 1.434572, 4.046900);
-  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb,  true, false, 2.021229, 2.999091);
-  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb,  true, false, 1.685708, 3.220821);
-  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, false, false, 1.871380, 5.024004);
-  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb,  true, false, 2.139312, 3.491463);
-  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb,  true,  true, 1.911670, 1.463890);
+  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a1 , b1 , c1 , d1 );
+  // network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a2 , b2 , c2 , d2 );
+  // network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a3 , b3 , c3 , d3 );
+  // network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a4 , b4 , c4 , d4 );
+  // network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a5 , b5 , c5 , d5 );
 
   (pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb)
 }

@@ -1,11 +1,10 @@
 import random
-import json
-import pandas as pd
 import numpy as np
 from numpy.random import normal
+from util import as_json
 
 random.seed(3)
-count = 10
+count = 1000
 
 def flips(p, l):
     return np.array([random.random() < p for _ in range(l)])
@@ -34,4 +33,6 @@ d[ a & ~b] = normal(loc=3, scale=0.3, size=c[ a & ~b].shape[0])
 d[~a &  b] = normal(loc=4, scale=0.3, size=c[~a &  b].shape[0])
 d[~a & ~b] = normal(loc=5, scale=0.3, size=c[~a & ~b].shape[0])
 
-print(pd.DataFrame(dict(a=a, b=b, c=c, d=d)))
+
+keys = as_json(a, b, c, d, batch_size=5, outname="hybrid0", col_names=["a", "b", "c", "d"])
+print(sorted(list(keys)))

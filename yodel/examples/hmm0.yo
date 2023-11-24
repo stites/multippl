@@ -46,18 +46,18 @@ sample fn sequence_model (
   true
 }
 sample {
-  ptA ~ dirichlet(0.5, 0.5, 0.5);
-  ptB ~ dirichlet(0.5, 0.5, 0.5);
-  ptC ~ dirichlet(0.5, 0.5, 0.5);
-  peA ~ dirichlet(0.5, 0.5, 0.5);
-  peB ~ dirichlet(0.5, 0.5, 0.5);
-  peC ~ dirichlet(0.5, 0.5, 0.5);
+  ptA ~ dirichlet(0.5, 0.5, 0.5); // [0.3, 0.6, 0.1]
+  ptB ~ dirichlet(0.5, 0.5, 0.5); // [0.6, 0.1, 0.3]
+  ptC ~ dirichlet(0.5, 0.5, 0.5); // [0.25, 0.50, 0.05]
+  peA ~ dirichlet(0.5, 0.5, 0.5); // [0/3, 2/3, 1/3],
+  peB ~ dirichlet(0.5, 0.5, 0.5); // [3/6, 2/6, 1/6],
+  peC ~ dirichlet(0.5, 0.5, 0.5); // [1/12, 1/12, 10/12],
 
   sequence_model(ptA, ptB, ptC, peA, peB, peC, len1, data1);
   sequence_model(ptA, ptB, ptC, peA, peB, peC, len2, data2);
   sequence_model(ptA, ptB, ptC, peA, peB, peC, len3, data3);
-  sequence_model(ptA, ptB, ptC, peA, peB, peC, len4, data4);
-  sequence_model(ptA, ptB, ptC, peA, peB, peC, len5, data5);
+  // sequence_model(ptA, ptB, ptC, peA, peB, peC, len4, data4);
+  // sequence_model(ptA, ptB, ptC, peA, peB, peC, len5, data5);
   sequence_model(ptA, ptB, ptC, peA, peB, peC, len6, data6);
   sequence_model(ptA, ptB, ptC, peA, peB, peC, len7, data7);
 
