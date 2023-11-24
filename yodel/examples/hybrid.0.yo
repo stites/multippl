@@ -31,11 +31,11 @@ sample {
   pd_nab ~ normal(2.5, 1.5);
   pd_nanb ~ normal(2.5, 1.5);
 
-  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a1 , b1 , c1 , d1 );
-  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a2 , b2 , c2 , d2 );
-  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a3 , b3 , c3 , d3 );
-  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a4 , b4 , c4 , d4 );
-  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a5 , b5 , c5 , d5 );
+  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a1, b1, c1, d1);
+  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a2, b2, c2, d2);
+  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a3, b3, c3, d3);
+  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a4, b4, c4, d4);
+  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a5, b5, c5, d5);
 
   (pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb)
 }

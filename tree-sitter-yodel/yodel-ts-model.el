@@ -114,5 +114,7 @@
     (treesit-parser-create 'yodel)
     (yodel-ts-setup)))
 
+
+(add-to-list 'auto-mode-alist '("\\.yo\\'" . (lambda () (yodel-ts-mode))))
 (provide 'yodel-ts-mode)
 ;;; yodel-ts-mode.el ends here

@@ -162,19 +162,19 @@
             help = "compile tree-sitter-yodel.so to ~/.emacs.d/tree-sitter/";
             # https://github.com/tree-sitter/tree-sitter/discussions/1711
             # https://github.com/tree-sitter/tree-sitter/discussions/1711
-            command = ''
-              echo "generating yodel.so"
-              cd tree-sitter-yodel
-              tree-sitter generate -b --libdir ~/.emacs.d/tree-sitter/
-              tree-sitter generate -b --libdir ~/.myemacs.d/tree-sitter/
-              echo "renaming yodel.so -> libtree-sitter-yodel.so"
-              mv ~/.emacs.d/tree-sitter/{,libtree-sitter-}yodel.so
-              mv ~/.myemacs.d/tree-sitter/{,libtree-sitter-}yodel.so
-              echo "ls ~/.emacs.d/tree-sitter/"
-              ls ~/.emacs.d/tree-sitter/
-              echo "ls ~/.myemacs.d/tree-sitter/"
-              ls ~/.myemacs.d/tree-sitter/
-            '';
+            command = let
+              cmd = dir: ''
+                echo "generating yodel.so in user-emacs-directory: ${dir}"
+                cd tree-sitter-yodel
+                tree-sitter generate -b --libdir ${dir}/tree-sitter/
+                echo "renaming yodel.so -> libtree-sitter-yodel.so"
+                mv ${dir}/tree-sitter/{,libtree-sitter-}yodel.so
+                echo "ls ${dir}/tree-sitter/"
+                ls ${dir}/tree-sitter/
+              '';
+              # in cmd "~/.emacs.d"; # vanilla emacs setup
+            in
+              cmd "~/.connfig/emacs/.local/cache"; # doom emacs setup
           }
         ];
         devshells.default.devshell.startup.install-pre-commit-hooks.text = config.pre-commit.devShell.shellHook;
