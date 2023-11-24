@@ -3,10 +3,10 @@ name = "yodel"
 version = "0.1.0"
 edition = "2021"
 
-[[bench]]
-name = "grids"
-harness = false
-required-features = ["criterion"]
+# [[bench]]
+# name = "grids"
+# harness = false
+# required-features = ["criterion"]
 
 [[bin]]
 name = "plot-grids"
