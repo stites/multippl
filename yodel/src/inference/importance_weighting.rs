@@ -69,7 +69,7 @@ pub fn importance_weighting_h_h(
                 let lwmc_final_accept = LW::new(wmc_final_accept);
                 let lwmc_sample = LW::new(wmc_sample);
 
-                let (lquery, lw): (Vec<LW>, LW) = match p.query() {
+                let (lquery, lw): (Vec<f64>, LW) = match p.query() {
                     // TODO drop this traversal, pre-compute during eval
                     Query::EQuery(_) => {
                         // the final accepting criteria is a & s. Normalize the query.
@@ -78,12 +78,12 @@ pub fn importance_weighting_h_h(
                             .dists()
                             .iter()
                             .map(|d| {
-                                if lwmc_accept == LW(std::f64::NEG_INFINITY) {
-                                    LW(std::f64::NEG_INFINITY)
+                                if wmc_final_accept == 0.0 {
+                                    0.0
                                 } else {
                                     let num = mgr.and(*d, final_accept);
                                     let RealSemiring(a) = num.wmc(&var_order, &params);
-                                    LW::new(a).sub(lwmc_final_accept)
+                                    a / wmc_final_accept
                                 }
                             })
                             .collect_vec();
@@ -95,19 +95,11 @@ pub fn importance_weighting_h_h(
                     }
                     Query::SQuery(_) => {
                         // FIXME: ensure that you're not missing something about incorporating the accepting criteria into the weight!
-                        let qs = out
-                            .sample
-                            .out
-                            .iter()
-                            .fold(vec![], |mut acc, v| {
-                                let vs: Vec<f64> = From::<&SVal>::from(v);
-                                acc.extend(vs);
-                                acc
-                            })
-                            .into_iter()
-                            // .map(|x| LW::new(x))
-                            .map(LW::new)
-                            .collect_vec();
+                        let qs = out.sample.out.iter().fold(vec![], |mut acc, v| {
+                            let vs: Vec<f64> = From::<&SVal>::from(v);
+                            acc.extend(vs);
+                            acc
+                        });
                         // let ws = qs.iter().map(|_| pq.weight()).collect_vec();
                         let w = LW::new(wmc_final_accept).sub(LW::new(wmc_sample));
                         let final_weight = pq.log_weight().add(w);

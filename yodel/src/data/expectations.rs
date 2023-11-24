@@ -32,12 +32,13 @@ impl Exp1 {
             count: 0,
         }
     }
-    pub fn new(lw: LW, qs: Vec<LW>) -> Self {
+    pub fn new(lw: LW, qs: Vec<f64>) -> Self {
         let w = lw.exp();
         Self {
-            query_sums: qs.iter().map(|q| q.exp()).collect_vec(),
-            wquery_sums: qs.iter().map(|q| w * q.exp()).collect_vec(),
-            lwquery_sums: qs.iter().map(|q| lw.add(*q).val()).collect_vec(),
+            query_sums: qs.iter().map(|q| *q).collect_vec(),
+            wquery_sums: qs.iter().map(|q| w * q).collect_vec(),
+            // lwquery_sums: qs.iter().map(|q| lw.add(*q).val()).collect_vec(),
+            lwquery_sums: vec![],
             sum_w: w,
             sum_lw: lw.val(),
             sum_w2: w * w,
@@ -81,11 +82,11 @@ impl Exp1 {
             .map(|q| if q == &0.0 { 0.0 } else { q / self.sum_w })
             .collect_vec();
 
-        let y = self
-            .lwquery_sums
-            .iter()
-            .map(|q| (q - self.sum_lw).exp())
-            .collect_vec();
+        // let y = self
+        //     .lwquery_sums
+        //     .iter()
+        //     .map(|q| (q - self.sum_lw).exp())
+        //     .collect_vec();
         x
     }
     pub fn var(&self) -> f64 {

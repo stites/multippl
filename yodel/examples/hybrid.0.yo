@@ -4,7 +4,20 @@ sample fn network (pa : Float, pbt : Float, pbf : Float, pc  :  Float, pd_ab : F
     let b = if a then flip pbt else flip pbf in observe b == b_data in
     (a_data, b_data)
   };
-  true
+  observe c_data from normal(pc, 1.0);
+  if ab[0] && ab[0] {
+    observe d_data from normal(c_data + pd_ab, 1.0); true
+  } else {
+    if ab[0] && !ab[0] {
+      observe d_data from normal(c_data + pd_anb, 1.0); true
+    } else {
+      if !ab[0] &&  ab[0] {
+        observe d_data from normal(c_data + pd_nab, 1.0); true
+      } else  {
+        observe d_data from normal(c_data + pd_nanb, 1.0); true
+      }
+    }
+  }
 }
 
 sample {
@@ -19,10 +32,10 @@ sample {
   pd_nanb ~ normal(2.5, 1.5);
 
   network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a1 , b1 , c1 , d1 );
-  // network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a2 , b2 , c2 , d2 );
-  // network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a3 , b3 , c3 , d3 );
-  // network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a4 , b4 , c4 , d4 );
-  // network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a5 , b5 , c5 , d5 );
+  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a2 , b2 , c2 , d2 );
+  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a3 , b3 , c3 , d3 );
+  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a4 , b4 , c4 , d4 );
+  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, a5 , b5 , c5 , d5 );
 
   (pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb)
 }
