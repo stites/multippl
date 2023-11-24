@@ -563,6 +563,7 @@ mod tests {
 
     #[test]
     #[traced_test]
+    #[allow(clippy::redundant_clone)]
     fn invalid_observe() {
         println!("----------------------------------------------------");
         let res =

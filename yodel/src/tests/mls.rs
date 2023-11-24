@@ -159,7 +159,7 @@ fn beta_3_1_flip_returns_true() {
     "#.to_owned() + &(0..10).map(|i| {
         let obs = |d, ix| format!("let d{}_{} = flip p in observe d{}_{} == {} in ", i, ix, i, ix, d);
         let observes : [String; 4] = [obs(true, 0), obs(true, 1), obs(true, 2), obs(false, 3)];
-        observes.into_iter().collect_vec().join("\n").to_owned()
+        observes.into_iter().collect_vec().join("\n")
     }).collect_vec().join("\n") +
         // (1) here is the return of our exact program. It must not produce samples which effect the weight. without needing to be pruned.
         " true\n    };" +
@@ -244,7 +244,7 @@ fn beta_2_2_flip_followed_by_1_3_or_3_1() {
       _{j} <- exact ( let y{j} = if s{j} then flip pt else flip pf in observe y{j} == {dy} in true );
         "#, j=j, dx=dx, dy=dy);
         let observes : Vec<String> = data.iter().enumerate().map(|(j, (dx, dy))| obs(ix(j), dx, dy)).collect_vec();
-        observes.join("").to_owned()
+        observes.join("")
     }).collect_vec().join("\n") +
     r#"
       (p, pt, pf)

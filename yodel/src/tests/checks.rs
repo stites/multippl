@@ -12,9 +12,9 @@ const USE_OPT: bool = false;
 const USE_DEBUG: bool = false;
 
 pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &str) {
-    let precision = precision.unwrap_or_else(|| 0.01);
-    let n = n.unwrap_or_else(|| 10000);
-    let exact = inference::exact(&p);
+    let precision = precision.unwrap_or(0.01);
+    let n = n.unwrap_or(10000);
+    let exact = inference::exact(p);
     let (approx, _) = importance_weighting_h(
         n,
         p,
@@ -91,6 +91,7 @@ pub fn check_inference_h(
         }
     });
 }
+#[allow(clippy::too_many_arguments)]
 pub fn check_inference_h_h(
     infname: &str,
     inf: &dyn Fn(&str, DataPoints) -> (Vec<f64>, Option<WmcStats>),
@@ -127,7 +128,7 @@ pub fn check_inference_h_h(
 }
 pub fn check_exact(s: &str, f: Vec<f64>, p: &str) {
     debug!("program:\n{}", &p);
-    check_inference("exact", &inference::exact_with_h, 0.000001, s, f, &p);
+    check_inference("exact", &inference::exact_with_h, 0.000001, s, f, p);
 }
 pub fn check_exact1(s: &str, f: f64, p: &str) {
     check_exact(s, vec![f], p)

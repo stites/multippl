@@ -88,8 +88,8 @@ macro_rules! b {
         $crate::grammar::ETy::EBool
     };
     (@anf $x:literal ; $ty:expr) => {
-        if $x.to_string() == "true" || $x.to_string() == "false" {
-            $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVal((), $crate::grammar::EVal::EBdd($crate::BddPtr::from_bool($x.to_string() == "true")))
+        if $x == "true" || $x == "false" {
+            $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVal((), $crate::grammar::EVal::EBdd($crate::BddPtr::from_bool($x == "true")))
         } else {
             $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, EVal>::AVar($ty, $x.to_string())
         }
@@ -100,8 +100,8 @@ macro_rules! b {
     };
 
     (~@anf $x:literal) => {
-        if $x.to_string() == "true" || $x.to_string() == "false" {
-            $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, SVal>::AVal((), $crate::grammar::SVal::SBool($x.to_string() == "true"))
+        if $x == "true" || $x == "false" {
+            $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, SVal>::AVal((), $crate::grammar::SVal::SBool($x == "true"))
         } else {
             $crate::grammar::Anf::<$crate::typeinf::grammar::Inferable, SVal>::AVar(None, $x.to_string())
         }

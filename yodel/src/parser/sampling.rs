@@ -564,13 +564,7 @@ mod sampling_parser_tests {
         let call = SExpr::SApp(
             (),
             "apply".to_string(),
-            vec![
-                zero.clone(),
-                zero.clone(),
-                zero.clone(),
-                zero.clone(),
-                zero.clone(),
-            ],
+            vec![zero.clone(), zero.clone(), zero.clone(), zero.clone(), zero],
         );
 
         assert_eq!(expr.unwrap(), Program::SBody(call));

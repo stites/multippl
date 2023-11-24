@@ -1,3 +1,4 @@
+#![allow(clippy::redundant_closure_call)]
 use crate::compile::*;
 use crate::grammar::*;
 use crate::inference::*;
@@ -45,20 +46,19 @@ pub fn allmarg(x: &str, y: &str) -> String {
 // #[traced_test]
 fn free_variable_2_inv() {
     let mk = |ret: &str| {
-        (r#"exact {
+        r#"exact {
   let x = flip (1.0/3.0) in
   let y = (let x0 = flip 1.0 / 5.0 in x0 || x) in
   observe (x || y) in
   "#
         .to_owned()
             + ret
-            + "\n}")
-            .to_string()
+            + "\n}"
     };
     let n = 500;
     (|p: String| check_invariant("free2/x*y ", None, None, &p))(mk(&allmarg("x", "y")));
-    (|p: String| check_approx("free2/x*y", vec![0.714285714], &p, n))(mk(&"x"));
-    (|p: String| check_approx("---------", vec![1.000000000], &p, n))(mk(&"y"));
+    (|p: String| check_approx("free2/x*y", vec![0.714285714], &p, n))(mk("x"));
+    (|p: String| check_approx("---------", vec![1.000000000], &p, n))(mk("y"));
     (|p: String| check_approx("---------", vec![0.714285714, 1.0, 1.0, 0.714285714], &p, n))(mk(
         &allmarg("x", "y"),
     ));
@@ -68,22 +68,21 @@ fn free_variable_2_inv() {
 // #[traced_test]
 fn free_variable_2_inv_small() {
     let mk = |ret: &str| {
-        (r#"exact {
+        r#"exact {
   let x = flip (1.0/3.0) in
   let y = (let x0 = flip 1.0 / 2.0 in x0 || x) in
   observe (x || y) in
   "#
         .to_owned()
             + ret
-            + "\n}")
-            .to_string()
+            + "\n}"
     };
-    check_approx_h("freevars2_inv", vec![0.5], &mk(&"x"), 3, Some(0));
+    check_approx_h("freevars2_inv", vec![0.5], &mk("x"), 3, Some(0));
 
     // let n = 500;
     // (|p: String| check_invariant("free2/x*y ", None, None, &p))(mk(&allmarg("x", "y")));
-    // (|p: String| check_approx("free2/x*y", vec![0.714285714], &p, n))(mk(&"x"));
-    // (|p: String| check_approx("---------", vec![1.000000000], &p, n))(mk(&"y"));
+    // (|p: String| check_approx("free2/x*y", vec![0.714285714], &p, n))(mk("x"));
+    // (|p: String| check_approx("---------", vec![1.000000000], &p, n))(mk("y"));
     // (|p: String| check_approx("---------", vec![0.714285714, 1.0, 1.0, 0.714285714], &p, n))(mk(
     //     &allmarg("x", "y"),
     // ));
@@ -148,7 +147,7 @@ fn free_variable_2_approx() {
         // vec![0.714285714, 1.0, 1.0, 0.714285714],
         // &mk(&allmarg("x", "y")),
         vec![0.714285714],
-        &mk(&"x"),
+        &mk("x"),
         15,
         Some(2),
     );
@@ -177,7 +176,7 @@ fn free_variable_2_approx_simple() {
         // vec![0.714285714, 1.0, 1.0, 0.714285714],
         // &mk(&allmarg("x", "(x || y)")),
         vec![0.5, 0.75],
-        &mk(&"(x, y)"),
+        &mk("(x, y)"),
         6000,
         Some(1),
     );
@@ -218,7 +217,7 @@ fn free_variables_shared_tuple() {
         }
         "#
     };
-    check_approx_h("sharedtuple", vec![1.0 / 3.0, 1.0 / 3.0], &mk(), 3, Some(0));
+    check_approx_h("sharedtuple", vec![1.0 / 3.0, 1.0 / 3.0], mk(), 3, Some(0));
 }
 #[test]
 #[ignore = "type-checking error? not a problem with the current functionality"]

@@ -1,4 +1,6 @@
 #![allow(dead_code)]
+#![allow(clippy::type_complexity)]
+#![allow(clippy::too_many_arguments)]
 #![allow(unused_imports)]
 // #![allow(mixed_script_confusables)] // for Gamma : )
 // // temporary as I convert to using types

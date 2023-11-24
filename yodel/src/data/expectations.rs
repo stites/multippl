@@ -35,7 +35,7 @@ impl Exp1 {
     pub fn new(lw: LW, qs: Vec<f64>) -> Self {
         let w = lw.exp();
         Self {
-            query_sums: qs.iter().map(|q| *q).collect_vec(),
+            query_sums: qs.iter().copied().collect_vec(),
             wquery_sums: qs.iter().map(|q| w * q).collect_vec(),
             // lwquery_sums: qs.iter().map(|q| lw.add(*q).val()).collect_vec(),
             lwquery_sums: vec![],
