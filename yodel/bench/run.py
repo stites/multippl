@@ -50,8 +50,13 @@ def runner_(cmd, **args):
     for run in tqdm(range(args['num_runs'])):
         seed = run + args['initial_seed']
         with open(outfilepath(seed), "w") as outfile:
-            subprocess.run(cmd(seed), stdout=outfile, cwd = files(args['experiment'])[0])
+            p = subprocess.run(cmd(seed), stdout=outfile, cwd = files(args['experiment'])[0])
+        noti(p.returncode, run, **args)
 
+def noti(exitcode, rix, experiment, type, num_runs, **args):
+    import subprocess, os
+    env = os.environ.copy()
+    subprocess.run(["noti", "-o", '-e', "-t", f"\"{experiment} ({type}: {rix+1}/{num_runs}): {exitcode}\"", '-m', '"done"' if exitcode == 0 else '"failed!"'], env=env)
 
 def pyrunner(**args):
     (_, main, _) = files(args['experiment'])
@@ -98,9 +103,10 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="generate data for simple HMMs")
     parser.add_argument("experiment", type=Experiment, choices=list(Experiment))
     parser.add_argument("--type", type=Backend, choices=list(Backend))
-    parser.add_argument("--num-runs", default=2, type=int,)
-    parser.add_argument("--num-steps", default=10, type=int,)
+    parser.add_argument("--num-runs", default=10, type=int,)
+    parser.add_argument("--num-steps", default=1_000, type=int,)
     parser.add_argument("--initial-seed", default=0, type=int,)
+    parser.add_argument("--noti", default=True, type=bool,)
     parser.add_argument("--out-dir", default="out/", type=str,)
     args = parser.parse_args()
 
