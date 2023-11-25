@@ -610,6 +610,10 @@
         "devenv": "devenv_2",
         "devshell": "devshell",
         "flake-parts": "flake-parts",
+        "flake-utils": [
+          "crane",
+          "flake-utils"
+        ],
         "nixpkgs": [
           "crane",
           "nixpkgs"

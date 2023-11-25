@@ -29,6 +29,8 @@
     rsdd.inputs.devenv.follows = "devenv";
     rsdd.inputs.flake-utils.follows = "crane/flake-utils";
     rsdd.inputs.nixpkgs.follows = "nixpkgs";
+
+    flake-utils.follows = "crane/flake-utils";
   };
 
   outputs = {
