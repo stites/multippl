@@ -1,4 +1,4 @@
-''' Just a test run, so not worrying about parallelism here. '''
+""" Just a test run, so not worrying about parallelism here. """
 import time
 import torch
 import pyro
@@ -17,10 +17,15 @@ def model(count, par=True):
             pyro.sample(f"obs_{i}", dist.Bernoulli(p))
     return torch.tensor([p])
 
+
+print("x")
 if __name__ == "__main__":
     import argparse
-    parser = argparse.ArgumentParser("hybrid0")
-    parser.add_argument("--num-samples", help="how many samples to run", default=100, type=int)
+
+    parser = argparse.ArgumentParser("beta-bernoulli")
+    parser.add_argument(
+        "--num-samples", help="how many samples to run", default=100, type=int
+    )
     parser.add_argument("--seed", help="set seed", default=0, type=int)
     parser.add_argument("--sequential", help="set seed", default=False, type=bool)
     args = parser.parse_args()
@@ -29,8 +34,13 @@ if __name__ == "__main__":
     pyro.set_rng_seed(args.seed)
 
     from generate import count, xs
-    truth = torch.tensor([ 0.75 ])
-    data = dict(obs=xs.double()) if par else {f"obs_{i}": x for i, x in enumerate(xs.double())}
+
+    truth = torch.tensor([0.75])
+    data = (
+        dict(obs=xs.double())
+        if par
+        else {f"obs_{i}": x for i, x in enumerate(xs.double())}
+    )
 
     conditioned_model = pyro.condition(model, data=data)
     conditioned_model(count)
@@ -39,7 +49,7 @@ if __name__ == "__main__":
 
     print("running importance sampling...")
     start = time.time()
-    emp_marginal = EmpiricalMarginal(importance.run(count), sites=['p'])
+    emp_marginal = EmpiricalMarginal(importance.run(count), sites=["p"])
     end = time.time()
 
     posterior_marg = emp_marginal.mean.detach()
@@ -49,8 +59,14 @@ if __name__ == "__main__":
     print("  estimates:", posterior_marg)
     print("      truth:", truth)
     print("         L1: {:.3f}".format((posterior_marg - truth).abs().sum().item()))
-    print("        ESS: {:.3f} / {}".format(importance.get_ESS().item(), args.num_samples))
-    print("Min/Max lw: {:.3f} <= log(w) <= {:.3f}".format(lws.min().item(), lws.max().item()))
+    print(
+        "        ESS: {:.3f} / {}".format(importance.get_ESS().item(), args.num_samples)
+    )
+    print(
+        "Min/Max lw: {:.3f} <= log(w) <= {:.3f}".format(
+            lws.min().item(), lws.max().item()
+        )
+    )
     print("  E[log(w)]: {:.3f}".format(lws.mean().item()))
     print("Var[log(w)]: {:.3f}".format(lws.std().item()))
     print("-----------------------------------------")

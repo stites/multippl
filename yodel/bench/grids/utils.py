@@ -80,10 +80,11 @@ def printit(sites, ms, l1s):
         print(f"P({d})={t:.6f}  (Δ: {l1:.6f})")
     print("L1: ", sum(l1s), flush=True)
 
-def runall(model, sites, truth, num_runs, num_samples):
+def runall(model, sites, truth, num_runs, num_samples, start_seed=0):
     l1s = []
     times = []
-    for run, seed in enumerate(range(1,num_runs+1)):
+    for run, seedoffset in enumerate(range(1,num_runs+1)):
+        seed = start_seed + seedoffset
         print(f"starting run {run+1}/{num_runs} (with seed: {seed})", flush=True)
         torch.manual_seed(seed)
         np.random.seed(seed)

@@ -1,35 +1,18 @@
 import pyro
-import itertools
-from abc import abstractmethod
 import time
-
 import torch
-import torch.nn as nn
-from torch.distributions import constraints
 
 import pyro
-import pyro.poutine as poutine
 import pyro.distributions as dist
-from pyro.distributions.torch import Categorical
-from pyro.distributions.torch_distribution import TorchDistribution
-from pyro.infer import SVI, Trace_ELBO, TraceEnum_ELBO, config_enumerate, infer_discrete, EmpiricalMarginal
+from pyro.infer import config_enumerate, EmpiricalMarginal
 import pyro.distributions as dist
 from pyro.infer.importance import Importance
-from torch.nn.functional import one_hot
 
-import sys
-import random
-import json
-import pandas as pd
-import numpy as np
-from pyro.infer.mcmc import MCMC, NUTS
-
-seed = 0
-pyro.set_rng_seed(seed)
+datagen_seed = 0
 torch.set_printoptions(sci_mode=False, precision=3, linewidth=120)
 
 from generate import transitions, emissions, transition_names, emission_names
-ds = torch.load(f"./hmm0.{seed}.pt")
+ds = torch.load(f"./hmm0.{datagen_seed}.pt")
 
 states, sequences, lengths = (ds['states'], ds['seqs'], ds['seq_lens'])
 
@@ -90,41 +73,51 @@ def model(sequences, lengths, args, include_prior=True, batch_size=None):
                     obs=sequence[t],
                 )
 
-args = dict(state_size=3, obs_size=3)
 
-num_observations = float(lengths.sum())
-num_samples = 5
-sites=["probs_x", "probs_y"]
+if __name__ == "__main__":
+    import argparse
 
-importance = Importance(model, guide=None, num_samples=num_samples)
+    parser = argparse.ArgumentParser(description="run hmm on simple data sequences")
+    parser.add_argument("--num-samples", default=10_000, type=int,)
+    parser.add_argument("--seed", default=0, type=int,)
+    args = parser.parse_args()
 
-print("running importance sampling...")
-start = time.time()
-emp_marginal = EmpiricalMarginal(importance.run(sequences, lengths, args), sites=sites)
-end = time.time()
+    pyro.set_rng_seed(args.seed)
 
-[posterior_marg_probs_x, posterior_marg_probs_y] = [emp_marginal.mean[mn] for mn in range(len(sites))]
-lws = torch.vstack(importance.log_weights)
+    args = dict(state_size=3, obs_size=3, num_samples=args.num_samples)
 
-torch.set_printoptions(sci_mode=False, precision=3, linewidth=120)
+    num_observations = float(lengths.sum())
+    sites=["probs_x", "probs_y"]
 
-print("post transitions:")
-print(posterior_marg_probs_x)
-print("true transitions:")
-print(transitions[:-1,:-1])
-print("  L1 transitions: {:.3f}".format((posterior_marg_probs_x - transitions[:-1,:-1]).abs().sum().item()))
-print()
+    importance = Importance(model, guide=None, num_samples=args['num_samples'])
 
-print("post emissions:")
-print(posterior_marg_probs_y)
-print("true emissions:")
-print(emissions[:-1, :])
-print("  L1 emissions: {:.3f}".format((posterior_marg_probs_y - emissions[:-1, :]).abs().sum().item()))
-print()
-print("           ESS: {:.3f} / {}".format(importance.get_ESS().item(), num_samples))
-print("   Min/Max lw: {:.3f} <= log(w) <= {:.3f}".format(lws.min().item(), lws.max().item()))
-print("     E[log(w)]: {:.3f}".format(lws.mean().item()))
-print("   Var[log(w)]: {:.3f}".format(lws.std().item()))
-print("-----------------------------------------")
-print("  wallclock: {:.3f}s".format(end - start))
-print()
+    print("running importance sampling...")
+    start = time.time()
+    emp_marginal = EmpiricalMarginal(importance.run(sequences, lengths, args), sites=sites)
+    end = time.time()
+
+    [posterior_marg_probs_x, posterior_marg_probs_y] = [emp_marginal.mean[mn] for mn in range(len(sites))]
+    lws = torch.vstack(importance.log_weights)
+
+    torch.set_printoptions(sci_mode=False, precision=3, linewidth=120)
+
+    print("post transitions:")
+    print(posterior_marg_probs_x)
+    print("true transitions:")
+    print(transitions[:-1,:-1])
+    print("  L1 transitions: {:.3f}".format((posterior_marg_probs_x - transitions[:-1,:-1]).abs().sum().item()))
+    print()
+
+    print("post emissions:")
+    print(posterior_marg_probs_y)
+    print("true emissions:")
+    print(emissions[:-1, :])
+    print("  L1 emissions: {:.3f}".format((posterior_marg_probs_y - emissions[:-1, :]).abs().sum().item()))
+    print()
+    print("           ESS: {:.3f} / {}".format(importance.get_ESS().item(), args['num_samples']))
+    print("   Min/Max lw: {:.3f} <= log(w) <= {:.3f}".format(lws.min().item(), lws.max().item()))
+    print("     E[log(w)]: {:.3f}".format(lws.mean().item()))
+    print("   Var[log(w)]: {:.3f}".format(lws.std().item()))
+    print("-----------------------------------------")
+    print("  wallclock: {:.3f}s".format(end - start))
+    print()

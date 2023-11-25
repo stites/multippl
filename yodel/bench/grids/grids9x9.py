@@ -16,15 +16,26 @@ def probfn(i, j):
        case (8, _): return [3.0 / 7.0, 3.0 / 8.0, 8.0 / 9.0, 9.0 / 11.0]
        case _: raise Exception()
 
-ising_model = lambda: mkgrid(9, probfn)
 
-(l1s, times) = runall(ising_model, sites9, truth9, num_runs=10, num_samples=10_000)
-print("--------")
-runs = len(l1s)
-print(f"averages over {runs} runs:")
-print("wallclock:", sum(times) / len(times), "s")
-print("       L1:", sum(l1s) / len(l1s))
 
-# averages over 10 runs:
-# wallclock: 296.45508604049684 s
-#        L1: 4.415222655601883
+if __name__ == "__main__":
+    import argparse
+
+    parser = argparse.ArgumentParser(description="generate data for simple HMMs")
+    parser.add_argument("--num-samples", default=10_000, type=int,)
+    parser.add_argument("--num-runs", default=10, type=int,)
+    parser.add_argument("--seed", default=0, type=int,)
+    args = parser.parse_args()
+
+    ising_model = lambda: mkgrid(9, probfn)
+
+    (l1s, times) = runall(ising_model, sites9, truth9, num_runs=args.num_runs, num_samples=args.num_samples, start_seed=args.seed)
+    print("--------")
+    runs = len(l1s)
+    print(f"averages over {runs} runs:")
+    print("wallclock:", sum(times) / len(times), "s")
+    print("       L1:", sum(l1s) / len(l1s))
+
+    # averages over 10 runs:
+    # wallclock: 296.45508604049684 s
+    #        L1: 4.415222655601883

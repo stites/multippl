@@ -1,4 +1,5 @@
 from utils import *
+from yodel import sites6, truth6
 
 # def ising_model():
 #     '''
@@ -72,17 +73,26 @@ def probfn(i, j):
        case (5, _): return [3.0 / 7.0, 3.0 / 8.0, 8.0 / 9.0, 9.0 / 11.0]
        case _: raise Exception()
 
-ising_model = lambda: mkgrid(6, probfn)
+if __name__ == "__main__":
+    import argparse
 
-from yodel import sites6, truth6
+    parser = argparse.ArgumentParser(description="generate data for simple HMMs")
+    parser.add_argument("--num-samples", default=10_000, type=int,)
+    parser.add_argument("--num-runs", default=10, type=int,)
+    parser.add_argument("--seed", default=0, type=int,)
+    args = parser.parse_args()
 
-(l1s, times) = runall(ising_model, sites6, truth6, num_runs=10, num_samples=10_000)
-print("--------")
-runs = len(l1s)
-print(f"averages over {runs} runs:")
-print("wallclock:", sum(times) / len(times), "s")
-print("       L1:", sum(l1s) / len(l1s))
 
-# averages over 10 runs:
-# wallclock: 130.2664161205292 s
-#        L1: 1.4880407196082837
+    ising_model = lambda: mkgrid(6, probfn)
+
+
+    (l1s, times) = runall(ising_model, sites6, truth6, num_runs=args.num_runs, num_samples=args.num_samples, start_seed=args.seed)
+    print("--------")
+    runs = len(l1s)
+    print(f"averages over {runs} runs:")
+    print("wallclock:", sum(times) / len(times), "s")
+    print("       L1:", sum(l1s) / len(l1s))
+
+    # averages over 10 runs:
+    # wallclock: 130.2664161205292 s
+    #        L1: 1.4880407196082837
