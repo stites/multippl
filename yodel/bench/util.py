@@ -51,7 +51,7 @@ def compact_dump(obj, out_file, *args, **kwargs):
     out_file.close()
 
 
-def as_json(*columns, col_names: list[str], outname:str, batch_size:int=10, outext:str="data.json"):
+def as_json(*columns, col_names: list[str], outname:str, batch_size:int=10, outext:str="data.json", seq_lens=None):
     nrows = len(columns[0])
     assert nrows % batch_size == 0, f"num sequences must be divisible by batch size, got #rows: {nrows} and batch size {batch_size}"
     assert len(columns) == len(col_names), f"a column name must be assigned for each of the {len(columns)} columns. Got: {col_names}"
@@ -70,11 +70,22 @@ def as_json(*columns, col_names: list[str], outname:str, batch_size:int=10, oute
         else:
             raise Exception(f"unexpected data type: {type(xs)}")
 
-    def slice_data (i):
-        slice = [tolist(col[i:i+nbatches]) for col in columns]
-        return Point(*slice)
+    if seq_lens is None:
+        def slice_data (i):
+            slice = [tolist(col[i:i+nbatches]) for col in columns]
+            return Point(*slice)
 
-    batches = [slice_data(i) for i in range(0, nrows, int(nbatches))]
+        batches = [slice_data(i) for i in range(0, nrows, int(nbatches))]
+    else:
+        def slice_data (i):
+            slice = []
+            for col in columns:
+                xs = tolist(col[i:i+nbatches])
+                truncated = xs if not isinstance(xs[0], list) else [c[:l] for (l, c) in zip(seq_lens[i:i+nbatches], xs)]
+                slice.append(truncated)
+            return Point(*slice)
+
+        batches = [slice_data(i) for i in range(0, nrows, int(nbatches))]
 
     def mk_field(i):
         return {f"{n}{i+1}": getattr(batches[i], n) for n in col_names}
