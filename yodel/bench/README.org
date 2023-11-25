@@ -1,0 +1,14 @@
+#+title: experiments and benchmarking
+* Experiments
+
+| model          | directory       | description                                    | notes                                          | tags                |
+|----------------+-----------------+------------------------------------------------+------------------------------------------------+---------------------|
+| beta-bernoulli | ~beta-bernoulli/~ | a biased coin                                  | not actually a benchmark, just a demo to run   | :hybrid:inference:  |
+| grid 3x3       | ~grids/~          | a directed network traversal                   | multippl grid-models sample along the diagonal | :hybrid:estimation: |
+| grid 6x6       | ~grids/~          | a directed network traversal                   | multippl grid-models sample along the diagonal | :hybrid:estimation: |
+| grid 9x9       | ~grids/~          | a directed network traversal                   | multippl grid-models sample along the diagonal | :hybrid:estimation: |
+| hybrid0        | ~hybrid0/~        | a simple conditional Gaussian                  |                                                |                     |
+| hmm            | ~hmm/~            | arbitrary-length HMM with discrete observables |                                                |                     |
+|                |                 |                                                |                                                |                     |
+|                |                 |                                                |                                                |                     |
+|                |                 |                                                |                                                |                     |
