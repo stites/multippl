@@ -6,15 +6,15 @@ sample fn network (pa : Float, pbt : Float, pbf : Float, pc  :  Float, pd_ab : F
   };
   observe c_data from normal(pc, 1.0);
   if ab[0] && ab[0] {
-    observe d_data from normal(c_data + pd_ab, 1.0); true
+    observe d_data from normal(pd_ab, 1.0); true
   } else {
     if ab[0] && !ab[0] {
-      observe d_data from normal(c_data + pd_anb, 1.0); true
+      observe d_data from normal(pd_anb, 1.0); true
     } else {
       if !ab[0] &&  ab[0] {
-        observe d_data from normal(c_data + pd_nab, 1.0); true
+        observe d_data from normal(pd_nab, 1.0); true
       } else  {
-        observe d_data from normal(c_data + pd_nanb, 1.0); true
+        observe d_data from normal(pd_nanb, 1.0); true
       }
     }
   }
