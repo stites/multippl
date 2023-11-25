@@ -38,8 +38,10 @@
     });
 }
 // lib.optionalAttrs (system == "x86_64-linux") {
-  my-crate-coverage = craneLib.cargoTarpaulin (commonArgs
-    // {
-      inherit cargoArtifacts;
-    });
+  # don't really need code coverage at this moment
+  # my-crate-coverage = craneLib.cargoTarpaulin (commonArgs
+  #   // {
+  #     cargoTarpaulinExtraArgs = "--skip-clean --out xml --output-dir $out -t 5000";
+  #     inherit cargoArtifacts;
+  #   });
 }

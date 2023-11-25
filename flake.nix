@@ -138,6 +138,7 @@
           # };
         };
         #devShells.default = import ./nix/shell.nix {inherit inputs pkgs lib;};
+        pre-commit.check.enable = false; # still need to download rsdd from github in offline mode, not sure how to do that right now
         pre-commit.settings.hooks = {
           shellcheck.enable = true;
           clippy.enable = true;
