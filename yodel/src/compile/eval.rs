@@ -925,15 +925,15 @@ impl<'a> State<'a> {
                         // }
                         (Dist::Uniform(lo, hi), SVal::SFloat(f)) => {
                             let dist = statrs::distribution::Uniform::new(*lo, *hi).unwrap();
-                            statrs::distribution::ContinuousCDF::cdf(&dist, *f)
+                            dist.pdf(*f)
                         }
                         (Dist::Normal(mn, sd), SVal::SFloat(f)) => {
                             let dist = statrs::distribution::Normal::new(*mn, *sd).unwrap();
-                            statrs::distribution::ContinuousCDF::cdf(&dist, *f)
+                            dist.pdf(*f)
                         }
                         (Dist::Beta(a, b), SVal::SFloat(f)) => {
                             let dist = statrs::distribution::Beta::new(*a, *b).unwrap();
-                            statrs::distribution::ContinuousCDF::cdf(&dist, *f)
+                            dist.pdf(*f)
                         }
                         (d, v) => {
                             panic!("new distribution encountered in sobserve: {d:?} in {v:?}")
