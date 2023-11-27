@@ -173,5 +173,16 @@ exact fn network (tpl: (Int, Bool)) -> (Int, Bool) {
 }
 sample {
   p ~ poisson(3.0);
-  exact { iterate(network, (1, true), p + 1) }
+  ix <- p;
+  npackets <- 0;
+  // est <- (1.0, 2.0);
+  while ix > 0 {
+    tot_args <- exact(let tpl = (1, true) in network(tpl));
+    ix <- ix - 1;
+    npackets <- tot_args[0] + npackets;
+    // est <- tot_args;
+    true
+  };
+  // (npackets, est)
+  npackets
 }
