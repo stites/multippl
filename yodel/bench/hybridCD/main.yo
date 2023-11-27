@@ -1,0 +1,67 @@
+exact fn emodel (
+  x00p : Float,
+  x10pT : Float,
+  x10pF : Float,
+  x01pT : Float,
+  x01pF : Float,
+  x00 : Bool,
+  x10 : Bool,
+  x01 : Bool,
+  x11 : Bool
+) -> Bool {
+  let f00 = flip x00p in                               observe f00 == x00 in
+  let f10 = if  f00 then flip x10pT else flip x10pF in observe f10 == x10 in
+  let f01 = if !f00 then flip x01pT else flip x01pF in observe f01 == x01 in
+  let f11 = f10 || f01 in                              observe f11 == x11 in
+  true
+}
+sample fn smodel (
+  np : Float,
+  boundary : Float,
+  x00P  : (Float,Float),
+  x10PT : (Float,Float),
+  x10PF : (Float,Float),
+  x01PT : (Float,Float),
+  x01PF : (Float,Float),
+  n : Float,
+  x00 : Bool,
+  x10 : Bool,
+  x01 : Bool,
+  x11 : Bool
+) -> Bool {
+  observe n from normal(np, 1.0);
+  if (n > boundary || n < (0.0 - boundary)) {
+    exact(emodel(x00P[0], x10PT[0], x10PF[0], x01PT[0], x01PF[0], x00, x10, x01, x11))
+  } else {
+    exact(emodel(x00P[1], x10PT[1], x10PF[1], x01PT[1], x01PF[1], x00, x10, x01, x11))
+  }
+}
+sample {
+  b ~ uniform(0.5, 1.5);
+  np ~ normal(0.0, 1.0);
+  x00p0  ~ beta(1.0, 1.0);
+  x10pT0 ~ beta(1.0, 1.0);
+  x10pF0 ~ beta(1.0, 1.0);
+  x01pT0 ~ beta(1.0, 1.0);
+  x01pF0 ~ beta(1.0, 1.0);
+
+  x00p1  ~ beta(1.0, 1.0);
+  x10pT1 ~ beta(1.0, 1.0);
+  x10pF1 ~ beta(1.0, 1.0);
+  x01pT1 ~ beta(1.0, 1.0);
+  x01pF1 ~ beta(1.0, 1.0);
+
+  x00p <- (x00p0, x00p1);
+  x10pT <- (x10pT0, x10pT1);
+  x10pF <- (x10pF0, x10pF1);
+  x01pT <- (x01pT0, x01pT1);
+  x01pF <- (x01pF0, x01pF1);
+
+  smodel(np, b, x00p, x10pT, x10pF, x01pT, x01pF, pop1, x00_1, x10_1, x01_1, x11_1);
+  smodel(np, b, x00p, x10pT, x10pF, x01pT, x01pF, pop2, x00_2, x10_2, x01_2, x11_2);
+  smodel(np, b, x00p, x10pT, x10pF, x01pT, x01pF, pop3, x00_3, x10_3, x01_3, x11_3);
+  smodel(np, b, x00p, x10pT, x10pF, x01pT, x01pF, pop4, x00_4, x10_4, x01_4, x11_4);
+  smodel(np, b, x00p, x10pT, x10pF, x01pT, x01pF, pop5, x00_5, x10_5, x01_5, x11_5);
+
+  (np, b, x00p0, x00p1, x10pT0, x10pT1, x10pF0, x10pF1, x01pT0, x01pT1, x01pF0, x01pF1)
+}
