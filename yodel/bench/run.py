@@ -16,6 +16,15 @@ class Experiment(Enum):
     grids3x3 = "grids3x3"
     grids6x6 = "grids6x6"
     grids9x9 = "grids9x9"
+
+    grids3x3_diag = "grids3x3-diag"
+    grids6x6_diag = "grids6x6-diag"
+    grids9x9_diag = "grids9x9-diag"
+
+    grids3x3_sample = "grids3x3-sample"
+    grids6x6_sample = "grids6x6-sample"
+    grids9x9_sample = "grids9x9-sample"
+
     hmm = "hmm"
     hybrid0 = "hybrid0"
     beta_bernoulli = "beta-bernoulli"
@@ -27,16 +36,35 @@ class Experiment(Enum):
 class Backend(Enum):
     python = "python"
     yodel = "yodel"
+    dice = "dice"
+    #psi = "psi"
     all = "all"
     def __str__(self):
         return self.value
 
-def files(ex:Experiment):
-    wd = "grids" if f"{ex}".startswith("grids") else f"{ex}"
-    mainpy = f"{ex}.py" if f"{ex}".startswith("grids") else "main.py"
-    mainyo = f"{ex}-sampled.yo" if f"{ex}".startswith("grids") else "main.yo"
-    return (wd, mainpy, mainyo)
+def gridwd(ex:Experiment):
+    return "grids/" + f"{ex}"[5:8]
 
+def gridmain(ex:Experiment, b: Backend):
+    if f"{ex}".startswith("grids"):
+        match b:
+            case Backend.python:
+                return f"{ex}"[:8] + ".py"
+            case Backend.yodel:
+                return f"{ex}.yo"
+            case Backend.dice:
+                return f"{ex}"[:8] + ".dice"
+            case x:
+                print("backend should be one of {}. Got: {}".format(list(Backend), x), file=sys.stderr)
+                sys.exit(1)
+
+
+def files(ex:Experiment, b: Backend):
+    wd = gridwd(ex) if f"{ex}".startswith("grids") else f"{ex}"
+    mainpy = gridmain(ex, b) if f"{ex}".startswith("grids") else "main.py"
+    mainyo = gridmain(ex, b) if f"{ex}".startswith("grids") else "main.yo"
+    maindice = gridmain(ex, b) if f"{ex}".startswith("grids") else None
+    return (wd, mainpy, mainyo, maindice)
 
 def runner_(cmd, **args):
     dt = time.strftime("%Y-%m-%d_%H:%M", time.localtime())
@@ -50,7 +78,7 @@ def runner_(cmd, **args):
     for run in tqdm(range(args['num_runs'])):
         seed = run + args['initial_seed']
         with open(outfilepath(seed), "w") as outfile:
-            p = subprocess.run(cmd(seed), stdout=outfile, cwd = files(args['experiment'])[0])
+            p = subprocess.run(cmd(seed), stdout=outfile, cwd = files(args['experiment'], args['type'])[0])
         noti(p.returncode, run, **args)
 
 def noti(exitcode, rix, experiment, type, num_runs, **args):
@@ -59,8 +87,14 @@ def noti(exitcode, rix, experiment, type, num_runs, **args):
     subprocess.run(["noti", "-o", '-e', "-t", f"\"{experiment} ({type}: {rix+1}/{num_runs}): {exitcode}\"", '-m', '"done"' if exitcode == 0 else '"failed!"'], env=env)
 
 def pyrunner(**args):
-    (_, main, _) = files(args['experiment'])
+    (_, main, _, _) = files(args['experiment'], args['type'])
     cmd = lambda seed: ["python", main, "--num-samples", str(args['num_steps']), "--seed", str(seed)] + ([ "--num-runs", "1" ] if f"{args['experiment']}".startswith("grids") else [])
+    runner_(cmd, **args)
+
+def dicerunner(**args):
+    (wd, _, _, main) = files(args['experiment'], args['type'])
+    benchdir = "/".join(map(lambda x: '..', wd.split("/"))) + "/"
+    cmd = lambda _: [benchdir + "time.sh", "dice", main]
     runner_(cmd, **args)
 
 def yorunner(**args):
@@ -70,7 +104,7 @@ def yorunner(**args):
         raise Exception("yodel binary was not built correctly")
     else:
         yodelcmd = [yodelbin]
-        (_, _, main) = files(args['experiment'])
+        (_, _, main, _) = files(args['experiment'], args['type'])
         filearg = ["--file", main]
         datafile = f"data.json"
         dataarg = ["--data", datafile] if os.path.isfile(f"{args['experiment']}/{datafile}") else []
@@ -83,6 +117,8 @@ def runner(**args):
             pyrunner(**args)
         case Backend.yodel:
             yorunner(**args)
+        case Backend.dice:
+            dicerunner(**args)
         case Backend.all:
             d = {k: v for k, v in args.items()}
             print("running python...")
@@ -108,32 +144,23 @@ if __name__ == "__main__":
     parser.add_argument("--initial-seed", default=0, type=int,)
     parser.add_argument("--noti", default=True, type=bool,)
     parser.add_argument("--out-dir", default="out/", type=str,)
+    parser.add_argument("--skip", type=str)
     args = parser.parse_args()
 
     os.makedirs(args.out_dir, exist_ok=True)
     match args.experiment:
-        case Experiment.beta_bernoulli:
-            runner(**vars(args))
-        case Experiment.grids3x3:
-            runner(**vars(args))
-        case Experiment.grids6x6:
-            runner(**vars(args))
-        case Experiment.grids9x9:
-            runner(**vars(args))
-        case Experiment.hmm:
-            runner(**vars(args))
-        case Experiment.hybrid0:
-            runner(**vars(args))
         case Experiment.all: # TODO
             d = vars(args)
+            skip = [Experiment.all]
+            if args.skip is not None:
+                skip += [Experiment[s.strip()] for s in args.skip.split(",")]
             for ex in list(Experiment):
-                if ex is not Experiment.all:
+                if ex not in skip:
                     d["experiment"] = ex
                     print(f"running {d['experiment']}")
                     runner(**d)
         case x:
-            print("experiment '{}' is not added to this CLI".format(x), file=sys.stderr);
-            sys.exit(1)
+            runner(**vars(args))
 else:
     print("please run as main", file=sys.stderr)
     sys.exit(1)

@@ -1,14 +1,49 @@
 #+title: experiments and benchmarking
 * Experiments
 
-| model          | directory       | description                                    | notes                                          | tags                |
-|----------------+-----------------+------------------------------------------------+------------------------------------------------+---------------------|
-| beta-bernoulli | ~beta-bernoulli/~ | a biased coin                                  | not actually a benchmark, just a demo to run   | :hybrid:inference:  |
-| grid 3x3       | ~grids/~          | a directed network traversal                   | multippl grid-models sample along the diagonal | :hybrid:estimation: |
-| grid 6x6       | ~grids/~          | a directed network traversal                   | multippl grid-models sample along the diagonal | :hybrid:estimation: |
-| grid 9x9       | ~grids/~          | a directed network traversal                   | multippl grid-models sample along the diagonal | :hybrid:estimation: |
-| hybrid0        | ~hybrid0/~        | a simple conditional Gaussian                  |                                                |                     |
-| hmm            | ~hmm/~            | arbitrary-length HMM with discrete observables |                                                |                     |
-|                |                 |                                                |                                                |                     |
-|                |                 |                                                |                                                |                     |
-|                |                 |                                                |                                                |                     |
+| model          | directory       | description                                                 | notes                                        | tags   |
+|----------------+-----------------+-------------------------------------------------------------+----------------------------------------------+--------|
+| beta-bernoulli | ~beta-bernoulli/~ | a biased coin                                               | not actually a benchmark, just a demo to run | :pyro: |
+| grid3x3-diag   | ~grids/~          | a directed network traversal (sampled across the diagonal)  | compared to python which fully samples       | :pyro: |
+| grid6x6-diag   | ~grids/~          | a directed network traversal (sampled across the diagonal)  | compared to python which fully samples       | :pyro: |
+| grid9x9-diag   | ~grids/~          | a directed network traversal (sampled across the diagonal)  | compared to python which fully samples       | :pyro: |
+| grid3x3-sample | ~grids/~          | a directed network traversal (exact model, fully sampled)   | compared to python which fully samples       | :pyro: |
+| grid6x6-sample | ~grids/~          | a directed network traversal (exact model, fully sampled)   | compared to python which fully samples       | :pyro: |
+| grid9x9-sample | ~grids/~          | a directed network traversal (exact model, fully sampled)   | compared to python which fully samples       | :pyro: |
+| grid3x3        | ~grids/~          | a directed network traversal (exact model)                  | compared to dice                             | :dice: |
+| grid6x6        | ~grids/~          | a directed network traversal (exact model)                  | compared to dice                             | :dice: |
+| grid9x9        | ~grids/~          | a directed network traversal (exact model)                  | compared to dice                             | :dice: |
+| hybrid0        | ~hybrid0/~        | a simple conditional Gaussian                               |                                              | :pyro: |
+| hmm            | ~hmm/~            | arbitrary-length HMM with discrete observables              |                                              | :pyro: |
+| hybridCD       | ~hybridCD/~       | hybrid model with continuous roots and with discrete leaves |                                              | :pyro: |
+
+* Results (10-run avg, unless otherwise stated)
+** Wallclock
+
+| model          | time (s) |
+|----------------+----------|
+| hybrid-1000-py |  1432.77 |
+| hybrid-1000-yo |     2.41 |
+| hmm-100-py     | 3497.756 |
+| hmm-100-yo     |  939.824 |
+
+
+** L1
+| model          |   L1 |
+|----------------+------|
+| hybrid-1000-py | 8.44 |
+| hybrid-1000-yo | 5.33 |
+| hmm-100-py     | 6.89 |
+| hmm-100-yo     | 5.03 |
+
+
+
+
+
+python hybrid-py-l1
+0500000000002
+❯ python hybrid-yo-results.py
+2111552840633
+# Local Variables:
+# jinx-local-words: "bernoulli hybridCD hybridCDDyn"
+# End:

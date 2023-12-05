@@ -30,6 +30,7 @@
     rsdd.inputs.flake-utils.follows = "crane/flake-utils";
     rsdd.inputs.nixpkgs.follows = "nixpkgs";
 
+    dice.url = "github:stites/dice.nix";
     flake-utils.follows = "crane/flake-utils";
   };
 
@@ -51,6 +52,7 @@
       flake = {};
       systems = ["x86_64-linux"];
       perSystem = {
+        inputs',
         config,
         system,
         pkgs,
@@ -118,6 +120,7 @@
         };
         checks = import ./nix/checks.nix {inherit lib system my-crate craneLib commonArgs cargoArtifacts;};
         packages.default = my-crate;
+        packages.dice = inputs'.dice.packages.default;
         packages.dev = my-dev-crate;
         packages.dev-test = craneLib.cargoNextest (commonArgs
           // {
@@ -203,6 +206,7 @@
 
             hunspellDicts.en_US-large
             (python3.withPackages (p: [p.pyro-ppl] ++ p.pyro-ppl.optional-dependencies.extras))
+            config.packages.dice
           ]
           ++ [
             #lldb # version of six conflicts with pyro's dependency
