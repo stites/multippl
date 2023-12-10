@@ -1,4 +1,4 @@
-exact fn emodel (
+exact fn network(
   x00p : Float,
   x10pT : Float,
   x10pF : Float,
@@ -15,7 +15,7 @@ exact fn emodel (
   let f11 = f10 || f01 in                              observe f11 == x11 in
   true
 }
-sample fn smodel (
+sample fn mixture(
   np : Float,
   boundary : Float,
   x00P  : (Float,Float),
@@ -31,11 +31,12 @@ sample fn smodel (
 ) -> Bool {
   observe n from normal(np, 1.0);
   if (n > boundary || n < (0.0 - boundary)) {
-    exact(emodel(x00P[0], x10PT[0], x10PF[0], x01PT[0], x01PF[0], x00, x10, x01, x11))
+    exact(network(x00P[0], x10PT[0], x10PF[0], x01PT[0], x01PF[0], x00, x10, x01, x11))
   } else {
-    exact(emodel(x00P[1], x10PT[1], x10PF[1], x01PT[1], x01PF[1], x00, x10, x01, x11))
+    exact(network(x00P[1], x10PT[1], x10PF[1], x01PT[1], x01PF[1], x00, x10, x01, x11))
   }
 }
+
 sample {
   b ~ uniform(0.5, 1.5);
   np ~ normal(0.0, 1.0);
@@ -57,11 +58,14 @@ sample {
   x01pT <- (x01pT0, x01pT1);
   x01pF <- (x01pF0, x01pF1);
 
-  smodel(np, b, x00p, x10pT, x10pF, x01pT, x01pF, pop1, x00_1, x10_1, x01_1, x11_1);
-  smodel(np, b, x00p, x10pT, x10pF, x01pT, x01pF, pop2, x00_2, x10_2, x01_2, x11_2);
-  smodel(np, b, x00p, x10pT, x10pF, x01pT, x01pF, pop3, x00_3, x10_3, x01_3, x11_3);
-  smodel(np, b, x00p, x10pT, x10pF, x01pT, x01pF, pop4, x00_4, x10_4, x01_4, x11_4);
-  smodel(np, b, x00p, x10pT, x10pF, x01pT, x01pF, pop5, x00_5, x10_5, x01_5, x11_5);
+  // mixture(np, b, x00p, x10pT, x10pF, x01pT, x01pF, pop1, x00_1, x10_1, x01_1, x11_1);
+  // mixture(np, b, x00p, x10pT, x10pF, x01pT, x01pF, pop2, x00_2, x10_2, x01_2, x11_2);
+  // mixture(np, b, x00p, x10pT, x10pF, x01pT, x01pF, pop3, x00_3, x10_3, x01_3, x11_3);
+  // mixture(np, b, x00p, x10pT, x10pF, x01pT, x01pF, pop4, x00_4, x10_4, x01_4, x11_4);
+  // mixture(np, b, x00p, x10pT, x10pF, x01pT, x01pF, pop5, x00_5, x10_5, x01_5, x11_5);
+
+  mixture(np, b, x00p, x10pT, x10pF, x01pT, x01pF, 0.8032760620117188, false, false, true, true);
+  mixture(np, b, x00p, x10pT, x10pF, x01pT, x01pF, 0.17483338713645935, false, false, true, true);
 
   (np, b, x00p0, x00p1, x10pT0, x10pT1, x10pF0, x10pF1, x01pT0, x01pT1, x01pF0, x01pF1)
 }
