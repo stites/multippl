@@ -4,18 +4,26 @@
 | model          | directory       | description                                                 | notes                                        | tags   |
 |----------------+-----------------+-------------------------------------------------------------+----------------------------------------------+--------|
 | beta-bernoulli | ~beta-bernoulli/~ | a biased coin                                               | not actually a benchmark, just a demo to run | :pyro: |
+| grid3x3        | ~grids/~          | a directed network traversal (exact model)                  | compared to dice                             | :dice: |
 | grid3x3-diag   | ~grids/~          | a directed network traversal (sampled across the diagonal)  | compared to python which fully samples       | :pyro: |
+| grid3x3-sample | ~grids/~          | a directed network traversal (exact model, fully sampled)   | compared to python which fully samples       | :pyro: |
+| arrival3x3     | ~arrival/~        |                                                             |                                              |        |
+|                |                 |                                                             |                                              |        |
 | grid6x6-diag   | ~grids/~          | a directed network traversal (sampled across the diagonal)  | compared to python which fully samples       | :pyro: |
 | grid9x9-diag   | ~grids/~          | a directed network traversal (sampled across the diagonal)  | compared to python which fully samples       | :pyro: |
-| grid3x3-sample | ~grids/~          | a directed network traversal (exact model, fully sampled)   | compared to python which fully samples       | :pyro: |
 | grid6x6-sample | ~grids/~          | a directed network traversal (exact model, fully sampled)   | compared to python which fully samples       | :pyro: |
 | grid9x9-sample | ~grids/~          | a directed network traversal (exact model, fully sampled)   | compared to python which fully samples       | :pyro: |
-| grid3x3        | ~grids/~          | a directed network traversal (exact model)                  | compared to dice                             | :dice: |
 | grid6x6        | ~grids/~          | a directed network traversal (exact model)                  | compared to dice                             | :dice: |
 | grid9x9        | ~grids/~          | a directed network traversal (exact model)                  | compared to dice                             | :dice: |
 | hybrid0        | ~hybrid0/~        | a simple conditional Gaussian                               |                                              | :pyro: |
 | hmm            | ~hmm/~            | arbitrary-length HMM with discrete observables              |                                              | :pyro: |
 | hybridCD       | ~hybridCD/~       | hybrid model with continuous roots and with discrete leaves |                                              | :pyro: |
+| hybridCDDyn    | ~hybridCDDyn/~    | hybridCD chained together as a dynamic Bayesian network     | incomplete                                   | :pyro: |
+| arrival 3x3    | ~arrival/~        |                                                             | missing pyro                                 |        |
+| arrival 6x6    | ~arrival/~        |                                                             | missing pyro                                 |        |
+| arrival 9x9    | ~arrival/~        |                                                             | missing pyro                                 |        |
+
+
 
 * Results (10-run avg, unless otherwise stated)
 ** Wallclock
