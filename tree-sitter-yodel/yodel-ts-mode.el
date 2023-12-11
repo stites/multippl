@@ -73,6 +73,10 @@
   (setq-local treesit-font-lock-settings
               (apply #'treesit-font-lock-rules
                      yodel-ts-font-lock-rules))
+  (setq-local comment-start "//")
+  (setq-local comment-end "")
+
+
   (setq-local font-lock-defaults nil)
   (setq-local treesit-font-lock-feature-list
               '(
@@ -114,7 +118,7 @@
     (treesit-parser-create 'yodel)
     (yodel-ts-setup)))
 
-
 (add-to-list 'auto-mode-alist '("\\.yo\\'" . (lambda () (yodel-ts-mode))))
+
 (provide 'yodel-ts-mode)
 ;;; yodel-ts-mode.el ends here
