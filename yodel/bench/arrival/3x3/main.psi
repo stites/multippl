@@ -36,6 +36,7 @@ def network(){
 def main () {
   ix := poisson(3.0);
   npackets := 0;
+  assert(ix <= 10); // this results in an error as we can't formally prove that ix <= 10, poisson's support is ℕ₀
   while (ix > 0) {
     traverses := network();
     npackets += (if traverses { 1 } else { 0 });
