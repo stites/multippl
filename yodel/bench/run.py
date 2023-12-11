@@ -25,6 +25,10 @@ class Experiment(Enum):
     grids6x6_sample = "grids6x6-sample"
     grids9x9_sample = "grids9x9-sample"
 
+    arrival3x3 = "arrival3x3"
+    arrival6x6 = "arrival6x6"
+    arrival9x9 = "arrival9x9"
+
     hmm = "hmm"
     hybrid0 = "hybrid0"
     beta_bernoulli = "beta-bernoulli"
@@ -42,8 +46,13 @@ class Backend(Enum):
     def __str__(self):
         return self.value
 
-def gridwd(ex:Experiment):
-    return "grids/" + f"{ex}"[5:8]
+def getwd(ex:Experiment):
+    if f"{ex}".startswith("grids"):
+        return "grids/" + f"{ex}"[5:8]
+    elif f"{ex}".startswith("arrival"):
+        return "arrival/" + f"{ex}"[7:10]
+    else:
+        return f"{ex}"
 
 def gridmain(ex:Experiment, b: Backend):
     if f"{ex}".startswith("grids"):
@@ -60,7 +69,7 @@ def gridmain(ex:Experiment, b: Backend):
 
 
 def files(ex:Experiment, b: Backend):
-    wd = gridwd(ex) if f"{ex}".startswith("grids") else f"{ex}"
+    wd = getwd(ex)
     mainpy = gridmain(ex, b) if f"{ex}".startswith("grids") else "main.py"
     mainyo = gridmain(ex, b) if f"{ex}".startswith("grids") else "main.yo"
     maindice = gridmain(ex, b) if f"{ex}".startswith("grids") else None
