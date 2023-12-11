@@ -9,21 +9,21 @@ from pyro.infer import Importance, EmpiricalMarginal
 from pyro.infer import config_enumerate
 import time
 
-def flip(n, p, suffix=""):
-    return pyro.sample("flip"+n+suffix, dist.Bernoulli(p))
+def flip(n, p, suffix="", obs=None):
+    return pyro.sample("flip"+n+suffix, dist.Bernoulli(p), obs=obs)
 
-def edge(n, parent, t, f, suffix=""):
-    return flip(n, t, suffix=suffix) if parent == 1 else flip(n, f, suffix=suffix)
+def edge(n, parent, t, f, suffix="", obs=None):
+    return flip(n, t, suffix=suffix, obs=obs) if parent == 1 else flip(n, f, suffix=suffix, obs=obs)
 
-def node(n, p0, p1, tt, tf, ft, ff, suffix=""):
+def node(n, p0, p1, tt, tf, ft, ff, suffix="", obs=None):
     if p0 == 1 and p1 == 1:
-        return flip(n, tt, suffix=suffix)
+        return flip(n, tt, suffix=suffix, obs=obs)
     elif p0 == 1 and p1 == 0:
-        return flip(n, tf, suffix=suffix)
+        return flip(n, tf, suffix=suffix, obs=obs)
     elif p0 == 0 and p1 == 1:
-        return flip(n, ft, suffix=suffix)
+        return flip(n, ft, suffix=suffix, obs=obs)
     else:
-        return flip(n, tt, suffix=suffix)
+        return flip(n, ff, suffix=suffix, obs=obs)
 
 def mkgrid(n, probfn, **kwargs):
     def mk(i, j, *args, **kwargs):
@@ -80,7 +80,7 @@ def printit(sites, ms, l1s):
         print(f"P({d})={t:.6f}  (Δ: {l1:.6f})")
     print("L1: ", sum(l1s), flush=True)
 
-def runall(model, sites, truth, num_runs, num_samples, start_seed=0):
+def runall(model, sites, truth, num_runs, num_samples, *args, start_seed=0):
     l1s = []
     times = []
     for run, seedoffset in enumerate(range(1,num_runs+1)):
@@ -92,7 +92,7 @@ def runall(model, sites, truth, num_runs, num_samples, start_seed=0):
         start = time.time()
 
         importance = Importance(model, num_samples=num_samples)
-        posterior = importance.run()
+        posterior = importance.run(*args)
 
         end = time.time()
         times.append(end - start)
