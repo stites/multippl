@@ -64,7 +64,8 @@ def as_json(*columns, col_names: list[str], outname:str, batch_size:int=10, oute
         if isinstance(xs, np.ndarray):
             return xs.tolist()
         elif isinstance(xs, torch.Tensor):
-            return xs.squeeze().numpy().tolist()
+            xsq = xs.squeeze().numpy()
+            return xsq.tolist() if len(xsq.shape) > 1 else [xsq.tolist()]
         elif isinstance(list, xs):
             return xs
         else:
