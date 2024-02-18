@@ -30,7 +30,8 @@
     rsdd.inputs.flake-utils.follows = "crane/flake-utils";
     rsdd.inputs.nixpkgs.follows = "nixpkgs";
 
-    ppls.url = "path:/home/stites/git/multilang/ppl-benchmarks";
+    #ppls.url = "path:/home/stites/git/multilang/ppl-benchmarks";
+    ppls.url = "git+ssh://git@gitlab.com/stites/ppl-benchmarks";
     flake-utils.follows = "crane/flake-utils";
   };
 

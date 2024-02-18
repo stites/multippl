@@ -1,5 +1,20 @@
-* Yodel
+* Heterogeneous Inference with a Probabilistic Multilanguage
+** file structure
+- ~nix/~ nix support files
+- ~ttg/~ trees that grow macros
+- ~tree-sitter-yodel/~ tree sitter grammar and emacs mode (~./yodel-ts-mode.el~)
+- ~yodel/~ compiler code
+  + ~yodel/src~ compiler source
+  + ~yodel/bench~ python CLI to run benchmarks
+  + ~yodel/examples~ example programs
+  + out-dated folders include:
+    * ~yodel/bench_old~ grid based incremental tests
+    * ~yodel/exe~ old plotting binaries
+* Running the benchmarks
+See [[./yodel/bench/README.org][the ~yodel/bench~ folder]]
 
-Initially because yodeling might cause avalanches (which feels a lot like
-collapsing big mountains of BDDs), but more that, as if by magic, yodeling
-brings all of the cows come home and none of them get lost.
+* Misc
+*** A note on the prototype name: /yodel/
+Initially named /yodel/, this project was simply designed to collapse "mountains
+of BDDs" --  which sounded a bit like yodeling : ). Yodeling also brings the
+cows home (convergence, anybody? 😉)

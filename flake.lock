@@ -1218,14 +1218,17 @@
         "pre-commit": "pre-commit"
       },
       "locked": {
-        "lastModified": 1701802537,
-        "narHash": "sha256-WjzNH3czZkfuCUQZhENbDl46rADLQPjaRztcCrWF5uo=",
-        "path": "/home/stites/git/multilang/ppl-benchmarks",
-        "type": "path"
+        "lastModified": 1704665728,
+        "narHash": "sha256-geniBNuf5X6+QV2zWhqPEMwmIIZ7WRuZGHNjPzqmP4U=",
+        "ref": "refs/heads/main",
+        "rev": "3ca32c411cfed70321760e313692e8077f5f52af",
+        "revCount": 31,
+        "type": "git",
+        "url": "ssh://git@gitlab.com/stites/ppl-benchmarks"
       },
       "original": {
-        "path": "/home/stites/git/multilang/ppl-benchmarks",
-        "type": "path"
+        "type": "git",
+        "url": "ssh://git@gitlab.com/stites/ppl-benchmarks"
       }
     },
     "pre-commit": {

@@ -79,7 +79,7 @@ impl ETy {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 pub enum EVal {
     // EBool(bool),
     EBdd(BddPtr),
@@ -87,6 +87,17 @@ pub enum EVal {
     EProd(Vec<EVal>),
     // extensions: not part of the core IR, just included in the maximal values as part of TTG
     EInteger(usize),
+}
+impl Debug for EVal {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        use EVal::*;
+        match &self {
+            EFloat(x) => f.write_str(&format!("EFloat({})", x)),
+            EInteger(x) => f.write_str(&format!("EInteger({})", x)),
+            EProd(x) => f.write_str(&format!("EProd({:?})", x)),
+            EBdd(x) => f.write_str(&format!("EBdd({:?}: {:?})", x, x.print_bdd())),
+        }
+    }
 }
 impl EVal {
     pub fn as_bool(&self) -> Option<bool> {

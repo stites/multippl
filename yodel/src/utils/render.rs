@@ -150,7 +150,7 @@ macro_rules! debug_step_ng {
 macro_rules! debug_compiled {
     ($comp:expr) => {{
         let dists = renderbdds(&$comp.out);
-        let accepts = format!("{:?}", $comp.accept);
+        let accepts = format!("{:?}", $comp.accept.print_bdd());
         // let weights = $comp
         //     .importance
         //     .clone()

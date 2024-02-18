@@ -241,3 +241,60 @@ fn free_variable_2_approx_again() {
     check_approx1("free2/x", 0.714285714, &mk("x"), 10000);
     check_approx1("free2/x&y", 0.714285714, &mk("x && y"), 10000);
 }
+#[test]
+fn observe_with_free_var_sampled() {
+    let mk = |ret: &str| {
+        r#"sample {
+        x ~ bern(1.0 / 3.0);
+        y <- exact {
+            let y = flip 1.0 / 4.0 in
+            observe x || y in
+            y
+        };
+        "#
+        .to_owned()
+            + ret
+            + r#"\n}"#
+    };
+    check_approx(
+        "observe_with_free_var_sampled",
+        vec![2.0 / 3.0, 2.0 / 6.0, 1.0, 1.0 / 6.0], // x y x|y x&y
+        &mk(&allmarg("x", "y")),
+        10000,
+    );
+    check_approx1(
+        "observe_with_free_var_sampled/x",
+        0.714285714,
+        &mk("x"),
+        10000,
+    );
+    check_approx1(
+        "observe_with_free_var_sampled/x&y",
+        0.714285714,
+        &mk("x && y"),
+        10000,
+    );
+}
+
+#[test]
+fn observe_with_free_var() {
+    let mk = |ret: &str| {
+        r#"sample {
+        x ~ bern(1.0 / 3.0);
+        _ <- exact {
+            let y = flip 1.0 / 4.0 in
+            observe x || y in
+            true
+        };
+        "#
+        .to_owned()
+            + ret
+            + r#"\n}"#
+    };
+    check_approx1(
+        "observe_with_free_var",
+        2.0 / 3.0, // x y x|y x&y
+        &mk("x"),
+        10000,
+    );
+}
