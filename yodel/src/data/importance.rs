@@ -1,32 +1,32 @@
 use itertools::*;
 use rsdd::sample::probability::Probability;
 
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct PQ {
-    pub p: f64,
-    pub q: f64,
-}
-impl PQ {
-    pub fn weight(&self) -> f64 {
-        self.p / self.q
-    }
-    pub fn render(&self) -> String {
-        format!("{:.6} / {:.6}", self.p, self.q)
-    }
-    pub fn ln(&self) -> LPQ {
-        LPQ {
-            lp: LW::new(self.p),
-            lq: LW::new(self.q),
-        }
-    }
-}
-impl Default for PQ {
-    fn default() -> Self {
-        PQ { p: 1.0, q: 1.0 }
-    }
-}
+// #[derive(Copy, Clone, Debug, PartialEq)]
+// pub struct PQ {
+//     pub p: f64,
+//     pub q: f64,
+// }
+// impl PQ {
+//     pub fn weight(&self) -> f64 {
+//         self.p / self.q
+//     }
+//     pub fn render(&self) -> String {
+//         format!("{:.6} / {:.6}", self.p, self.q)
+//     }
+//     pub fn ln(&self) -> LPQ {
+//         LPQ {
+//             lp: LW::new(self.p),
+//             lq: LW::new(self.q),
+//         }
+//     }
+// }
+// impl Default for PQ {
+//     fn default() -> Self {
+//         PQ { p: 1.0, q: 1.0 }
+//     }
+// }
 
-#[derive(PartialEq, Copy, Clone, Debug, Default)]
+#[derive(PartialEq, Copy, Clone, Debug)]
 pub struct LW(pub f64);
 impl LW {
     pub fn val(&self) -> f64 {
@@ -51,33 +51,38 @@ impl LW {
         format!("LW(log_weight={:.6})", self.val())
     }
 }
+impl Default for LW {
+    fn default() -> Self {
+        Self(0.0)
+    }
+}
 
-#[derive(Copy, Clone, Debug, PartialEq, Default)]
-pub struct LPQ {
-    pub lp: LW,
-    pub lq: LW,
-}
-impl LPQ {
-    pub fn log_weight(&self) -> LW {
-        self.lp.sub(self.lq)
-    }
-    pub fn render(&self) -> String {
-        format!("LPQ(p={}, q={})", self.lp.render(), self.lq.render())
-    }
-    pub fn log_render(&self) -> String {
-        format!(
-            "LPQ(p={}, q={})",
-            self.lp.log_render(),
-            self.lq.log_render()
-        )
-    }
-    pub fn exp(&self) -> PQ {
-        PQ {
-            p: self.lp.exp(),
-            q: self.lq.exp(),
-        }
-    }
-}
+// #[derive(Copy, Clone, Debug, PartialEq, Default)]
+// pub struct LPQ {
+//     pub lp: LW,
+//     pub lq: LW,
+// }
+// impl LPQ {
+//     pub fn log_weight(&self) -> LW {
+//         self.lp.sub(self.lq)
+//     }
+//     pub fn render(&self) -> String {
+//         format!("LPQ(p={}, q={})", self.lp.render(), self.lq.render())
+//     }
+//     pub fn log_render(&self) -> String {
+//         format!(
+//             "LPQ(p={}, q={})",
+//             self.lp.log_render(),
+//             self.lq.log_render()
+//         )
+//     }
+//     pub fn exp(&self) -> PQ {
+//         PQ {
+//             p: self.lp.exp(),
+//             q: self.lq.exp(),
+//         }
+//     }
+// }
 
 // #[derive(Debug, Clone, PartialEq)]
 // pub enum Importance {

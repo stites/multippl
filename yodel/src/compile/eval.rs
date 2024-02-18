@@ -213,7 +213,7 @@ pub struct State<'a> {
     pub call_counter: HashMap<FnId, u64>,
     next: Option<VarLabel>,
     while_index: u64,
-    log_pq: LPQ,
+    log_weight: LW,
     pub fnctx: Option<FnCall>,
 }
 
@@ -256,7 +256,7 @@ impl<'a> State<'a> {
             opts,
             mgr,
             rng,
-            log_pq: LPQ::default(),
+            log_weight: LW::default(),
             funs,
             fnctx: None,
             while_index: 0,
@@ -285,13 +285,13 @@ impl<'a> State<'a> {
         }
     }
 
-    pub fn log_pq(&self) -> LPQ {
-        self.log_pq
+    pub fn log_weight(&self) -> LW {
+        self.log_weight
     }
-    pub fn mult_pq(&mut self, p: f64, q: f64) {
+    pub fn score(&mut self, s: f64) {
         // if !(p == q) {
-        self.log_pq.lp = self.log_pq.lp.add(LW::new(p));
-        self.log_pq.lq = self.log_pq.lq.add(LW::new(q));
+        self.log_weight = self.log_weight.add(LW::new(s));
+        // self.log_pq.lq = self.log_pq.lq.add(LW::new(q));
         // }
     }
     pub fn eval_program_with_data(
@@ -399,39 +399,31 @@ impl<'a> State<'a> {
                     .into_iter()
                     .fold(accept, |global, cur| self.mgr.and(global, cur));
 
-                // let var_order = self.opts.order.clone();
-                // let wmc_params = ctx.exact.weightmap.as_params(self.opts.max_label);
-                // let avars = crate::utils::variables(dist);
-                // for (i, var) in avars.iter().enumerate() {
-                //     debug!("{}@{:?}: {:?}", i, var, wmc_params.get_var_weight(*var));
-                // }
-                // debug!("WMCParams  {:?}", wmc_params);
-                // debug!("VarOrder   {:?}", var_order);
-                // debug!("Accept     {:?}", &dist);
-                // // FIXME: should be aggregating these stats somewhere
-                // debug!("using optimizations: {}", self.opts.sample_pruning);
+                // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                // Score the program:
+                let var_order = self.opts.order.clone();
+                let wmc_params = ctx.exact.weightmap.as_params(self.opts.max_label);
+                let avars = crate::utils::variables(dist);
+                for (i, var) in avars.iter().enumerate() {
+                    debug!("{}@{:?}: {:?}", i, var, wmc_params.get_var_weight(*var));
+                }
+                debug!("WMCParams  {:?}", wmc_params);
+                debug!("VarOrder   {:?}", var_order);
+                debug!("Accept     {:?}", &dist);
+                // FIXME: should be aggregating these stats somewhere
+                debug!("using optimizations: {}", self.opts.sample_pruning);
 
-                // // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-                // // TODO Need to talk to review the semantics in detail and talk
-                // // to steven about this if it doesn't get resolved. the issue is
-                // // that weighting should be a /clean separation/ from exact
-                // // compilation (which also saves us a WMC count) the fix is that
-                // // we need to compile this at the _end_ of the program and
-                // // weight the distribution accordingly. this amounts to the
-                // // partially collapsed importance sampling of bayesian networks
-                // // as documented in (Koller & Friedman, 2009). As-is we are kind of cheating.
-                // // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-                // let ss = ctx.exact.samples(self.mgr, self.opts.sample_pruning);
-                // let (wmc, _) = crate::inference::calculate_wmc_prob(
-                //     self.mgr,
-                //     &wmc_params,
-                //     &var_order,
-                //     dist.clone(),
-                //     ctx.exact.accept.clone(),
-                //     ss,
-                // );
+                let ss = ctx.exact.samples(self.mgr, self.opts.sample_pruning);
+                let (wmc, _) = crate::inference::calculate_wmc_prob(
+                    self.mgr,
+                    &wmc_params,
+                    &var_order,
+                    dist.clone(),
+                    ctx.exact.accept.clone(),
+                    ss,
+                );
 
-                // self.mult_pq(wmc, 1.0);
+                self.score(wmc);
                 // // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
                 let o = EOutput {
@@ -941,7 +933,7 @@ impl<'a> State<'a> {
                     },
                     _ => panic!("semantic error, see note on SObserve in SExpr enum"),
                 };
-                self.mult_pq(q, 1.0);
+                self.score(q);
 
                 let newctx = Ctx::from(&a_out);
                 self.eval_sexpr(newctx, rst)

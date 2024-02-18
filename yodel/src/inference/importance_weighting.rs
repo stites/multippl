@@ -47,7 +47,7 @@ pub fn importance_weighting_h_h(
         let step0ix = step - 1; // fix off-by-one for data view
         match crate::runner_with_data(&mut mgr, &mut rng, opt, &p, &lenv, step0ix, &dview) {
             Ok(o) => {
-                let (out, pq) = (o.out, o.pq);
+                let (out, w) = (o.out, o.weight);
                 trace!("sample output : {:?}", out.sample.out);
                 trace!("sample trace  : {:?}", out.sample.trace);
                 trace!("exact output  : {:?}", out.exact.out);
@@ -89,7 +89,7 @@ pub fn importance_weighting_h_h(
                             .collect_vec();
 
                         // Weight the query by ratio of a & s : s
-                        let w = LW::new(wmc_final_accept).sub(LW::new(wmc_sample));
+                        // let w = LW::new(wmc_final_accept).sub(LW::new(wmc_sample));
 
                         (lquery, w)
                     }
@@ -101,13 +101,12 @@ pub fn importance_weighting_h_h(
                             acc
                         });
                         // let ws = qs.iter().map(|_| pq.weight()).collect_vec();
-                        let w = LW::new(wmc_final_accept).sub(LW::new(wmc_sample));
-                        let final_weight = pq.log_weight().add(w);
-                        trace!("    final_weight: {}", final_weight.log_render());
+                        // let w = LW::new(wmc_final_accept).sub(LW::new(wmc_sample));
+                        trace!("    final_weight: {}", w.log_render());
                         trace!("           query: {:?}", qs);
                         trace!("-----------------------");
 
-                        (qs, final_weight)
+                        (qs, w)
                     }
                 };
                 e.add(Exp1::new(lw, lquery));

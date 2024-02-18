@@ -237,12 +237,12 @@ pub struct ROut {
     pub out: Output,
     pub rng: Option<StdRng>,
     pub mgr: Mgr,
-    pub pq: LPQ,
+    pub weight: LW,
 }
 
 pub struct PartialROut {
     pub out: Output,
-    pub pq: LPQ,
+    pub weight: LW,
     pub rng: Option<StdRng>,
 }
 impl PartialROut {
@@ -251,7 +251,7 @@ impl PartialROut {
             mgr,
             out: self.out.clone(),
             rng: self.rng.clone(),
-            pq: self.pq,
+            weight: self.weight,
         }
     }
 }
@@ -314,7 +314,7 @@ pub fn runner_with_data(
 
     Ok(PartialROut {
         out,
-        pq: state.log_pq(),
+        weight: state.log_weight(),
         rng: state.rng.cloned(),
     })
 }
