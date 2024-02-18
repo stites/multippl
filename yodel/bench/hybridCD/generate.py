@@ -30,14 +30,16 @@ import torch
 
 pyro.set_rng_seed(3)
 
-count = 100
+count = 5
+#count = 100
 
 pop_truth = 0.0
+boundary = 1.0
 
 outlier_truth = dict(x00=0.3, x01t=0.4, x01f=0.6, x10t=0.6, x10f=0.5)
 normals_truth = dict(x00=0.2, x01t=0.3, x01f=0.4, x10t=0.5, x10f=0.6)
 d2a = lambda d: [d['x00'], d['x01t'], d['x01f'], d['x10t'], d['x10f']]
-truth = [pop_truth] + d2a(outlier_truth) + d2a(normals_truth)
+truth = [pop_truth] + [boundary] + d2a(outlier_truth) + d2a(normals_truth)
 
 #def one_step(prev_cls=None, prev_x11=None, rix=None):
 def one_step(rix=None):
@@ -53,7 +55,7 @@ def one_step(rix=None):
         #     c = pc if prev_x11[i] else pc + 1 % 2
         # d = pyro.sample(f"pop{rix}_{i}", dist.Normal((c.double() * 2) - 1, torch.ones(1)))
         p = pyro.sample(f"pop{rix}_{i}", dist.Normal(torch.ones(1) * pop_truth, torch.ones(1)))
-        if (p > -1.0 or p < 1.0): # we are in the average case
+        if (p > -boundary or p < boundary): # we are in the average case
             x00 = pyro.sample(f"x00{rix}_{i}", dist.Bernoulli(outlier_truth["x00"]))
             x01 = pyro.sample(f"x01{rix}_{i}", dist.Bernoulli(outlier_truth["x01t"] if x00 else outlier_truth["x01f"]))
             x10 = pyro.sample(f"x10{rix}_{i}", dist.Bernoulli(outlier_truth["x10t"] if x00 else outlier_truth["x10f"]))

@@ -91,7 +91,7 @@ if __name__ == "__main__":
 
     import argparse
     parser = argparse.ArgumentParser("hybrid0")
-    parser.add_argument("--num-samples", help="how many samples to run", default=100, type=int)
+    parser.add_argument("--num-samples", help="how many samples to run", default=1000, type=int)
     parser.add_argument("--seed", help="set seed", default=0, type=int)
     args = parser.parse_args()
 

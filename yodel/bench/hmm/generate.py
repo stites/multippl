@@ -112,7 +112,8 @@ def yodel_data(args):
     print("generating yodel dataset with {} sequences in {}-sized batches".format(args.num_sequences, args.batch_size))
     assert args.num_sequences % args.batch_size == 0, f"num sequences must be divisible by batch size, got num sequences: {args.num_sequences} and batch size {args.batch_size}"
     states, _, iseqs, seq_lens = sequence(args.num_sequences)
-    _, _, iseqs, seq_lens = sequence(args.num_sequences)
+    #_, _, iseqs, seq_lens = sequence(args.num_sequences)
+    print(seq_lens)
 
     d = dict(states=states + 1, seqs=iseqs + 1, seq_lens=seq_lens) # states and seqs are 1-indexed in main.yo
     keys = as_json(d['seqs'], d['seq_lens'], batch_size=args.batch_size, outname="data", outext="json", col_names=['seqs', 'lens'], seq_lens=seq_lens)
@@ -124,8 +125,8 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="generate data for simple HMMs")
     parser.add_argument("format", type=str)
-    bs = 4
-    ns = bs * 10
+    bs = 5
+    ns = bs * 1
     parser.add_argument("-b", "--batch-size", default=bs, type=int,)
     parser.add_argument("-n", "--num-sequences", default=ns, type=int,)
     parser.add_argument("-s", "--seed", default=0, type=int,)

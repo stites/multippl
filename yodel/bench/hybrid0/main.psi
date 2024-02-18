@@ -1,0 +1,47 @@
+def network(pa , pbt , pbf , pc  , pd_ab , pd_anb , pd_nab , pd_nanb , a_data, b_data, c_data , d_data ){
+  a := flip(pa);
+  observe(a == a_data);
+  b := if a { flip(pbt) } else { flip(pbf) };
+  observe(b == b_data);
+  g0 := gauss(pc, 1.0);
+  cobserve(g0, c_data);
+
+  if (a && b) {
+    g1 := gauss(pd_ab, 1.0);
+    cobserve (g1, d_data);
+  } else {
+    if a && !b {
+      g1 := gauss(pd_anb, 1.0);
+      cobserve(g1, d_data);
+    } else {
+      if !a &&  b {
+        g1 := gauss(pd_nab, 1.0);
+        cobserve(g1, d_data );
+      } else  {
+        g1 := gauss(pd_nanb, 1.0);
+        cobserve(g1, d_data );
+      }
+    }
+  }
+}
+
+def main() {
+  pa := beta(1.0, 1.0);
+  pbt := beta(1.0, 1.0);
+  pbf := beta(1.0, 1.0);
+  pc := gauss(0.0, 1.0);
+
+  pd_ab := gauss(2.5, 1.5);
+  pd_anb := gauss(2.5, 1.5);
+  pd_nab := gauss(2.5, 1.5);
+  pd_nanb := gauss(2.5, 1.5);
+
+  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, true, true, 2.5365885420290954, 1.893572306219304)  ;
+  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, false, false, 2.130952955153597, 4.8568345908921495);
+  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, true, true, 2.0289492404216025, 1.975177555555262)  ;
+  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, false, true, 1.4409521889906527, 3.811899796952846) ;
+  network(pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb, false, true, 1.9167835392456802, 3.9868545493072216);
+
+  return Marginal((pa, pbt, pbf, pc, pd_ab, pd_anb, pd_nab, pd_nanb));
+
+}

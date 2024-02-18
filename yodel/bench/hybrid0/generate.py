@@ -9,7 +9,8 @@ from numpy.random import normal
 random.seed(3)
 np.random.seed(3)
 
-count = 1000
+#count = 1000
+count = 5
 
 def flips(p, l):
     return np.array([random.random() < p for _ in range(l)])

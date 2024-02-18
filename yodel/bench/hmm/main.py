@@ -78,7 +78,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="run hmm on simple data sequences")
-    parser.add_argument("--num-samples", default=10_000, type=int,)
+    parser.add_argument("--num-samples", default=1_000, type=int,)
     parser.add_argument("--seed", default=0, type=int,)
     args = parser.parse_args()
 
@@ -105,14 +105,16 @@ if __name__ == "__main__":
     print(posterior_marg_probs_x)
     print("true transitions:")
     print(transitions[:-1,:-1])
-    print("  L1 transitions: {:.3f}".format((posterior_marg_probs_x - transitions[:-1,:-1]).abs().sum().item()))
+    l1tr = ((posterior_marg_probs_x - transitions[:-1,:-1]).abs().sum().item())
+    print("  L1 transitions: {:.3f}".format(l1tr))
     print()
 
     print("post emissions:")
     print(posterior_marg_probs_y)
     print("true emissions:")
     print(emissions[:-1, :])
-    print("  L1 emissions: {:.3f}".format((posterior_marg_probs_y - emissions[:-1, :]).abs().sum().item()))
+    l1em = ((posterior_marg_probs_y - emissions[:-1, :]).abs().sum().item())
+    print("  L1 emissions: {:.3f}".format(l1em))
     print()
     print("           ESS: {:.3f} / {}".format(importance.get_ESS().item(), args['num_samples']))
     print("   Min/Max lw: {:.3f} <= log(w) <= {:.3f}".format(lws.min().item(), lws.max().item()))
@@ -120,4 +122,5 @@ if __name__ == "__main__":
     print("   Var[log(w)]: {:.3f}".format(lws.std().item()))
     print("-----------------------------------------")
     print("  wallclock: {:.3f}s".format(end - start))
+    print("   total L1: {:.3f}s".format(l1tr + l1em))
     print()

@@ -117,7 +117,8 @@ def yorunner(**args):
         filearg = ["--file", main]
         datafile = f"data.json"
         dataarg = ["--data", datafile] if os.path.isfile(f"{args['experiment']}/{datafile}") else []
-        cmd = lambda seed: yodelcmd + filearg + dataarg + ["--steps", str(args['num_steps']), "--rng", str(seed)]
+        nsteps = ["--steps", str(args['num_steps'])]
+        cmd = lambda seed: yodelcmd + filearg + dataarg + nsteps + [ "--rng", str(seed)]
         runner_(cmd, **args)
 
 def runner(**args):

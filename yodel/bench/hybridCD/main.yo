@@ -4,15 +4,15 @@ exact fn network(
   _p10F : Float,
   _p01T : Float,
   _p01F : Float,
-  o00 : Bool,
-  o10 : Bool,
-  o01 : Bool,
-  o11 : Bool
+  _o00 : Bool,
+  _o10 : Bool,
+  _o01 : Bool,
+  _o11 : Bool
 ) -> Bool {
-  let f00 = flip _p00 in                               observe f00 == o00 in
-  let f10 = if  f00 then flip _p10T else flip _p10F in observe f10 == o10 in
-  let f01 = if !f00 then flip _p01T else flip _p01F in observe f01 == o01 in
-  let f11 = f10 || f01 in                              observe f11 == o11 in
+  let f00 = flip _p00 in                               observe f00 == _o00 in
+  let f10 = if  f00 then flip _p10T else flip _p10F in observe f10 == _o10 in
+  let f01 = if !f00 then flip _p01T else flip _p01F in observe f01 == _o01 in
+  let f11 = f10 || f01 in                              observe f11 == _o11 in
   true
 }
 sample fn mixture(
@@ -30,7 +30,7 @@ sample fn mixture(
   o11 : Bool
 ) -> Bool {
   observe n from normal(np, 1.0);
-  if (n > boundary || n < (0.0 - boundary)) {
+  if (n > (0.0 - boundary) || n < boundary) {
     exact(network(p00[0], p10T[0], p10F[0], p01T[0], p01F[0], o00, o10, o01, o11))
   } else {
     exact(network(p00[1], p10T[1], p10F[1], p01T[1], p01F[1], o00, o10, o01, o11))

@@ -1,4 +1,5 @@
 #+title: experiments and benchmarking
+
 * Experiments
 
 | model          | directory       | description                                                 | notes                                        | tags   |
@@ -8,7 +9,6 @@
 | grid3x3-diag   | ~grids/~          | a directed network traversal (sampled across the diagonal)  | compared to python which fully samples       | :pyro: |
 | grid3x3-sample | ~grids/~          | a directed network traversal (exact model, fully sampled)   | compared to python which fully samples       | :pyro: |
 | arrival3x3     | ~arrival/~        |                                                             |                                              |        |
-|                |                 |                                                             |                                              |        |
 | grid6x6-diag   | ~grids/~          | a directed network traversal (sampled across the diagonal)  | compared to python which fully samples       | :pyro: |
 | grid9x9-diag   | ~grids/~          | a directed network traversal (sampled across the diagonal)  | compared to python which fully samples       | :pyro: |
 | grid6x6-sample | ~grids/~          | a directed network traversal (exact model, fully sampled)   | compared to python which fully samples       | :pyro: |
@@ -16,7 +16,8 @@
 | grid6x6        | ~grids/~          | a directed network traversal (exact model)                  | compared to dice                             | :dice: |
 | grid9x9        | ~grids/~          | a directed network traversal (exact model)                  | compared to dice                             | :dice: |
 | hybrid0        | ~hybrid0/~        | a simple conditional Gaussian                               |                                              | :pyro: |
-| hmm            | ~hmm/~            | arbitrary-length HMM with discrete observables              |                                              | :pyro: |
+| hmm            | ~hmm/~            | arbitrary-length HMM with discrete observables (pyro is markov) |                                              | :pyro: |
+| hmm-60         | ~hmm/~            | fixed-length HMM with discrete observables     (pyro is not markov) |                                              | :pyro: |
 | hybridCD       | ~hybridCD/~       | hybrid model with continuous roots and with discrete leaves |                                              | :pyro: |
 | hybridCDDyn    | ~hybridCDDyn/~    | hybridCD chained together as a dynamic Bayesian network     | incomplete                                   | :pyro: |
 | arrival 3x3    | ~arrival/~        |                                                             | missing pyro                                 |        |
@@ -24,6 +25,216 @@
 | arrival 9x9    | ~arrival/~        |                                                             | missing pyro                                 |        |
 
 
+* Results, quick rerun (just a 2x run)
+** averages (full)
+*** grid3x3
+| backend                     | exp     | time (sec, unless stated) |         L1 |
+|-----------------------------+---------+---------------------------+------------|
+| yodel (exact, 1000 samples) | grid3x3 |                     3.410 |          0 |
+| yodel (exact, 1 sample)     | grid3x3 |                     0.002 |          0 |
+| yodel (sampled diagonal)    | grid3x3 |                     2.602 | 0.03446375 |
+| yodel (fully sampled)       | grid3x3 |                     5.189 |  0.0863544 |
+| python                      | grid3x3 |                     3.430 |    0.16841 |
+| dice                        | grid3x3 |                     0.049 |          0 |
+| psi                         | grid3x3 |                    181.12 |          0 |
+
+
+*** grid6x6
+| backend                  | exp     | time (sec, unless stated) |        L1 |
+|--------------------------+---------+---------------------------+-----------|
+| yodel (exact, 1 sample)  | grid6x6 |                    0.0155 |         0 |
+| yodel (sampled diagonal) | grid6x6 |                     79.72 |   0.07952 |
+| yodel (fully sampled)    | grid6x6 |                  164.0485 |  0.404633 |
+| python                   | grid6x6 |                  14.90025 | 8.2448055 |
+| dice                     | grid6x6 |                         - |         - |
+| psi                      | grid6x6 |                         - |         - |
+
+- parse error: dice doesn't support the 36-element output list
+- psi times out
+
+
+*** grid9x9
+| backend                  | exp     | time (sec, unless stated) |        L1 |
+|--------------------------+---------+---------------------------+-----------|
+| yodel (exact, 1 sample)  | grid9x9 |                     0.588 |         0 |
+| yodel (sampled diagonal) | grid9x9 |                  506.3665 | 0.2930415 |
+| yodel (fully sampled)    | grid9x9 |                  2238.194 | 0.8755265 |
+| python                   | grid9x9 |                    25.970 | 2.6159999 |
+| dice                     | grid9x9 |                         - |         - |
+| psi                      | grid9x9 |                         - |         - |
+
+- dice doesn't support the 36-element output list
+- psi times out
+
+
+*** arrival3x3
+| backend | time (sec) |       L1 |
+|---------+------------+----------|
+| yodel   |    20.8879 | 0.068499 |
+| python  |  14.196942 |  0.69126 |
+| psi     |         -  |        - |
+
+*** arrival6x6
+| backend | time (sec) |                  L1 |
+|---------+------------+---------------------|
+| yodel   |   925.8544 | 0.06671630490328632 |
+| python  | 68.7876576 |  1.1832836321539224 |
+*** TODO arrival9x9
+| backend | time (sec) |                 L1 |
+|---------+------------+--------------------|
+| yodel   |            |                    |
+| python  | 155.718539 | 1.2026153745597927 |
+|         |            |                    |
+*** hybrid 0
+| backend | time (sec) |                L1 |
+|---------+------------+-------------------|
+| yodel   |    1.80149 | 4.414959173491276 |
+| python  |     9.9805 |           10.4235 |
+|         |            |                    |
+*** hybrid c-d
+| backend |   time (sec) |                 L1 |
+|---------+--------------+--------------------|
+| yodel   |       5.3235 | 1.7502517618116156 |
+| python  | 10.363815188 |            1.89115 |
+
+
+** DONE grid 3x3
+| backend                      | time (sec, unless stated) |                   L1 | # runs |
+|------------------------------+---------------------------+----------------------+--------|
+| yodel (exact, 1000 samples)  | 3.425,3.396               |                    0 |      2 |
+| yodel (exact, 1 sample)      | 0.002,0.002               |                    0 |      2 |
+| yodel (sampled diagonal)     | 2.641,2.564               |  0.0457188,0.0232087 |      2 |
+| yodel (fully sampled)        | 5.314,5.066               | 0.0888877, 0.0838211 |      2 |
+| python                       | 3.349,3.512               |      0.15724,0.17958 |      2 |
+| dice                         | 0.050, 0.048              |                    0 |      2 |
+| psi                          | 200.52, 161.72            |                    0 |      2 |
+
+
+** DONE grid 6x6
+CLOSED: [2024-01-07 Sun 20:30]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-01-07 Sun 20:30]
+- State "DONE"       from "TODO"       [2024-01-07 Sun 18:00]
+:END:
+| backend                  | time              | L1                 | # runs |
+|--------------------------+-------------------+--------------------+--------|
+| yodel                    | 0.016,0.015       | 0                  | 2      |
+| yodel (sampled diagonal) | 78.204,81.236     | 0.0535374,0.105517 | 2      |
+| yodel (fully sampled)    | 159.071,169.026   | 0.458838,0.350428  | 2      |
+| python                   | 14.9990,14.801500 | 8.229941, 8.25967  | 2      |
+| dice                     | n/a               | n/a                | n/a    |
+| psi                      | t/o               | t/o                | t/o    |
+- how did I /slow down/ the code????
+
+** DONE grid 9x9
+CLOSED: [2024-01-07 Sun 20:58]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-01-07 Sun 20:58]
+:END:
+| backend                  | time              | L1                 | # runs |
+|--------------------------+-------------------+--------------------+--------|
+| yodel                    | 0.590,0.586       | 0                  |        |
+| yodel (sampled diagonal) | 536.321,476.412   | 0.254747,0.331336  |        |
+| yodel (fully sampled)    | 2243.407,2232.981 | 0.83301, 0.918043  |        |
+| python                   | 26.1944,25.74624  | 2.5616418,2.670358 |        |
+| dice                     | n/a               | n/a                | n/a    |
+| psi                      | t/o               | t/o                | t/o    |
+
+- again, how did I /slow down/ the code? nothing has changed >.>
+2243407ms
+ms
+
+** DONE arrival 3x3
+CLOSED: [2024-01-07 Sun 20:58]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-01-07 Sun 20:58]
+:END:
+| backend | run | time                | L1                            | # runs |
+|---------+-----+---------------------+-------------------------------+--------|
+| yodel   |     | 20.021,21.755       | 0.00373778,0.1332622165628865 |        |
+| python  |     | 13.799380,14.594505 | 0.64226214,0.7402621898       |        |
+| dice    |     | n/a                 | n/a                           |        |
+| psi     |     | n/a                 | n/a                           |        |
+
+- dice does not support Poisson distributions or while loops
+- psi does not support while loops
+- exact value is: μ poisson * P(final node from grid):
+  + 3.0 * 0.7709125944790379 = 2.3127377834371137
+
+** DONE arrival 6x6
+CLOSED: [2024-01-07 Sun 22:05]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-01-07 Sun 22:05]
+:END:
+| backend | time                                | L1                                  |
+|---------+-------------------------------------+-------------------------------------|
+| yodel   | 918.661,933.048                     | 0.10271630490357264,0.030716304903  |
+| python  | 65.22332763671875,72.35198760032654 | 1.1012836149877847,1.26528364932006 |
+
+
+- dice does not support Poisson distributions or while loops
+- psi does not support while loops
+- exact value is: μ poisson * P(final node from grid):
+  + 3.0 * 0.6025721016345242 = 1.8077163049035727
+** TODO arrival 9x9
+| backend |  time                  | L1                                    |
+|---------+------------------------+---------------------------------------|
+| yodel   |                        |                                       |
+| python  | 152.87909388542175,158.55798602104187 | 1.1841154041236965,1.221115344995889  |
+
+- dice does not support Poisson distributions or while loops
+- psi does not support while loops
+- exact value is: μ poisson * P(final node from grid):
+  + 3.0 * 0.5906282285072297 = 1.7718846855216892
+
+** DONE hybrid 0
+CLOSED: [2024-01-07 Sun 21:33]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-01-07 Sun 21:33]
+:END:
+| backend | time          | L1                                |
+|---------+---------------+-----------------------------------|
+| yodel   | 1.917,1.686   | 4.318738081749352,4.5111802652332 |
+| python  | 9.763, 10.198 | 11.527,9.320                      |
+
+#+begin_example haskell
+
+
+let l1 = \ts xs -> sum (map abs (zipWith (-) ts xs))  in l1  [0.500, 0.250, 0.667, 2.000, 2.000, 3.000, 4.000, 5.000] [0.5057021696314727, 0.7005588121287021, 0.45441963849149725, 1.852384770612518, 2.056186951722315, 3.8423723418733498, 2.497965344886149, 3.898312439616323]
+let l1 = \ts xs -> sum (map abs (zipWith (-) ts xs))  in l1  [0.500, 0.250, 0.667, 2.000, 2.000, 3.000, 4.000, 5.000] [0.3965118089622099, 0.7641210999979808, 0.716848532082581, 1.8842034624989055, 1.9544518904978894, 1.7063116089781678, 2.4987299939012293, 4.11258060200896]
+#+end_example
+
+
+
+** TODO dynamic-length hmm
+| backend | run | time | L1 | # runs |
+|---------+-----+------+----+--------|
+| yodel   |     |      |    |        |
+| python  |      |  179.028     |    |        |
+
+** DONE hybrid bayesian network: continuous-discrete
+| backend | time                       | L1                                    |
+|---------+----------------------------+---------------------------------------|
+| yodel   | 5.255,5.392                | 1.9777432360434883, 1.5227602875797426 |
+| python  | 10.523571729, 10.204058647 | 2.0562,1.7261                         |
+
+truth: [0.0000, 1.0, 0.3000, 0.4000, 0.6000, 0.6000, 0.5000, 0.2000, 0.3000, 0.4000, 0.5000, 0.6000]
+let l1 = \ts xs -> sum (map abs (zipWith (-) ts xs))  in l1  [0.0000, 1.0, 0.3000, 0.4000, 0.6000, 0.6000, 0.5000, 0.2000, 0.3000, 0.4000, 0.5000, 0.6000] [0.13011108796605958, 0.9685630275762207, 0.4428830035274971, 0.582047348917772, 0.765249221650758, 0.5095187938059823, 0.20277001779283083, 0.5335055956071594, 0.596398695510706, 0.5848180349158075, 0.49108011624622483, 0.48533779663101245]
+let l1 = \ts xs -> sum (map abs (zipWith (-) ts xs))  in l1  [0.0000, 0.3000, 0.4000, 0.6000, 0.6000, 0.5000, 0.2000, 0.3000, 0.4000, 0.5000, 0.6000] [0.08358196287810819, 0.9309223507225306, 0.4309460999772467, 0.4973155856652682, 0.7497330727263971, 0.5320316096351594, 0.21529709321078594, 0.48546700666556175, 0.6037967591026505, 0.49841838621118223, 0.5132816954622472, 0.5017743656801558]
+
+
+** HOLD hybrid dynamic bayesian network
+CLOSED: [2024-01-07 Sun 22:07]
+:LOGBOOK:
+- State "HOLD"       from "TODO"       [2024-01-07 Sun 22:07] \\
+  incomplete, IIRC
+:END:
+| backend | run | time | L1 | # runs |
+|---------+-----+------+----+--------|
+| yodel   |     |      |    |        |
+| python  |     |      |    |        |
+| dice    | -   | -    | -  | -      |
+| psi     | -   | -    | -  | -      |
 
 * Results (10-run avg, unless otherwise stated)
 ** Wallclock

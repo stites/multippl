@@ -58,10 +58,11 @@ def mkgrid(n, probfn, **kwargs):
 
 def mkarrival(n, probfn):
     npackets = pyro.sample("npackets", dist.Poisson(3))
-    ss = torch.empty(n,n)
+    arrives = 0.0
     for ix in pyro.plate("packet", int(npackets.item())+1):
-        ss += mkgrid(n, probfn, suffix="_"+str(ix))
-    return ss / n
+        o = mkgrid(n, probfn, suffix="_"+str(ix))
+        arrives += o[-1][-1].item()
+    return arrives
 
 def arrival_sites(sites):
     return [s + "_0" for s in sites]
@@ -90,14 +91,12 @@ def runall(model, sites, truth, num_runs, num_samples, *args, start_seed=0):
         np.random.seed(seed)
         random.seed(seed)
         start = time.time()
-
         importance = Importance(model, num_samples=num_samples)
         posterior = importance.run(*args)
-
+        ms = allmarg(posterior, sites, num_samples=num_samples)
         end = time.time()
         times.append(end - start)
         print(times[-1], "s", flush=True)
-        ms = allmarg(posterior, sites, num_samples=int(num_samples / 10) if num_samples > 1000 else num_samples) # don't think wneed a full
         l1 = compute_l1(ms, truth)
         printit(sites, ms, l1)
         l1s.append(sum(l1))

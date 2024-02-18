@@ -31,7 +31,7 @@ def network(i, p00, p10t, p10f, p01t, p01f, o00, o10, o01, o11):
 @config_enumerate
 def mixture(i, np, boundary, x00P , x10PT, x10PF, x01PT, x01PF, n, o00, o10, o01, o11):
   pyro.sample(f"n_{i}", dist.Normal(np, 1.0), obs=n)
-  if (n > boundary or n < (-boundary)):
+  if (n > -boundary or n < boundary): # we are in the average case
       return network(i, x00P[0], x10PT[0], x10PF[0], x01PT[0], x01PF[0], o00, o01, o10, o11)
   else:
       return network(i, x00P[1], x10PT[1], x10PF[1], x01PT[1], x01PF[1], o00, o01, o10, o11)
@@ -63,7 +63,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="generate data for simple HMMs")
-    parser.add_argument("--num-samples", default=10_000, type=int,)
+    parser.add_argument("--num-samples", default=1_000, type=int,)
     parser.add_argument("--num-runs", default=10, type=int,)
     parser.add_argument("--seed", default=0, type=int,)
     args = parser.parse_args()
@@ -82,4 +82,3 @@ if __name__ == "__main__":
     print(f"averages over {runs} runs:")
     print("wallclock:", sum(times) / len(times), "s")
     print("       L1:", sum(l1s) / len(l1s))
-

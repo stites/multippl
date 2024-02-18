@@ -7,27 +7,6 @@ import pyro.distributions as dist
 from pyro.infer import Importance, EmpiricalMarginal
 from utils import *
 
-def network(npackets):
-    packets_left  = pyro.sample("packets_left", dist.Binomial(npackets, 0.5))
-    packets_right = npackets - packets_left
-
-    packets_left_lost  = pyro.sample("packets_left_lost", dist.Binomial(packets_left, 0.0001))
-    packets_right_lost = pyro.sample("packets_right_lost", dist.Binomial(packets_right, 0.0001))
-
-    packets_left_received = packets_left - packets_left_lost
-    packets_right_received = packets_right - packets_right_lost
-
-    left_sent_to_destination = packets_left_received
-    right_sent_to_destination = packets_right_received
-
-    destination_lost_left_packets  = pyro.sample("destination_lost_left_packets", dist.Binomial(left_sent_to_destination, 0.0001))
-    destination_lost_right_packets = pyro.sample("destination_lost_right_packets", dist.Binomial(right_sent_to_destination, 0.0001))
-
-    destination_received_left  = left_sent_to_destination  - destination_lost_left_packets
-    destination_received_right = right_sent_to_destination - destination_lost_right_packets
-
-    return destination_received_left + destination_received_right
-
 def probfn(i, j):
    match (i, j):
        case (0, 0): return [0.5]
@@ -39,28 +18,60 @@ def probfn(i, j):
        case (2, 2): return [3.0 / 7.0, 3.0 / 8.0, 8.0 / 9.0, 9.0 / 11.0]
        case _: raise Exception
 
-ising_model = lambda: mkgrid(3, probfn)
+# ising_model = lambda: mkgrid(3, probfn)
 
-def model():
-    npackets = pyro.sample("npackets", dist.Poisson(3.0))
-    seen = 0
-    for _ in range(int(npackets.item())):
-        traverses = ising_model()[-1][-1] == 1.
-        seen += 1 if traverses else 0
-    return seen
+# def model():
+#     npackets = pyro.sample("npackets", dist.Poisson(3.0))
+#     seen = 0.0
+#     for _ in range(int(npackets.item())):
+#         traverses = ising_model()[-1][-1] == 1.
+#         seen += 1.0 if traverses else 0.0
+#     return seen
 
-for x in range(3):
-  print(model())
-
+# for x in range(3):
+#   print(model())
 # def guide():
 #     lambda_ = pyro.param("lambda_", torch.tensor(4096.0), constraint=dist.constraints.positive)
 #     npackets = pyro.sample("npackets", dist.Poisson(lambda_))
 #     return network(npackets)
 
 # # Importance sampling
-# num_samples = 100
-# importance = Importance(model, guide).run()
-# marginal = EmpiricalMarginal(importance, sites=["npackets"])
+#importance = Importance(model).run()
+#marginal = EmpiricalMarginal(importance, sites=["npackets"])
+if __name__ == "__main__":
+    num_samples = 1_000
+    num_runs = 2
+    start_seed = 0
+    args = {}
+    sites = ["npackets"]
+    truth = [2.3127377834371137]
+
+    model = lambda: mkarrival(3, probfn)
+
+    l1s = []
+    times = []
+    for run, seedoffset in enumerate(range(1,num_runs+1)):
+        seed = start_seed + seedoffset
+        print(f"starting run {run+1}/{num_runs} (with seed: {seed})", flush=True)
+        torch.manual_seed(seed)
+        np.random.seed(seed)
+        random.seed(seed)
+        start = time.time()
+
+        importance = Importance(model, num_samples=num_samples)
+        posterior = importance.run(*args)
+
+        ms = allmarg(posterior, sites, num_samples=num_samples) # don't think need a full
+        print("am")
+        end = time.time()
+        times.append(end - start)
+        print(times[-1], "s", flush=True)
+        l1 = compute_l1(ms, truth)
+        printit(sites, ms, l1)
+        l1s.append(sum(l1))
+    #return (l1s, times)
+
+
 
 # # Estimate the expectation
 # samples = [marginal().item() for _ in range(num_samples)]
