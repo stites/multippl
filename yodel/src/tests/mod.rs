@@ -18,6 +18,7 @@ mod freevars;
 mod grids;
 mod ite;
 mod mls;
+mod properties;
 // mod nested;
 mod sample;
 mod tuples;
