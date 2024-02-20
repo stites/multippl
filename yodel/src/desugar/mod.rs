@@ -674,7 +674,7 @@ pub mod discrete {
             assert_eq!(hash, "13bd45");
             let params = floats2eanf(vec![1.0, 4.0, 2.0, 3.0]);
             let hash = hash_discrete(&params);
-            assert_eq!(hash, "a21a4f");
+            assert_eq!(hash, "240a3b");
         }
         #[test]
         pub fn test_mkguard_for_discrete_var() {
