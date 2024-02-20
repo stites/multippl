@@ -27,8 +27,8 @@ use rsdd::sample::probability::Probability;
 // }
 
 #[derive(PartialEq, Copy, Clone, Debug)]
-pub struct LW(pub f64);
-impl LW {
+pub struct Ln(pub f64);
+impl Ln {
     pub fn val(&self) -> f64 {
         self.0
     }
@@ -45,13 +45,13 @@ impl LW {
         Self(self.0 - o.0)
     }
     pub fn render(&self) -> String {
-        format!("LW(weight={:.6})", self.exp())
+        format!("ln(weight={:.6})", self.exp())
     }
     pub fn log_render(&self) -> String {
-        format!("LW(log_weight={:.6})", self.val())
+        format!("ln(log_weight={:.6})", self.val())
     }
 }
-impl Default for LW {
+impl Default for Ln {
     fn default() -> Self {
         Self(0.0)
     }

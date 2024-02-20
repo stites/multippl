@@ -237,12 +237,12 @@ pub struct ROut {
     pub out: Output,
     pub rng: Option<StdRng>,
     pub mgr: Mgr,
-    pub weight: LW,
+    pub weight: Ln,
 }
 
 pub struct PartialROut {
     pub out: Output,
-    pub weight: LW,
+    pub weight: Ln,
     pub rng: Option<StdRng>,
 }
 impl PartialROut {

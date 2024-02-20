@@ -213,7 +213,7 @@ pub struct State<'a> {
     pub call_counter: HashMap<FnId, u64>,
     next: Option<VarLabel>,
     while_index: u64,
-    log_weight: LW,
+    log_weight: Ln,
     pub fnctx: Option<FnCall>,
 }
 
@@ -256,7 +256,7 @@ impl<'a> State<'a> {
             opts,
             mgr,
             rng,
-            log_weight: LW::default(),
+            log_weight: Ln::default(),
             funs,
             fnctx: None,
             while_index: 0,
@@ -285,13 +285,13 @@ impl<'a> State<'a> {
         }
     }
 
-    pub fn log_weight(&self) -> LW {
+    pub fn log_weight(&self) -> Ln {
         self.log_weight
     }
     pub fn score(&mut self, s: f64) {
         // if !(p == q) {
-        self.log_weight = self.log_weight.add(LW::new(s));
-        // self.log_pq.lq = self.log_pq.lq.add(LW::new(q));
+        self.log_weight = self.log_weight.add(Ln::new(s));
+        // self.log_pq.lq = self.log_pq.lq.add(Ln::new(q));
         // }
     }
     pub fn eval_program_with_data(
@@ -409,9 +409,9 @@ impl<'a> State<'a> {
                 }
                 debug!("WMCParams  {:?}", wmc_params);
                 debug!("VarOrder   {:?}", var_order);
-                debug!("Accept     {:?}", &dist);
+                debug!("Accept     {}", &dist.print_bdd());
                 // FIXME: should be aggregating these stats somewhere
-                debug!("using optimizations: {}", self.opts.sample_pruning);
+                debug!("using opt? {}", self.opts.sample_pruning);
 
                 let ss = ctx.exact.samples(self.mgr, self.opts.sample_pruning);
                 let (wmc, _) = crate::inference::calculate_wmc_prob(
@@ -422,6 +422,7 @@ impl<'a> State<'a> {
                     ctx.exact.accept.clone(),
                     ss,
                 );
+                debug!("WMC        {}", &wmc);
 
                 self.score(wmc);
                 // // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<

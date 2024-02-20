@@ -1,5 +1,5 @@
 use crate::utils::render::*;
-use crate::LW;
+use crate::Ln;
 use itertools::*;
 use std::iter::Sum;
 
@@ -32,7 +32,7 @@ impl Exp1 {
             count: 0,
         }
     }
-    pub fn new(lw: LW, qs: Vec<f64>) -> Self {
+    pub fn new(lw: Ln, qs: Vec<f64>) -> Self {
         let w = lw.exp();
         Self {
             query_sums: qs.iter().copied().collect_vec(),

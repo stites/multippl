@@ -65,11 +65,11 @@ pub fn importance_weighting_h_h(
                 let RealSemiring(wmc_final_accept) = final_accept.wmc(&var_order, &params);
                 let RealSemiring(wmc_sample) = samples.wmc(&var_order, &params);
 
-                let lwmc_accept = LW::new(wmc_accept);
-                let lwmc_final_accept = LW::new(wmc_final_accept);
-                let lwmc_sample = LW::new(wmc_sample);
+                let lwmc_accept = Ln::new(wmc_accept);
+                let lwmc_final_accept = Ln::new(wmc_final_accept);
+                let lwmc_sample = Ln::new(wmc_sample);
 
-                let (lquery, lw): (Vec<f64>, LW) = match p.query() {
+                let (lquery, lw): (Vec<f64>, Ln) = match p.query() {
                     // TODO drop this traversal, pre-compute during eval
                     Query::EQuery(_) => {
                         // the final accepting criteria is a & s. Normalize the query.
@@ -89,7 +89,7 @@ pub fn importance_weighting_h_h(
                             .collect_vec();
 
                         // Weight the query by ratio of a & s : s
-                        // let w = LW::new(wmc_final_accept).sub(LW::new(wmc_sample));
+                        // let w = Ln::new(wmc_final_accept).sub(Ln::new(wmc_sample));
 
                         (lquery, w)
                     }
@@ -101,7 +101,7 @@ pub fn importance_weighting_h_h(
                             acc
                         });
                         // let ws = qs.iter().map(|_| pq.weight()).collect_vec();
-                        // let w = LW::new(wmc_final_accept).sub(LW::new(wmc_sample));
+                        // let w = Ln::new(wmc_final_accept).sub(Ln::new(wmc_sample));
                         trace!("    final_weight: {}", w.log_render());
                         trace!("           query: {:?}", qs);
                         trace!("-----------------------");
