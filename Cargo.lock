@@ -1102,7 +1102,7 @@ version = "0.1.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4703ad64153382334aa8db57c637364c322d3372e097840c72000dabdcf6156e"
 dependencies = [
- "num-bigint",
+ "num-bigint 0.1.44",
  "num-complex 0.1.43",
  "num-integer",
  "num-iter",
@@ -1120,6 +1120,17 @@ dependencies = [
  "num-traits",
  "rand 0.4.6",
  "rustc-serialize",
+]
+
+[[package]]
+name = "num-bigint"
+version = "0.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "608e7659b5c3d7cba262d894801b9ec9d00de989e8a82bd4bef91d08da45cdc0"
+dependencies = [
+ "autocfg",
+ "num-integer",
+ "num-traits",
 ]
 
 [[package]]
@@ -1168,7 +1179,7 @@ version = "0.1.42"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ee314c74bd753fc86b4780aa9475da469155f3848473a261d2d18e35245a784e"
 dependencies = [
- "num-bigint",
+ "num-bigint 0.1.44",
  "num-integer",
  "num-traits",
  "rustc-serialize",
@@ -1181,6 +1192,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0638a1c9d0a3c0914158145bc76cff373a75a627e6ecbfb71cbe6f453a5a19b0"
 dependencies = [
  "autocfg",
+ "num-bigint 0.4.4",
  "num-integer",
  "num-traits",
 ]
@@ -2460,6 +2472,7 @@ dependencies = [
  "indexmap",
  "itertools",
  "nalgebra",
+ "num-rational 0.4.1",
  "num-traits",
  "paste",
  "plotters",

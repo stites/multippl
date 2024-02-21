@@ -53,6 +53,7 @@ quickcheck = "1"
 quickcheck_macros = "1"
 
 [dev-dependencies]
+num-rational = "0.4.1"
 quickcheck = "1"
 quickcheck_macros = "1"
 

@@ -318,10 +318,9 @@ pub mod integers {
     mod tests {
         use super::*;
         #[test]
-        fn test_prop() {
+        fn test_onehot() {
             for x in [0, 1, 5, 10] {
                 let oh = as_onehot(x);
-                println!("{oh:?}");
                 assert_eq!(from_prod_val(&oh).unwrap(), x);
             }
         }

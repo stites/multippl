@@ -266,6 +266,21 @@ macro_rules! run {
         opt.exact_only = true;
         run!($code, opt)
     }};
+    ($code:expr; --erased) => {{
+        let mut opt = $crate::pipeline::Options::stoch();
+        opt.exact_only = true;
+        let exact = $code.strip_samples().ok().unwrap();
+        let (mut mgr, p, lenv, _) = make_mgr_and_ir_with_data_h(&exact, DataSet::empty())
+            .ok()
+            .unwrap();
+        tracing::debug!(",====================================.");
+        tracing::debug!("| manager compiled! building program |");
+        tracing::debug!("`===================================='");
+        let r = runner(&mut mgr, &mut opt.rng(), &opt, &p, &lenv)
+            .ok()
+            .unwrap();
+        r.to_rout(mgr)
+    }};
     ($code:expr, $opt:expr) => {{
         match $crate::pipeline::run($code, &$opt) {
             Ok(o) => o,
@@ -370,6 +385,18 @@ pub fn make_mgr_and_ir_with_data(
     tracing::info!("compiling code:\n{code}");
     tracing::trace!("making manager");
     let p = crate::parser::program::parse(code)?;
+    make_mgr_and_ir_with_data_h(&p, ds)
+}
+
+pub fn make_mgr_and_ir_with_data_h(
+    p: &ProgramInferable,
+    ds: DataSet,
+) -> Result<(
+    Mgr,
+    Program<crate::annotate::grammar::Annotated>,
+    LabelEnv,
+    DataView,
+)> {
     tracing::debug!("(parsed)");
     tracing::debug!("(parsed) >>> {p:?}");
     tracing::debug!("(parsed)");
