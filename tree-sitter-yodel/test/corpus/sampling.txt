@@ -1,4 +1,26 @@
 ======================
+sampling: adding
+======================
+
+sample {
+  (1.0 + 1.0) / 5.0
+}
+
+---
+(source_file
+  (program
+    (sexpr
+      (sexpr
+        (sanf
+          (sanfbinop
+            (sanfbinop
+              (sanf (svalue (float)))
+              (numeric_op)
+              (sanf (svalue (float))))
+            (numeric_op)
+            (sanf (svalue (float)))))))))
+
+======================
 sampling: simple
 ======================
 
