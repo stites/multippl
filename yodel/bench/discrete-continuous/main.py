@@ -77,10 +77,11 @@ if __name__ == "__main__":
     parser.add_argument("--seed", help="set seed", default=0, type=int)
     args = parser.parse_args()
 
+    from generate import a, b, c, d, e, f, g, count
+    # rng is set in generate, need to re-set it after import
     pyro.set_rng_seed(args.seed)
     num_samples = args.num_samples
 
-    from generate import a, b, c, d, e, f, g, count
     a = torch.tensor(a).double()
     b = torch.tensor(b).double()
     c = torch.tensor(c).double()
@@ -105,10 +106,10 @@ if __name__ == "__main__":
     conditioned_model = pyro.condition(model, data=data)
     conditioned_model(N) # just a smoke test
 
-    importance = Importance(conditioned_model, guide=None, num_samples=num_samples)
 
     print("running importance sampling...")
     start = time.time()
+    importance = Importance(conditioned_model, guide=None, num_samples=num_samples)
     emp_marginal = EmpiricalMarginal(importance.run(N), sites=param_sites)
     end = time.time()
 

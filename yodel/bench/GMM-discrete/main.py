@@ -86,7 +86,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     from generate import hs, g1s, g2s, gs, x00, x10, x01, x11
-    from utils import *
+    # rng is set in generate, need to re-set it after import
+    pyro.set_rng_seed(args.seed)
 
     # smoke test
     # model(2, torch.tensor([0.8032760620117188, 0.17483338713645935]), torch.zeros(2), torch.zeros(3), torch.ones(4), torch.ones(5))
