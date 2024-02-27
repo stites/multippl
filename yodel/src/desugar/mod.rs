@@ -289,8 +289,8 @@ pub mod integers {
         )
     }
     pub fn from_prod(vs: &[EVal]) -> Result<usize> {
-        let (tot, int) = vs.iter().enumerate().fold(Ok((0, 0)), |acc, (ix, v)| {
-            let (tot, int) = acc?;
+        let (tot, int) = vs.iter().enumerate().try_fold((0, 0), |acc, (ix, v)| {
+            let (tot, int) = acc;
             match v {
                 EVal::EBdd(BddPtr::PtrTrue) => Ok((tot + 1, ix)),
                 EVal::EBdd(BddPtr::PtrFalse) => Ok((tot, int)),
@@ -394,7 +394,7 @@ pub mod discrete {
         let partitions = params2partitions(&params);
         params
             .into_iter()
-            .zip(partitions.into_iter())
+            .zip(partitions)
             .map(|(phat, z)| Anf::Div(Box::new(phat), Box::new(z)))
             .collect()
     }

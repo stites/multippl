@@ -868,7 +868,7 @@ impl LabelEnv {
                 let f = self.annotate_efun(f)?;
                 self.funs.insert(i, Fun::Exact(f.clone()));
                 let end_bdds = self.max_varlabel_val();
-                let mut ctr = self.fun_stats.get_mut(&i).expect("it's 9L up there!");
+                let ctr = self.fun_stats.get_mut(&i).expect("it's 9L up there!");
                 ctr.num_uids = end_bdds.0 - start_bdds.0;
                 // reserve the next #fncalls-worth of bdd ptrs
                 self.lblsym += compute_function_block(ctr);
@@ -892,7 +892,7 @@ impl LabelEnv {
                 let f = self.annotate_sfun(f)?;
                 self.funs.insert(i, Fun::Sample(f.clone()));
                 let end_bdds = self.max_varlabel_val();
-                let mut ctr = self.fun_stats.get_mut(&i).expect("it's 9L up there!");
+                let ctr = self.fun_stats.get_mut(&i).expect("it's 9L up there!");
                 ctr.num_uids = end_bdds.0 - start_bdds.0;
                 // reserve the next #fncalls-worth of bdd ptrs
                 self.lblsym += compute_function_block(ctr);

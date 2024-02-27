@@ -1,5 +1,4 @@
 pub use crate::inference::wmc::*;
-pub use crate::typeinf::*;
 pub use crate::*;
 
 pub fn exact_with(p: &str) -> (Vec<f64>, WmcStats) {

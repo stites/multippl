@@ -418,8 +418,8 @@ impl<'a> State<'a> {
                     self.mgr,
                     &wmc_params,
                     &var_order,
-                    dist.clone(),
-                    ctx.exact.accept.clone(),
+                    dist,
+                    ctx.exact.accept,
                     ss,
                 );
                 debug!("WMC        {}", &wmc);

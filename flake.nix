@@ -3,36 +3,19 @@
   nixConfig.extra-trusted-public-keys = "stites.cachix.org-1:ZuZInLV0i4TjoZhdh0pr9TFl2OFtHoSnOf4vKqwpthQ=";
 
   inputs = {
-    devenv.url = "github:cachix/devenv";
-    crane.url = "github:ipetkov/crane/v0.14.1";
-    rsdd.url = "github:stites/rsdd/yodel-additions?dir=nix";
-
-    advisory-db.url = "github:rustsec/advisory-db";
-    advisory-db.flake = false;
-
+    nixpkgs.url = "github:nixos/nixpkgs/release-23.11";
     flake-parts.url = "github:hercules-ci/flake-parts";
     devshell.url = "github:numtide/devshell";
-
-    #nixlib.url = "github:stites/nixlib";
-    #nixlib.url = "path:/home/stites/git/nix/nixlib";
+    crane.url = "github:ipetkov/crane/v0.16.2";
     cachix-push.url = "github:juspay/cachix-push";
+    #ppls.url = "path:/home/stites/git/multilang/ppl-benchmarks";
+    rsdd.url = "github:stites/rsdd/yodel-additions?dir=nix";
+    ppls.url = "git+ssh://git@gitlab.com/stites/ppl-benchmarks";
 
     # clean up dependencies
-    nixpkgs.follows = "crane/nixpkgs";
-    devenv.inputs.flake-compat.follows = "crane/flake-compat";
-    devenv.inputs.nixpkgs.follows = "nixpkgs";
-    devenv.inputs.pre-commit-hooks.follows = "pre-commit";
     pre-commit.url = "github:cachix/pre-commit-hooks.nix";
-    pre-commit.inputs.flake-utils.follows = "crane/flake-utils";
-    pre-commit.inputs.flake-compat.follows = "crane/flake-compat";
     pre-commit.inputs.nixpkgs.follows = "nixpkgs";
-    rsdd.inputs.devenv.follows = "devenv";
-    rsdd.inputs.flake-utils.follows = "crane/flake-utils";
     rsdd.inputs.nixpkgs.follows = "nixpkgs";
-
-    #ppls.url = "path:/home/stites/git/multilang/ppl-benchmarks";
-    ppls.url = "git+ssh://git@gitlab.com/stites/ppl-benchmarks";
-    flake-utils.follows = "crane/flake-utils";
   };
 
   outputs = {
@@ -41,9 +24,7 @@
     devenv,
     flake-parts,
     ...
-  } @ inputs: let
-    mk-sys-package = import ./nix/mk-sys-package.nix;
-  in
+  } @ inputs:
     flake-parts.lib.mkFlake {inherit inputs;} {
       imports = [
         inputs.pre-commit.flakeModule
@@ -61,10 +42,6 @@
       }: let
         craneLib = (inputs.crane.mkLib pkgs).overrideScope' (final: prev: {
           rsdd = inputs.rsdd.packages.${system}.rsdd;
-          # for plotters
-          expat-sys = mk-sys-package prev "expat-sys" prev.expat;
-          freetype-sys = mk-sys-package prev "freetype-sys" prev.freetype;
-          fontconfig-sys = mk-sys-package prev "fontconfig-sys" final.fontconfig;
         });
         inherit (pkgs) lib;
         src = builtins.filterSource (path: type:
@@ -84,13 +61,7 @@
           inherit src;
           buildInputs = with pkgs;
             [
-              tree-sitter
-              # plotters needs this for the sys packages
-              cmake
-              pkg-config
-              fontconfig
-              freetype
-              expat
+              #tree-sitter
             ]
             ++ lib.optionals pkgs.stdenv.isDarwin [
               pkgs.libiconv
@@ -99,26 +70,21 @@
         # Build *just* the cargo dependencies, so we can reuse
         # all of that work (e.g. via cachix) when running in CI
         cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-        cargoDevArtifacts = craneLib.buildDepsOnly (commonArgs
-          // {
-            CARGO_PROFILE = "dev";
-          });
+        cargoDevArtifacts = craneLib.buildDepsOnly (commonArgs // {CARGO_PROFILE = "dev";});
+
+        # set doCheck = false and use nextest via `nix flake check`
         my-dev-crate = craneLib.buildPackage (commonArgs
           // {
             CARGO_PROFILE = "dev";
             NIX_DEBUG = 0;
-            doCheck = false; # use nextest in `nix flake check` for tests
+            doCheck = false;
           });
         my-crate = craneLib.buildPackage (commonArgs
           // {
             NIX_DEBUG = 0;
-            doCheck = false; # use nextest in `nix flake check` for tests
+            doCheck = false;
           });
       in {
-        _module.args.pkgs = import nixpkgs {
-          inherit system;
-          overlays = [(import ./nix/fontconfig-overlay.nix)];
-        };
         checks = import ./nix/checks.nix {inherit lib system my-crate craneLib commonArgs cargoArtifacts;};
         packages.default = my-crate;
         packages.dice = inputs'.ppls.packages.dice;
@@ -133,31 +99,15 @@
             partitionType = "count";
           });
 
-        apps = let
-          cache = "stites";
-        in {
-          default = inputs.flake-utils.lib.mkApp {
-            drv = my-crate;
-          };
-          # cachix-pull = pkgs.callPackage inputs.nixlib.lib.my.apps.cachix-pull {};
-          # cachix-push = pkgs.callPackage inputs.nixlib.lib.my.apps.cachix-push {
-          #   cache = "stites";
-          # };
-        };
-        #devShells.default = import ./nix/shell.nix {inherit inputs pkgs lib;};
         pre-commit.check.enable = false; # still need to download rsdd from github in offline mode, not sure how to do that right now
         pre-commit.settings.hooks = {
           shellcheck.enable = true;
           clippy.enable = true;
           hunspell.enable = false;
           alejandra.enable = true; # nix formatter
-          # statix.enable = true; # lints for nix, but apparently borked
           rustfmt.enable = true;
           typos.enable = true;
         };
-        #devshells.default.languages.rust.enableDefaultToolchain = true;
-        #devshells.default.languages.rust.packageSet = pkgs.rustPlatform;
-        #devshells.default.languages.rust.tools = ["rustc" "cargo" "clippy" "rustfmt"];
         cachix-push.cacheName = "stites";
         devshells.default.commands = [
           {
@@ -195,26 +145,12 @@
         ];
         devshells.default.packages = with pkgs;
           [
-            # plotters dependencies
-            zlib.dev
-            bzip2.dev
-            libpng.dev
-            brotli.dev
-            cmake
-            pkg-config
-            freetype
-            expat
-            fontconfig
-
-            hunspellDicts.en_US-large
             (python3.withPackages (p: [p.pyro-ppl] ++ p.pyro-ppl.optional-dependencies.extras))
 
             config.packages.dice
             config.packages.psi
           ]
           ++ [
-            #lldb # version of six conflicts with pyro's dependency
-
             cargo
             clippy
             rustc

@@ -400,7 +400,7 @@ pub fn make_mgr_and_ir_with_data_h(
     tracing::debug!("(parsed)");
     tracing::debug!("(parsed) >>> {p:?}");
     tracing::debug!("(parsed)");
-    let p = crate::typeinf::typeinference(&p)?;
+    let p = crate::typeinf::typeinference(p)?;
     tracing::debug!("(inferred)");
     tracing::debug!("(inferred) >>> {p:?}");
     tracing::debug!("(inferred)");
