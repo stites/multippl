@@ -1,0 +1,78 @@
+sample fn network (
+  pa : Float, pb_t : Float, pb_f : Float, pc_t : Float, pc_f : Float, pd_tt : Float, pd_tf : Float, pd_ft : Float, pd_ff : Float,
+  pe_t : Float,
+  pe_f : Float,
+  pf_t : Float,
+  pf_f : Float,
+  b_obs : Bool,
+  d_obs : Float,
+  f_obs : Bool,
+  g_obs : Float
+) -> Bool  {
+  bcd <- exact {
+    let a = flip pa in
+    let b = if a then flip pb_t else flip pb_f in
+    let c = if a then flip pc_t else flip pc_f in
+    let d =
+      if  b &&  c then flip pd_tt else
+      if  b && !c then flip pd_tf else
+      if !b &&  c then flip pd_ft else
+                       flip pd_ff in
+    observe b == b_obs in
+    observe d == d_obs in
+    (b, c, d)
+  };
+  e <- if (bcd[0] || bcd[2]) {
+    et ~ normal(pe_t, 1.0); et
+  } else {
+    ef ~ normal(pe_f, 1.0); ef
+  };
+
+  if bcd[1] || bcd[2] {
+    observe f_obs from normal(pf_t, 1.0); true
+  } else {
+    observe f_obs from normal(pf_f, 1.0); true
+  };
+  observe g_obs from normal(e + f_obs, 1.0);
+  // b <- if bcd[0] { 1.0 } else { 0.0 };
+  // c <- if bcd[1] { 1.0 } else { 0.0 };
+  // d <- if bcd[2] { 1.0 } else { 0.0 };
+  // (b, c, d)
+  true
+}
+
+sample {
+  pa ~ beta(1.0, 1.0);
+  pb_t ~ beta(1.0, 1.0);
+  pb_f ~ beta(1.0, 1.0);
+  pc_t <- 7.0 / 8.0;
+  pc_f <- 1.0 / 8.0;
+  // pc_t ~ beta(1.0, 1.0);
+  // pc_f ~ beta(1.0, 1.0);
+  pd_tt ~ beta(1.0, 1.0);
+  pd_tf ~ beta(1.0, 1.0);
+  pd_ft ~ beta(1.0, 1.0);
+  pd_ff ~ beta(1.0, 1.0);
+
+  pe_t ~ normal(0.0, 1.0);
+  pe_f ~ normal(2.0, 1.0);
+  pf_t ~ normal(2.0, 1.0);
+  pf_f ~ normal(0.0, 1.0);
+
+  bcd1 <- network(pa, pb_t, pb_f, pc_t, pc_f, pd_tt, pd_tf, pd_ft, pd_ff, pe_t, pe_f, pf_t, pf_f, b1, d1, f1, g1);
+  bcd2 <- network(pa, pb_t, pb_f, pc_t, pc_f, pd_tt, pd_tf, pd_ft, pd_ff, pe_t, pe_f, pf_t, pf_f, b2, d2, f2, g2);
+  bcd3 <- network(pa, pb_t, pb_f, pc_t, pc_f, pd_tt, pd_tf, pd_ft, pd_ff, pe_t, pe_f, pf_t, pf_f, b3, d3, f3, g3);
+  bcd4 <- network(pa, pb_t, pb_f, pc_t, pc_f, pd_tt, pd_tf, pd_ft, pd_ff, pe_t, pe_f, pf_t, pf_f, b4, d4, f4, g4);
+  bcd5 <- network(pa, pb_t, pb_f, pc_t, pc_f, pd_tt, pd_tf, pd_ft, pd_ff, pe_t, pe_f, pf_t, pf_f, b5, d5, f5, g5);
+
+  // bn <- (bcd1[0] + bcd2[0] + bcd3[0] + bcd4[0] + bcd5[0]);
+  // b <- bn / 5.0;
+
+  // cn <- (bcd1[1] + bcd2[1] + bcd3[1] + bcd4[1] + bcd5[1]);
+  // c <- cn / 5.0;
+
+  // dn <- (bcd1[2] + bcd2[2] + bcd3[2] + bcd4[2] + bcd5[2]);
+  // d <- dn / 5.0;
+
+  (pa, pb_t, pb_f, pc_t, pc_f, pd_tt, pd_tf, pd_ft, pd_ff, pe_t, pe_f, pf_t, pf_f)
+}
