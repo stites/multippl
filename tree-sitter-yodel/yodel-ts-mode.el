@@ -8,7 +8,7 @@
   )
 
 (setq yodel-ts-mode--keywords-builtins
-  '("flip" "normal" "beta" "discrete" "uniform" "normal" "dirichlet" "observe" "iterate")
+  '("flip" "normal" "bern" "beta" "discrete" "uniform" "normal" "dirichlet" "observe" "iterate")
   )
 
 ;; https://www.gnu.org/software/emacs/manual/html_node/elisp/Faces-for-Font-Lock.html
