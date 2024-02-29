@@ -427,6 +427,6 @@ pub fn make_mgr_and_ir_with_data_h(
     let maxlbl = ar.maxbdd.0;
     tracing::debug!("(manager created with max label: {maxlbl})");
     // let mgr = Mgr::new_default_order(maxlbl as usize);
-    let mgr = Mgr::new_default_order(0_usize);
+    let mgr = Mgr::new_default_order_lru(0_usize);
     Ok((mgr, p, lenv, dv))
 }

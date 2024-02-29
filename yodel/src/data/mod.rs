@@ -20,7 +20,9 @@ use rsdd::builder::cache::all_app::AllTable;
 
 // reexports and aliases
 pub use rsdd::builder::bdd_builder::BddManager;
+pub use rsdd::builder::cache::lru_app::BddApplyTable;
 pub use rsdd::repr::bdd::BddPtr;
 pub use rsdd::sample::probability::Probability;
 
-pub type Mgr = BddManager<AllTable<BddPtr>>;
+// pub type Mgr = BddManager<AllTable<BddPtr>>;
+pub type Mgr = BddManager<BddApplyTable<BddPtr>>;
