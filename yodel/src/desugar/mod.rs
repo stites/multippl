@@ -8,13 +8,13 @@ use crate::*;
 
 use crate::grammar::program::Program;
 
+use crate::data::HashMap;
 use core::fmt;
 use core::fmt::Debug;
 use discrete::*;
 use itertools::Itertools;
 use rsdd::builder::bdd_plan::BddPlan;
 use std::any::{Any, TypeId};
-use crate::data::HashMap;
 use std::marker::PhantomData;
 use std::string::String;
 

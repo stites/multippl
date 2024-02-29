@@ -5,10 +5,10 @@ use crate::tests::checks::*;
 use crate::typeinf::grammar::*;
 use crate::*;
 
+use crate::data::HashMap;
 use itertools::*;
 use rsdd::sample::probability::*;
 use std::any::{Any, TypeId};
-use crate::data::HashMap;
 use std::ops::Range;
 use tracing::*;
 use tracing_test::*;

@@ -5,6 +5,7 @@ use crate::tests::checks::*;
 use crate::typeinf::grammar::*;
 use crate::*;
 
+use crate::data::HashMap;
 use crate::utils::render::renderfloats;
 use core::fmt::Debug;
 use itertools::*;
@@ -15,7 +16,6 @@ use rand::distributions::uniform::*;
 use rand::distributions::Distribution;
 use rand::Rng;
 use statrs::distribution::{Bernoulli, Categorical};
-use crate::data::HashMap;
 
 impl Arbitrary for EVal {
     fn arbitrary(g: &mut Gen) -> Self {
@@ -96,12 +96,12 @@ fn arb_discrete<T: Copy>(g: &mut Gen, ps: &[(T, usize)]) -> T {
     key[&choice]
 }
 
-fn arb_flip<T: Copy>(g: &mut Gen, p: Rational32) -> bool {
+fn arb_flip(g: &mut Gen, p: Rational32) -> bool {
     let denom = Rational32::from_integer(*p.denom());
     let np = Rational32::one() - p;
     let ratiop = (denom * p).to_integer().try_into().unwrap();
     let rationp = (denom * np).to_integer().try_into().unwrap();
-    return arb_discrete(g, &[(true, ratiop), (false, rationp)]);
+    arb_discrete(g, &[(true, ratiop), (false, rationp)])
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -147,7 +147,7 @@ fn partial_arbitrary_eanf(g: &mut Gen, vars: &VarStore, r: Restriction) -> Anf<I
             );
             match path {
                 Var => {
-                    if vars.0.len() > 0 {
+                    if !vars.0.is_empty() {
                         choose_var(g, vars)
                     } else {
                         partial_arbitrary_eanf(g, vars, r)
@@ -197,7 +197,7 @@ fn partial_arbitrary_eanf(g: &mut Gen, vars: &VarStore, r: Restriction) -> Anf<I
             );
             match (path, r) {
                 (Var, _) => {
-                    if vars.0.len() > 0 {
+                    if !vars.0.is_empty() {
                         choose_var(g, vars)
                     } else {
                         partial_arbitrary_eanf(g, vars, r)
@@ -303,7 +303,7 @@ fn partial_arbitrary_sanf(g: &mut Gen, vars: &VarStore, r: Restriction) -> Anf<I
             );
             match path {
                 Var => {
-                    if vars.0.len() > 0 {
+                    if !vars.0.is_empty() {
                         choose_var(g, vars)
                     } else {
                         partial_arbitrary_sanf(g, vars, r)
@@ -353,7 +353,7 @@ fn partial_arbitrary_sanf(g: &mut Gen, vars: &VarStore, r: Restriction) -> Anf<I
             );
             match (path, r) {
                 (Var, _) => {
-                    if vars.0.len() > 0 {
+                    if !vars.0.is_empty() {
                         choose_var(g, vars)
                     } else {
                         partial_arbitrary_sanf(g, vars, r)
@@ -535,11 +535,11 @@ fn partial_arbitrary_sexpr(g: &mut Gen, vars: &VarStore, r: Restriction) -> SExp
 
 impl Arbitrary for Program<Inferable> {
     fn arbitrary(g: &mut Gen) -> Self {
-        let mut vs = VarStore(vec![]);
+        let vs = VarStore(vec![]);
         if bool::arbitrary(g) {
-            Program::EBody(partial_arbitrary_eexpr(g, &mut vs, Restriction::Bool))
+            Program::EBody(partial_arbitrary_eexpr(g, &vs, Restriction::Bool))
         } else {
-            Program::SBody(partial_arbitrary_sexpr(g, &mut vs, Restriction::Bool))
+            Program::SBody(partial_arbitrary_sexpr(g, &vs, Restriction::Bool))
         }
     }
 }

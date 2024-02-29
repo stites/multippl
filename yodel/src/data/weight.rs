@@ -1,6 +1,6 @@
+use crate::data::HashMap;
 use rsdd::repr::bdd::VarLabel;
 use rsdd::repr::wmc::{RealSemiring, WmcParams};
-use crate::data::HashMap;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Weight {

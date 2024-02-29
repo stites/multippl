@@ -2,6 +2,7 @@ use crate::annotate::{InvMap, LabelEnv};
 use crate::compile::eval::State;
 use crate::compile::grammar::ProgramTr;
 use crate::compile::grammar::Trace;
+use crate::data::HashMap;
 use crate::typecheck::{
     grammar::{EExprTyped, ProgramTyped},
     typecheck,
@@ -12,7 +13,6 @@ use crate::uniquify::{grammar::UniqueId, SymEnv};
 use crate::*;
 use itertools::*;
 use rand::rngs::StdRng;
-use crate::data::HashMap;
 use tracing::debug;
 
 #[derive(Debug, Clone, Default)]

@@ -1,4 +1,5 @@
 use crate::data::{errors, CompileError, Result};
+use crate::data::{HashMap, HashSet};
 use crate::grammar::*;
 use crate::typeinf::grammar::ProgramInferable;
 use crate::uniquify::grammar::*;
@@ -8,7 +9,6 @@ use rsdd::repr::var_label::*;
 use rsdd::repr::var_order::VarOrder;
 use rsdd::repr::wmc::WmcParams;
 use std::cmp::Eq;
-use crate::data::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use tracing::*;

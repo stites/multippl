@@ -1,5 +1,7 @@
 use crate::annotate::grammar::*;
 use crate::annotate::Fun;
+use crate::data::HashMap;
+use crate::data::HashSet;
 use crate::grammar::*;
 use crate::uniquify::grammar::{FnCall, FnCounts, FnId, UniqueId};
 use crate::utils::render::*;
@@ -19,8 +21,6 @@ use rsdd::repr::var_order::VarOrder;
 use rsdd::repr::wmc::*;
 use rsdd::sample::probability::Probability;
 use statrs::distribution::*;
-use crate::data::HashMap;
-use crate::data::HashSet;
 use std::fmt;
 use std::string::String;
 use tracing::*;

@@ -1,3 +1,4 @@
+use crate::data::HashMap;
 /// Trees-that-grow style grammar to unify type-checking, analysis, and
 /// compilation. going to be honest it's pretty atrocious in rust.
 use crate::*;
@@ -6,7 +7,6 @@ use core::fmt::Debug;
 use itertools::Itertools;
 use rsdd::builder::bdd_plan::BddPlan;
 use std::any::{Any, TypeId};
-use crate::data::HashMap;
 use std::marker::PhantomData;
 use std::string::String;
 

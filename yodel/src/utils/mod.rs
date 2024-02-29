@@ -1,5 +1,6 @@
 pub mod render;
 
+use crate::data::HashSet;
 use itertools::izip;
 use rsdd::builder::bdd_builder::*;
 use rsdd::builder::bdd_plan::BddPlan;
@@ -7,7 +8,6 @@ use rsdd::builder::cache::all_app::*;
 use rsdd::repr::bdd::*;
 use rsdd::repr::var_label::*;
 use rsdd::repr::var_order::*;
-use crate::data::HashSet;
 
 #[inline]
 pub fn l1_distance(x0: &[f64], x1: &[f64]) -> f64 {
@@ -114,7 +114,9 @@ pub fn plan_variables_h(bdd: &BddPlan, mut vs: HashSet<VarLabel>) -> HashSet<Var
 }
 
 pub fn plan_variables(bdd: &BddPlan) -> Vec<VarLabel> {
-    plan_variables_h(bdd, HashSet::default()).into_iter().collect()
+    plan_variables_h(bdd, HashSet::default())
+        .into_iter()
+        .collect()
 }
 
 #[cfg(test)]

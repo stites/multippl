@@ -1,11 +1,11 @@
 #![allow(clippy::redundant_closure_call)]
 use crate::compile::*;
+use crate::data::HashMap;
 use crate::grammar::*;
 use crate::inference::*;
 use crate::tests::checks::*;
 use crate::typeinf::grammar::*;
 use crate::*;
-use crate::data::HashMap;
 
 use itertools::*;
 use rsdd::sample::probability::*;

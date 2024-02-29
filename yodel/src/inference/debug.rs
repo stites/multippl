@@ -1,8 +1,8 @@
+use crate::data::HashMap;
 use crate::uniquify::grammar::*;
 use crate::utils::render::*;
 use crate::*;
 use itertools::*;
-use crate::data::HashMap;
 use tracing::debug;
 
 #[allow(clippy::too_many_arguments)]

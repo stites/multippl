@@ -1,4 +1,4 @@
-use crate::data::{Weight, HashMap};
+use crate::data::{HashMap, Weight};
 use rsdd::repr::bdd::VarLabel;
 use rsdd::repr::wmc::{RealSemiring, WmcParams};
 

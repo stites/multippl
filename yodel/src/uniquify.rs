@@ -1,8 +1,8 @@
 use crate::data::{errors, CompileError, Result};
+use crate::data::{HashMap, HashSet};
 use crate::grammar::*;
 use crate::DataView;
 use grammar::*;
-use crate::data::{HashMap, HashSet};
 use std::collections::VecDeque;
 use std::fmt::Debug;
 use tracing::*;

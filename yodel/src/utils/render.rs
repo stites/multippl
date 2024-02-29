@@ -1,4 +1,5 @@
 use crate::annotate::grammar::Var;
+use crate::data::HashMap;
 use crate::data::*;
 use crate::grammar::*;
 use crate::uniquify::grammar::UniqueId;
@@ -7,7 +8,6 @@ use itertools::*;
 /// helper functions for rendering
 use rsdd::builder::bdd_plan::*;
 use rsdd::sample::probability::Probability;
-use crate::data::HashMap;
 use tracing::*;
 
 pub fn rendervec(fs: &[String]) -> String {
@@ -160,12 +160,12 @@ macro_rules! debug_compiled {
         //     //     .map(fmt_f64(false))
         //     //     .join(", ");
 
-            debug!("      \\||/  {}", renderbdds(&$comp.out));
-            debug!("      \\||/  {:?}", $comp.accept.print_bdd());
-            debug!("      \\||/  [{}]", renderw(&$comp.weightmap));
-            debug!("      \\||/  [{}]", renderp(&$comp.substitutions));
-            // debug!("      \\||/  {}", weights);
-            debug!("----------------------------------------");
+        debug!("      \\||/  {}", renderbdds(&$comp.out));
+        debug!("      \\||/  {:?}", $comp.accept.print_bdd());
+        debug!("      \\||/  [{}]", renderw(&$comp.weightmap));
+        debug!("      \\||/  [{}]", renderp(&$comp.substitutions));
+        // debug!("      \\||/  {}", weights);
+        debug!("----------------------------------------");
         // })
     }};
     (@ $comp:expr) => {{

@@ -1,9 +1,9 @@
+use crate::data::HashMap;
 use crate::*;
 use core::fmt;
 use core::fmt::Debug;
 use itertools::Itertools;
 use std::any::{Any, TypeId};
-use crate::data::HashMap;
 use std::marker::PhantomData;
 use std::string::String;
 
