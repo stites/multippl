@@ -8,7 +8,7 @@ use rsdd::repr::var_label::*;
 use rsdd::repr::var_order::VarOrder;
 use rsdd::repr::wmc::WmcParams;
 use std::cmp::Eq;
-use std::collections::{HashMap, HashSet};
+use crate::data::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 use tracing::*;
@@ -289,7 +289,9 @@ pub fn insert_inv<T: Hash + Eq + Clone>(inv: &mut InvMap<T>, v: &T, provenance: 
         None => (),
         Some(prov) => match inv.get_mut(prov) {
             None => {
-                inv.insert(prov.clone(), HashSet::from([v.clone()]));
+                let mut hs = HashSet::default();
+                hs.insert(v.clone());
+                inv.insert(prov.clone(), hs);
             }
             Some(vs) => {
                 vs.insert(v.clone());
@@ -342,7 +344,7 @@ impl LabelEnv {
     pub fn new(fids: HashMap<String, FnId>, fun_stats: HashMap<FnId, FnCounts>) -> Self {
         Self {
             lblsym: 0,
-            subst_var: HashMap::new(),
+            subst_var: HashMap::default(),
             letpos: None,
             fnctx: None,
             fids,
@@ -359,7 +361,7 @@ impl LabelEnv {
                     )
                 })
                 .collect(),
-            funs: HashMap::new(),
+            funs: HashMap::default(),
             does_sample: false,
         }
     }
@@ -372,7 +374,7 @@ impl LabelEnv {
     }
 
     pub fn get_bdd_inv(&self) -> InvMap<BddVar> {
-        let mut inv: InvMap<BddVar> = HashMap::new();
+        let mut inv: InvMap<BddVar> = HashMap::default();
         for (_, var) in self.subst_var.iter() {
             match var {
                 Var::Named(_) => continue,
@@ -383,7 +385,7 @@ impl LabelEnv {
         inv
     }
     pub fn get_sampled_inv(&self) -> InvMap<SampledVar> {
-        let mut inv: InvMap<SampledVar> = HashMap::new();
+        let mut inv: InvMap<SampledVar> = HashMap::default();
         for (_, var) in self.subst_var.iter() {
             match var {
                 Var::Named(_) => continue,

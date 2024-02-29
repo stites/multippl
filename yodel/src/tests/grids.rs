@@ -8,7 +8,7 @@ use crate::*;
 use itertools::*;
 use rsdd::sample::probability::*;
 use std::any::{Any, TypeId};
-use std::collections::HashMap;
+use crate::data::HashMap;
 use std::ops::Range;
 use tracing::*;
 use tracing_test::*;
@@ -27,7 +27,7 @@ fn grid2x2_warmup0() {
         "#
         .to_owned()
             + ret
-            + r#"\n}"#
+            + r"\n}"
     };
     check_exact1("grid2x2/0/00", 1.0 / 2.0, &mk("x00"));
     check_exact1("grid2x2/0/01", 0.291666667, &mk("x01"));
@@ -48,7 +48,7 @@ fn grid2x2_warmup1() {
         "#
         .to_owned()
             + ret
-            + r#"\n}"#
+            + r"\n}"
     };
     check_exact1("grid2x2/2/11", 0.317911255, &mk("x11"));
 }
@@ -72,7 +72,7 @@ fn grid2x2() {
         "#
         .to_owned()
             + ret
-            + r#"\n}"#
+            + r"\n}"
     };
     check_exact1("grid2x2/3/00", 0.500000000, &mk("x00"));
     check_exact1("grid2x2/3/01", 0.291666667, &mk("x01"));

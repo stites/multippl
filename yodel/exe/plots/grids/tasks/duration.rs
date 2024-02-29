@@ -85,7 +85,7 @@ pub fn stats(path: String) {
             data.extend(rows.clone());
         }
     }
-    let mut summary = HashMap::new();
+    let mut summary = HashMap::default();
     for d in data {
         let k = SummaryKey::from_data(&d);
         let v = SummaryData::from_data(&d);

@@ -12,7 +12,7 @@ use crate::uniquify::{grammar::UniqueId, SymEnv};
 use crate::*;
 use itertools::*;
 use rand::rngs::StdRng;
-use std::collections::HashMap;
+use crate::data::HashMap;
 use tracing::debug;
 
 #[derive(Debug, Clone, Default)]
@@ -141,8 +141,8 @@ impl DataView {
         Self::new(DataSet::empty())
     }
     pub fn new(data: DataSet) -> Self {
-        let mut sampling = HashMap::new();
-        let mut exact = HashMap::new();
+        let mut sampling = HashMap::default();
+        let mut exact = HashMap::default();
         let mut keys = vec![];
         for (k, vs) in data.ds {
             if vs.is_empty() {

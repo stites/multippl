@@ -8,7 +8,7 @@ use crate::*;
 use itertools::*;
 use rsdd::sample::probability::*;
 use std::any::{Any, TypeId};
-use std::collections::HashMap;
+use crate::data::HashMap;
 use std::ops::Range;
 use tracing::*;
 use tracing_test::*;

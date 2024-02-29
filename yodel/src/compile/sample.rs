@@ -2,7 +2,7 @@ use crate::*;
 use rand::distributions::Distribution;
 use rsdd::builder::bdd_builder::DDNNFPtr;
 use rsdd::repr::wmc::RealSemiring;
-use std::collections::HashMap;
+use crate::data::HashMap;
 use tracing::*;
 
 pub fn sample_from<D: Distribution<V>, V>(state: &mut super::eval::State, dist: D) -> V {

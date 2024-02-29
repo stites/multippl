@@ -3,7 +3,7 @@ use core::fmt;
 use core::fmt::Debug;
 use itertools::Itertools;
 use std::any::{Any, TypeId};
-use std::collections::HashMap;
+use crate::data::HashMap;
 use std::marker::PhantomData;
 use std::string::String;
 

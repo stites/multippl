@@ -24,5 +24,9 @@ pub use rsdd::builder::cache::lru_app::BddApplyTable;
 pub use rsdd::repr::bdd::BddPtr;
 pub use rsdd::sample::probability::Probability;
 
+pub use rustc_hash::{FxHashMap, FxHashSet};
+
 // pub type Mgr = BddManager<AllTable<BddPtr>>;
 pub type Mgr = BddManager<BddApplyTable<BddPtr>>;
+pub type HashMap<K, V> = FxHashMap<K, V>;
+pub type HashSet<V> = FxHashSet<V>;

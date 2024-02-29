@@ -7,7 +7,7 @@ use itertools::*;
 /// helper functions for rendering
 use rsdd::builder::bdd_plan::*;
 use rsdd::sample::probability::Probability;
-use std::collections::HashMap;
+use crate::data::HashMap;
 use tracing::*;
 
 pub fn rendervec(fs: &[String]) -> String {

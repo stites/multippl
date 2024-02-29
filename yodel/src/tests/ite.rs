@@ -8,7 +8,7 @@ use crate::*;
 use itertools::*;
 use rsdd::sample::probability::*;
 use std::any::{Any, TypeId};
-use std::collections::HashMap;
+use crate::data::HashMap;
 use std::ops::Range;
 use tracing::*;
 use tracing_test::*;
@@ -43,7 +43,7 @@ fn ite_0() {
         b"#
         .to_owned()
             + ""
-            + r#"\n}"#
+            + r"\n}"
     };
 
     check_exact1("ite_0  ", 1.0 / 4.0, &mk("b"));
@@ -60,7 +60,7 @@ fn ite_1() {
         "#
         .to_owned()
             + ret
-            + r#"\n}"#
+            + r"\n}"
     };
 
     let yres = (1.0 / 3.0 * 0.25) + (2.0 / 3.0 * 0.4);
@@ -82,7 +82,7 @@ fn ite_2() {
         "#
         .to_owned()
             + ret
-            + r#"\n}"#
+            + r"\n}"
     };
 
     check_exact1("ite_2/y  ", 0.464285714, &mk("y"));
@@ -119,7 +119,7 @@ fn ite_3_with_one_sample_hard1_simplified_more() {
         "#
         .to_owned()
             + ret
-            + r#"\n}"#
+            + r"\n}"
     };
     let n = 5000;
     // debug_approx1("ite_3/x", 0.6, mk(b!("x")), n); // works!
@@ -152,7 +152,7 @@ fn ite_3_with_one_sample_hard1_simplified_more() {
 //     nfail_approx1("ite_3/y", 0.3, mk(b!("y")), n); // broken!
 
 //     let mgr = Mgr::new_default_order(0);
-//     let names = HashMap::new();
+//     let names = HashMap::default();
 //     let (out, mgr) = formula::eval_with("x".to_string(), mgr, names).unwrap();
 //     // hand-derived
 //     let x = out.circuit;
@@ -298,7 +298,7 @@ fn ite_3_with_one_sample_hard1_simplified() {
         "#
         .to_owned()
             + ret
-            + r#"\n}"#
+            + r"\n}"
     };
     let n = 5000;
 
@@ -324,7 +324,7 @@ fn ite_3_with_one_sample_easy_x() {
         "#
         .to_owned()
             + ret
-            + r#"\n}"#
+            + r"\n}"
     };
     check_approx1("ite_3/x  ", 0.909090909, &mk("x"), 1000);
 }
@@ -339,7 +339,7 @@ fn ite_3_with_one_sample_hard1() {
         "#
         .to_owned()
             + ret
-            + r#"\n}"#
+            + r"\n}"
     };
     let n = 3000;
     check_approx1("ite_3/observe/x  ", 0.909090909, &mk("x"), n);
@@ -367,7 +367,7 @@ fn ite_3_with_one_sample_easy_x_or_y() {
         "#
         .to_owned()
             + ret
-            + r#"\n}"#
+            + r"\n}"
     };
     check_approx1("ite_3/x|y", 1.000000000, &mk("x || y"), 1000);
 }
@@ -391,7 +391,7 @@ fn ite_3_with_one_sample_hard1_extra() {
         "#
         .to_owned()
             + ret
-            + r#"\n}"#
+            + r"\n}"
     };
     let n = 50000;
     check_approx1("ite_3/observe/y  ", 0.620253165, &mk("y"), n);

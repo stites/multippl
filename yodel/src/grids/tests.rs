@@ -34,21 +34,21 @@ macro_rules! pr {
 
 macro_rules! pmap {
     ( $(($key:expr , $val:expr)),*) => {{
-        let mut probmap: HashMap<(Ix, Parents<bool>), Probability> = HashMap::new();
+        let mut probmap: HashMap<(Ix, Parents<bool>), Probability> = HashMap::default();
         $(
             probmap.insert($key, $val);
         )*
         probmap
     }};
     ( $($p:literal @ $key:expr),* ) => {{
-        let mut probmap: HashMap<(Ix, Parents<bool>), Probability> = HashMap::new();
+        let mut probmap: HashMap<(Ix, Parents<bool>), Probability> = HashMap::default();
         $(
             probmap.insert($key, pr!($val));
         )*
         probmap
     }};
     ( $($n:literal / $d:literal @ $key:expr),* ) => {{
-        let mut probmap: HashMap<(Ix, Parents<bool>), Probability> = HashMap::new();
+        let mut probmap: HashMap<(Ix, Parents<bool>), Probability> = HashMap::default();
         $(
             probmap.insert($key, pr!($n / $d));
             let (i, p) = $key;

@@ -15,7 +15,7 @@ use rand::distributions::uniform::*;
 use rand::distributions::Distribution;
 use rand::Rng;
 use statrs::distribution::{Bernoulli, Categorical};
-use std::collections::HashMap;
+use crate::data::HashMap;
 
 impl Arbitrary for EVal {
     fn arbitrary(g: &mut Gen) -> Self {

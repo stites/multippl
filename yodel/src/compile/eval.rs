@@ -19,8 +19,8 @@ use rsdd::repr::var_order::VarOrder;
 use rsdd::repr::wmc::*;
 use rsdd::sample::probability::Probability;
 use statrs::distribution::*;
-use std::collections::HashMap;
-use std::collections::HashSet;
+use crate::data::HashMap;
+use crate::data::HashSet;
 use std::fmt;
 use std::string::String;
 use tracing::*;
@@ -79,7 +79,7 @@ fn mk_ite_output_samples(
     truthy_samples: &HashMap<BddPtr, bool>,
     falsy_samples: &HashMap<BddPtr, bool>,
 ) -> HashMap<BddPtr, bool> {
-    let mut samples = HashMap::new();
+    let mut samples = HashMap::default();
     if !opts.sample_pruning {
         samples.extend(truthy_samples);
         samples.extend(falsy_samples);

@@ -3,13 +3,13 @@ use crate::annotate::grammar::Var;
 // use crate::data::importance::{Importance, I};
 use crate::data::errors;
 use crate::data::{Result, Weight, WeightMap};
+use crate::data::HashMap;
 use crate::grammar::{EVal, SVal};
 use crate::uniquify::grammar::UniqueId;
 use crate::*;
 use itertools::izip;
 use num_traits::identities::Zero;
 use rsdd::sample::probability::Probability;
-use std::collections::HashMap;
 
 pub type SubstMap<V> = HashMap<UniqueId, V>;
 pub type Tr = Vec<(SVal, Dist, f64, Option<UniqueId>)>;

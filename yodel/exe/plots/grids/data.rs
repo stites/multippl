@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use crate::data::HashSet;
 use std::str::FromStr;
 use std::time::Duration;
 

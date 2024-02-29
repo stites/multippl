@@ -285,11 +285,11 @@ pub mod make {
         if spec.size < 2 {
             panic!("grid size too small and I don't want to make this typesafe yet");
         }
-        let mut flips = HashMap::new();
-        let mut parents = HashMap::new();
-        let mut diag = HashSet::new();
-        let mut tril = HashSet::new();
-        let mut triu = HashSet::new();
+        let mut flips = HashMap::default();
+        let mut parents = HashMap::default();
+        let mut diag = HashSet::default();
+        let mut tril = HashSet::default();
+        let mut triu = HashSet::default();
         let sampled = spec.sampled;
         let query = spec.query;
 

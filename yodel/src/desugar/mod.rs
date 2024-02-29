@@ -14,7 +14,7 @@ use discrete::*;
 use itertools::Itertools;
 use rsdd::builder::bdd_plan::BddPlan;
 use std::any::{Any, TypeId};
-use std::collections::HashMap;
+use crate::data::HashMap;
 use std::marker::PhantomData;
 use std::string::String;
 
@@ -113,7 +113,7 @@ pub struct SugarMagicEnv {
 impl SugarMagicEnv {
     pub fn new() -> Self {
         Self {
-            discretes: HashMap::new(),
+            discretes: HashMap::default(),
             current_ebind: None,
         }
     }

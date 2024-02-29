@@ -5,11 +5,11 @@ use crate::inference::*;
 use crate::tests::checks::*;
 use crate::typeinf::grammar::*;
 use crate::*;
+use crate::data::HashMap;
 
 use itertools::*;
 use rsdd::sample::probability::*;
 use std::any::{Any, TypeId};
-use std::collections::HashMap;
 use std::ops::Range;
 use tracing::*;
 use tracing_test::*;
@@ -230,7 +230,7 @@ fn free_variable_2_approx_again() {
         "#
         .to_owned()
             + ret
-            + r#"\n}"#
+            + r"\n}"
     };
     check_approx(
         "free2/x*y",
@@ -254,7 +254,7 @@ fn observe_with_free_var_sampled() {
         "#
         .to_owned()
             + ret
-            + r#"\n}"#
+            + r"\n}"
     };
 
     // 𝔼[x = ⊤] =  (p=1/3) ∘ 𝕀[⊤ = ⊤] ∘ (w=1) + (p=2/3) 𝕀[⊥ = ⊤] (w=1/4)
@@ -286,7 +286,7 @@ fn observe_with_free_var() {
         "#
         .to_owned()
             + ret
-            + r#"\n}"#
+            + r"\n}"
     };
     check_approx1(
         "observe_with_free_var",

@@ -1,7 +1,6 @@
-use crate::data::Weight;
+use crate::data::{Weight, HashMap};
 use rsdd::repr::bdd::VarLabel;
 use rsdd::repr::wmc::{RealSemiring, WmcParams};
-use std::collections::HashMap;
 
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct WeightMap {

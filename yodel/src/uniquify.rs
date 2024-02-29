@@ -2,7 +2,8 @@ use crate::data::{errors, CompileError, Result};
 use crate::grammar::*;
 use crate::DataView;
 use grammar::*;
-use std::collections::{HashMap, HashSet, VecDeque};
+use crate::data::{HashMap, HashSet};
+use std::collections::VecDeque;
 use std::fmt::Debug;
 use tracing::*;
 
@@ -110,7 +111,7 @@ impl SymEnv {
         match self.scope.iter().last() {
             Some(_) => (),
             None => {
-                self.scope.push_back(HashSet::new());
+                self.scope.push_back(HashSet::default());
             }
         }
         self.scope.iter_mut().last().unwrap()
