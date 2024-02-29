@@ -149,21 +149,24 @@ macro_rules! debug_step_ng {
 #[macro_export]
 macro_rules! debug_compiled {
     ($comp:expr) => {{
-        let dists = renderbdds(&$comp.out);
-        let accepts = format!("{:?}", $comp.accept.print_bdd());
-        // let weights = $comp
-        //     .importance
-        //     .clone()
-        //     .into_iter()
-        //     .map(fmt_f64(false))
-        //     .join(", ");
+        // let span = debug_span!("debug_compiled");
+        // span.in_scope(|| {
+        //     let dists = ;
+        //     let accepts = format!("{:?}", );
+        //     // let weights = $comp
+        //     //     .importance
+        //     //     .clone()
+        //     //     .into_iter()
+        //     //     .map(fmt_f64(false))
+        //     //     .join(", ");
 
-        debug!("      \\||/  {}", dists);
-        debug!("      \\||/  {}", accepts);
-        debug!("      \\||/  [{}]", renderw(&$comp.weightmap));
-        debug!("      \\||/  [{}]", renderp(&$comp.substitutions));
-        // debug!("      \\||/  {}", weights);
-        debug!("----------------------------------------");
+            debug!("      \\||/  {}", renderbdds(&$comp.out));
+            debug!("      \\||/  {:?}", $comp.accept.print_bdd());
+            debug!("      \\||/  [{}]", renderw(&$comp.weightmap));
+            debug!("      \\||/  [{}]", renderp(&$comp.substitutions));
+            // debug!("      \\||/  {}", weights);
+            debug!("----------------------------------------");
+        // })
     }};
     (@ $comp:expr) => {{
         debug!("      \\||/  {:?}", &$comp.out);
