@@ -121,10 +121,11 @@ macro_rules! debug_step {
 macro_rules! debug_step_ng {
     ($s:expr, $ctx:expr, $comp:expr) => {{
         debug!(
-            "{}, e[{}], e[{}], s[{}]",
+            // "{}, e[{}], e[{}], s[{}]",
+            "{}, e[{}], s[{}]",
             $s,
             renderp(&$ctx.exact.substitutions),
-            renderw(&$ctx.exact.weightmap),
+            // renderw(&$ctx.exact.weightmap),
             renderssubs(&$ctx.sample.substitutions),
         );
         debug_compiled!($comp);

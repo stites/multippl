@@ -54,10 +54,11 @@ pub fn importance_weighting_h_h(
                 trace!("exact output  : {:?}", out.exact.out);
                 trace!("accepting     : {:?}", out.exact.accept);
                 let var_order = mgr.get_order().clone();
-                let params = out
-                    .exact
-                    .weightmap
-                    .as_params(mgr.get_order().num_vars() as u64);
+                let params = o.wmcp.params();
+                // let params = out
+                //     .exact
+                //     .weightmap
+                //     .as_params(mgr.get_order().num_vars() as u64);
 
                 let samples = out.exact.samples(&mut mgr);
                 let accept = out.exact.accept;
@@ -158,10 +159,11 @@ pub fn importance_weighting_inferable(
                 trace!("exact output  : {:?}", out.exact.out);
                 trace!("accepting     : {:?}", out.exact.accept);
                 let var_order = mgr.get_order().clone();
-                let params = out
-                    .exact
-                    .weightmap
-                    .as_params(mgr.get_order().num_vars() as u64);
+                let params = o.wmcp.params();
+                // let params = out
+                //     .exact
+                //     .weightmap
+                //     .as_params(mgr.get_order().num_vars() as u64);
 
                 let samples = out.exact.samples(&mut mgr);
                 let accept = out.exact.accept;

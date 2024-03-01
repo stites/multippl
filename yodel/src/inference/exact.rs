@@ -12,7 +12,7 @@ pub fn exact_with(p: &str) -> (Vec<f64>, WmcStats) {
 pub fn exact_with_h(p: &str) -> (Vec<f64>, Option<WmcStats>) {
     let o = crate::run!(p; --split exact);
     let (out, mut mgr) = (o.out, o.mgr);
-    wmc_prob(&mut mgr, &out.exact)
+    wmc_prob(&mut mgr, &o.wmcp, &out.exact)
 }
 
 pub fn exact(p: &str) -> Vec<f64> {
@@ -35,5 +35,5 @@ pub fn exact_inferable(p: &ProgramInferable) -> (Vec<f64>, Option<WmcStats>) {
         .unwrap();
     let o = r.to_rout(mgr);
     let (out, mut mgr) = (o.out, o.mgr);
-    wmc_prob(&mut mgr, &out.exact)
+    wmc_prob(&mut mgr, &r.wmcp, &out.exact)
 }

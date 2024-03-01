@@ -50,7 +50,8 @@ pub fn eval_eite_predicate(
     }
     let pred_dist = pred_dist[0];
     let var_order = opts.order.clone();
-    let wmc_params = ctx.exact.weightmap.as_params(opts.max_label);
+    // let wmc_params = ctx.exact.weightmap.as_params(opts.max_label);
+    let wmc_params = state.wmc.params();
 
     // FIXME : should be adding stats somewhere
     let mut wmc_opt_h = |pred_dist| {
@@ -207,6 +208,7 @@ pub struct Opts {
 pub struct State<'a> {
     pub opts: Opts,
     pub mgr: &'a mut Mgr,
+    pub wmc: WmcP,
     pub rng: Option<&'a mut StdRng>, // None will use the thread rng
     pub funs: &'a HashMap<FnId, Fun>,
     pub fun_stats: &'a HashMap<FnId, FnCounts>,
@@ -252,9 +254,11 @@ impl<'a> State<'a> {
         } else {
             Some(VarLabel::new(0))
         };
+        let wmc = WmcP::new_with_size(opts.max_label as usize);
         State {
             opts,
             mgr,
+            wmc,
             rng,
             log_weight: Ln::default(),
             funs,
@@ -358,15 +362,15 @@ impl<'a> State<'a> {
                 tracing::debug!("flip done");
                 let o = match &o.out {
                     Some(EVal::EFloat(param)) => {
-                        let mut weightmap = ctx.exact.weightmap.clone();
+                        // let mut weightmap = ctx.exact.weightmap.clone();
                         let (lbl, var) = self.next_bdd(d.clone());
-                        weightmap.insert(lbl, *param);
+                        self.wmc.insert_high(lbl, *param);
                         let var = self.mgr.var(lbl, true);
                         Ok(EOutput {
                             out: Some(EVal::EBdd(var)),
                             accept: ctx.exact.accept,
                             samples: ctx.exact.samples,
-                            weightmap,
+                            weightmap: ctx.exact.weightmap.clone(), // this is effectively a noop now
                             substitutions: ctx.exact.substitutions.clone(),
                         })
                     }
@@ -402,7 +406,8 @@ impl<'a> State<'a> {
                 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 // Score the program:
                 let var_order = self.opts.order.clone();
-                let wmc_params = ctx.exact.weightmap.as_params(self.opts.max_label);
+                // let wmc_params = ctx.exact.weightmap.as_params(self.opts.max_label);
+                let wmc_params = self.wmc.params();
                 let avars = crate::utils::variables(dist);
                 for (i, var) in avars.iter().enumerate() {
                     debug!("{}@{:?}: {:?}", i, var, wmc_params.get_var_weight(*var));

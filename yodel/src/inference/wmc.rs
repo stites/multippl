@@ -65,7 +65,7 @@ pub fn calculate_wmc_prob(
     calculate_wmc_prob_hf64(mgr, params, var_order, dist, accept)
 }
 
-pub fn wmc_prob(mgr: &mut Mgr, c: &EOutput) -> (Vec<f64>, Option<WmcStats>) {
+pub fn wmc_prob(mgr: &mut Mgr, wmc: &WmcP, c: &EOutput) -> (Vec<f64>, Option<WmcStats>) {
     let span = tracing::span!(tracing::Level::DEBUG, "wmc_prob");
     let _enter = span.enter();
     let mut last_stats = None;
@@ -76,7 +76,8 @@ pub fn wmc_prob(mgr: &mut Mgr, c: &EOutput) -> (Vec<f64>, Option<WmcStats>) {
             let ss = c.samples(mgr);
             let (p, stats) = calculate_wmc_prob(
                 mgr,
-                &c.weightmap.as_params(mgr.get_order().num_vars() as u64),
+                // &c.weightmap.as_params(mgr.get_order().num_vars() as u64),
+                &wmc.params(),
                 &mgr.get_order().clone(),
                 *d,
                 c.accept,
@@ -89,7 +90,7 @@ pub fn wmc_prob(mgr: &mut Mgr, c: &EOutput) -> (Vec<f64>, Option<WmcStats>) {
     (probs, last_stats)
 }
 
-pub fn numerators(mgr: &mut Mgr, c: &EOutput, fold_in_samples: bool) -> Vec<f64> {
+pub fn numerators(mgr: &mut Mgr, wmc: WmcP, c: &EOutput, fold_in_samples: bool) -> Vec<f64> {
     let span = tracing::span!(tracing::Level::DEBUG, "numerators");
     let _enter = span.enter();
 
@@ -99,7 +100,8 @@ pub fn numerators(mgr: &mut Mgr, c: &EOutput, fold_in_samples: bool) -> Vec<f64>
     } else {
         c.accept
     };
-    let params = c.weightmap.as_params(mgr.get_order().num_vars() as u64);
+    // let params = c.weightmap.as_params(mgr.get_order().num_vars() as u64);
+    let params = wmc.params();
 
     let probs = c
         .dists()
@@ -113,10 +115,11 @@ pub fn numerators(mgr: &mut Mgr, c: &EOutput, fold_in_samples: bool) -> Vec<f64>
     probs
 }
 
-pub fn queries(mgr: &mut Mgr, c: &EOutput) -> Vec<f64> {
+pub fn queries(mgr: &mut Mgr, w: &WmcP, c: &EOutput) -> Vec<f64> {
     let span = tracing::span!(tracing::Level::DEBUG, "queries");
     let _enter = span.enter();
-    let params = c.weightmap.as_params(mgr.get_order().num_vars() as u64);
+    // let params = c.weightmap.as_params(mgr.get_order().num_vars() as u64);
+    let params = w.params();
 
     let probs = c
         .dists()

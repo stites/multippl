@@ -32,7 +32,8 @@ pub fn exact2sample_bdd_eff(
     out: &mut Output,
     dist: &BddPtr,
 ) -> bool {
-    let wmc_params = out.exact.weightmap.as_params(state.opts.max_label);
+    // let wmc_params = out.exact.weightmap.as_params(state.opts.max_label);
+    let wmc_params = state.wmc.params();
     let var_order = state.opts.order.clone();
     let accept = out.exact.accept;
     let ss = GetSamples::samples(&out.exact, state.mgr, state.opts.sample_pruning);
