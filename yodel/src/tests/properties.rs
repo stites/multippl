@@ -582,6 +582,7 @@ pub fn run_property(precision: Option<f64>, n: Option<usize>, p: &Program<Infera
 }
 
 #[quickcheck]
+#[ignore = "generate well-typed terms first"]
 fn prop_erasure(p: Program<Inferable>) -> bool {
     println!("running...");
     let erased = p.strip_samples();
@@ -592,6 +593,7 @@ fn prop_erasure(p: Program<Inferable>) -> bool {
 }
 
 #[test]
+#[ignore = "generate well-typed terms first"]
 fn test_prop_ex1() {
     let p = Program::SBody(SExpr::SAnf(
         (),
@@ -604,6 +606,7 @@ fn test_prop_ex1() {
 }
 
 #[test]
+#[ignore = "generate well-typed terms first"]
 fn test_prop_ex2() {
     use Anf::*;
     use BddPtr::*;

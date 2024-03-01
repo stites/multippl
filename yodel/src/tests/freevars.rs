@@ -292,6 +292,6 @@ fn observe_with_free_var() {
         "observe_with_free_var",
         2.0 / 3.0, // x y x|y x&y
         &mk("x"),
-        1000,
+        10000,
     );
 }

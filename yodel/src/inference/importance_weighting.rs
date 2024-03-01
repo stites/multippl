@@ -53,7 +53,7 @@ pub fn importance_weighting_h_h(
                 trace!("sample trace  : {:?}", out.sample.trace);
                 trace!("exact output  : {:?}", out.exact.out);
                 trace!("accepting     : {:?}", out.exact.accept);
-                let var_order = mgr.get_order().clone();
+                // let var_order = ;
                 let params = o.wmcp.params();
                 // let params = out
                 //     .exact
@@ -63,9 +63,9 @@ pub fn importance_weighting_h_h(
                 let samples = out.exact.samples(&mut mgr);
                 let accept = out.exact.accept;
                 let final_accept = mgr.and(samples, accept);
-                let RealSemiring(wmc_accept) = accept.wmc(&var_order, &params);
-                let RealSemiring(wmc_final_accept) = final_accept.wmc(&var_order, &params);
-                let RealSemiring(wmc_sample) = samples.wmc(&var_order, &params);
+                let RealSemiring(wmc_accept) = accept.wmc(mgr.get_order(), &params);
+                let RealSemiring(wmc_final_accept) = final_accept.wmc(mgr.get_order(), &params);
+                let RealSemiring(wmc_sample) = samples.wmc(mgr.get_order(), &params);
 
                 let lwmc_accept = Ln::new(wmc_accept);
                 let lwmc_final_accept = Ln::new(wmc_final_accept);
@@ -84,7 +84,7 @@ pub fn importance_weighting_h_h(
                                     0.0
                                 } else {
                                     let num = mgr.and(*d, final_accept);
-                                    let RealSemiring(a) = num.wmc(&var_order, &params);
+                                    let RealSemiring(a) = num.wmc(mgr.get_order(), &params);
                                     a / wmc_final_accept
                                 }
                             })

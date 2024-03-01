@@ -2,7 +2,6 @@ pub mod context;
 pub mod errors;
 pub mod expectations;
 pub mod importance;
-pub mod map;
 pub mod output;
 pub mod weight;
 pub mod wmcstats;
@@ -11,21 +10,18 @@ pub use crate::data::errors::CompileError::*;
 pub use crate::data::errors::*;
 pub use crate::data::expectations::*;
 pub use crate::data::importance::*;
-pub use crate::data::map::*;
 pub use crate::data::output::*;
 pub use crate::data::weight::*;
 pub use crate::data::wmcstats::*;
-use rsdd::repr::var_label::VarLabel;
-use rsdd::repr::wmc::{RealSemiring, WmcParams};
-
-use rsdd::builder::cache::all_app::AllTable;
 
 // reexports and aliases
 pub use rsdd::builder::bdd_builder::BddManager;
+use rsdd::builder::cache::all_app::AllTable;
 pub use rsdd::builder::cache::lru_app::BddApplyTable;
 pub use rsdd::repr::bdd::BddPtr;
+use rsdd::repr::var_label::VarLabel;
+use rsdd::repr::wmc::{RealSemiring, WmcParams};
 pub use rsdd::sample::probability::Probability;
-
 pub use rustc_hash::{FxHashMap, FxHashSet};
 
 // pub type Mgr = BddManager<AllTable<BddPtr>>;

@@ -28,7 +28,7 @@ use tracing::*;
 pub use crate::data::errors::{CompileError, Result};
 // pub use crate::data::importance::{Importance, I};
 pub use crate::data::output::{Output, SubstMap};
-pub use crate::data::{Weight, WeightMap};
+pub use crate::data::Weight;
 use CompileError::*;
 
 use super::anf::*;
@@ -49,8 +49,7 @@ pub fn eval_eite_predicate(
         )));
     }
     let pred_dist = pred_dist[0];
-    let var_order = opts.order.clone();
-    // let wmc_params = ctx.exact.weightmap.as_params(opts.max_label);
+    // let var_order = opts.order.clone();
     let wmc_params = state.wmc.params();
 
     // FIXME : should be adding stats somewhere
@@ -60,7 +59,7 @@ pub fn eval_eite_predicate(
             crate::inference::calculate_wmc_prob(
                 state.mgr,
                 &wmc_params,
-                &var_order,
+                &opts.order,
                 pred_dist,
                 ctx.exact.accept,
                 // TODO if switching to samples_opt, no need to use ctx.
@@ -136,14 +135,11 @@ pub fn eval_eite_output(
 
     let mut substitutions = truthy.exact.substitutions.clone();
     substitutions.extend(falsey.exact.substitutions.clone());
-    let mut weightmap = truthy.exact.weightmap.clone();
-    weightmap.weights.extend(falsey.exact.weightmap.clone());
 
     Ok(EOutput {
         out: Some(dist),
         accept,
         samples,
-        weightmap,
         substitutions,
     })
 }
@@ -194,7 +190,6 @@ pub fn eval_elet_output(
         accept,
         samples,
         substitutions: body.exact.substitutions.clone(),
-        weightmap: body.exact.weightmap,
     };
     Ok(c)
 }
@@ -362,7 +357,6 @@ impl<'a> State<'a> {
                 tracing::debug!("flip done");
                 let o = match &o.out {
                     Some(EVal::EFloat(param)) => {
-                        // let mut weightmap = ctx.exact.weightmap.clone();
                         let (lbl, var) = self.next_bdd(d.clone());
                         self.wmc.insert_high(lbl, *param);
                         let var = self.mgr.var(lbl, true);
@@ -370,7 +364,6 @@ impl<'a> State<'a> {
                             out: Some(EVal::EBdd(var)),
                             accept: ctx.exact.accept,
                             samples: ctx.exact.samples,
-                            weightmap: ctx.exact.weightmap.clone(), // this is effectively a noop now
                             substitutions: ctx.exact.substitutions.clone(),
                         })
                     }
@@ -390,7 +383,6 @@ impl<'a> State<'a> {
 
                 // debug!("In. Accept {}", &ctx.accept.print_bdd());
                 // debug!("Comp. dist {}", renderbdds(&comp.dists));
-                // debug!("weightmap  {:?}", ctx.weightmap);
 
                 // except everything up to this point
                 let accept = ctx.exact.accept;
@@ -406,7 +398,6 @@ impl<'a> State<'a> {
                 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 // Score the program:
                 let var_order = self.opts.order.clone();
-                // let wmc_params = ctx.exact.weightmap.as_params(self.opts.max_label);
                 let wmc_params = self.wmc.params();
                 let avars = crate::utils::variables(dist);
                 for (i, var) in avars.iter().enumerate() {
@@ -436,7 +427,6 @@ impl<'a> State<'a> {
                     out: Some(EVal::EBdd(BddPtr::PtrTrue)),
                     accept: dist,
                     samples: ctx.exact.samples,
-                    weightmap: ctx.exact.weightmap.clone(),
                     substitutions: ctx.exact.substitutions.clone(),
                 };
 

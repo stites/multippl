@@ -89,12 +89,12 @@ pub fn render_history(xss: &[Vec<f64>], high_precision: bool) -> String {
         .map(|ws| format!("[{}]", ws))
         .join(", ")
 }
-pub fn renderw(ws: &WeightMap) -> String {
-    ws.weights
-        .iter()
-        .map(|(k, w)| format!("L{}: ({:.4}, {:.4})", k.value(), w.lo, w.hi))
-        .join(", ")
-}
+// pub fn renderw(ws: &WeightMap) -> String {
+//     ws.weights
+//         .iter()
+//         .map(|(k, w)| format!("L{}: ({:.4}, {:.4})", k.value(), w.lo, w.hi))
+//         .join(", ")
+// }
 pub fn renderp<V: std::fmt::Debug + Clone + PartialEq>(ps: &SubstMap<V>) -> String {
     String::new()
     // ps.iter()
@@ -109,10 +109,11 @@ pub fn renderssubs(ps: &SubstMap<SVal>) -> String {
 macro_rules! debug_step {
     ($s:expr, $ctx:expr, $comp:expr) => {{
         debug!(
-            "{}, [{}], [{}]",
+            // "{}, [{}], [{}]",
+            "{}, [{}]",
             $s,
             renderp(&$ctx.substitutions),
-            renderw(&$ctx.weightmap)
+            // renderw(&$ctx.weightmap)
         );
         debug_compiled!($comp);
     }};
@@ -132,10 +133,10 @@ macro_rules! debug_step_ng {
     }};
     ($s:expr, $ctx:expr, $comp:expr ; $type:literal) => {{
         debug!(
-            "{}, e[{}], e[{}], s[{}]",
+            "{}, e[{}], s[{}]",
             $s,
             renderp(&$ctx.exact.substitutions),
-            renderw(&$ctx.exact.weightmap),
+            // renderw(&$ctx.exact.weightmap),
             renderssubs(&$ctx.sample.substitutions),
         );
         if $type == "sample" {
@@ -163,7 +164,6 @@ macro_rules! debug_compiled {
 
         debug!("      \\||/  {}", renderbdds(&$comp.out));
         debug!("      \\||/  {:?}", $comp.accept.print_bdd());
-        debug!("      \\||/  [{}]", renderw(&$comp.weightmap));
         debug!("      \\||/  [{}]", renderp(&$comp.substitutions));
         // debug!("      \\||/  {}", weights);
         debug!("----------------------------------------");

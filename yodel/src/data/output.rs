@@ -3,7 +3,7 @@ use crate::annotate::grammar::Var;
 // use crate::data::importance::{Importance, I};
 use crate::data::errors;
 use crate::data::HashMap;
-use crate::data::{Result, Weight, WeightMap};
+use crate::data::{Result, Weight};
 use crate::grammar::{EVal, SVal};
 use crate::uniquify::grammar::UniqueId;
 use crate::*;
@@ -23,7 +23,6 @@ pub struct ECtx {
     #[cfg(not(feature = "debug_samples"))]
     pub samples: BddPtr,
     pub substitutions: SubstMap<EVal>,
-    pub weightmap: WeightMap,
 }
 pub trait GetSamples {
     /// optionally prune these samples.
@@ -77,7 +76,6 @@ impl ECtx {
             accept: BddPtr::PtrTrue,
             samples: default_samples(),
             substitutions: dv.exact.clone(),
-            weightmap: Default::default(),
         }
     }
 }
@@ -87,7 +85,6 @@ impl From<&EOutput> for ECtx {
             accept: out.accept,
             samples: out.samples,
             substitutions: out.substitutions.clone(),
-            weightmap: out.weightmap.clone(),
         }
     }
 }
@@ -98,7 +95,6 @@ impl From<&EOutput> for ECtx {
 //             accept: out.accept.clone(),
 //             samples: out.samples.clone(),
 //             substitutions: out.substitutions.clone(),
-//             weightmap: out.weightmap.clone(),
 //         }
 //     }
 // }
@@ -110,7 +106,6 @@ impl ECtx {
             accept: self.accept,
             samples: self.samples,
             substitutions: self.substitutions.clone(),
-            weightmap: self.weightmap.clone(),
         }
     }
 }
@@ -127,8 +122,6 @@ pub struct EOutput {
     pub samples: HashMap<BddPtr, bool>,
     #[cfg(not(feature = "debug_samples"))]
     pub samples: BddPtr,
-    /// compiled weightmap
-    pub weightmap: WeightMap,
     /// substitution environment
     pub substitutions: SubstMap<EVal>,
 }
@@ -163,7 +156,6 @@ impl EOutput {
             accept: ctx.accept,
             samples: ctx.samples,
             substitutions: ctx.substitutions.clone(),
-            weightmap: ctx.weightmap.clone(),
         }
     }
     pub fn pkg(&self) -> Output {
@@ -198,7 +190,6 @@ impl Default for EOutput {
             out: Default::default(),
             accept: BddPtr::PtrTrue,
             samples: default_samples(),
-            weightmap: Default::default(),
             substitutions: Default::default(),
         }
     }
@@ -337,7 +328,6 @@ impl Output {
 
     //         // pass through
     //         substitutions: ctx.substitutions.clone(),
-    //         weightmap: ctx.weightmap.clone(),
 
     //         // unused
     //         probabilities: vec![Probability::new(1.0)],
@@ -354,7 +344,6 @@ impl Output {
 
     //         // pass through
     //         substitutions: ctx.substitutions.clone(),
-    //         weightmap: ctx.weightmap.clone(),
 
     //         // unused
     //         probabilities: vec![Probability::new(1.0)],
