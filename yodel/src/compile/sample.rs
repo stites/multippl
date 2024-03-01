@@ -11,18 +11,6 @@ pub fn sample_from<D: Distribution<V>, V>(state: &mut super::eval::State, dist: 
         None => dist.sample(&mut rand::thread_rng()),
     }
 }
-#[cfg(feature = "debug_samples")]
-fn mk_output_samples(
-    mgr: &mut Mgr,
-    prev_samples: &HashMap<BddPtr, bool>,
-    dist: BddPtr,
-    sample: bool,
-) -> HashMap<BddPtr, bool> {
-    let mut samples = prev_samples.clone();
-    samples.insert(dist.clone(), sample);
-    samples
-}
-#[cfg(not(feature = "debug_samples"))]
 fn mk_output_samples(mgr: &mut Mgr, prev_samples: &BddPtr, dist: BddPtr, sample: bool) -> BddPtr {
     let new_sample = mgr.iff(dist, BddPtr::from_bool(sample));
     mgr.and(*prev_samples, new_sample)
@@ -34,7 +22,7 @@ pub fn exact2sample_bdd_eff(
 ) -> bool {
     // let wmc_params = out.exact.weightmap.as_params(state.opts.max_label);
     let wmc_params = state.wmc.params();
-    let var_order = state.opts.order.clone();
+    let var_order = &state.order;
     let accept = out.exact.accept;
     let ss = GetSamples::samples(&out.exact, state.mgr, state.opts.sample_pruning);
     debug!(" samples: {:?}", out.exact.samples);
@@ -42,7 +30,7 @@ pub fn exact2sample_bdd_eff(
     debug!("  dist size: {}", dist.count_nodes());
     debug!("accept size: {}", accept.count_nodes());
     let theta_q =
-        crate::inference::calculate_wmc_prob(state.mgr, &wmc_params, &var_order, *dist, accept, ss)
+        crate::inference::calculate_wmc_prob(state.mgr, &wmc_params, var_order, *dist, accept, ss)
             .0;
     debug!(" #rec calls: {}", state.mgr.num_recursive_calls());
 

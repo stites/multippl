@@ -59,7 +59,7 @@ pub fn eval_eite_predicate(
             crate::inference::calculate_wmc_prob(
                 state.mgr,
                 &wmc_params,
-                &opts.order,
+                &state.order,
                 pred_dist,
                 ctx.exact.accept,
                 // TODO if switching to samples_opt, no need to use ctx.
@@ -197,13 +197,14 @@ pub fn eval_elet_output(
 pub struct Opts {
     pub sample_pruning: bool,
     pub max_label: u64,
-    pub order: VarOrder,
+    // pub order: VarOrder,
 }
 
 pub struct State<'a> {
     pub opts: Opts,
     pub mgr: &'a mut Mgr,
     pub wmc: WmcP,
+    pub order: VarOrder,
     pub rng: Option<&'a mut StdRng>, // None will use the thread rng
     pub funs: &'a HashMap<FnId, Fun>,
     pub fun_stats: &'a HashMap<FnId, FnCounts>,
@@ -239,7 +240,7 @@ impl<'a> State<'a> {
         fun_stats: &'a HashMap<FnId, FnCounts>,
     ) -> State<'a> {
         let opts = Opts {
-            order: mgr.get_order().clone(),
+            // order: mgr.get_order().clone(),
             max_label: mgr.get_order().num_vars() as u64,
             sample_pruning,
         };
@@ -250,11 +251,13 @@ impl<'a> State<'a> {
             Some(VarLabel::new(0))
         };
         let wmc = WmcP::new_with_size(opts.max_label as usize);
+        let order = mgr.get_order().clone();
         State {
             opts,
             mgr,
             wmc,
             rng,
+            order,
             log_weight: Ln::default(),
             funs,
             fnctx: None,
@@ -397,14 +400,13 @@ impl<'a> State<'a> {
 
                 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 // Score the program:
-                let var_order = self.opts.order.clone();
                 let wmc_params = self.wmc.params();
                 let avars = crate::utils::variables(dist);
                 for (i, var) in avars.iter().enumerate() {
                     debug!("{}@{:?}: {:?}", i, var, wmc_params.get_var_weight(*var));
                 }
                 debug!("WMCParams  {:?}", wmc_params);
-                debug!("VarOrder   {:?}", var_order);
+                debug!("VarOrder   {:?}", self.order);
                 debug!("Accept     {}", &dist.print_bdd());
                 // FIXME: should be aggregating these stats somewhere
                 debug!("using opt? {}", self.opts.sample_pruning);
@@ -413,7 +415,7 @@ impl<'a> State<'a> {
                 let (wmc, _) = crate::inference::calculate_wmc_prob(
                     self.mgr,
                     &wmc_params,
-                    &var_order,
+                    &self.order,
                     dist,
                     ctx.exact.accept,
                     ss,
