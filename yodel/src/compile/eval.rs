@@ -67,7 +67,7 @@ pub fn eval_eite_predicate(
         )
     };
     let wmc_true = wmc_opt_h(pred_dist);
-    let wmc_false = wmc_opt_h(pred_dist.neg());
+    let wmc_false = Probability::new(1.0 - wmc_true.as_f64()); // wmc_opt_h(pred_dist.neg());
     Ok((pred_dist, (wmc_true, wmc_false)))
 }
 
