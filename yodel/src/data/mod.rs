@@ -26,7 +26,7 @@ pub use rustc_hash::{FxHashMap, FxHashSet};
 
 // pub type Mgr = BddManager<AllTable<BddPtr>>;
 pub type Mgr = BddManager<BddApplyTable<BddPtr>>;
-pub fn new_manager(maxlbl : u64) -> Mgr {
+pub fn new_manager(maxlbl: u64) -> Mgr {
     // Mgr::new_default_order(maxlbl as usize)
     // Mgr::new_default_order(0_usize);
     Mgr::new_default_order_lru(0_usize)
