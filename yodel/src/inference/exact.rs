@@ -30,7 +30,8 @@ pub fn exact_inferable(p: &ProgramInferable) -> (Vec<f64>, Option<WmcStats>) {
     tracing::debug!(",====================================.");
     tracing::debug!("| manager compiled! building program |");
     tracing::debug!("`===================================='");
-    let r = crate::pipeline::runner(&mut mgr, &mut opt.rng(), &opt, &p, &lenv)
+    let wmc = WmcP::new_with_size(mgr.get_order().num_vars());
+    let r = crate::pipeline::runner(&mut mgr, &mut opt.rng(), wmc, &opt, &p, &lenv)
         .ok()
         .unwrap();
     let o = PartialROut::to_rout(r, mgr);

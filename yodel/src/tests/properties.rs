@@ -548,36 +548,37 @@ pub fn run_property(precision: Option<f64>, n: Option<usize>, p: &Program<Infera
     let precision = precision.unwrap_or(0.01);
     let n = n.unwrap_or(10000);
     let exact = exact_inferable(p).0;
-    let (approx, _) = importance_weighting_inferable(
-        n,
-        p,
-        &Options {
-            opt: false,
-            debug: false,
-            // seed: Some(9),
-            ..Default::default()
-        },
-    );
+    panic!("not implemented");
+    // let (approx, _) = importance_weighting_inferable(
+    //     n,
+    //     p,
+    //     &Options {
+    //         opt: false,
+    //         debug: false,
+    //         // seed: Some(9),
+    //         ..Default::default()
+    //     },
+    // );
     println!("exact:  {:?}", exact);
-    println!("approx: {:?}", approx);
+    // println!("approx: {:?}", approx);
 
-    assert_eq!(
-        exact.len(),
-        approx.len(),
-        "[check_inv][mismatch shape] compiled exact queries {}, but approx returned results {}",
-        renderfloats(&exact, false),
-        renderfloats(&approx, false),
-    );
-    izip!(exact, approx)
-        .enumerate()
-        .for_each(|(i, (ext, apx))| {
-            let ret = (ext - apx).abs() < precision;
-            let i = i + 1;
-            assert!(
-                ret,
-                "[check_inv][#{i}][err]((exact: {ext}) - (approx: {apx})).abs < {precision}"
-            );
-        });
+    // assert_eq!(
+    //     exact.len(),
+    //     approx.len(),
+    //     "[check_inv][mismatch shape] compiled exact queries {}, but approx returned results {}",
+    //     renderfloats(&exact, false),
+    //     renderfloats(&approx, false),
+    // );
+    // izip!(exact, approx)
+    //     .enumerate()
+    //     .for_each(|(i, (ext, apx))| {
+    //         let ret = (ext - apx).abs() < precision;
+    //         let i = i + 1;
+    //         assert!(
+    //             ret,
+    //             "[check_inv][#{i}][err]((exact: {ext}) - (approx: {apx})).abs < {precision}"
+    //         );
+    //     });
     true
 }
 

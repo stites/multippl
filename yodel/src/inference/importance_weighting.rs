@@ -39,6 +39,7 @@ pub fn importance_weighting_h_h(
     let (mut mgr, p, lenv, dview) = make_mgr_and_ir_with_data(code, ds).unwrap();
     let mut rng = opt.rng();
     let mut e = Exp1::empty();
+    let mut wmc = WmcP::new_with_size(mgr.get_order().num_vars());
 
     debug!("running with options: {:#?}", opt);
     for step in 1..=steps {
@@ -46,7 +47,7 @@ pub fn importance_weighting_h_h(
             debug!("step: {step}");
         }
         let step0ix = step - 1; // fix off-by-one for data view
-        match crate::runner_with_data(&mut mgr, &mut rng, opt, &p, &lenv, step0ix, &dview) {
+        match crate::runner_with_data(&mut mgr, &mut rng, wmc, opt, &p, &lenv, step0ix, &dview) {
             Ok(o) => {
                 let (out, w) = (o.out, o.weight);
                 trace!("sample output : {:?}", out.sample.out);
@@ -110,6 +111,7 @@ pub fn importance_weighting_h_h(
                         (qs, w)
                     }
                 };
+                wmc = o.wmcp;
                 e.add(Exp1::new(lw, lquery));
             }
             Err(e) => panic!(
@@ -135,105 +137,113 @@ pub fn importance_weighting_h_h(
     (e.query(), None)
 }
 
-pub fn importance_weighting_inferable(
-    steps: usize,
-    p: &Program<Inferable>,
-    opt: &crate::Options,
-) -> (Vec<f64>, Option<WmcStats>) {
-    let (mut mgr, p, lenv, dview) = make_mgr_and_ir_with_data_h(p, DataSet::empty()).unwrap();
-    let mut rng = opt.rng();
-    let mut e = Exp1::empty();
+// pub fn importance_weighting_inferable(
+//     steps: usize,
+//     p: &Program<Inferable>,
+//     opt: &crate::Options,
+// ) -> (Vec<f64>, Option<WmcStats>) {
+//     panic!("not implemented");
+//     let (mut mgr, p, lenv, dview) = make_mgr_and_ir_with_data_h(p, DataSet::empty()).unwrap();
+//     let mut rng = opt.rng();
+//     let mut e = Exp1::empty();
+//     let mut prev_calls = 0;
+//     let mut wmc = WmcP::new_with_size(mgr.get_order().num_vars());
 
-    debug!("running with options: {:#?}", opt);
-    for step in 1..=steps {
-        if step % 100 == 1 {
-            debug!("step: {step}");
-        }
-        let step0ix = step - 1; // fix off-by-one for data view
-        match crate::runner_with_data(&mut mgr, &mut rng, opt, &p, &lenv, step0ix, &dview) {
-            Ok(o) => {
-                let (out, w) = (o.out, o.weight);
-                trace!("sample output : {:?}", out.sample.out);
-                trace!("exact output  : {:?}", out.exact.out);
-                trace!("accepting     : {:?}", out.exact.accept);
-                let params = o.wmcp.params();
-                // let params = out
-                //     .exact
-                //     .weightmap
-                //     .as_params(mgr.get_order().num_vars() as u64);
+//     debug!("running with options: {:#?}", opt);
+//     for step in 1..=steps {
+//         if step % 100 == 1 {
+//             debug!("step: {step}");
+//         }
+//         let step0ix = step - 1; // fix off-by-one for data view
 
-                let samples = out.exact.samples(&mut mgr);
-                let accept = out.exact.accept;
-                let final_accept = mgr.and(samples, accept);
-                let RealSemiring(wmc_accept) = accept.wmc(&mgr.get_order(), &params);
-                let RealSemiring(wmc_final_accept) = final_accept.wmc(&mgr.get_order(), &params);
-                let RealSemiring(wmc_sample) = samples.wmc(&mgr.get_order(), &params);
+//         match crate::runner_with_data(&mut mgr, &mut rng, wmc, opt, &p, &lenv, step0ix, &dview) {
+//             Ok(o) => {
+//                 let (out, w) = (o.out, o.weight);
+//                 trace!("sample output : {:?}", out.sample.out);
+//                 trace!("exact output  : {:?}", out.exact.out);
+//                 trace!("accepting     : {:?}", out.exact.accept);
+//                 let params = o.wmcp.params();
+//                 // let params = out
+//                 //     .exact
+//                 //     .weightmap
+//                 //     .as_params(mgr.get_order().num_vars() as u64);
 
-                let lwmc_accept = Ln::new(wmc_accept);
-                let lwmc_final_accept = Ln::new(wmc_final_accept);
-                let lwmc_sample = Ln::new(wmc_sample);
+//                 let samples = out.exact.samples(&mut mgr);
+//                 let accept = out.exact.accept;
+//                 let final_accept = mgr.and(samples, accept);
+//                 let RealSemiring(wmc_accept) = accept.wmc(&mgr.get_order(), &params);
+//                 let RealSemiring(wmc_final_accept) = final_accept.wmc(&mgr.get_order(), &params);
+//                 let RealSemiring(wmc_sample) = samples.wmc(&mgr.get_order(), &params);
 
-                let (lquery, lw): (Vec<f64>, Ln) = match p.query() {
-                    // TODO drop this traversal, pre-compute during eval
-                    Query::EQuery(_) => {
-                        // the final accepting criteria is a & s. Normalize the query.
-                        let lquery = out
-                            .exact
-                            .dists()
-                            .iter()
-                            .map(|d| {
-                                if wmc_final_accept == 0.0 {
-                                    0.0
-                                } else {
-                                    let num = mgr.and(*d, final_accept);
-                                    let RealSemiring(a) = num.wmc(mgr.get_order(), &params);
-                                    a / wmc_final_accept
-                                }
-                            })
-                            .collect_vec();
+//                 let lwmc_accept = Ln::new(wmc_accept);
+//                 let lwmc_final_accept = Ln::new(wmc_final_accept);
+//                 let lwmc_sample = Ln::new(wmc_sample);
 
-                        // Weight the query by ratio of a & s : s
-                        // let w = Ln::new(wmc_final_accept).sub(Ln::new(wmc_sample));
+//                 let (lquery, lw): (Vec<f64>, Ln) = match p.query() {
+//                     // TODO drop this traversal, pre-compute during eval
+//                     Query::EQuery(_) => {
+//                         // the final accepting criteria is a & s. Normalize the query.
+//                         let lquery = out
+//                             .exact
+//                             .dists()
+//                             .iter()
+//                             .map(|d| {
+//                                 if wmc_final_accept == 0.0 {
+//                                     0.0
+//                                 } else {
+//                                     let num = mgr.and(*d, final_accept);
+//                                     let RealSemiring(a) = num.wmc(mgr.get_order(), &params);
+//                                     a / wmc_final_accept
+//                                 }
+//                             })
+//                             .collect_vec();
 
-                        (lquery, w)
-                    }
-                    Query::SQuery(_) => {
-                        // FIXME: ensure that you're not missing something about incorporating the accepting criteria into the weight!
-                        let qs = out.sample.out.iter().fold(vec![], |mut acc, v| {
-                            let vs: Vec<f64> = From::<&SVal>::from(v);
-                            acc.extend(vs);
-                            acc
-                        });
-                        // let ws = qs.iter().map(|_| pq.weight()).collect_vec();
-                        // let w = Ln::new(wmc_final_accept).sub(Ln::new(wmc_sample));
-                        trace!("    final_weight: {}", w.log_render());
-                        trace!("           query: {:?}", qs);
-                        trace!("-----------------------");
+//                         // Weight the query by ratio of a & s : s
+//                         // let w = Ln::new(wmc_final_accept).sub(Ln::new(wmc_sample));
 
-                        (qs, w)
-                    }
-                };
-                e.add(Exp1::new(lw, lquery));
-            }
-            Err(e) => panic!(
-                "Error type: {}{}",
-                e.errtype(),
-                e.msg()
-                    .map(|x| format!("\nMessage: {}", x))
-                    .unwrap_or_else(|| "".to_string())
-            ),
-        }
-    }
+//                         (lquery, w)
+//                     }
+//                     Query::SQuery(_) => {
+//                         // FIXME: ensure that you're not missing something about incorporating the accepting criteria into the weight!
+//                         let qs = out.sample.out.iter().fold(vec![], |mut acc, v| {
+//                             let vs: Vec<f64> = From::<&SVal>::from(v);
+//                             acc.extend(vs);
+//                             acc
+//                         });
+//                         // let ws = qs.iter().map(|_| pq.weight()).collect_vec();
+//                         // let w = Ln::new(wmc_final_accept).sub(Ln::new(wmc_sample));
+//                         trace!("    final_weight: {}", w.log_render());
+//                         trace!("           query: {:?}", qs);
+//                         trace!("-----------------------");
 
-    // let exp = e.exp.clone();
-    // let expw = e.expw.clone();
-    debug!("∑[w * f(-)]: {:?}", e.wquery_sums);
-    debug!("       ∑[w]: {:?}", e.sum_w);
+//                         (qs, w)
+//                     }
+//                 };
+//                 let calls = mgr.num_recursive_calls();
+//                 println!("{:?}", prev_calls - calls);
+//                 prev_calls = calls;
+//                 wmc = o.wmcp;
+//                 e.add(Exp1::new(lw, lquery));
+//             }
+//             Err(e) => panic!(
+//                 "Error type: {}{}",
+//                 e.errtype(),
+//                 e.msg()
+//                     .map(|x| format!("\nMessage: {}", x))
+//                     .unwrap_or_else(|| "".to_string())
+//             ),
+//         }
+//     }
 
-    // // debug_importance_weighting(true, steps, &ws, &[], &prs, &sss, &exp, &expw);
+//     // let exp = e.exp.clone();
+//     // let expw = e.expw.clone();
+//     debug!("∑[w * f(-)]: {:?}", e.wquery_sums);
+//     debug!("       ∑[w]: {:?}", e.sum_w);
 
-    // let x = e.query();
-    // info!("E[q]: {}", renderfloats(&x, false));
-    // (x, stats_max)
-    (e.query(), None)
-}
+//     // // debug_importance_weighting(true, steps, &ws, &[], &prs, &sss, &exp, &expw);
+
+//     // let x = e.query();
+//     // info!("E[q]: {}", renderfloats(&x, false));
+//     // (x, stats_max)
+//     (e.query(), None)
+// }

@@ -223,6 +223,7 @@ pub struct State<'a> {
 impl<'a> State<'a> {
     pub fn new(
         mgr: &'a mut Mgr,
+        wmc: WmcP,
         rng: Option<&'a mut StdRng>, // None will use the thread rng
         sample_pruning: bool,
         funs: &'a HashMap<FnId, Fun>,
@@ -238,7 +239,6 @@ impl<'a> State<'a> {
         } else {
             Some(VarLabel::new(0))
         };
-        let wmc = WmcP::new_with_size(opts.max_label as usize);
         State {
             opts,
             mgr,

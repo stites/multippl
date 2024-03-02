@@ -302,26 +302,29 @@ macro_rules! run {
 
 pub fn run(code: &str, opt: &Options) -> Result<ROut> {
     let (mut mgr, p, lenv) = make_mgr_and_ir(code)?;
+    let wmc = WmcP::new_with_size(mgr.get_order().num_vars());
     tracing::debug!(",====================================.");
     tracing::debug!("| manager compiled! building program |");
     tracing::debug!("`===================================='");
-    let r = runner(&mut mgr, &mut opt.rng(), opt, &p, &lenv)?;
+    let r = runner(&mut mgr, &mut opt.rng(), wmc, opt, &p, &lenv)?;
     Ok(PartialROut::to_rout(r, mgr))
 }
 
 pub fn runner(
     mgr: &mut Mgr,
     rng: &mut StdRng,
+    wmc: WmcP,
     opt: &Options,
     p: &Program<crate::annotate::grammar::Annotated>,
     lenv: &LabelEnv,
 ) -> Result<PartialROut> {
-    runner_with_data(mgr, rng, opt, p, lenv, 0, &DataView::empty())
+    runner_with_data(mgr, rng, wmc, opt, p, lenv, 0, &DataView::empty())
 }
 
 pub fn runner_with_data(
     mgr: &mut Mgr,
     rng: &mut StdRng,
+    wmc: WmcP,
     opt: &Options,
     p: &Program<crate::annotate::grammar::Annotated>,
     lenv: &LabelEnv,
@@ -331,7 +334,14 @@ pub fn runner_with_data(
     let sample_pruning = opt.opt;
 
     tracing::debug!("program running...");
-    let mut state = State::new(mgr, Some(rng), sample_pruning, &lenv.funs, &lenv.fun_stats);
+    let mut state = State::new(
+        mgr,
+        wmc,
+        Some(rng),
+        sample_pruning,
+        &lenv.funs,
+        &lenv.fun_stats,
+    );
     let out = state.eval_program_with_data(p, &dv.view(step))?;
     tracing::debug!("program... compiled!");
     let weight = state.log_weight();
