@@ -51,52 +51,34 @@ pub fn eval_eite_predicate(
     let pred_dist = pred_dist[0];
     let wmc_params = state.wmc.params();
 
-    // FIXME : should be adding stats somewhere
-    let mut wmc_opt_h = |pred_dist| {
-        let ss = ctx.exact.samples(state.mgr, state.opts.sample_pruning);
-        Probability::new(
-            crate::inference::calculate_wmc_prob(
-                state.mgr,
-                &wmc_params,
-                pred_dist,
-                ctx.exact.accept,
-                // TODO if switching to samples_opt, no need to use ctx.
-                ss,
-            )
-            .0,
-        )
-    };
-    let wmc_true = wmc_opt_h(pred_dist);
-    let wmc_false = Probability::new(1.0 - wmc_true.as_f64()); // wmc_opt_h(pred_dist.neg());
-    Ok((pred_dist, (wmc_true, wmc_false)))
-}
-
-#[inline]
-#[cfg(feature = "debug_samples")]
-fn mk_ite_output_samples(
-    state: &mut super::eval::State,
-    truthy_samples: &HashMap<BddPtr, bool>,
-    falsy_samples: &HashMap<BddPtr, bool>,
-) -> HashMap<BddPtr, bool> {
-    let mut samples = HashMap::default();
-    if !state.opts.sample_pruning {
-        samples.extend(truthy_samples);
-        samples.extend(falsy_samples);
-    };
-    samples
+    let ss = ctx.exact.samples(state.mgr, state.opts.sample_pruning);
+    let wmc_true = crate::inference::calculate_wmc_prob(
+        state.mgr,
+        &wmc_params,
+        pred_dist,
+        ctx.exact.accept,
+        // TODO if switching to samples_opt, no need to use ctx.
+        ss,
+    )
+    .0;
+    let wmc_false = 1.0 - wmc_true;
+    Ok((
+        pred_dist,
+        (Probability::new(wmc_true), Probability::new(wmc_false)),
+    ))
 }
 
 #[inline(always)]
-#[cfg(not(feature = "debug_samples"))]
 fn mk_ite_output_samples(
     state: &mut super::eval::State,
     truthy_samples: &BddPtr,
     falsy_samples: &BddPtr,
 ) -> BddPtr {
     if !state.opts.sample_pruning {
-        return state.mgr.and(*truthy_samples, *falsy_samples);
-    };
-    BddPtr::PtrTrue
+        state.mgr.and(*truthy_samples, *falsy_samples)
+    } else {
+        BddPtr::PtrTrue
+    }
 }
 
 #[inline(always)]
