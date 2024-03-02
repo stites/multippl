@@ -8,7 +8,6 @@ use tracing::*;
 pub fn calculate_wmc_prob_h(
     mgr: &mut Mgr,
     params: &WmcParams<RealSemiring>,
-    var_order: &VarOrder,
     dist: BddPtr,
     accept: BddPtr,
 ) -> (f64, f64, WmcStats) {
@@ -18,6 +17,7 @@ pub fn calculate_wmc_prob_h(
     debug!("{:?} /\\ {:?} = {:?}", dist, accept, num);
     debug!("-------------");
     debug!("{:?}", accept);
+    let var_order = mgr.get_order();
 
     let RealSemiring(a) = num.wmc(var_order, params);
     let RealSemiring(z) = accept.wmc(var_order, params);
@@ -39,11 +39,10 @@ pub fn calculate_wmc_prob_h(
 pub fn calculate_wmc_prob_hf64(
     mgr: &mut Mgr,
     params: &WmcParams<RealSemiring>,
-    var_order: &VarOrder,
     dist: BddPtr,
     accept: BddPtr,
 ) -> (f64, WmcStats) {
-    let (a, z, stats) = calculate_wmc_prob_h(mgr, params, var_order, dist, accept);
+    let (a, z, stats) = calculate_wmc_prob_h(mgr, params, dist, accept);
     if a == 0.0 {
         (0.0, stats)
     } else {
@@ -54,7 +53,6 @@ pub fn calculate_wmc_prob_hf64(
 pub fn calculate_wmc_prob(
     mgr: &mut Mgr,
     params: &WmcParams<RealSemiring>,
-    var_order: &VarOrder,
     dist: BddPtr,
     accept: BddPtr,
     samples: BddPtr,
@@ -62,7 +60,7 @@ pub fn calculate_wmc_prob(
     let span = tracing::span!(tracing::Level::DEBUG, "calculate_wmc_prob");
     let _enter = span.enter();
     let accept = mgr.and(samples, accept);
-    calculate_wmc_prob_hf64(mgr, params, var_order, dist, accept)
+    calculate_wmc_prob_hf64(mgr, params, dist, accept)
 }
 
 pub fn wmc_prob(mgr: &mut Mgr, wmc: &WmcP, c: &EOutput) -> (Vec<f64>, Option<WmcStats>) {
@@ -78,7 +76,6 @@ pub fn wmc_prob(mgr: &mut Mgr, wmc: &WmcP, c: &EOutput) -> (Vec<f64>, Option<Wmc
                 mgr,
                 // &c.weightmap.as_params(mgr.get_order().num_vars() as u64),
                 &wmc.params(),
-                &mgr.get_order().clone(),
                 *d,
                 c.accept,
                 ss,

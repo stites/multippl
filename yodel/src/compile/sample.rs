@@ -22,7 +22,6 @@ pub fn exact2sample_bdd_eff(
 ) -> bool {
     // let wmc_params = out.exact.weightmap.as_params(state.opts.max_label);
     let wmc_params = state.wmc.params();
-    let var_order = &state.order;
     let accept = out.exact.accept;
     let ss = GetSamples::samples(&out.exact, state.mgr, state.opts.sample_pruning);
     debug!(" samples: {:?}", out.exact.samples);
@@ -30,7 +29,7 @@ pub fn exact2sample_bdd_eff(
     debug!("  dist size: {}", dist.count_nodes());
     debug!("accept size: {}", accept.count_nodes());
     let theta_q =
-        crate::inference::calculate_wmc_prob(state.mgr, &wmc_params, var_order, *dist, accept, ss)
+        crate::inference::calculate_wmc_prob(state.mgr, &wmc_params, *dist, accept, ss)
             .0;
     debug!(" #rec calls: {}", state.mgr.num_recursive_calls());
 

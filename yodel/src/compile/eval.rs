@@ -48,7 +48,6 @@ pub fn eval_eite_predicate(
         )));
     }
     let pred_dist = pred_dist[0];
-    // let var_order = opts.order.clone();
     let wmc_params = state.wmc.params();
 
     // FIXME : should be adding stats somewhere
@@ -58,7 +57,6 @@ pub fn eval_eite_predicate(
             crate::inference::calculate_wmc_prob(
                 state.mgr,
                 &wmc_params,
-                &state.order,
                 pred_dist,
                 ctx.exact.accept,
                 // TODO if switching to samples_opt, no need to use ctx.
@@ -189,18 +187,17 @@ pub fn eval_elet_output(
     };
     Ok(c)
 }
+
 #[derive(Debug)]
 pub struct Opts {
     pub sample_pruning: bool,
     pub max_label: u64,
-    // pub order: VarOrder,
 }
 
 pub struct State<'a> {
     pub opts: Opts,
     pub mgr: &'a mut Mgr,
     pub wmc: WmcP,
-    pub order: VarOrder,
     pub rng: Option<&'a mut StdRng>, // None will use the thread rng
     pub funs: &'a HashMap<FnId, Fun>,
     pub fun_stats: &'a HashMap<FnId, FnCounts>,
@@ -211,22 +208,7 @@ pub struct State<'a> {
     pub fnctx: Option<FnCall>,
 }
 
-fn calculate_label(
-    label: VarLabel,
-    offset: Option<FnCall>,
-    while_index: u64, // this one is brittle, requires some more static analysis
-    stats: &HashMap<FnId, FnCounts>,
-) -> VarLabel {
-    match offset {
-        None => label,
-        Some(FnCall(fid, fcall)) => {
-            let stats = stats.get(&fid).expect("all functions present");
-            let offset = stats.num_uids * (fcall - 1 + while_index); // function calls are 1-indexed, offsets are 0-indexed,
-            let l = label.value() + offset;
-            VarLabel::new(label.value() + offset)
-        }
-    }
-}
+
 impl<'a> State<'a> {
     pub fn new(
         mgr: &'a mut Mgr,
@@ -236,7 +218,6 @@ impl<'a> State<'a> {
         fun_stats: &'a HashMap<FnId, FnCounts>,
     ) -> State<'a> {
         let opts = Opts {
-            // order: mgr.get_order().clone(),
             max_label: mgr.get_order().num_vars() as u64,
             sample_pruning,
         };
@@ -247,13 +228,11 @@ impl<'a> State<'a> {
             Some(VarLabel::new(0))
         };
         let wmc = WmcP::new_with_size(opts.max_label as usize);
-        let order = mgr.get_order().clone();
         State {
             opts,
             mgr,
             wmc,
             rng,
-            order,
             log_weight: Ln::default(),
             funs,
             fnctx: None,
@@ -283,9 +262,12 @@ impl<'a> State<'a> {
         }
     }
 
+    #[inline(always)]
     pub fn log_weight(&self) -> Ln {
         self.log_weight
     }
+
+    #[inline(always)]
     pub fn score(&mut self, s: f64) {
         // if !(p == q) {
         self.log_weight = self.log_weight.add(Ln::new(s));
@@ -402,7 +384,6 @@ impl<'a> State<'a> {
                     debug!("{}@{:?}: {:?}", i, var, wmc_params.get_var_weight(*var));
                 }
                 debug!("WMCParams  {:?}", wmc_params);
-                debug!("VarOrder   {:?}", self.order);
                 debug!("Accept     {}", &dist.print_bdd());
                 // FIXME: should be aggregating these stats somewhere
                 debug!("using opt? {}", self.opts.sample_pruning);
@@ -411,7 +392,6 @@ impl<'a> State<'a> {
                 let (wmc, _) = crate::inference::calculate_wmc_prob(
                     self.mgr,
                     &wmc_params,
-                    &self.order,
                     dist,
                     ctx.exact.accept,
                     ss,
