@@ -860,7 +860,6 @@ impl<'a> State<'a> {
                 trace!("sample: {:?}", v);
                 trace!("  prob: {}", q);
 
-                out.sample.trace.push((v.clone(), d.clone(), q, None));
                 out.sample.out = Some(v);
                 Ok(out)
             }

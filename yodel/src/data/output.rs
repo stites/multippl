@@ -18,9 +18,6 @@ pub type Tr = Vec<(SVal, Dist, f64, Option<UniqueId>)>;
 #[derive(Debug, Clone, PartialEq)]
 pub struct ECtx {
     pub accept: BddPtr,
-    #[cfg(feature = "debug_samples")]
-    pub samples: HashMap<BddPtr, bool>,
-    #[cfg(not(feature = "debug_samples"))]
     pub samples: BddPtr,
     pub substitutions: SubstMap<EVal>,
 }
@@ -28,6 +25,7 @@ pub trait GetSamples {
     /// optionally prune these samples.
     fn compile_samples(&self, mgr: &mut Mgr) -> BddPtr;
 
+    #[inline(always)]
     fn samples(&self, mgr: &mut Mgr, prune: bool) -> BddPtr {
         if prune {
             BddPtr::PtrTrue
@@ -37,40 +35,26 @@ pub trait GetSamples {
     }
 }
 
-#[cfg(feature = "debug_samples")]
-fn _all_samples(samples: &HashMap<BddPtr, bool>, mgr: &mut Mgr) -> BddPtr {
-    samples.iter().fold(BddPtr::PtrTrue, |ss, (dist, s)| {
-        let nxt = mgr.iff(dist.clone(), BddPtr::from_bool(*s));
-        mgr.and(ss, nxt)
-    })
-}
-
 impl GetSamples for ECtx {
-    #[cfg(feature = "debug_samples")]
-    fn compile_samples(&self, mgr: &mut Mgr) -> BddPtr {
-        _all_samples(&self.samples, mgr)
-    }
-    #[cfg(not(feature = "debug_samples"))]
+    #[inline(always)]
     fn compile_samples(&self, mgr: &mut Mgr) -> BddPtr {
         self.samples
     }
 }
 
-#[cfg(feature = "debug_samples")]
-fn default_samples() -> HashMap<BddPtr, bool> {
-    Default::default()
-}
-#[cfg(not(feature = "debug_samples"))]
+#[inline(always)]
 fn default_samples() -> BddPtr {
     BddPtr::PtrTrue
 }
 impl GetSamples for Ctx {
+    #[inline(always)]
     fn compile_samples(&self, mgr: &mut Mgr) -> BddPtr {
         GetSamples::compile_samples(&self.exact, mgr)
     }
 }
 
 impl ECtx {
+    #[inline(always)]
     pub fn default_with_data(dv: &DataView1) -> Self {
         ECtx {
             accept: BddPtr::PtrTrue,
@@ -80,6 +64,7 @@ impl ECtx {
     }
 }
 impl From<&EOutput> for ECtx {
+    #[inline(always)]
     fn from(out: &EOutput) -> Self {
         ECtx {
             accept: out.accept,
@@ -88,18 +73,8 @@ impl From<&EOutput> for ECtx {
         }
     }
 }
-// impl From<&EOutput> for Ctx {
-//     fn from(out: &EOutput) -> Self {
-
-//         ECtx {
-//             accept: out.accept.clone(),
-//             samples: out.samples.clone(),
-//             substitutions: out.substitutions.clone(),
-//         }
-//     }
-// }
-
 impl ECtx {
+    #[inline(always)]
     pub fn as_output(&self, out: Option<EVal>) -> EOutput {
         EOutput {
             out,
@@ -118,30 +93,25 @@ pub struct EOutput {
     /// acceptance criteria
     pub accept: BddPtr,
     /// sample consistency
-    #[cfg(feature = "debug_samples")]
-    pub samples: HashMap<BddPtr, bool>,
-    #[cfg(not(feature = "debug_samples"))]
     pub samples: BddPtr,
     /// substitution environment
     pub substitutions: SubstMap<EVal>,
 }
 impl GetSamples for EOutput {
-    #[cfg(feature = "debug_samples")]
-    fn compile_samples(&self, mgr: &mut Mgr) -> BddPtr {
-        _all_samples(&self.samples, mgr)
-    }
-    #[cfg(not(feature = "debug_samples"))]
+    #[inline(always)]
     fn compile_samples(&self, mgr: &mut Mgr) -> BddPtr {
         self.samples
     }
 }
+#[inline(always)]
 pub fn as_dists(outs: Vec<EVal>) -> Vec<BddPtr> {
     outs.iter()
-        .cloned()
-        .filter(|v| match v {
+        // .cloned()
+        .filter(|v| match *v {
             EVal::EBdd(b) => true,
             a => false,
         })
+        .cloned()
         .map(|v| match v {
             EVal::EBdd(b) => Ok(b),
             a => errors::typecheck_failed(&format!("eoutput projection into bdds got {a:?}")),
@@ -197,20 +167,17 @@ impl Default for EOutput {
 #[derive(Debug, Clone, PartialEq)]
 pub struct SCtx {
     pub substitutions: SubstMap<SVal>,
-    pub trace: Tr,
 }
 impl SCtx {
     pub fn as_output(&self, out: Option<SVal>) -> SOutput {
         SOutput {
             out,
-            trace: self.trace.clone(),
             substitutions: self.substitutions.clone(),
         }
     }
     pub fn default_with_data(dv: &DataView1) -> Self {
         SCtx {
             substitutions: dv.sampling.clone(),
-            trace: Default::default(),
         }
     }
 }
@@ -221,8 +188,6 @@ pub struct SOutput {
     pub out: Option<SVal>,
     /// sampling substitutions
     pub substitutions: SubstMap<SVal>,
-    // sampled values traces (and ids)
-    pub trace: Tr,
 }
 impl SOutput {
     pub fn head(&self) -> SVal {
@@ -236,7 +201,6 @@ impl From<&SOutput> for SCtx {
     fn from(o: &SOutput) -> Self {
         SCtx {
             substitutions: o.substitutions.clone(),
-            trace: o.trace.clone(),
         }
     }
 }
@@ -248,6 +212,7 @@ pub struct Ctx {
 }
 
 impl Ctx {
+    #[inline(always)]
     pub fn default_with_data(dv: &DataView1) -> Self {
         Ctx {
             exact: ECtx::default_with_data(dv),
@@ -256,23 +221,27 @@ impl Ctx {
     }
 }
 impl Ctx {
+    #[inline(always)]
     pub fn mk_eoutput(&self, exact: EOutput) -> Output {
         Output {
             exact,
             sample: self.sample.as_output(None),
         }
     }
+    #[inline(always)]
     pub fn mk_soutput(&self, sample: SOutput) -> Output {
         Output {
             exact: self.exact.as_output(None),
             sample,
         }
     }
+    #[inline(always)]
     pub fn new_from_eoutput(&self, exact: &EOutput) -> Self {
         let mut ctx = self.clone();
         ctx.exact = ECtx::from(exact);
         ctx
     }
+    #[inline(always)]
     pub fn new_from_soutput(&self, sample: &SOutput) -> Self {
         let mut ctx = self.clone();
         ctx.sample = SCtx::from(sample);
@@ -280,6 +249,7 @@ impl Ctx {
     }
 }
 impl From<&Output> for Ctx {
+    #[inline(always)]
     fn from(o: &Output) -> Self {
         Ctx {
             exact: ECtx::from(&o.exact),
@@ -297,74 +267,18 @@ pub struct Output {
 }
 
 impl Output {
-    // pub fn new_from_eoutput(ctx: &Ctx, exact: &EOutput) -> Output {
-    //     let mut ctx = ctx.clone();
-    //     ctx.exact = ECtx::from(exact);
-    //     ctx
-    // }
-    // pub fn new_from_soutput(&self, sample: &SOutput) -> Self {
-    //     let mut ctx = self.clone();
-    //     ctx.sample = SCtx::from(sample);
-    //     ctx
-    // }
+    #[inline(always)]
     pub fn exact(exact: EOutput) -> Output {
         Output {
             exact,
             sample: Default::default(),
         }
     }
+    #[inline(always)]
     pub fn sample(sample: SOutput) -> Output {
         Output {
             sample,
             exact: Default::default(),
         }
     }
-    // pub fn for_sample_lang_sample(ctx: &Context, sample: bool, dist: BddPtr) -> Output {
-    //     let newsample = if sample { dist } else { dist.not() };
-    //     Output {
-    //         out: vec![],
-    //         accept: ctx.accept,
-    //         samples: ctx.samples,
-
-    //         // pass through
-    //         substitutions: ctx.substitutions.clone(),
-
-    //         // unused
-    //         probabilities: vec![Probability::new(1.0)],
-    //         importance: I::Weight(1.0),
-    //     }
-    // }
-
-    // pub fn for_sample_lang(ctx: &Context) -> Output {
-    //     // let accept = BddPtr::from_bool(sample.unwrap_or_else(|| false));
-    //     Output {
-    //         out: vec![BddPtr::PtrTrue],
-    //         accept: ctx.accept,
-    //         samples: ctx.samples,
-
-    //         // pass through
-    //         substitutions: ctx.substitutions.clone(),
-
-    //         // unused
-    //         probabilities: vec![Probability::new(1.0)],
-    //         // importance: I::Weight(1.0),
-    //         ssubstitutions: ctx.ssubstitutions.clone(),
-    //         sout: vec![],
-    //     }
-    // }
-    // pub fn sval(&self) -> Vec<SVal> {
-    //     self.sout.clone()
-    // }
-    // pub fn sint(&self) -> u64 {
-    //     SVal::vec_as(&self.sout, &SVal::as_int)
-    // }
-    // pub fn sbool(&self) -> bool {
-    //     SVal::vec_as(&self.sout, &SVal::as_bool)
-    // }
-    // pub fn sfloat(&self) -> f64 {
-    //     SVal::vec_as(&self.sout, &SVal::as_float)
-    // }
-    // pub fn sfloats(&self) -> Vec<f64> {
-    //     self.sval().iter().map(|v| v.as_float()).collect()
-    // }
 }

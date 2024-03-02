@@ -151,17 +151,6 @@ macro_rules! debug_step_ng {
 #[macro_export]
 macro_rules! debug_compiled {
     ($comp:expr) => {{
-        // let span = debug_span!("debug_compiled");
-        // span.in_scope(|| {
-        //     let dists = ;
-        //     let accepts = format!("{:?}", );
-        //     // let weights = $comp
-        //     //     .importance
-        //     //     .clone()
-        //     //     .into_iter()
-        //     //     .map(fmt_f64(false))
-        //     //     .join(", ");
-
         debug!("      \\||/  {}", renderbdds(&$comp.out));
         debug!("      \\||/  {:?}", $comp.accept.print_bdd());
         debug!("      \\||/  [{}]", renderp(&$comp.substitutions));
@@ -171,7 +160,6 @@ macro_rules! debug_compiled {
     }};
     (@ $comp:expr) => {{
         debug!("      \\||/  {:?}", &$comp.out);
-        debug!("      \\||/  {:?}", &$comp.trace);
         debug!("      \\||/  {:?}", &$comp.substitutions);
         debug!("----------------------------------------");
     }};

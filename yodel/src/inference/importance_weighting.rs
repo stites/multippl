@@ -50,7 +50,6 @@ pub fn importance_weighting_h_h(
             Ok(o) => {
                 let (out, w) = (o.out, o.weight);
                 trace!("sample output : {:?}", out.sample.out);
-                trace!("sample trace  : {:?}", out.sample.trace);
                 trace!("exact output  : {:?}", out.exact.out);
                 trace!("accepting     : {:?}", out.exact.accept);
                 // let var_order = ;
@@ -155,7 +154,6 @@ pub fn importance_weighting_inferable(
             Ok(o) => {
                 let (out, w) = (o.out, o.weight);
                 trace!("sample output : {:?}", out.sample.out);
-                trace!("sample trace  : {:?}", out.sample.trace);
                 trace!("exact output  : {:?}", out.exact.out);
                 trace!("accepting     : {:?}", out.exact.accept);
                 let params = o.wmcp.params();
