@@ -5,16 +5,20 @@ use rsdd::builder::bdd_builder::DDNNFPtr;
 use rsdd::repr::wmc::RealSemiring;
 use tracing::*;
 
+#[inline(always)]
 pub fn sample_from<D: Distribution<V>, V>(state: &mut super::eval::State, dist: D) -> V {
     match state.rng.as_mut() {
         Some(rng) => dist.sample(rng),
         None => dist.sample(&mut rand::thread_rng()),
     }
 }
+#[inline(always)]
 fn mk_output_samples(mgr: &mut Mgr, prev_samples: &BddPtr, dist: BddPtr, sample: bool) -> BddPtr {
     let new_sample = mgr.iff(dist, BddPtr::from_bool(sample));
     mgr.and(*prev_samples, new_sample)
 }
+
+#[inline]
 pub fn exact2sample_bdd_eff(
     state: &mut super::eval::State,
     out: &mut Output,
@@ -28,9 +32,7 @@ pub fn exact2sample_bdd_eff(
     debug!("csamples: {:?}", ss);
     debug!("  dist size: {}", dist.count_nodes());
     debug!("accept size: {}", accept.count_nodes());
-    let theta_q =
-        crate::inference::calculate_wmc_prob(state.mgr, &wmc_params, *dist, accept, ss)
-            .0;
+    let theta_q = crate::inference::calculate_wmc_prob(state.mgr, &wmc_params, *dist, accept, ss).0;
     debug!(" #rec calls: {}", state.mgr.num_recursive_calls());
 
     let bern = statrs::distribution::Bernoulli::new(theta_q).unwrap();

@@ -35,6 +35,7 @@ use super::anf::*;
 use super::grammar::*;
 use super::sample::*;
 
+#[inline(always)]
 pub fn eval_eite_predicate(
     state: &mut super::eval::State,
     ctx: &Ctx,
@@ -69,6 +70,8 @@ pub fn eval_eite_predicate(
     let wmc_false = wmc_opt_h(pred_dist.neg());
     Ok((pred_dist, (wmc_true, wmc_false)))
 }
+
+#[inline]
 #[cfg(feature = "debug_samples")]
 fn mk_ite_output_samples(
     state: &mut super::eval::State,
@@ -82,6 +85,8 @@ fn mk_ite_output_samples(
     };
     samples
 }
+
+#[inline(always)]
 #[cfg(not(feature = "debug_samples"))]
 fn mk_ite_output_samples(
     state: &mut super::eval::State,
@@ -93,6 +98,8 @@ fn mk_ite_output_samples(
     };
     BddPtr::PtrTrue
 }
+
+#[inline(always)]
 pub fn eval_eite_output(
     state: &mut super::eval::State,
     ctx: &Ctx,
@@ -138,6 +145,7 @@ pub fn eval_eite_output(
     })
 }
 
+#[inline(always)]
 #[cfg(feature = "debug_samples")]
 fn mk_elet_output_samples(
     opts: &Opts,
@@ -152,6 +160,8 @@ fn mk_elet_output_samples(
     };
     Default::default()
 }
+
+#[inline(always)]
 #[cfg(not(feature = "debug_samples"))]
 fn mk_elet_output_samples(
     opts: &Opts,
@@ -164,6 +174,8 @@ fn mk_elet_output_samples(
     };
     BddPtr::PtrTrue
 }
+
+#[inline(always)]
 pub fn eval_elet_output(
     mgr: &mut Mgr,
     ctx: &Ctx,
@@ -207,7 +219,6 @@ pub struct State<'a> {
     log_weight: Ln,
     pub fnctx: Option<FnCall>,
 }
-
 
 impl<'a> State<'a> {
     pub fn new(
