@@ -33,7 +33,8 @@ pub fn exact_inferable(p: &ProgramInferable) -> (Vec<f64>, Option<WmcStats>) {
     let r = crate::pipeline::runner(&mut mgr, &mut opt.rng(), &opt, &p, &lenv)
         .ok()
         .unwrap();
-    let o = r.to_rout(mgr);
+    let o = PartialROut::to_rout(r, mgr);
     let (out, mut mgr) = (o.out, o.mgr);
-    wmc_prob(&mut mgr, &r.wmcp, &out.exact)
+    let wmcp = o.wmcp;
+    wmc_prob(&mut mgr, &wmcp, &out.exact)
 }

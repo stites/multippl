@@ -29,7 +29,7 @@ pub type Mgr = BddManager<BddApplyTable<BddPtr>>;
 pub type HashMap<K, V> = FxHashMap<K, V>;
 pub type HashSet<V> = FxHashSet<V>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct WmcP(WmcParams<RealSemiring>);
 
 impl WmcP {

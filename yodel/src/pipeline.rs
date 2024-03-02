@@ -248,13 +248,18 @@ pub struct PartialROut {
     pub rng: Option<StdRng>,
 }
 impl PartialROut {
-    pub fn to_rout(&self, mgr: Mgr) -> ROut {
+    pub fn to_rout(p: Self, mgr: Mgr) -> ROut {
+        let rng = p.rng.clone();
+        let out = p.out.clone();
+        let weight = p.weight;
+        let wmcp = p.wmcp;
+
         ROut {
             mgr,
-            out: self.out.clone(),
-            rng: self.rng.clone(),
-            weight: self.weight,
-            wmcp: self.wmcp.clone(),
+            out,
+            rng,
+            weight,
+            wmcp,
         }
     }
 }
@@ -301,7 +306,7 @@ pub fn run(code: &str, opt: &Options) -> Result<ROut> {
     tracing::debug!("| manager compiled! building program |");
     tracing::debug!("`===================================='");
     let r = runner(&mut mgr, &mut opt.rng(), opt, &p, &lenv)?;
-    Ok(r.to_rout(mgr))
+    Ok(PartialROut::to_rout(r, mgr))
 }
 
 pub fn runner(
@@ -329,12 +334,15 @@ pub fn runner_with_data(
     let mut state = State::new(mgr, Some(rng), sample_pruning, &lenv.funs, &lenv.fun_stats);
     let out = state.eval_program_with_data(p, &dv.view(step))?;
     tracing::debug!("program... compiled!");
+    let weight = state.log_weight();
+    let rng = state.rng.cloned();
+    let wmcp = state.wmc;
 
     Ok(PartialROut {
         out,
-        wmcp: state.wmc.clone(),
-        weight: state.log_weight(),
-        rng: state.rng.cloned(),
+        wmcp,
+        weight,
+        rng,
     })
 }
 

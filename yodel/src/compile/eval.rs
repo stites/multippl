@@ -39,7 +39,6 @@ pub fn eval_eite_predicate(
     state: &mut super::eval::State,
     ctx: &Ctx,
     cond: &AnfAnn<EVal>,
-    opts: &Opts,
 ) -> Result<(BddPtr, (Probability, Probability))> {
     let pred = eval_eanf(state, ctx, cond)?;
     let pred_dist = pred.dists();
@@ -54,7 +53,7 @@ pub fn eval_eite_predicate(
 
     // FIXME : should be adding stats somewhere
     let mut wmc_opt_h = |pred_dist| {
-        let ss = ctx.exact.samples(state.mgr, opts.sample_pruning);
+        let ss = ctx.exact.samples(state.mgr, state.opts.sample_pruning);
         Probability::new(
             crate::inference::calculate_wmc_prob(
                 state.mgr,
@@ -74,13 +73,12 @@ pub fn eval_eite_predicate(
 }
 #[cfg(feature = "debug_samples")]
 fn mk_ite_output_samples(
-    opts: &Opts,
     state: &mut super::eval::State,
     truthy_samples: &HashMap<BddPtr, bool>,
     falsy_samples: &HashMap<BddPtr, bool>,
 ) -> HashMap<BddPtr, bool> {
     let mut samples = HashMap::default();
-    if !opts.sample_pruning {
+    if !state.opts.sample_pruning {
         samples.extend(truthy_samples);
         samples.extend(falsy_samples);
     };
@@ -88,12 +86,11 @@ fn mk_ite_output_samples(
 }
 #[cfg(not(feature = "debug_samples"))]
 fn mk_ite_output_samples(
-    opts: &Opts,
     state: &mut super::eval::State,
     truthy_samples: &BddPtr,
     falsy_samples: &BddPtr,
 ) -> BddPtr {
-    if !opts.sample_pruning {
+    if !state.opts.sample_pruning {
         return state.mgr.and(*truthy_samples, *falsy_samples);
     };
     BddPtr::PtrTrue
@@ -104,7 +101,6 @@ pub fn eval_eite_output(
     guard: BddPtr,
     truthy_branch: (Probability, Output),
     falsey_branch: (Probability, Output),
-    opts: &Opts,
 ) -> Result<EOutput> {
     let (wmc_true, truthy) = truthy_branch;
     let (wmc_false, falsey) = falsey_branch;
@@ -126,7 +122,7 @@ pub fn eval_eite_output(
             f = f
         ),
     };
-    let samples = mk_ite_output_samples(opts, state, &truthy.exact.samples, &falsey.exact.samples);
+    let samples = mk_ite_output_samples(state, &truthy.exact.samples, &falsey.exact.samples);
 
     let accept = state
         .mgr
@@ -193,7 +189,7 @@ pub fn eval_elet_output(
     };
     Ok(c)
 }
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Opts {
     pub sample_pruning: bool,
     pub max_label: u64,
@@ -442,9 +438,7 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 tracing::debug!("ite");
 
-                let opts = &self.opts.clone();
-                let (pred_dist, (wmc_true, wmc_false)) =
-                    eval_eite_predicate(self, &ctx, cond, opts)?;
+                let (pred_dist, (wmc_true, wmc_false)) = eval_eite_predicate(self, &ctx, cond)?;
 
                 debug!("=============================");
                 debug!("wmc_true {}, wmc_false {}", wmc_true, wmc_false);
@@ -469,7 +463,6 @@ impl<'a> State<'a> {
                     pred_dist,
                     (wmc_true, truthy),
                     (wmc_false, falsey),
-                    opts,
                 )?;
                 debug_step_ng!("ite", ctx, &o);
                 let out = ctx.mk_eoutput(o);
