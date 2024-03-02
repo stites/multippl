@@ -47,8 +47,7 @@ pub fn importance_weighting_h_h(
             debug!("step: {step}");
         }
         let step0ix = step - 1; // fix off-by-one for data view
-                                // let mut mgr = Mgr::new_default_order_lru((mxl as usize));
-        let mut mgr = Mgr::new_default_order_lru(0_usize);
+        let mut mgr = crate::data::new_manager(mxl);
         match crate::runner_with_data(&mut mgr, &mut rng, wmc, opt, &p, &lenv, step0ix, &dview) {
             Ok(o) => {
                 let (out, w) = (o.out, o.weight);

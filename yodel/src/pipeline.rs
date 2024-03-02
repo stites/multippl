@@ -347,6 +347,7 @@ pub fn runner_with_data(
     let weight = state.log_weight();
     let rng = state.rng.cloned();
     let wmcp = state.wmc;
+    // println!("{}", state.mgr.get_order().num_vars());
 
     Ok(PartialROut {
         out,
@@ -386,7 +387,7 @@ pub fn runner_with_data(
 //     tracing::debug!("(annotated)");
 //     let maxlbl = ar.maxbdd.0;
 //     tracing::trace!("(manager created with max label: {maxlbl})");
-//     Ok(Mgr::new_default_order(maxlbl as usize))
+//     Ok(new_manager(maxlbl))
 // }
 pub fn make_mgr_and_ir(
     code: &str,
@@ -448,7 +449,6 @@ pub fn make_mgr_and_ir_with_data_h(
     tracing::debug!("(annotated)");
     let maxlbl = ar.maxbdd.0;
     tracing::debug!("(manager created with max label: {maxlbl})");
-    // let mgr = Mgr::new_default_order(maxlbl as usize);
-    let mgr = Mgr::new_default_order_lru(0_usize);
+    let mgr = crate::data::new_manager(maxlbl);
     Ok((mgr, p, lenv, dv))
 }
