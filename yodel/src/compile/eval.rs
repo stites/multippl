@@ -253,7 +253,9 @@ impl<'a> State<'a> {
             next,
         }
     }
-    pub fn next_bdd(&mut self, flip: BddVar) -> (VarLabel, BddPtr) {
+
+    /// use State::next_bdd because we can't statically determine the var label, given that we have probabilistic programs and procedures.
+    pub fn next_bdd(&mut self) -> (VarLabel, BddPtr) {
         match self.next {
             None => {
                 // let label = calculate_label(&self.call_stack, flip.label, self.fnctx, self.while_index, self.fun_stats);
@@ -264,7 +266,8 @@ impl<'a> State<'a> {
             Some(lbl) => {
                 let label = lbl;
                 self.next = Some(VarLabel::new(label.value() + 1));
-                if self.mgr.num_vars() < (label.value() as usize) {
+                // println!("{:?}, {}: reuse? {}", self.next, self.mgr.num_vars(), self.mgr.num_vars() < (label.value() as usize));
+                if (label.value() as usize) < self.mgr.num_vars() {
                     (label, self.mgr.var(label, true))
                 } else {
                     self.mgr.new_var(true)
@@ -341,7 +344,7 @@ impl<'a> State<'a> {
                 let out = ctx.mk_eoutput(o);
                 Ok(out)
             }
-            EFlip(d, param) => {
+            EFlip(_d, param) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "flip");
                 let _enter = span.enter();
                 tracing::debug!("flip: {:?}", e);
@@ -349,9 +352,13 @@ impl<'a> State<'a> {
                 tracing::debug!("flip done");
                 let o = match &o.out {
                     Some(EVal::EFloat(param)) => {
-                        let (lbl, var) = self.next_bdd(d.clone());
-                        self.wmc.insert_high(lbl, *param);
-                        let var = self.mgr.var(lbl, true);
+                        // // backfill any cached variables
+                        // while self.mgr.get_order().num_vars() <= d.label.value().try_into().unwrap() {
+                        //    self.mgr.new_var(true);
+                        // }
+                        // let var = self.mgr.var(d.label, true);
+                        let (label, var) = self.next_bdd();
+                        self.wmc.insert_high(label, *param);
                         Ok(EOutput {
                             out: Some(EVal::EBdd(var)),
                             accept: ctx.exact.accept,
