@@ -5,12 +5,13 @@ use rsdd::repr::var_order::VarOrder;
 use rsdd::repr::wmc::*;
 use tracing::*;
 
+#[inline(always)]
 pub fn calculate_wmc_prob_h(
     mgr: &mut Mgr,
     params: &WmcParams<RealSemiring>,
     dist: BddPtr,
     accept: BddPtr,
-) -> (f64, f64, WmcStats) {
+) -> (f64, f64, Option<WmcStats>) {
     // let dist = mgr.compile_plan(&dist);
     // let accept = mgr.compile_plan(&accept);
     let num = mgr.and(dist, accept);
@@ -25,23 +26,24 @@ pub fn calculate_wmc_prob_h(
     debug!("----------- = {}", a / z);
     debug!("{}", z);
     (
-        a,
-        z,
-        WmcStats {
-            dist: dist.count_nodes(),
-            dist_accept: num.count_nodes(),
-            accept: accept.count_nodes(),
-            mgr_recursive_calls: mgr.num_recursive_calls(),
-        },
+        a, z,
+        None,
+        // Some(WmcStats {
+        //     dist: dist.count_nodes(),
+        //     dist_accept: num.count_nodes(),
+        //     accept: accept.count_nodes(),
+        //     mgr_recursive_calls: mgr.num_recursive_calls(),
+        // }),
     )
 }
 
+#[inline(always)]
 pub fn calculate_wmc_prob_hf64(
     mgr: &mut Mgr,
     params: &WmcParams<RealSemiring>,
     dist: BddPtr,
     accept: BddPtr,
-) -> (f64, WmcStats) {
+) -> (f64, Option<WmcStats>) {
     let (a, z, stats) = calculate_wmc_prob_h(mgr, params, dist, accept);
     if a == 0.0 {
         (0.0, stats)
@@ -50,13 +52,14 @@ pub fn calculate_wmc_prob_hf64(
     }
 }
 
+#[inline(always)]
 pub fn calculate_wmc_prob(
     mgr: &mut Mgr,
     params: &WmcParams<RealSemiring>,
     dist: BddPtr,
     accept: BddPtr,
     samples: BddPtr,
-) -> (f64, WmcStats) {
+) -> (f64, Option<WmcStats>) {
     let span = tracing::span!(tracing::Level::DEBUG, "calculate_wmc_prob");
     let _enter = span.enter();
     let accept = mgr.and(samples, accept);
@@ -80,7 +83,7 @@ pub fn wmc_prob(mgr: &mut Mgr, wmc: &WmcP, c: &EOutput) -> (Vec<f64>, Option<Wmc
                 c.accept,
                 ss,
             );
-            last_stats = Some(stats);
+            last_stats = stats;
             p
         })
         .collect_vec();
