@@ -36,10 +36,10 @@ pub fn importance_weighting_h_h(
     data: DataPoints,
 ) -> (Vec<f64>, Option<WmcStats>) {
     let ds = DataSet::new(data);
-    let (mut mgr, p, lenv, dview) = make_mgr_and_ir_with_data(code, ds).unwrap();
+    let (mgr, p, lenv, dview) = make_mgr_and_ir_with_data(code, ds).unwrap();
     let mut rng = opt.rng();
     let mut e = Exp1::empty();
-    let mut wmc = WmcP::new_with_size(mgr.get_order().num_vars());
+    let mut wmc = WmcP::new_with_size(lenv.lblsym as usize);
 
     debug!("running with options: {:#?}", opt);
     for step in 1..=steps {
@@ -47,6 +47,8 @@ pub fn importance_weighting_h_h(
             debug!("step: {step}");
         }
         let step0ix = step - 1; // fix off-by-one for data view
+                                // let mut mgr = Mgr::new_default_order_lru((mxl as usize));
+        let mut mgr = Mgr::new_default_order_lru(0_usize);
         match crate::runner_with_data(&mut mgr, &mut rng, wmc, opt, &p, &lenv, step0ix, &dview) {
             Ok(o) => {
                 let (out, w) = (o.out, o.weight);
