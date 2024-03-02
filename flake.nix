@@ -165,6 +165,8 @@
             cargo-criterion
             evcxr # make sure repl is in a gc-root
             cargo-play # quickly run a rust file that has a main function
+            valgrind
+            cargo-valgrind
 
             cargo-tarpaulin # code coverage
 
