@@ -30,15 +30,29 @@ if __name__ == "__main__":
     parser.add_argument("--seed", default=0, type=int,)
     args = parser.parse_args()
 
-    ising_model = lambda: mkgrid(9, probfn)
+    model = lambda: mkgrid(9, probfn)
 
-    (l1s, times) = runall(ising_model, sites9, truth9, num_runs=args.num_runs, num_samples=args.num_samples, start_seed=args.seed)
-    print("--------")
-    runs = len(l1s)
-    print(f"averages over {runs} runs:")
-    print("wallclock:", sum(times) / len(times), "s")
-    print("       L1:", sum(l1s) / len(l1s))
-
-    # averages over 10 runs:
-    # wallclock: 296.45508604049684 s
-    #        L1: 4.415222655601883
+    if args.num_runs > 1:
+        (l1s, times) = runall(model, sites9, truth9, num_runs=args.num_runs, num_samples=args.num_samples, start_seed=args.seed)
+        print("--------")
+        runs = len(l1s)
+        print(f"averages over {runs} runs:")
+        print("wallclock:", sum(times) / len(times), "s")
+        print("       L1:", sum(l1s) / len(l1s))
+    else:
+        # we are benchmarking, expect the same output as yodel
+        torch.manual_seed(args.seed)
+        np.random.seed(args.seed)
+        random.seed(args.seed)
+        start = time.time()
+        importance = Importance(model, num_samples=args.num_samples)
+        posterior = importance.run()
+        xs = allmarg(posterior, sites9, num_samples=args.num_samples)
+        end = time.time()
+        s = end - start
+        print(" ".join([f"{x}" for x in xs]))
+        print("{:.3f}ms".format(s * 1000))
+        # if s < 1.0:
+        #     print("{:.3f}ms".format(s / 1000))
+        # else:
+        #     print("{:.3f}s".format(s))

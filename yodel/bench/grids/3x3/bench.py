@@ -18,8 +18,8 @@ def proc(args):
 
     outfilepath = lambda seed: logdir + "_".join([
         f"{mainfile.replace('.', '-')}",
-        f"s{seed}",
         f"n{nsteps}",
+        f"s{seed}",
         f"{date}_{hm}.log"])
 
 
@@ -44,7 +44,7 @@ def runner_(mainfile, cmd, with_seed=True, logdir="logs/",**args):
     all_args = [(run, mainfile, nsteps, nruns, args['initial_seed'], cmd, logdir, with_seed) for run in range(nruns)]
     with Pool(nruns) as p:
         pbar = tqdm(p.imap(proc, all_args), total=nruns)
-        pbar.set_description(mainfile)
+        pbar.set_description(mainfile + f"(n:{nsteps})")
         list(pbar)
     end = time.time()
     noti_success(mainfile, nruns, nruns,  (end - start) / nruns)
@@ -104,21 +104,29 @@ if __name__ == "__main__":
     hm  = time.strftime("%H:%M", time.localtime())
     logdir = args.out_dir + date + "/" + hm + "/"
     os.makedirs(logdir, exist_ok=True)
+    reserved = ["bench.py", "avg.py"]
+    files = [f for f in os.listdir('.') if os.path.isfile(f) and not (f in reserved)]
 
-    files = [f for f in os.listdir('.') if os.path.isfile(f) and f != "bench.py"]
     args = vars(args)
+    num_steps = args["num_steps"]
     for f in files:
         if f[-3:] == ".py":
             pyrunner(f, logdir=logdir, **args)
+            pass
         elif f[-5:] == ".dice":
             timedrunner("dice", f, logdir=logdir, **args)
+            pass
         elif f[-4:] == ".psi":
             timedrunner("psi", f, logdir=logdir, **args)
+            pass
         elif f[:5] == "grids" and f[-3:] == ".yo" and len(f) == 11: # we are compiling exactly, only use one sample
             args["num_steps"] = 1
             yorunner(f, logdir=logdir, **args)
+            args["num_steps"] = num_steps
+            pass
         elif f[-3:] == ".yo":
             yorunner(f, logdir=logdir, **args)
+            pass
         else:
             print(f"WARNING! saw unexpected file {f}")
 

@@ -63,7 +63,7 @@ if __name__ == "__main__":
         end = time.time()
         s = end - start
         print(" ".join([f"{x}" for x in xs]))
-        print("{:.3f}ms".format(s / 1000))
+        print("{:.3f}ms".format(s * 1000))
         # if s < 1.0:
         #     print("{:.3f}ms".format(s / 1000))
         # else:
