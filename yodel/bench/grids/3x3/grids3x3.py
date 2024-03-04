@@ -34,20 +34,37 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="generate data for simple HMMs")
-    parser.add_argument("--num-samples", default=10_000, type=int,)
-    parser.add_argument("--num-runs", default=10, type=int,)
+    parser.add_argument("--num-samples", default=1_000, type=int,)
+    parser.add_argument("--num-runs", default=1, type=int,)
     parser.add_argument("--seed", default=0, type=int,)
     args = parser.parse_args()
 
-    ising_model = lambda: mkgrid(3, probfn)
+    model = lambda: mkgrid(3, probfn)
 
-    (l1s, times) = runall(ising_model, sites3, truth3, num_runs=args.num_runs, num_samples=args.num_samples, start_seed=args.seed)
-    print("--------")
-    runs = len(l1s)
-    print(f"averages over {runs} runs:")
-    print("wallclock:", sum(times) / len(times), "s")
-    print("       L1:", sum(l1s) / len(l1s))
-
-    # averages over 10 runs:
-    # wallclock: 42.63511703014374 s
-    #        L1: 0.41128323336703865
+    if args.num_runs > 1:
+        (l1s, times) = runall(model, sites3, truth3, num_runs=args.num_runs, num_samples=args.num_samples, start_seed=args.seed)
+        print("--------")
+        runs = len(l1s)
+        print(f"averages over {runs} runs:")
+        print("wallclock:", sum(times) / len(times), "s")
+        print("       L1:", sum(l1s) / len(l1s))
+        # averages over 10 runs:
+        # wallclock: 42.63511703014374 s
+        #        L1: 0.41128323336703865
+    else:
+        # we are benchmarking, expect the same output as yodel
+        torch.manual_seed(args.seed)
+        np.random.seed(args.seed)
+        random.seed(args.seed)
+        start = time.time()
+        importance = Importance(model, num_samples=args.num_samples)
+        posterior = importance.run()
+        xs = allmarg(posterior, sites3, num_samples=args.num_samples)
+        end = time.time()
+        s = end - start
+        print(" ".join([f"{x}" for x in xs]))
+        print("{:.3f}ms".format(s / 1000))
+        # if s < 1.0:
+        #     print("{:.3f}ms".format(s / 1000))
+        # else:
+        #     print("{:.3f}s".format(s))

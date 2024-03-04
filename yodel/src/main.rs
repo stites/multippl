@@ -12,6 +12,7 @@ use std::time::*;
 use tracing::*;
 use tracing_subscriber::fmt;
 use yodel::pipeline::{DataPoints, Datum};
+use itertools::*;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -191,16 +192,19 @@ fn main() -> Result<(), Box<dyn Error>> {
     if args.stats {
         println!("{:?}", stats);
     }
-    if format!("{:?}", query).len() < 80 {
-        println!("   Computed: {:?}", query);
-    } else {
-        println!("Computed:\n{:?}", query);
-    }
 
-    // if elapsed_time.as_secs() > 10 {
-    //     println!("Took {}s", elapsed_time.as_secs());
+    println!("{}", query.into_iter().map(|f| f.to_string()).join(" "));
+    // if format!("{:?}", query).len() < 80 {
+    //     println!("   Computed: {:?}", query);
     // } else {
-    println!("Took {}ms", elapsed_time.as_millis());
+    //     println!("Computed:\n{:?}", query);
+    // }
+
+    println!("{}ms", elapsed_time.as_millis());
+    // if elapsed_time.as_secs() > 1 {
+    //     println!("{}s", elapsed_time.as_secs());
+    // } else {
+    //     println!("{}ms", elapsed_time.as_millis());
     // }
     Ok(())
 }
