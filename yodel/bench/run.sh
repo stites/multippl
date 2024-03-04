@@ -12,7 +12,6 @@ NUM_STEPS=10
 NUM_RUNS=2
 
 run_benchmark() {
-    #(cd "$1" && rm -rf logs/)
     (cd "$1" && python ./bench.py --num-runs $NUM_RUNS --num-steps $NUM_STEPS && python avg.py)
 }
 
