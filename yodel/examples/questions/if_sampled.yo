@@ -1,0 +1,11 @@
+exact {
+  let x = flip 1.0/2.0  in
+  if x then
+    sample ( exact (
+      let y = flip(1.0/2.0) in
+      observe(x||y) in
+      x
+    ) )
+  else
+    x
+}
