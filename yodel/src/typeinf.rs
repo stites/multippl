@@ -96,6 +96,13 @@ where
 
         // [x]; (l,r); x[0]
         AnfVec(xs) => typeinf_anf_vec(ty, xs, AnfVec),
+        AnfPush(xs, x) => Ok(AnfPush(
+            Box::new(typeinference_anf(ty, xs)?),
+            Box::new(typeinference_anf(ty, x)?),
+        )),
+        AnfHead(xs) => Ok(AnfHead(Box::new(typeinference_anf(ty, xs)?))),
+        AnfTail(xs) => Ok(AnfTail(Box::new(typeinference_anf(ty, xs)?))),
+
         AnfProd(xs) => typeinf_anf_vec(ty, xs, AnfProd),
         AnfPrj(var, ix) => Ok(AnfPrj(
             //     (),

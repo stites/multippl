@@ -294,6 +294,13 @@ impl SymEnv {
 
             // [x]; (l,r); x[0]
             AnfVec(xs) => Ok(AnfVec(self.uniquify_anf_vec(xs)?)),
+            AnfPush(xs, x) => Ok(AnfPush(
+                Box::new(self.uniquify_anf(xs)?),
+                Box::new(self.uniquify_anf(x)?),
+            )),
+            AnfHead(xs) => Ok(AnfHead(Box::new(self.uniquify_anf(xs)?))),
+            AnfTail(xs) => Ok(AnfTail(Box::new(self.uniquify_anf(xs)?))),
+
             AnfProd(xs) => Ok(AnfProd(self.uniquify_anf_vec(xs)?)),
             AnfPrj(var, ix) => Ok(AnfPrj(
                 Box::new(self.uniquify_anf(var)?),

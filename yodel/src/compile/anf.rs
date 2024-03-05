@@ -481,6 +481,16 @@ pub fn eval_sanf<'a>(
 
         AnfProd(anfs) => eval_sanf_vec(state, ctx, anfs, AnfProd),
         AnfVec(anfs) => eval_sanf_vec(state, ctx, anfs, AnfVec),
+        AnfPush(xs, x) => {
+            todo!()
+        }
+        AnfHead(xs) => {
+            todo!()
+        }
+        AnfTail(xs) => {
+            todo!()
+        }
+
         AnfPrj(var, ix) => {
             let ovar = eval_sanf(state, ctx, var)?;
             let oix = eval_sanf(state, ctx, ix)?;
@@ -701,6 +711,10 @@ pub fn eval_eanf<'a>(
             }
         }
         AnfVec(anfs) => errors::not_in_exact(),
+        AnfPush(xs, x) => errors::not_in_exact(),
+        AnfHead(xs) => errors::not_in_exact(),
+        AnfTail(xs) => errors::not_in_exact(),
+
         AnfBernoulli(sv, p) => errors::not_in_exact(),
         AnfPoisson(sv, p) => errors::not_in_exact(),
         AnfUniform(sv, p0, p1) => errors::not_in_exact(),

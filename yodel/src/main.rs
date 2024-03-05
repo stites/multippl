@@ -4,6 +4,7 @@ extern crate yodel;
 use clap::Parser;
 use clap_verbosity_flag::LevelFilter as VerbLevel;
 use clap_verbosity_flag::Verbosity;
+use itertools::*;
 use serde_json::Value;
 use std::error::Error;
 use std::fs;
@@ -12,7 +13,6 @@ use std::time::*;
 use tracing::*;
 use tracing_subscriber::fmt;
 use yodel::pipeline::{DataPoints, Datum};
-use itertools::*;
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]

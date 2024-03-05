@@ -464,6 +464,13 @@ impl LabelEnv {
 
             // [x]; (l,r); x[0]
             AnfVec(xs) => annotate_anf_vec(self, Self::annotate_sanf, xs, AnfVec),
+            AnfPush(xs, x) => Ok(AnfPush(
+                Box::new(self.annotate_sanf(xs)?),
+                Box::new(self.annotate_sanf(x)?),
+            )),
+            AnfHead(xs) => Ok(AnfHead(Box::new(self.annotate_sanf(xs)?))),
+            AnfTail(xs) => Ok(AnfTail(Box::new(self.annotate_sanf(xs)?))),
+
             AnfProd(xs) => annotate_anf_vec(self, Self::annotate_sanf, xs, AnfProd),
             AnfPrj(var, ix) => Ok(AnfPrj(
                 Box::new(self.annotate_sanf(var)?),

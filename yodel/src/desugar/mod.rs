@@ -64,6 +64,10 @@ pub fn desugar_eanf(a: &AnfUD<EVal>) -> Result<AnfUD<EVal>> {
 
         // [x]; (l,r); x[0]
         AnfVec(xs) => errors::not_in_exact(),
+        AnfPush(xs, x) => errors::not_in_exact(),
+        AnfHead(xs) => errors::not_in_exact(),
+        AnfTail(xs) => errors::not_in_exact(),
+
         AnfProd(xs) => Ok(AnfProd(desugar_eanf_vec(xs)?)),
         AnfPrj(var, ix) => Ok(AnfPrj(
             Box::new(desugar_eanf(var)?),

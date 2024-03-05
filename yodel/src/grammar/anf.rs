@@ -38,6 +38,10 @@ where
 
     // [x] && x [ 0 ]
     AnfVec(Vec<Anf<X, Val>>), // in the exact language, this denotes a one-hot encoded integer
+    AnfPush(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    AnfHead(Box<Anf<X, Val>>),
+    AnfTail(Box<Anf<X, Val>>),
+
     AnfProd(Vec<Anf<X, Val>>),
     AnfPrj(
         Box<Anf<X, Val>>, // tuple to index

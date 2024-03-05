@@ -166,6 +166,13 @@ where
 
         // [x]; (l,r); x[0]
         AnfVec(xs) => typecheck_anf_vec(xs, AnfVec),
+        AnfPush(xs, x) => Ok(AnfPush(
+            Box::new(typecheck_anf(xs)?),
+            Box::new(typecheck_anf(x)?),
+        )),
+        AnfHead(xs) => Ok(AnfHead(Box::new(typecheck_anf(xs)?))),
+        AnfTail(xs) => Ok(AnfTail(Box::new(typecheck_anf(xs)?))),
+
         AnfProd(xs) => typecheck_anf_vec(xs, AnfProd),
         AnfPrj(var, ix) => Ok(AnfPrj(
             Box::new(typecheck_anf(var)?),

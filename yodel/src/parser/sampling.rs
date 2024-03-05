@@ -241,6 +241,7 @@ pub fn parse_sval(src: &[u8], c: &mut TreeCursor, n: &Node) -> SVal {
             "sdirichlet" => {
                 SVal::SDist(Dirichlet(parse_vec(src, c, n, |a, b, c| parse_num(a, &c))))
             }
+            "nil" => SVal::SVec(vec![]),
             _ => panic!("invalid value! found sexp:\n{}", n.to_sexp()),
         },
     }
@@ -568,5 +569,37 @@ mod sampling_parser_tests {
         );
 
         assert_eq!(expr.unwrap(), Program::SBody(call));
+    }
+    #[test]
+    fn vectors() {
+        let code = "sample { [] }";
+        let expr = parse(code);
+        let nil = Anf::AVal((), SVal::SVec(vec![]));
+        assert_eq!(
+            expr.unwrap(),
+            Program::SBody(SExpr::SAnf((), Box::new(nil.clone())))
+        );
+        let code = "sample { push([], 1.0) }";
+        let expr = parse(code);
+        let one = Anf::AVal((), SVal::SInt(1));
+        let push = Anf::AnfPush(Box::new(nil.clone()), Box::new(one));
+        assert_eq!(
+            expr.unwrap(),
+            Program::SBody(SExpr::SAnf((), Box::new(push)))
+        );
+        let code = "sample { head([]) }";
+        let expr = parse(code);
+        let head = Anf::AnfHead(Box::new(nil.clone()));
+        assert_eq!(
+            expr.unwrap(),
+            Program::SBody(SExpr::SAnf((), Box::new(head)))
+        );
+        let code = "sample { tail([]) }";
+        let expr = parse(code);
+        let tail = Anf::AnfTail(Box::new(nil.clone()));
+        assert_eq!(
+            expr.unwrap(),
+            Program::SBody(SExpr::SAnf((), Box::new(tail)))
+        );
     }
 }
