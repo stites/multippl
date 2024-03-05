@@ -597,6 +597,10 @@
           "named": true
         },
         {
+          "type": "sanf",
+          "named": true
+        },
+        {
           "type": "sanfbern",
           "named": true
         },

@@ -238,6 +238,8 @@ module.exports = grammar({
 
       $.sanfbinop,
       $.sanfunop,
+
+      prec(7, seq('(', $.sanf, ')')),
     ),
 
     sanfbinop: $ => choice(
