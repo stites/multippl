@@ -192,6 +192,11 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
 
     let k = n.kind();
     match k {
+        "comment" => {
+            let n = cs.next().unwrap();
+            // println!("{}>>> {}", n.kind(), n.to_sexp());
+            parse_eexpr(src, c, &n)
+        }
         "eexpr" => {
             // made it to a nested paren! run again
             parse_eexpr(src, c, &n)

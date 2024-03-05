@@ -28,6 +28,7 @@ exact fn network_step(i0 : Bool, i1 : Bool, i2: Bool, i3 : Bool, next : Int) -> 
 }
 
 sample {
+  // first we sample two packets from the starting node 0
   p1 <- exact(node(0));
   p2 <- exact(node(0));
   i0 <- true;
