@@ -36,6 +36,35 @@ fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVal> {
         "sanf" => parse_sanf(src, c, n),
         "sanfprod" => Anf::AnfProd(parse_vec(src, c, n, parse_sanf)),
         "sanfvec" => Anf::AnfVec(parse_vec(src, c, n, parse_sanf)),
+        "sanfpush" => {
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let xs = cs.next().unwrap();
+            let xs = parse_sanf(src, c, xs);
+
+            let x = cs.next().unwrap();
+            let x = parse_sanf(src, c, x);
+            Anf::AnfPush(Box::new(xs), Box::new(x))
+        }
+        "sanfhead" => {
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let xs = cs.next().unwrap();
+            let xs = parse_sanf(src, c, xs);
+
+            Anf::AnfHead(Box::new(xs))
+        }
+        "sanftail" => {
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let xs = cs.next().unwrap();
+            let xs = parse_sanf(src, c, xs);
+
+            Anf::AnfTail(Box::new(xs))
+        }
         "sanfprj" => {
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
@@ -581,7 +610,7 @@ mod sampling_parser_tests {
         );
         let code = "sample { push([], 1.0) }";
         let expr = parse(code);
-        let one = Anf::AVal((), SVal::SInt(1));
+        let one = Anf::AVal((), SVal::SFloat(1.0));
         let push = Anf::AnfPush(Box::new(nil.clone()), Box::new(one));
         assert_eq!(
             expr.unwrap(),
