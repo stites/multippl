@@ -1199,3 +1199,71 @@ sample {
                       (eanf
                         (identifier)))))))))))
 
+======================
+vectors: nil
+======================
+
+sample {
+  []
+}
+
+---
+
+(source_file
+  (program
+    (sexpr
+      (sanf
+        (svalue (nil))))))
+
+======================
+vectors: push
+======================
+
+sample {
+  push([], 1.0)
+}
+
+---
+
+(source_file
+  (program
+    (sexpr
+      (sanf
+        (sanfpush
+          (sanf (svalue (nil)))
+          (sanf (svalue (float))))))))
+
+======================
+vectors: head
+======================
+
+sample {
+  head(xs)
+}
+
+---
+
+(source_file
+  (program
+    (sexpr
+      (sanf
+        (sanfhead
+          (sanf
+          (identifier)))))))
+
+======================
+vectors: tail
+======================
+
+sample {
+  tail(xs)
+}
+
+---
+(source_file
+  (program
+    (sexpr
+      (sanf
+        (sanftail
+          (sanf
+          (identifier)))))))

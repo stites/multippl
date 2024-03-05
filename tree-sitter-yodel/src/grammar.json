@@ -2271,6 +2271,18 @@
         },
         {
           "type": "SYMBOL",
+          "name": "sanfpush"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sanftail"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sanfhead"
+        },
+        {
+          "type": "SYMBOL",
           "name": "sanfbern"
         },
         {
@@ -2526,6 +2538,90 @@
         ]
       }
     },
+    "nil": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "["
+        },
+        {
+          "type": "STRING",
+          "value": "]"
+        }
+      ]
+    },
+    "sanfpush": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "push"
+        },
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sanf"
+        },
+        {
+          "type": "STRING",
+          "value": ","
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sanf"
+        },
+        {
+          "type": "STRING",
+          "value": ")"
+        }
+      ]
+    },
+    "sanfhead": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "head"
+        },
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sanf"
+        },
+        {
+          "type": "STRING",
+          "value": ")"
+        }
+      ]
+    },
+    "sanftail": {
+      "type": "SEQ",
+      "members": [
+        {
+          "type": "STRING",
+          "value": "tail"
+        },
+        {
+          "type": "STRING",
+          "value": "("
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sanf"
+        },
+        {
+          "type": "STRING",
+          "value": ")"
+        }
+      ]
+    },
     "svalue": {
       "type": "CHOICE",
       "members": [
@@ -2540,6 +2636,10 @@
         {
           "type": "SYMBOL",
           "name": "int"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "nil"
         },
         {
           "type": "SYMBOL",

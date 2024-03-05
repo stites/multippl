@@ -228,6 +228,10 @@ module.exports = grammar({
       $.sanfvec,
       $.sanfprod,
 
+      $.sanfpush,
+      $.sanftail,
+      $.sanfhead,
+
       $.sanfbern,
       $.sanfpoisson,
       $.sanfuniform,
@@ -254,10 +258,16 @@ module.exports = grammar({
       prec.left(5, seq($.bool_unop, $.sanf)),
     ),
     sann: $ => prec.right(4, seq($.sexpr, ':', $.sty)),
+    nil: $ => seq('[', ']' ),
+
+    sanfpush: $ => seq('push', '(', $.sanf, ',', $.sanf, ')'),
+    sanfhead: $ => seq('head', '(', $.sanf, ')'),
+    sanftail: $ => seq('tail', '(', $.sanf, ')'),
     svalue: $ => choice(
       $.bool,
       $.float,
       $.int,
+      $.nil,
       $.svec,
       $.sprod,
 

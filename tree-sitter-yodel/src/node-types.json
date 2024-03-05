@@ -545,6 +545,11 @@
     }
   },
   {
+    "type": "nil",
+    "named": true,
+    "fields": {}
+  },
+  {
     "type": "numeric_op",
     "named": true,
     "fields": {}
@@ -621,6 +626,10 @@
           "named": true
         },
         {
+          "type": "sanfhead",
+          "named": true
+        },
+        {
           "type": "sanfnormal",
           "named": true
         },
@@ -634,6 +643,14 @@
         },
         {
           "type": "sanfprod",
+          "named": true
+        },
+        {
+          "type": "sanfpush",
+          "named": true
+        },
+        {
+          "type": "sanftail",
           "named": true
         },
         {
@@ -743,6 +760,21 @@
     }
   },
   {
+    "type": "sanfhead",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
+      "required": true,
+      "types": [
+        {
+          "type": "sanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "sanfnormal",
     "named": true,
     "fields": {},
@@ -797,6 +829,36 @@
     "fields": {},
     "children": {
       "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "sanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sanfpush",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "sanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sanftail",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": false,
       "required": true,
       "types": [
         {
@@ -1453,6 +1515,10 @@
           "named": true
         },
         {
+          "type": "nil",
+          "named": true
+        },
+        {
           "type": "sbern",
           "named": true
         },
@@ -1689,6 +1755,10 @@
     "named": false
   },
   {
+    "type": "head",
+    "named": false
+  },
+  {
     "type": "identifier",
     "named": true
   },
@@ -1729,11 +1799,19 @@
     "named": false
   },
   {
+    "type": "push",
+    "named": false
+  },
+  {
     "type": "sample",
     "named": false
   },
   {
     "type": "snd",
+    "named": false
+  },
+  {
+    "type": "tail",
     "named": false
   },
   {
