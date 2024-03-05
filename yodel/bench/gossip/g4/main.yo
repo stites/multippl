@@ -1,0 +1,54 @@
+exact fn forward(ix : Int) -> Int {
+  // choose a receiving neighbor
+  // if there are n neighbors, sample from n-1.
+  // if sample is < ix, return it
+  // if sample is >= ix, return sample + 1
+  let s = discrete(1, 1, 1) in
+  if s < ix then s else s + 1
+}
+
+exact fn node(nid : Int) -> (Int, Int) {
+  // an infected node will forward two more packets
+  let p1 = forward(nid) in
+  let p2 = forward(nid) in
+  (p1, p2)
+}
+exact fn network_step(i0 : Bool, i1 : Bool, i2: Bool, i3 : Bool, next : Int) -> (Bool, Bool, Bool, Bool, Int, Int) {
+  // at each step, an infected node sends new packets
+  let fwd = node(next) in
+  let p1 = fwd[0] in
+  let p2 = fwd[1] in
+  // we re-tabulate infections
+  let _i0 = i0 || (p1 == 0) || (p2 == 0) in
+  let _i1 = i1 || (p1 == 1) || (p2 == 1) in
+  let _i2 = i2 || (p1 == 2) || (p2 == 2) in
+  let _i3 = i3 || (p1 == 3) || (p2 == 3) in
+  // and return the new state
+  (_i0, _i1, _i2, _i3, p1, p2)
+}
+
+sample {
+  p1 <- exact(node(0));
+  p2 <- exact(node(0));
+  i0 <- true;
+  i1 <- false;
+  i2 <- false;
+  i3 <- false;
+
+  q  <- [];
+  q  <- push(q, p1);
+  q  <- push(q, p2);
+  num_steps <- 15;
+  while (num_steps > 0) {
+    nxt <- head(q);
+    q   <- tail(q);
+    state <- exact(network_step(i0, i1, i2, i3, nxt));
+    i0 <- state[0];
+    i1 <- state[1];
+    i2 <- state[2];
+    i3 <- state[3];
+    q   <- push(q, state[4]);
+    q   <- push(q, state[5]);
+    num_steps <- num_steps - 1;
+  }
+}
