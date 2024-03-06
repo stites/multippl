@@ -119,6 +119,13 @@ pub fn eval_sanf_numop<'a>(
         _ => errors::typecheck_failed("sanf numop"),
     }
 }
+pub fn as_bdd(b: &EVal) -> BddPtr {
+    match b {
+        EVal::EBdd(b) => *b,
+        _ => todo!(),
+    }
+}
+#[allow(unreachable_code)] // there are still some todos with bdd integer ops
 pub fn eval_eanf_numop<'a>(
     state: &mut super::eval::State,
     ctx: &'a Ctx,
@@ -146,6 +153,31 @@ pub fn eval_eanf_numop<'a>(
             tracing::debug!("{l} <iop> {r} = {x}");
             // let out = ctx.exact.as_output(Some(integers::as_onehot(x)));
             let out = ctx.exact.as_output(Some(EVal::EInteger(x)));
+            Ok(out)
+        }
+        (Some(EVal::EProd(bdds)), Some(EVal::EInteger(r))) => {
+            todo!("this one is actually just a left/right shift with false to the OH vector");
+            let l = bdds.iter().position(|b| !as_bdd(&b).is_neg()).unwrap();
+            let x = iop(l, *r);
+            assert!(x < bdds.len());
+            tracing::debug!("{l} <iop> {r} = {x}");
+            // let out = ctx.exact.as_output(Some(integers::as_onehot(x)));
+            let plus = bdds
+                .iter()
+                .enumerate()
+                .map(|(ix, b)| {
+                    let b = as_bdd(&b);
+                    if ix == x && b.is_neg() {
+                        b.neg() // make positive
+                    } else if !b.is_neg() {
+                        b.neg() // make everything else positive
+                    } else {
+                        b
+                    }
+                })
+                .map(EVal::EBdd)
+                .collect_vec();
+            let out = ctx.exact.as_output(Some(EVal::EProd(plus)));
             Ok(out)
         }
         // (Some(EVal::EInteger(l)], _) => return errors::erased(),
@@ -253,6 +285,7 @@ pub fn eval_sanf_cop(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[allow(unreachable_code)] // there are still some todos
 pub fn eval_eanf_cop(
     state: &mut super::eval::State,
     ctx: &Ctx,
@@ -289,22 +322,32 @@ pub fn eval_eanf_cop(
                 .as_output(Some(EVal::EBdd(BddPtr::from_bool(iop(l, r)))));
             Ok(out)
         }
-        (Some(EVal::EProd(bdds)), Some(EVal::EInteger(r))) => match bop {
-            None => errors::typecheck_failed("eanf compare op invalid"),
-            Some(mut bop) => {
-                // println!("comparing {:?} == {}", bdds, r);
-                let oh = crate::desugar::integers::as_onehot_(*r);
-                let fin = izip!(bdds, oh).fold(Ok(BddPtr::PtrTrue), |acc, (b, o)| match b {
-                    EVal::EBdd(b) => {
-                        let apply = bop(state.mgr, Box::new(*b), Box::new(o));
-                        Ok(state.mgr.and(acc?, apply))
-                    }
-                    _ => errors::typecheck_failed("eanf compare op invalid"),
-                })?;
-                let out = ctx.exact.as_output(Some(EVal::EBdd(fin)));
-                Ok(out)
+        (Some(EVal::EProd(bdds)), Some(EVal::EInteger(r))) => {
+            match bop {
+                None => {
+                    todo!("This one is just a disjunction of (bdd <=> T/F) with the OH encoded integer.");
+                    // this is type-safe, so we can perform this operation
+                    let l = bdds.iter().position(|b| !as_bdd(&b).is_neg()).unwrap();
+                    let out = ctx
+                        .exact
+                        .as_output(Some(EVal::EBdd(BddPtr::from_bool(iop(&l, &r)))));
+                    Ok(out)
+                }
+                Some(mut bop) => {
+                    // println!("comparing {:?} == {}", bdds, r);
+                    let oh = crate::desugar::integers::as_onehot_(*r);
+                    let fin = izip!(bdds, oh).fold(Ok(BddPtr::PtrTrue), |acc, (b, o)| match b {
+                        EVal::EBdd(b) => {
+                            let apply = bop(state.mgr, Box::new(*b), Box::new(o));
+                            Ok(state.mgr.and(acc?, apply))
+                        }
+                        _ => errors::typecheck_failed("eanf compare op invalid"),
+                    })?;
+                    let out = ctx.exact.as_output(Some(EVal::EBdd(fin)));
+                    Ok(out)
+                }
             }
-        },
+        }
         (Some(EVal::EInteger(r)), Some(EVal::EProd(bdds))) => {
             todo!();
         }
@@ -482,15 +525,45 @@ pub fn eval_sanf<'a>(
         AnfProd(anfs) => eval_sanf_vec(state, ctx, anfs, AnfProd),
         AnfVec(anfs) => eval_sanf_vec(state, ctx, anfs, AnfVec),
         AnfPush(xs, x) => {
-            todo!()
+            let xs = eval_sanf(state, ctx, xs)?;
+            let x = eval_sanf(state, ctx, x)?;
+            let push = |xs: &Vec<SVal>, x: &SVal| {
+                let mut rs = xs.clone();
+                rs.push(x.clone());
+                rs
+            };
+            match (&xs.sample.out, &x.sample.out) {
+                (Some(SVal::SVec(xs)), Some(x)) => {
+                    let out = ctx.sample.as_output(Some(SVal::SVec(push(xs, x))));
+                    let out = ctx.mk_soutput(out);
+                    Ok(out)
+                }
+                a => errors::typecheck_failed(&format!("vec push got {a:?}")),
+            }
         }
         AnfHead(xs) => {
-            todo!()
+            let xs = eval_sanf(state, ctx, xs)?;
+            match &xs.sample.out {
+                Some(SVal::SVec(xs)) => {
+                    let out = ctx.sample.as_output(Some(xs[0].clone()));
+                    let out = ctx.mk_soutput(out);
+                    Ok(out)
+                }
+                a => errors::typecheck_failed(&format!("vec head got {a:?}")),
+            }
         }
         AnfTail(xs) => {
-            todo!()
+            let xs = eval_sanf(state, ctx, xs)?;
+            match &xs.sample.out {
+                Some(SVal::SVec(xs)) => {
+                    let (_, tail) = xs.split_first().unwrap();
+                    let out = ctx.sample.as_output(Some(SVal::SVec(tail.to_vec())));
+                    let out = ctx.mk_soutput(out);
+                    Ok(out)
+                }
+                a => errors::typecheck_failed(&format!("vec head got {a:?}")),
+            }
         }
-
         AnfPrj(var, ix) => {
             let ovar = eval_sanf(state, ctx, var)?;
             let oix = eval_sanf(state, ctx, ix)?;
