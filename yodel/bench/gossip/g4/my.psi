@@ -83,7 +83,7 @@ def main () {
   q.pushBack(p1);
   q.pushBack(p2);
 
-  num_steps := 3;
+  num_steps := 2;
   for step in [0..num_steps) {
     nxt := q.takeFront();
     state := network_step(i0, i1, i2, i3, nxt);

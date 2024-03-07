@@ -34,8 +34,10 @@ sample fn as_num(b : Bool) -> Float {
 sample {
   // first we sample two packets from the starting node 0
   p <- exact(node(0));
-  p1  <- p[0];
-  p2  <- p[1];
+
+  // p1 <- trace (p) p[0];
+  p1 <- p[0];
+  p2 <- p[1];
   i0 <- true;
   i1 <- false;
   i2 <- false;
@@ -44,17 +46,19 @@ sample {
   q  <- [];
   q  <- push(q, p1);
   q  <- push(q, p2);
-  num_steps <- 3;
+  num_steps <- 2;
   while (num_steps > 0) {
     nxt <- head(q);
     q   <- tail(q);
     state <- exact(network_step(i0, i1, i2, i3, nxt));
+
+    // i0 <- trace (state) state[0];
     i0 <- state[0];
     i1 <- state[1];
     i2 <- state[2];
     i3 <- state[3];
-    q   <- push(q, state[4]);
-    q   <- push(q, state[5]);
+    q  <- push(q, state[4]);
+    q  <- push(q, state[5]);
     num_steps <- num_steps - 1;
     true
   };
@@ -62,5 +66,7 @@ sample {
   n1 <- as_num(i1);
   n2 <- as_num(i2);
   n3 <- as_num(i3);
-  (n0 + n1 + n2 + n3)
+  out <- (n0 + n1 + n2 + n3);
+  // trace ((n0, n1, n2, n3, out))
+  out
 }
