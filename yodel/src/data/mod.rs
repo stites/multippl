@@ -37,6 +37,11 @@ pub type HashSet<V> = FxHashSet<V>;
 #[derive(Debug)]
 pub struct WmcP(WmcParams<RealSemiring>);
 
+impl Default for WmcP {
+    fn default() -> Self {
+        WmcP(WmcParams::new(RealSemiring(0.0), RealSemiring(1.0)))
+    }
+}
 impl WmcP {
     pub fn params(&self) -> &WmcParams<RealSemiring> {
         &self.0
@@ -44,9 +49,6 @@ impl WmcP {
     pub fn insert_high(&mut self, lbl: VarLabel, param: f64) {
         self.0
             .set_weight(lbl, RealSemiring(1.0 - param), RealSemiring(param))
-    }
-    pub fn new() -> Self {
-        WmcP(WmcParams::new(RealSemiring(0.0), RealSemiring(1.0)))
     }
     pub fn new_with_size(sz: usize) -> Self {
         WmcP(WmcParams::new_with_size(

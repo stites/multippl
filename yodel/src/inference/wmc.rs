@@ -78,7 +78,7 @@ pub fn wmc_prob(mgr: &mut Mgr, wmc: &WmcP, c: &EOutput) -> (Vec<f64>, Option<Wmc
             let (p, stats) = calculate_wmc_prob(
                 mgr,
                 // &c.weightmap.as_params(mgr.get_order().num_vars() as u64),
-                &wmc.params(),
+                wmc.params(),
                 *d,
                 c.accept,
                 ss,
@@ -108,7 +108,7 @@ pub fn numerators(mgr: &mut Mgr, wmc: WmcP, c: &EOutput, fold_in_samples: bool) 
         .iter()
         .map(|dist| {
             let numerator_formula = mgr.and(*dist, accept);
-            let RealSemiring(num) = numerator_formula.wmc(mgr.get_order(), &params);
+            let RealSemiring(num) = numerator_formula.wmc(mgr.get_order(), params);
             num
         })
         .collect_vec();
@@ -125,7 +125,7 @@ pub fn queries(mgr: &mut Mgr, w: &WmcP, c: &EOutput) -> Vec<f64> {
         .dists()
         .iter()
         .map(|dist| {
-            let RealSemiring(num) = dist.wmc(mgr.get_order(), &params);
+            let RealSemiring(num) = dist.wmc(mgr.get_order(), params);
             num
         })
         .collect_vec();

@@ -32,7 +32,7 @@ pub fn exact2sample_bdd_eff(
     debug!("csamples: {:?}", ss);
     debug!("  dist size: {}", dist.count_nodes());
     debug!("accept size: {}", accept.count_nodes());
-    let theta_q = crate::inference::calculate_wmc_prob(state.mgr, &wmc_params, *dist, accept, ss).0;
+    let theta_q = crate::inference::calculate_wmc_prob(state.mgr, wmc_params, *dist, accept, ss).0;
     debug!(" #rec calls: {}", state.mgr.num_recursive_calls());
 
     let bern = statrs::distribution::Bernoulli::new(theta_q).unwrap();

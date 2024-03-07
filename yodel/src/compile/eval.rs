@@ -54,7 +54,7 @@ pub fn eval_eite_predicate(
     let ss = ctx.exact.samples(state.mgr, state.opts.sample_pruning);
     let wmc_true = crate::inference::calculate_wmc_prob(
         state.mgr,
-        &wmc_params,
+        wmc_params,
         pred_dist,
         ctx.exact.accept,
         // TODO if switching to samples_opt, no need to use ctx.
@@ -384,7 +384,7 @@ impl<'a> State<'a> {
                 let ss = ctx.exact.samples(self.mgr, self.opts.sample_pruning);
                 let (wmc, _) = crate::inference::calculate_wmc_prob(
                     self.mgr,
-                    &wmc_params,
+                    wmc_params,
                     dist,
                     ctx.exact.accept,
                     ss,

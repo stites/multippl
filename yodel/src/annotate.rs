@@ -591,7 +591,6 @@ impl LabelEnv {
                 Box::new(self.annotate_eanf(x)?),
             )),
 
-
             // AnfPrj(uid, s, ix) => {
             //     let var = self.get_var(uid)?;
             //     match var {

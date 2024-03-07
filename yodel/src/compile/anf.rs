@@ -157,28 +157,28 @@ pub fn eval_eanf_numop<'a>(
         }
         (Some(EVal::EProd(bdds)), Some(EVal::EInteger(r))) => {
             todo!("this one is actually just a left/right shift with false to the OH vector");
-            let l = bdds.iter().position(|b| !as_bdd(&b).is_neg()).unwrap();
-            let x = iop(l, *r);
-            assert!(x < bdds.len());
-            tracing::debug!("{l} <iop> {r} = {x}");
-            // let out = ctx.exact.as_output(Some(integers::as_onehot(x)));
-            let plus = bdds
-                .iter()
-                .enumerate()
-                .map(|(ix, b)| {
-                    let b = as_bdd(&b);
-                    if ix == x && b.is_neg() {
-                        b.neg() // make positive
-                    } else if !b.is_neg() {
-                        b.neg() // make everything else positive
-                    } else {
-                        b
-                    }
-                })
-                .map(EVal::EBdd)
-                .collect_vec();
-            let out = ctx.exact.as_output(Some(EVal::EProd(plus)));
-            Ok(out)
+            // let l = bdds.iter().position(|b| !as_bdd(&b).is_neg()).unwrap();
+            // let x = iop(l, *r);
+            // assert!(x < bdds.len());
+            // tracing::debug!("{l} <iop> {r} = {x}");
+            // // let out = ctx.exact.as_output(Some(integers::as_onehot(x)));
+            // let plus = bdds
+            //     .iter()
+            //     .enumerate()
+            //     .map(|(ix, b)| {
+            //         let b = as_bdd(&b);
+            //         if ix == x && b.is_neg() {
+            //            b.neg() // make positive
+            //         } else if !b.is_neg() {
+            //             b.neg() // make everything else positive
+            //         } else {
+            //             b
+            //         }
+            //     })
+            //     .map(EVal::EBdd)
+            //     .collect_vec();
+            // let out = ctx.exact.as_output(Some(EVal::EProd(plus)));
+            // Ok(out)
         }
         // (Some(EVal::EInteger(l)], _) => return errors::erased(),
         // (_, [EVal::EInteger(r))) => return errors::erased(),
@@ -327,10 +327,10 @@ pub fn eval_eanf_cop(
                 None => {
                     todo!("This one is just a disjunction of (bdd <=> T/F) with the OH encoded integer.");
                     // this is type-safe, so we can perform this operation
-                    let l = bdds.iter().position(|b| !as_bdd(&b).is_neg()).unwrap();
+                    let l = bdds.iter().position(|b| !as_bdd(b).is_neg()).unwrap();
                     let out = ctx
                         .exact
-                        .as_output(Some(EVal::EBdd(BddPtr::from_bool(iop(&l, &r)))));
+                        .as_output(Some(EVal::EBdd(BddPtr::from_bool(iop(&l, r)))));
                     Ok(out)
                 }
                 Some(mut bop) => {
@@ -565,9 +565,9 @@ pub fn eval_sanf<'a>(
             }
         }
         AnfTrace(tr, x) => {
-            println!("{:?}", eval_sanf(state, ctx, tr)?.sample.out);
+            println!("{:?}", eval_sanf(state, ctx, tr)?.sample.out.unwrap());
             eval_sanf(state, ctx, x)
-        },
+        }
         AnfPrj(var, ix) => {
             let ovar = eval_sanf(state, ctx, var)?;
             let oix = eval_sanf(state, ctx, ix)?;
@@ -788,7 +788,7 @@ pub fn eval_eanf<'a>(
             }
         }
         AnfTrace(tr, x) => {
-            println!("{:?}", eval_eanf(state, ctx, tr)?.out);
+            println!("{:?}", eval_eanf(state, ctx, tr)?.out.unwrap());
             eval_eanf(state, ctx, x)
         }
         AnfVec(anfs) => errors::not_in_exact(),

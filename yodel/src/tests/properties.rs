@@ -559,7 +559,7 @@ pub fn run_property(precision: Option<f64>, n: Option<usize>, p: &Program<Infera
     //         ..Default::default()
     //     },
     // );
-    println!("exact:  {:?}", exact);
+    // println!("exact:  {:?}", exact);
     // println!("approx: {:?}", approx);
 
     // assert_eq!(
@@ -579,7 +579,7 @@ pub fn run_property(precision: Option<f64>, n: Option<usize>, p: &Program<Infera
     //             "[check_inv][#{i}][err]((exact: {ext}) - (approx: {apx})).abs < {precision}"
     //         );
     //     });
-    true
+    // true
 }
 
 #[quickcheck]
