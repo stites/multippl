@@ -88,6 +88,18 @@ pub enum EVal {
     // extensions: not part of the core IR, just included in the maximal values as part of TTG
     EInteger(usize),
 }
+impl EVal {
+    pub fn pretty(&self) -> String {
+        match self {
+            EVal::EBdd(x) => format!("{}", x.print_bdd()),
+            EVal::EFloat(x) => format!("{}", x),
+            EVal::EInteger(x) => format!("{:?}", x),
+            EVal::EProd(xs) => {
+                format!("({})", xs.iter().map(Self::pretty).collect_vec().join(", "))
+            }
+        }
+    }
+}
 impl Debug for EVal {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use EVal::*;

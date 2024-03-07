@@ -62,6 +62,20 @@ pub enum SVal {
     SProd(Vec<SVal>),
     SDist(Dist),
 }
+impl SVal {
+    pub fn pretty(&self) -> String {
+        match self {
+            SVal::SBool(x) => format!("{}", x),
+            SVal::SFloat(x) => format!("{}", x),
+            SVal::SInt(x) => format!("{}", x),
+            SVal::SVec(xs) => format!("[{}]", xs.iter().map(Self::pretty).collect_vec().join(", ")),
+            SVal::SProd(xs) => {
+                format!("({})", xs.iter().map(Self::pretty).collect_vec().join(", "))
+            }
+            SVal::SDist(x) => format!("{:?}", x),
+        }
+    }
+}
 #[derive(PartialEq, Clone, Debug)]
 pub enum STy {
     SBool,

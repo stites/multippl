@@ -565,7 +565,10 @@ pub fn eval_sanf<'a>(
             }
         }
         AnfTrace(tr, x) => {
-            println!("{:?}", eval_sanf(state, ctx, tr)?.sample.out.unwrap());
+            println!(
+                "S) {}",
+                eval_sanf(state, ctx, tr)?.sample.out.unwrap().pretty()
+            );
             eval_sanf(state, ctx, x)
         }
         AnfPrj(var, ix) => {
@@ -788,7 +791,7 @@ pub fn eval_eanf<'a>(
             }
         }
         AnfTrace(tr, x) => {
-            println!("{:?}", eval_eanf(state, ctx, tr)?.out.unwrap());
+            println!("E) {}", eval_eanf(state, ctx, tr)?.out.unwrap().pretty());
             eval_eanf(state, ctx, x)
         }
         AnfVec(anfs) => errors::not_in_exact(),
