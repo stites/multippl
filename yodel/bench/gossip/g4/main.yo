@@ -24,7 +24,7 @@ exact fn network_step(n0 : Bool, n1 : Bool, n2: Bool, n3 : Bool, next : Int) -> 
   let _n2 = n2 || (_p1 == 2) || (_p2 == 2) in
   let _n3 = n3 || (_p1 == 3) || (_p2 == 3) in
   // and return the new state
-  (_n0, _n1, _n2, _n3, _p1, p2)
+  (_n0, _n1, _n2, _n3, _p1, _p2)
 }
 
 sample fn as_num(b : Bool) -> Float {
@@ -44,7 +44,7 @@ sample {
   q  <- [];
   q  <- push(q, p1);
   q  <- push(q, p2);
-  num_steps <- 15;
+  num_steps <- 3;
   while (num_steps > 0) {
     nxt <- head(q);
     q   <- tail(q);
