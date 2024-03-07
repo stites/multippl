@@ -67,6 +67,17 @@ fn parse_eanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EVal> {
                 _ => panic!("invalid unary operator found!\nsexp: {}", n.to_sexp()),
             }
         }
+        "etrace" => {
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let tr = cs.next().unwrap();
+            let tr = parse_eanf(src, c, tr);
+
+            let x = cs.next().unwrap();
+            let x = parse_eanf(src, c, x);
+            Anf::AnfTrace(Box::new(tr), Box::new(x))
+        }
         "eanfbinop" => {
             tracing::debug!(
                 "parsing eanf binop: {} >>> {}",

@@ -172,6 +172,10 @@ where
         )),
         AnfHead(xs) => Ok(AnfHead(Box::new(typecheck_anf(xs)?))),
         AnfTail(xs) => Ok(AnfTail(Box::new(typecheck_anf(xs)?))),
+        AnfTrace(xs, x) => Ok(AnfTrace(
+            Box::new(typecheck_anf(xs)?),
+            Box::new(typecheck_anf(x)?),
+        )),
 
         AnfProd(xs) => typecheck_anf_vec(xs, AnfProd),
         AnfPrj(var, ix) => Ok(AnfPrj(

@@ -42,6 +42,8 @@ where
     AnfHead(Box<Anf<X, Val>>),
     AnfTail(Box<Anf<X, Val>>),
 
+    AnfTrace(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+
     AnfProd(Vec<Anf<X, Val>>),
     AnfPrj(
         Box<Anf<X, Val>>, // tuple to index

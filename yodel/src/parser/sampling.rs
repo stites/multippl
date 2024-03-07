@@ -76,6 +76,17 @@ fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVal> {
             let prj = parse_sanf(src, c, prj);
             Anf::AnfPrj(Box::new(ident), Box::new(prj))
         }
+        "strace" => {
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
+
+            let tr = cs.next().unwrap();
+            let tr = parse_sanf(src, c, tr);
+
+            let x = cs.next().unwrap();
+            let x = parse_sanf(src, c, x);
+            Anf::AnfTrace(Box::new(tr), Box::new(x))
+        }
         "svalue" => Anf::AVal((), parse_sval(src, c, &n)),
         "identifier" => Anf::AVar(None, parse_str(src, &n)),
         "sanfbern" => {

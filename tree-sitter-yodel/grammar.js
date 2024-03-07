@@ -146,6 +146,7 @@ module.exports = grammar({
       $.eanfprj,
       $.eanfbinop,
       $.eanfunop,
+      $.etrace,
       seq('(', $.eanf, ')'),
     ),
 
@@ -242,6 +243,7 @@ module.exports = grammar({
 
       $.sanfbinop,
       $.sanfunop,
+      $.strace,
 
       prec(7, seq('(', $.sanf, ')')),
     ),
@@ -258,6 +260,8 @@ module.exports = grammar({
       prec.left(5, seq($.bool_unop, $.sanf)),
     ),
     sann: $ => prec.right(4, seq($.sexpr, ':', $.sty)),
+    strace: $ => seq('trace', '(', $.sanf, ')', $.sanf),
+    etrace: $ => seq('trace', '(', $.eanf, ')', $.eanf),
     nil: $ => seq('[', ']' ),
 
     sanfpush: $ => seq('push', '(', $.sanf, ',', $.sanf, ')'),

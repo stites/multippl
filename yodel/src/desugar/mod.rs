@@ -74,6 +74,11 @@ pub fn desugar_eanf(a: &AnfUD<EVal>) -> Result<AnfUD<EVal>> {
             Box::new(desugar_eanf(ix)?),
         )),
 
+        AnfTrace(xs, x) => Ok(AnfTrace(
+            Box::new(desugar_eanf(xs)?),
+            Box::new(desugar_eanf(x)?),
+        )),
+
         AnfBernoulli(_, x) => errors::not_in_exact(),
         AnfPoisson(_, x) => errors::not_in_exact(),
         AnfUniform(_, l, r) => errors::not_in_exact(),

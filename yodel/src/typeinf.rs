@@ -100,6 +100,10 @@ where
             Box::new(typeinference_anf(ty, xs)?),
             Box::new(typeinference_anf(ty, x)?),
         )),
+        AnfTrace(xs, x) => Ok(AnfTrace(
+            Box::new(typeinference_anf(ty, xs)?),
+            Box::new(typeinference_anf(ty, x)?),
+        )),
         AnfHead(xs) => Ok(AnfHead(Box::new(typeinference_anf(ty, xs)?))),
         AnfTail(xs) => Ok(AnfTail(Box::new(typeinference_anf(ty, xs)?))),
 

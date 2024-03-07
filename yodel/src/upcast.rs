@@ -75,7 +75,10 @@ where
         AnfPush(xs, x) => Ok(AnfPush(Box::new(upcast_anf(xs)?), Box::new(upcast_anf(x)?))),
         AnfHead(xs) => Ok(AnfHead(Box::new(upcast_anf(xs)?))),
         AnfTail(xs) => Ok(AnfTail(Box::new(upcast_anf(xs)?))),
-
+        AnfTrace(tr, x) => Ok(AnfTrace(
+            Box::new(upcast_anf(tr)?),
+            Box::new(upcast_anf(x)?),
+        )),
         AnfProd(xs) => upcast_anf_vec(xs, AnfProd),
         AnfPrj(var, ix) => Ok(AnfPrj(
             //     (),

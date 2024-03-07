@@ -301,6 +301,11 @@ impl SymEnv {
             AnfHead(xs) => Ok(AnfHead(Box::new(self.uniquify_anf(xs)?))),
             AnfTail(xs) => Ok(AnfTail(Box::new(self.uniquify_anf(xs)?))),
 
+            AnfTrace(tr, x) => Ok(AnfTrace(
+                Box::new(self.uniquify_anf(tr)?),
+                Box::new(self.uniquify_anf(x)?),
+            )),
+
             AnfProd(xs) => Ok(AnfProd(self.uniquify_anf_vec(xs)?)),
             AnfPrj(var, ix) => Ok(AnfPrj(
                 Box::new(self.uniquify_anf(var)?),

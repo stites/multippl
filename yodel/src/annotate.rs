@@ -476,6 +476,11 @@ impl LabelEnv {
                 Box::new(self.annotate_sanf(var)?),
                 Box::new(self.annotate_sanf(ix)?),
             )),
+            AnfTrace(tr, x) => Ok(AnfTrace(
+                Box::new(self.annotate_sanf(tr)?),
+                Box::new(self.annotate_sanf(x)?),
+            )),
+
             // AnfPrj(uid, s, ix) => {
             //     let var = self.get_var(uid)?;
             //     match var {
@@ -581,6 +586,11 @@ impl LabelEnv {
                 Box::new(self.annotate_eanf(var)?),
                 Box::new(self.annotate_eanf(ix)?),
             )),
+            AnfTrace(tr, x) => Ok(AnfTrace(
+                Box::new(self.annotate_eanf(tr)?),
+                Box::new(self.annotate_eanf(x)?),
+            )),
+
 
             // AnfPrj(uid, s, ix) => {
             //     let var = self.get_var(uid)?;

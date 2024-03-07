@@ -564,6 +564,10 @@ pub fn eval_sanf<'a>(
                 a => errors::typecheck_failed(&format!("vec head got {a:?}")),
             }
         }
+        AnfTrace(tr, x) => {
+            println!("{:?}", eval_sanf(state, ctx, tr)?.sample.out);
+            eval_sanf(state, ctx, x)
+        },
         AnfPrj(var, ix) => {
             let ovar = eval_sanf(state, ctx, var)?;
             let oix = eval_sanf(state, ctx, ix)?;
@@ -782,6 +786,10 @@ pub fn eval_eanf<'a>(
                     l, r
                 )),
             }
+        }
+        AnfTrace(tr, x) => {
+            println!("{:?}", eval_eanf(state, ctx, tr)?.out);
+            eval_eanf(state, ctx, x)
         }
         AnfVec(anfs) => errors::not_in_exact(),
         AnfPush(xs, x) => errors::not_in_exact(),

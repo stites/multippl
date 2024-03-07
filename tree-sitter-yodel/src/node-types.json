@@ -43,6 +43,10 @@
           "named": true
         },
         {
+          "type": "etrace",
+          "named": true
+        },
+        {
           "type": "evalue",
           "named": true
         },
@@ -480,6 +484,21 @@
     }
   },
   {
+    "type": "etrace",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "eanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "ety",
     "named": true,
     "fields": {},
@@ -663,6 +682,10 @@
         },
         {
           "type": "sanfvec",
+          "named": true
+        },
+        {
+          "type": "strace",
           "named": true
         },
         {
@@ -1430,6 +1453,21 @@
     }
   },
   {
+    "type": "strace",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "sanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "sty",
     "named": true,
     "fields": {},
@@ -1816,6 +1854,10 @@
   },
   {
     "type": "then",
+    "named": false
+  },
+  {
+    "type": "trace",
     "named": false
   },
   {
