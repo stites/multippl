@@ -188,3 +188,76 @@ fn program04_approx() {
 //         todo!();
 //     });
 // }
+
+#[test]
+fn shadows() {
+    let p = r#"
+sample {
+  x <- (x <- 1; 2);
+  x
+}
+"#
+    .to_owned();
+    check_approx_h("let", vec![2.0], &p, 1, None);
+
+    let p = r#"
+sample fn foo (x: Int) -> Int {
+  x + 1
+}
+sample {
+  x <- foo(3);
+  x
+}
+"#
+    .to_owned();
+    check_approx_h("fn", vec![4.0], &p, 1, None);
+
+    let p = r#"
+sample fn bar (x: Int) -> Int {
+  x + 1
+}
+sample fn foo (x: Int) -> Int {
+  x <- bar(x + 2);
+  x + 3
+}
+sample {
+  x <- foo(1);
+  x
+}
+"#
+    .to_owned();
+    check_approx_h("double-fn", vec![7.0], &p, 1, None);
+
+    let p = r#"
+sample fn bar (x: Int) -> Int {
+  x <- x + 1;
+  x + 1
+}
+sample fn foo (x: Int) -> Int {
+  x <- x + 1;
+  bar(x + 1)
+}
+sample {
+  x <- foo(3);
+  x
+}
+"#
+    .to_owned();
+    check_approx_h("double-fn+let", vec![7.0], &p, 1, None);
+
+    let p = r#"
+sample fn bar (x: Int) -> Int {
+  x + 1
+}
+exact fn foo (x: Int) -> Int {
+  let x = sample(bar(x + 2)) in
+  x + 3
+}
+sample {
+  x <- exact(foo(1));
+  x
+}
+"#
+    .to_owned();
+    check_approx_h("mls-double-fn", vec![7.0], &p, 1, None);
+}
