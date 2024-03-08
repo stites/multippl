@@ -1,0 +1,195 @@
+def forward(ix) {
+  s := categorical(
+          1.0 / 19.0,
+          1.0 / 19.0,
+          1.0 / 19.0,
+          1.0 / 19.0,
+          1.0 / 19.0,
+          1.0 / 19.0,
+          1.0 / 19.0,
+          1.0 / 19.0,
+          1.0 / 19.0,
+          1.0 / 19.0,
+          1.0 / 19.0,
+          1.0 / 19.0,
+          1.0 / 19.0,
+          1.0 / 19.0,
+          1.0 / 19.0,
+          1.0 / 19.0,
+          1.0 / 19.0,
+          1.0 / 19.0,
+          1.0 / 19.0
+  );
+  if s < ix {
+    return s
+  } else {
+    return s + 1
+  }
+}
+
+def node(nid) {
+  // an infected node will forward two more packets
+  p1 := forward(nid);
+  p2 := forward(nid);
+  return (p1, p2)
+}
+
+def network_step(
+    n0 : B,
+    n1 : B,
+    n2 : B,
+    n3 : B,
+    n4 : B,
+    n5 : B,
+    n6 : B,
+    n7 : B,
+    n8 : B,
+    n9 : B,
+    n10 : B,
+    n11 : B,
+    n12 : B,
+    n13 : B,
+    n14 : B,
+    n15 : B,
+    n16 : B,
+    n17 : B,
+    n18 : B,
+    n19 : B,
+    next : R) {
+
+  // the incoming packet performs the infection
+  _n0 := n0 || (next == 0);
+  _n1 := n1 || (next == 1);
+  _n2 := n2 || (next == 2);
+  _n3 := n3 || (next == 3);
+  _n4 := n4 || (next == 4);
+  _n5 := n5 || (next == 5);
+  _n6 := n6 || (next == 6);
+  _n7 := n7 || (next == 7);
+  _n8 := n8 || (next == 8);
+  _n9 := n9 || (next == 9);
+  _n10 := n10 || (next == 10);
+  _n11 := n11 || (next == 11);
+  _n12 := n12 || (next == 12);
+  _n13 := n13 || (next == 13);
+  _n14 := n14 || (next == 14);
+  _n15 := n15 || (next == 15);
+  _n16 := n16 || (next == 16);
+  _n17 := n17 || (next == 17);
+  _n18 := n18 || (next == 18);
+  _n19 := n19 || (next == 19);
+
+  // the infected node sends two outgoing packets
+  fwd := node(next);
+  _p1 := fwd[0];
+  _p2 := fwd[1];
+  // and return the new state
+  return (_n0,
+   _n1,
+   _n2,
+   _n3,
+   _n4,
+   _n5,
+   _n6,
+   _n7,
+   _n8,
+   _n9,
+   _n10,
+   _n11,
+   _n12,
+   _n13,
+   _n14,
+   _n15,
+   _n16,
+   _n17,
+   _n18,
+   _n19,
+   _p1, _p2)
+}
+
+def as_num(b : B) {
+  if (b) { return 1.0 } else { return 0.0 }
+}
+
+def main () {
+  // first we sample two packets from the starting node 0
+  p := node(0);
+  p1 := p[0];
+  p2 := p[1];
+  i0 := true;
+  i1 := false;
+  i2 := false;
+  i3 := false;
+  i4 := false;
+  i5 := false;
+  i6 := false;
+  i7 := false;
+  i8 := false;
+  i9 := false;
+  i10 := false;
+  i11 := false;
+  i12 := false;
+  i13 := false;
+  i14 := false;
+  i15 := false;
+  i16 := false;
+  i17 := false;
+  i18 := false;
+  i19 := false;
+
+
+  q := [p1, p2];
+
+  num_steps := 2;
+  for step in [0..num_steps) {
+    nxt := q[0];
+    q = q[1 .. q.length];
+    state := network_step(i0 , i1 , i2 , i3 , i4 , i5 , i6 , i7 , i8 , i9 , i10 , i11 , i12 , i13 , i14 , i15 , i16 , i17 , i18 , i19, nxt);
+    i0 = state[0];
+    i1 = state[1];
+    i2 = state[2];
+    i3 = state[3];
+    i4 = state[4];
+    i5 = state[5];
+    i6 = state[6];
+    i7 = state[7];
+    i8 = state[8];
+    i9 = state[9];
+    i10 = state[10];
+    i11 = state[11];
+    i12 = state[12];
+    i13 = state[13];
+    i14 = state[14];
+    i15 = state[15];
+    i16 = state[16];
+    i17 = state[17];
+    i18 = state[18];
+    i19 = state[19];
+    q = q~[state[20]];
+    q = q~[state[21]];
+  };
+  n0 := as_num(i0);
+  n1 := as_num(i1);
+  n2 := as_num(i2);
+  n3 := as_num(i3);
+  n4 := as_num(i4);
+  n5 := as_num(i5);
+  n6 := as_num(i6);
+  n7 := as_num(i7);
+  n8 := as_num(i8);
+  n9 := as_num(i9);
+
+  n10 := as_num(i10);
+  n11 := as_num(i11);
+  n12 := as_num(i12);
+  n13 := as_num(i13);
+  n14 := as_num(i14);
+  n15 := as_num(i15);
+  n16 := as_num(i16);
+  n17 := as_num(i17);
+  n18 := as_num(i18);
+  n19 := as_num(i19);
+
+  out := (n0 + n1 + n2 + n3 + n4 + n5 + n6 + n7 + n8 + n9 + n10 + n11 + n12 + n13 + n14 + n15 + n16 + n17 + n18 + n19);
+  return Expectation(out)
+}
