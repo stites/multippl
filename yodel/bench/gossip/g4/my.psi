@@ -15,15 +15,15 @@ def node(nid) {
 }
 
 def network_step(n0 : B, n1 : B, n2 : B, n3 : B, next : R) {
-  // at each step, an infected node sends new packets
+  // the incoming packet performs the infection
+  _n0 := n0 || (next == 0);
+  _n1 := n1 || (next == 1);
+  _n2 := n2 || (next == 2);
+  _n3 := n3 || (next == 3);
+  // the infected node sends two outgoing packets
   fwd := node(next);
   _p1 := fwd[0];
   _p2 := fwd[1];
-  // we re-tabulate infections
-  _n0 := n0 || (_p1 == 0) || (_p2 == 0);
-  _n1 := n1 || (_p1 == 1) || (_p2 == 1);
-  _n2 := n2 || (_p1 == 2) || (_p2 == 2);
-  _n3 := n3 || (_p1 == 3) || (_p2 == 3);
   // and return the new state
   return (_n0, _n1, _n2, _n3, _p1, _p2)
 }
@@ -32,43 +32,6 @@ def as_num(b : B) {
   if (b) { return 1.0 } else { return 0.0 }
 }
 
-dat Queue{
-    data: (ℝ)[];
-    def Queue(){
-        data = ([]:(ℝ)[]);
-    }
-    def pushFront(x: ℝ){
-        data=[x]~data;
-    }
-    def pushBack(x: ℝ){
-        data=data~[x];
-    }
-    def takeFront(){
-        r:=front();
-        popFront();
-        return r;
-    }
-    def takeBack(){
-        r:=data[nonempty()-1];
-        data=data[0..nonempty()-1];
-        return r;
-    }
-    def size(){
-        return data.length;
-    }
-    def nonempty(){
-        return data.length > 0;
-    }
-    def front(){
-        return data[0];
-    }
-    def dupFront(){
-        pushFront(front());
-    }
-    def popFront(){
-        data=data[1..nonempty()];
-    }
-}
 def main () {
   // first we sample two packets from the starting node 0
   p := node(0);
@@ -79,20 +42,21 @@ def main () {
   i2 := false;
   i3 := false;
 
-  q := Queue();
-  q.pushBack(p1);
-  q.pushBack(p2);
+  q := [p1, p2];
+  // q = q~[p1];
+  // q = q~[p2];
 
   num_steps := 2;
   for step in [0..num_steps) {
-    nxt := q.takeFront();
+    nxt := q[0];
+    q = q[1 .. q.length];
     state := network_step(i0, i1, i2, i3, nxt);
     i0 = state[0];
     i1 = state[1];
     i2 = state[2];
     i3 = state[3];
-    q.pushBack(state[4]);
-    q.pushBack(state[5]);
+    q = q~[state[4]];
+    q = q~[state[5]];
   };
   n0 := as_num(i0);
   n1 := as_num(i1);

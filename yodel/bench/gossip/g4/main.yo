@@ -14,15 +14,15 @@ exact fn node(nid : Int) -> (Int, Int) {
   (p1, p2)
 }
 exact fn network_step(n0 : Bool, n1 : Bool, n2: Bool, n3 : Bool, next : Int) -> (Bool, Bool, Bool, Bool, Int, Int) {
-  // at each step, an infected node sends new packets
+  // the incoming packet performs the infection
+  let _n0 = n0 || (next == 0) in
+  let _n1 = n1 || (next == 1) in
+  let _n2 = n2 || (next == 2) in
+  let _n3 = n3 || (next == 3) in
+  // the infected node sends two outgoing packets
   let fwd = node(next) in
   let _p1 = fwd[0] in
   let _p2 = fwd[1] in
-  // we re-tabulate infections
-  let _n0 = n0 || (_p1 == 0) || (_p2 == 0) in
-  let _n1 = n1 || (_p1 == 1) || (_p2 == 1) in
-  let _n2 = n2 || (_p1 == 2) || (_p2 == 2) in
-  let _n3 = n3 || (_p1 == 3) || (_p2 == 3) in
   // and return the new state
   (_n0, _n1, _n2, _n3, _p1, _p2)
 }
@@ -35,7 +35,7 @@ sample {
   // first we sample two packets from the starting node 0
   p <- exact(node(0));
 
-  // p1 <- trace (p) p[0];
+  p1 <- p[0];
   p1 <- p[0];
   p2 <- p[1];
   i0 <- true;
@@ -52,8 +52,8 @@ sample {
     q   <- tail(q);
     state <- exact(network_step(i0, i1, i2, i3, nxt));
 
-    // i0 <- trace (state) state[0];
     i0 <- state[0];
+    // i0 <- state[0];
     i1 <- state[1];
     i2 <- state[2];
     i3 <- state[3];
