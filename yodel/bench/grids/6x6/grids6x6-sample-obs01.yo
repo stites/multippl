@@ -2,7 +2,7 @@ sample{
 exact {
   let x00 = flip 0.5 in
   let x01 = if x00 then flip 0.3333333333333333 else flip 0.25 in
-  observe !x10 in
+  observe !x01 in
   let x02 = if x01 then flip 0.3333333333333333 else flip 0.25 in
   let x03 = if x02 then flip 0.3333333333333333 else flip 0.25 in
   let x04 = if x03 then flip 0.3333333333333333 else flip 0.25 in

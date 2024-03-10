@@ -1,8 +1,8 @@
 exact {
   let x00 = flip 0.5 in
   let x01 = if x00 then flip 0.3333333333333333 else flip 0.25 in
-  let x10 = if x00 then flip 0.2 else flip 0.16666666666666666 in
   observe !x01 in
+  let x10 = if x00 then flip 0.2 else flip 0.16666666666666666 in
   let diag = sample {
     x20 ~ if x10 then bern(0.2) else bern(0.16666666666666666);
     x11 ~ if  x10 &&  x01 then bern(0.14285714285714285) else
