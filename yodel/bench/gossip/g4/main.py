@@ -11,7 +11,7 @@ import pyro.distributions as dist
 from pyro.infer.importance import Importance
 
 num_nodes = 4
-num_steps = 2
+num_steps = 4
 def forward(ix, pkt, node):
     s = pyro.sample(
         f"{ix}_n{node}_{pkt}",
@@ -49,6 +49,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="generate data for simple HMMs")
+    parser.add_argument("--num-runs", default=1, type=int,) # unused!
     parser.add_argument("--num-samples", default=1_000, type=int,)
     parser.add_argument("--seed", default=0, type=int,)
     args = parser.parse_args()

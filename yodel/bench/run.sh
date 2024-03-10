@@ -20,14 +20,16 @@ run_clean() {
 }
 
 
+#MODE=run_benchmark
+MODE=run_clean
+
 for exp_meta in grids arrival; do
     for exp in "$exp_meta"/*; do
         if elementIn "$exp" "${SKIP[@]}"; then
             echo "skipping $exp"
         else
             if [ -d "$exp" ]; then
-                run_benchmark "$exp"
-                #run_clean "$exp"
+                $MODE "$exp"
             fi
         fi
     done
