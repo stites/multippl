@@ -1,0 +1,79 @@
+#+title: Arrival for the Integra network
+
+From topology-zoo.org [cite:@knight2011Internet].
+
+[[http://www.topology-zoo.org/maps/Integra.jpg][Integra network]]
+
+Notes:
+- Country: USA
+- Classification: Backbone, Customer, Transit
+- Layer: IP
+- Network date: 08/2010
+- 26 nodes
+- Provenance: Primary
+- Notes: Electric Lightwave provides carrier wholesale. Hard to read as 3D style. May be multiple PoPs in same city, with multiple links.
+- Nodes:
+  + Chicago
+  + Dallas
+  + StCloud
+  + Minneapolis
+  + LosAngeles
+  + SantaClara
+  + LasVegas
+  + Phoenix
+  + Sacramento
+  + SantaRose
+  + Salem
+  + Bend
+  + Eugene
+  + Reno
+  + RanchoCordova
+  + NewYork
+  + Ashburn
+  + Spokane
+  + Fargo
+  + Billings
+  + Denver
+  + Ogden
+  + Orem
+  + SaltLakeCity
+  + Boise
+  + Portland
+  + Seattle
+- Edges:
+  + Chicago -> Ashburn
+  + Chicago -> Minneapolis
+  + Chicago -> Denver
+  + Dallas -> Denver
+  + Dallas -> Phoenix
+  + StCloud -> Fargo
+  + StCloud -> Minneapolis
+  + Minneapolis -> Fargo
+  + Minneapolis -> Seattle
+  + Minneapolis -> New York
+  + LosAngeles -> SantaClara
+  + LosAngeles -> LasVegas
+  + LosAngeles -> Phoenix
+  + Santa Clara -> Sacramento
+  + LasVegas -> Salt Lake City
+  + LasVegas -> Phoenix
+  + Sacramento -> Santa Rose
+  + Sacramento -> Reno
+  + Sacramento -> RanchoCordova
+  + Sacramento -> Portland
+  + Salem -> Portland
+  + Salem -> Eugene
+  + Bend -> Portland
+  + Bend -> Seattle
+  + Reno -> Salt Lake City
+  + NewYork -> Ashburn
+  + Spokane -> Seattle
+  + Spokane -> Billings
+  + Billings -> Denver
+  + Denver -> Ogden
+  + Ogden -> Orem
+  + Ogden -> SaltLakeCity
+  + Orem -> SaltLakeCity
+  + SaltLakeCity -> Boise
+  + Boise -> Portland
+  + Portland -> Seattle
