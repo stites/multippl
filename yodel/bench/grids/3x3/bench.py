@@ -9,8 +9,8 @@ import time
 from multiprocessing import Pool
 import multiprocessing.context as ctx
 
-USE_NOTI=False
-TIMEOUT_SEC=1 * 60 # = 5min
+USE_NOTI=True
+TIMEOUT_SEC=5 * 60 # = 5min
 repo_dir = subprocess.Popen(['git', 'rev-parse', '--show-toplevel'], stdout=subprocess.PIPE).communicate()[0].rstrip().decode('utf-8')
 benchdir = f"{repo_dir}/yodel/bench/"
 
