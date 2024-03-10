@@ -11,33 +11,9 @@ from multiprocessing import Pool
 import multiprocessing.context as ctx
 
 USE_NOTI=True
-TIMEOUT_SEC=60 * 5 # 5min
+TIMEOUT_SEC=5 * 60 # = 5min
 repo_dir = subprocess.Popen(['git', 'rev-parse', '--show-toplevel'], stdout=subprocess.PIPE).communicate()[0].rstrip().decode('utf-8')
 benchdir = f"{repo_dir}/yodel/bench/"
-
-class Abortable:
-    def __init__(self, func, timeout):
-        self.timeout = timeout
-        self.func = func
-
-    def __call__(self, args):
-        run, mainfile, nsteps, nruns, iseed, cmd, logdir, with_seed, needs_timer = args
-        seed = run + iseed
-        start = time.time()
-        outfilepath = mkoutpath(logdir, mainfile, nsteps, seed, date, hm)
-
-        p = ThreadPool(1)
-        res = p.apply_async(self.func, args=args)
-        try:
-            out = res.get(self.timeout)  # Wait timeout seconds for func to complete.
-            return out
-        except (TimeoutError, ctx.TimeoutError):
-            with open(outfilepath, "w") as outfile:
-                outfile.write(f"timeout@{TIMEOUT_SEC} (seconds)\n")
-            noti_failed(mainfile, 124, run, nruns)
-        finally:
-            p.close()
-            p.join()
 
 def mkoutpath(logdir, mainfile, nsteps, seed, date, hm):
     outfilepath = logdir + "_".join([
@@ -48,7 +24,8 @@ def mkoutpath(logdir, mainfile, nsteps, seed, date, hm):
     return outfilepath
 
 
-def proc(run, mainfile, nsteps, nruns, initial_seed, cmd, logdir, with_seed, needs_timer):
+def proc(args):
+    run, mainfile, nsteps, nruns, initial_seed, cmd, logdir, with_seed, needs_timer = args
     date = time.strftime("%Y-%m-%d", time.localtime())
     hm  = time.strftime("%H:%M", time.localtime())
     seed = run + initial_seed
@@ -56,17 +33,22 @@ def proc(run, mainfile, nsteps, nruns, initial_seed, cmd, logdir, with_seed, nee
 
     start = time.time()
     cmd = cmd if not with_seed else cmd + [str(seed)]
-    with open(outfilepath, "w") as outfile:
-        p = subprocess.run(cmd, stdout=outfile, timeout=TIMEOUT_SEC)
-        if needs_timer:
-            outfile.write(f"{time.time() - start}ms\n")
+    try:
+        with open(outfilepath, "w") as outfile:
+            p = subprocess.run(cmd, stdout=outfile, timeout=TIMEOUT_SEC)
+            if needs_timer:
+                outfile.write(f"{time.time() - start}ms\n")
 
-    if run == 0 and p.returncode == 0:
-        end1 = time.time()
-        noti_success(mainfile, 1, nruns, (end1 - start))
+        if run == 0 and p.returncode == 0:
+            end1 = time.time()
+            noti_success(mainfile, 1, nruns, (end1 - start))
 
-    if p.returncode > 0:
-        noti_failed(mainfile, p.returncode, run, nruns)
+        if p.returncode > 0:
+            noti_failed(mainfile, p.returncode, run, nruns)
+    except (subprocess.TimeoutExpired, ctx.TimeoutError):
+        with open(outfilepath, "w") as outfile:
+            outfile.write(f"timeout@{TIMEOUT_SEC} (seconds)\n")
+        noti_failed(mainfile, 124, run, nruns)
 
 def runner_(mainfile, cmd, with_seed=True, logdir="logs/", needs_timer=False, **kwargs):
     nsteps = kwargs['num_steps']
@@ -76,8 +58,7 @@ def runner_(mainfile, cmd, with_seed=True, logdir="logs/", needs_timer=False, **
     start = time.time()
     all_args = [(run, mainfile, nsteps, nruns, iseed, cmd, logdir, with_seed, needs_timer) for run in range(nruns)]
     with Pool(nruns) as p:
-        aworker = Abortable(proc, timeout=5)
-        pbar = tqdm(p.imap_unordered(aworker, all_args), total=nruns)
+        pbar = tqdm(p.imap_unordered(proc, all_args), total=nruns)
         pbar.set_description(mainfile + f"(n:{nsteps})")
         list(pbar)
     end = time.time()
