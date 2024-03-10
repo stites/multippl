@@ -1,0 +1,163 @@
+let x00 = flip 0.5 in
+let x01 = if x00 then flip 0.3333333333333333 else flip 0.25 in
+let _ = observe !x01 in
+let x02 = if x01 then flip 0.3333333333333333 else flip 0.25 in
+let x03 = if x02 then flip 0.3333333333333333 else flip 0.25 in
+let x04 = if x03 then flip 0.3333333333333333 else flip 0.25 in
+let x10 = if x00 then flip 0.2 else flip 0.16666666666666666 in
+let x11 =
+  if  x10 &&  x01 then flip 0.14285714285714285 else
+  if  x10 && !x01 then flip 0.125 else
+  if !x10 &&  x01 then flip 0.1111111111111111 else
+                         flip 0.09090909090909091 in
+
+let x12 =
+  if  x11 &&  x02 then flip 0.14285714285714285 else
+  if  x11 && !x02 then flip 0.125 else
+  if !x11 &&  x02 then flip 0.1111111111111111 else
+                         flip 0.09090909090909091 in
+
+let x13 =
+  if  x12 &&  x03 then flip 0.14285714285714285 else
+  if  x12 && !x03 then flip 0.125 else
+  if !x12 &&  x03 then flip 0.1111111111111111 else
+                         flip 0.09090909090909091 in
+
+let x20 = if x10 then flip 0.2 else flip 0.16666666666666666 in
+let x21 =
+  if  x20 &&  x11 then flip 0.2857142857142857 else
+  if  x20 && !x11 then flip 0.25 else
+  if !x20 &&  x11 then flip 0.2222222222222222 else
+                         flip 0.18181818181818182 in
+
+let x22 =
+  if  x21 &&  x12 then flip 0.2857142857142857 else
+  if  x21 && !x12 then flip 0.25 else
+  if !x21 &&  x12 then flip 0.2222222222222222 else
+                         flip 0.18181818181818182 in
+
+let x30 = if x20 then flip 0.2 else flip 0.16666666666666666 in
+let x31 =
+  if  x30 &&  x21 then flip 0.8571428571428571 else
+  if  x30 && !x21 then flip 0.75 else
+  if !x30 &&  x21 then flip 0.6666666666666666 else
+                         flip 0.5454545454545454 in
+
+let x40 = if x30 then flip 0.2 else flip 0.16666666666666666 in
+let x50 = if x40 then flip 0.2 else flip 0.16666666666666666 in
+let x41 =
+  if  x40 &&  x31 then flip 0.42857142857142855 else
+  if  x40 && !x31 then flip 0.375 else
+  if !x40 &&  x31 then flip 0.8888888888888888 else
+                         flip 0.8181818181818182 in
+
+let x32 =
+  if  x31 &&  x22 then flip 0.8571428571428571 else
+  if  x31 && !x22 then flip 0.75 else
+  if !x31 &&  x22 then flip 0.6666666666666666 else
+                         flip 0.5454545454545454 in
+
+let x23 =
+  if  x22 &&  x13 then flip 0.2857142857142857 else
+  if  x22 && !x13 then flip 0.25 else
+  if !x22 &&  x13 then flip 0.2222222222222222 else
+                         flip 0.18181818181818182 in
+
+let x14 =
+  if  x13 &&  x04 then flip 0.14285714285714285 else
+  if  x13 && !x04 then flip 0.125 else
+  if !x13 &&  x04 then flip 0.1111111111111111 else
+                         flip 0.09090909090909091 in
+
+let x05 = if x04 then flip 0.3333333333333333 else flip 0.25 in
+let x15 =
+  if  x14 &&  x05 then flip 0.14285714285714285 else
+  if  x14 && !x05 then flip 0.125 else
+  if !x14 &&  x05 then flip 0.1111111111111111 else
+                         flip 0.09090909090909091 in
+
+let x24 =
+  if  x23 &&  x14 then flip 0.2857142857142857 else
+  if  x23 && !x14 then flip 0.25 else
+  if !x23 &&  x14 then flip 0.2222222222222222 else
+                         flip 0.18181818181818182 in
+
+let x25 =
+  if  x24 &&  x15 then flip 0.2857142857142857 else
+  if  x24 && !x15 then flip 0.25 else
+  if !x24 &&  x15 then flip 0.2222222222222222 else
+                         flip 0.18181818181818182 in
+
+let x33 =
+  if  x32 &&  x23 then flip 0.8571428571428571 else
+  if  x32 && !x23 then flip 0.75 else
+  if !x32 &&  x23 then flip 0.6666666666666666 else
+                         flip 0.5454545454545454 in
+
+let x34 =
+  if  x33 &&  x24 then flip 0.8571428571428571 else
+  if  x33 && !x24 then flip 0.75 else
+  if !x33 &&  x24 then flip 0.6666666666666666 else
+                         flip 0.5454545454545454 in
+
+let x35 =
+  if  x34 &&  x25 then flip 0.8571428571428571 else
+  if  x34 && !x25 then flip 0.75 else
+  if !x34 &&  x25 then flip 0.6666666666666666 else
+                         flip 0.5454545454545454 in
+
+let x42 =
+  if  x41 &&  x32 then flip 0.42857142857142855 else
+  if  x41 && !x32 then flip 0.375 else
+  if !x41 &&  x32 then flip 0.8888888888888888 else
+                         flip 0.8181818181818182 in
+
+let x43 =
+  if  x42 &&  x33 then flip 0.42857142857142855 else
+  if  x42 && !x33 then flip 0.375 else
+  if !x42 &&  x33 then flip 0.8888888888888888 else
+                         flip 0.8181818181818182 in
+
+let x44 =
+  if  x43 &&  x34 then flip 0.42857142857142855 else
+  if  x43 && !x34 then flip 0.375 else
+  if !x43 &&  x34 then flip 0.8888888888888888 else
+                         flip 0.8181818181818182 in
+
+let x45 =
+  if  x44 &&  x35 then flip 0.42857142857142855 else
+  if  x44 && !x35 then flip 0.375 else
+  if !x44 &&  x35 then flip 0.8888888888888888 else
+                         flip 0.8181818181818182 in
+
+let x51 =
+  if  x50 &&  x41 then flip 0.42857142857142855 else
+  if  x50 && !x41 then flip 0.375 else
+  if !x50 &&  x41 then flip 0.8888888888888888 else
+                         flip 0.8181818181818182 in
+
+let x52 =
+  if  x51 &&  x42 then flip 0.42857142857142855 else
+  if  x51 && !x42 then flip 0.375 else
+  if !x51 &&  x42 then flip 0.8888888888888888 else
+                         flip 0.8181818181818182 in
+
+let x53 =
+  if  x52 &&  x43 then flip 0.42857142857142855 else
+  if  x52 && !x43 then flip 0.375 else
+  if !x52 &&  x43 then flip 0.8888888888888888 else
+                         flip 0.8181818181818182 in
+
+let x54 =
+  if  x53 &&  x44 then flip 0.42857142857142855 else
+  if  x53 && !x44 then flip 0.375 else
+  if !x53 &&  x44 then flip 0.8888888888888888 else
+                         flip 0.8181818181818182 in
+
+let x55 =
+  if  x54 &&  x45 then flip 0.42857142857142855 else
+  if  x54 && !x45 then flip 0.375 else
+  if !x54 &&  x45 then flip 0.8888888888888888 else
+                         flip 0.8181818181818182 in
+
+[x00, x01, x02, x03, x04, x05, x10, x11, x12, x13 ]
