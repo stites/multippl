@@ -25,7 +25,7 @@ run_clean() {
 
 
 MODE=run_benchmark
-#MODE=run_clean
+MODE=run_clean
 
 for exp_meta in grids arrival gossip; do
     for exp in "$exp_meta"/*; do

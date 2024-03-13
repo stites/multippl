@@ -4,6 +4,7 @@ import time
 import os, sys
 from main import truth
 
+DEVELOP=False
 def compute_l1(ms, truth):
     return list(map(lambda x: abs(x[0] - x[1]), zip(ms, truth)))
 
@@ -18,7 +19,7 @@ def str_stats(ss):
     for metric in ['l1', 'ms', ' #']:
         for m in mainfiles:
             if ss[m][' #'] == 0:
-                break
+                continue
             out = ss[m][metric] if metric == " #" else sum(ss[m][metric]) / ss[m][' #']
             s.append("{} {}: {}".format(m.ljust(pad, " "), metric, str(out)))
             s.append("\n")
@@ -33,22 +34,31 @@ if __name__ == "__main__":
 
     date = time.strftime("%Y-%m-%d", time.localtime())
 
-    stats = {k: {" #":0,"ms":[], "l1":[]} for k in mainfiles}
     for day in filter(lambda f: os.path.isdir(args.dir + f), os.listdir(args.dir)):
         day = args.dir + "/" + day + "/"
         for hm in filter(lambda f: os.path.isdir(day + f), os.listdir(day)):
             run = day + "/" + hm + "/"
+            stats = {k: {" #":0,"ms":[], "l1":[]} for k in mainfiles}
             for log in filter(lambda l: l[-4:] == ".log", os.listdir(run)):
                 main = [m for m in mainfiles if log[:len(m)] == m.replace(".", "-")]
                 assert len(main) == 1, f"did not find a main file associated with {log}"
                 main = main[0]
                 with open(run + "/" + log, "r") as f:
                     out = f.readlines()
-                    if len(out) == 0:
-                        print(f"warning! {run}/{log} is empty!")
+                    out = "".join(out).rstrip().split('\n')
+                    if len(out) == 1 and out[0] == "":
+                        print(f"incomplete run: {run}/{log} is empty!")
                         continue
-                last = out[-1].rstrip()
-                assert last[-2:] == "ms", f"expected {log} to have last line ending in 'ms'"
+                    last = out[-1]
+                    if last == "":
+                        print("warning! last is empty! full output is:")
+                        print(out)
+                        continue
+                    if  last[:len("timeout")] == "timeout":
+                        continue
+                    if last[-2:] != "ms":
+                        print(f"WARNING! expected {log} to have last line ending in 'ms'")
+                        continue
                 stats[main]['ms'].append(float(last[:-2]))
                 stats[main][' #'] += 1
                 if needs_l1(main):
@@ -58,8 +68,9 @@ if __name__ == "__main__":
                 else:
                     stats[main]['l1'].append(0.0)
             ss = str_stats(stats)
-            with open(day + f"/{hm}.stats", "w") as f:
-                f.writelines(ss)
+            if not DEVELOP:
+                with open(day + f"/{hm}.stats", "w") as f:
+                    f.writelines(ss)
             print(run)
             print("".join(["    " + s for s in ss]))
 

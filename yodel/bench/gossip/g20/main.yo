@@ -138,7 +138,7 @@ sample {
   q  <- [];
   q  <- push(q, p1);
   q  <- push(q, p2);
-  num_steps <- 20;
+  num_steps <- 3;
   while (num_steps > 0) {
     nxt <- head(q);
     q   <- tail(q);

@@ -46,7 +46,7 @@ def main () {
   // q = q~[p1];
   // q = q~[p2];
 
-  num_steps := 3;
+  num_steps := 0;
   for step in [0..num_steps) {
     nxt := q[0];
     q = q[1 .. q.length];

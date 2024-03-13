@@ -11,7 +11,8 @@ import pyro.distributions as dist
 from pyro.infer.importance import Importance
 
 num_nodes = 10
-num_steps = 10
+num_steps = 3 # because /maybe/ psi will finish
+truth = [ 298 / 81 ]
 def forward(ix, pkt, node):
     s = pyro.sample(
         f"{ix}_n{node}_{pkt}",

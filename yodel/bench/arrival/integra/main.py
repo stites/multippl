@@ -11,6 +11,8 @@ import pyro
 import time
 #from utils import *
 
+truth = [ 0.956412014 * 3.0 ]
+
 def network(suffix=""):
     def flip(n, p):
         return pyro.sample(n+suffix, dist.Bernoulli(p))

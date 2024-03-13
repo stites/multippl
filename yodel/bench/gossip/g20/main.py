@@ -11,7 +11,7 @@ import pyro.distributions as dist
 from pyro.infer.importance import Importance
 
 num_nodes = 20
-num_steps = 20
+num_steps = 3
 def forward(ix, pkt, node):
     s = pyro.sample(
         f"{ix}_n{node}_{pkt}",

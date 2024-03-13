@@ -140,7 +140,7 @@ def main () {
 
   q := [p1, p2];
 
-  num_steps := 20;
+  num_steps := 3;
   for step in [0..num_steps) {
     nxt := q[0];
     q = q[1 .. q.length];

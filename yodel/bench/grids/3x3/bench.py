@@ -9,8 +9,9 @@ import time
 from multiprocessing import Pool
 import multiprocessing.context as ctx
 
-USE_NOTI=True
-TIMEOUT_SEC=5 * 60 # = 5min
+# USE_NOTI=True
+USE_NOTI=False
+TIMEOUT_SEC= 20 # * 60 # = 20min
 repo_dir = subprocess.Popen(['git', 'rev-parse', '--show-toplevel'], stdout=subprocess.PIPE).communicate()[0].rstrip().decode('utf-8')
 benchdir = f"{repo_dir}/yodel/bench/"
 
@@ -36,7 +37,8 @@ def proc(args):
         with open(outfilepath, "w") as outfile:
             p = subprocess.run(cmd, stdout=outfile, timeout=TIMEOUT_SEC)
             if needs_timer:
-                outfile.write(f"{time.time() - start}ms\n")
+                sec = time.time() - start
+                outfile.write(f"{sec * 1000}ms\n")
 
         if run == 0 and p.returncode == 0:
             end1 = time.time()
@@ -132,12 +134,18 @@ if __name__ == "__main__":
             pyrunner(f, logdir=logdir, **args)
             pass
         elif f[-5:] == ".dice":
+            args["num_steps"] = 1
             timedrunner("dice", f, logdir=logdir, **args)
+            args["num_steps"] = num_steps
             pass
         elif f[-4:] == ".psi":
+            args["num_steps"] = 1
             timedrunner("psi", f, logdir=logdir, **args)
+            args["num_steps"] = num_steps
             pass
-        elif f[:5] == "grids" and f[-3:] == ".yo" and len(f) == 11: # we are compiling exactly, only use one sample
+        elif (f[:5] == "grids" and f[-3:] == ".yo" and len(f) == 11) or (   # grids#x#.yo
+              f[:5] == "grids" and f[-9:] == "-obs01.yo" and len(f) == 17): # grids#x#-obs01.yo
+            # we are compiling exactly, only use one sample
             args["num_steps"] = 1
             yorunner(f, logdir=logdir, **args)
             args["num_steps"] = num_steps

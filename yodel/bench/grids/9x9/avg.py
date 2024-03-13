@@ -17,7 +17,7 @@ def str_stats(ss):
     for metric in ['l1', 'ms', ' #']:
         for m in mainfiles:
             if ss[m][' #'] == 0:
-                break
+                continue
             out = ss[m][metric] if metric == " #" else sum(ss[m][metric]) / ss[m][' #']
             s.append("{} {}: {}".format(m.ljust(pad, " "), metric, str(out)))
             s.append("\n")
@@ -47,7 +47,9 @@ if __name__ == "__main__":
                         print(f"warning! {run}/{log} is empty!")
                         continue
                 last = out[-1].rstrip()
-                assert last[-2:] == "ms", f"expected {log} to have last line ending in 'ms'"
+                if last[-2:] != "ms":
+                    print(f"WARNING! expected {log} to have last line ending in 'ms'")
+                    continue
                 stats[main]['ms'].append(float(last[:-2]))
                 stats[main][' #'] += 1
                 if needs_l1(main):

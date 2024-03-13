@@ -1,0 +1,96 @@
+let arrives_at_chicago = true in
+let chicago = discrete(1/3, 1/3, 1/3)  in
+let chicago_to_ashburn = if (arrives_at_chicago && chicago == int(2, 0)) then flip 0.999 else false in
+let chicago_to_minneap = if (arrives_at_chicago && chicago == int(2, 1)) then flip 0.999 else false in
+let chicago_to_denver  = if arrives_at_chicago && chicago  == int(2, 2) then flip 0.999 else false in
+
+let arrives_at_dallas = true in
+let dallas = flip 0.5 in
+let dallas_to_denver  = if arrives_at_dallas &&  dallas then flip 0.999 else false in
+let dallas_to_pheonix = if arrives_at_dallas && !dallas then flip 0.999 else false in
+
+let arrives_at_stcloud = true in
+let stcloud = flip 0.5 in
+let stcloud_to_fargo   = if arrives_at_stcloud &&  stcloud then flip 0.999 else false in
+let stcloud_to_minneap = if arrives_at_stcloud && !stcloud then flip 0.999 else false in
+
+let arrives_at_minneap = stcloud_to_minneap || chicago_to_minneap in
+let minneap = discrete(1/3, 1/3, 1/3)  in
+let minneap_to_fargo   = if arrives_at_minneap && minneap == int(2, 0) then flip 0.999 else false in
+let minneap_to_seattle = if arrives_at_minneap && minneap == int(2, 1) then flip 0.999 else false in
+let minneap_to_newyork = if arrives_at_minneap && minneap == int(2, 2) then flip 0.999 else false in
+
+let arrives_at_losangeles = true in
+let losangeles = discrete(1/3, 1/3, 1/3)  in
+let losangeles_to_santaclara = if arrives_at_losangeles && losangeles == int(2, 0) then flip 0.999 else false in
+let losangeles_to_lasvegas   = if arrives_at_losangeles && losangeles == int(2, 1) then flip 0.999 else false in
+let losangeles_to_phoenix    = if arrives_at_losangeles && losangeles == int(2, 2) then flip 0.999 else false in
+
+let arrives_at_santaclara = losangeles_to_santaclara in
+let santaclara = true in // is deterministic
+let santaclara_to_sacramento = if arrives_at_santaclara then flip 0.999 else false in
+
+let arrives_at_lasvegas = losangeles_to_lasvegas in
+let lasvegas = flip 0.5 in
+let lasvegas_to_saltlake = if arrives_at_lasvegas &&  lasvegas then flip 0.999 else false in
+let lasvegas_to_pheonix  = if arrives_at_lasvegas && !lasvegas then flip 0.999 else false in
+
+let arrives_at_sacramento = santaclara_to_sacramento in
+let sacramento = discrete(1/4, 1/4, 1/4, 1/4) in
+let sacramento_to_santarose = if arrives_at_sacramento && sacramento == int(2, 0) then flip 0.999 else false in
+let sacramento_to_reno      = if arrives_at_sacramento && sacramento == int(2, 1) then flip 0.999 else false in
+let sacramento_to_rancho    = if arrives_at_sacramento && sacramento == int(2, 2) then flip 0.999 else false in
+let sacramento_to_portland  = if arrives_at_sacramento && sacramento == int(2, 3) then flip 0.999 else false in
+
+let arrives_at_salem = true in
+let salem = flip 0.5 in
+let salem_to_portland = if arrives_at_salem &&  salem then flip 0.999 else false in
+let salem_to_eugene   = if arrives_at_salem && !salem then flip 0.999 else false in
+
+let arrives_at_bend = true in
+let bend = discrete(1/3, 1/3, 1/3)  in
+let bend_to_portland = if arrives_at_bend && bend == int(2, 0) then flip 0.999 else false in
+let bend_to_seattle  = if arrives_at_bend && bend == int(2, 1) then flip 0.999 else false in
+let bend_to_saltlake = if arrives_at_bend && bend == int(2, 2) then flip 0.999 else false in
+
+let arrives_at_newyork = true in
+let newyork = true  in
+let newyork_to_ashburn = if arrives_at_newyork && newyork then flip 0.999 else false in
+
+let arrives_at_spokane = true in
+let spokane = flip 0.5 in
+let spokane_to_seattle  = if arrives_at_spokane &&  spokane then flip 0.999 else false in
+let spokane_to_billings = if arrives_at_spokane && !spokane then flip 0.999 else false in
+
+let arrives_at_billings = spokane_to_billings in
+let billings = true  in
+let billings_to_denver = if arrives_at_billings && billings then flip 0.999 else false in
+
+let arrives_at_denver = billings_to_denver || dallas_to_denver || chicago_to_denver in
+let denver = true  in
+let denver_to_ogden = if arrives_at_denver && denver then flip 0.999 else false in
+
+let arrives_at_ogden = denver_to_ogden in
+let ogden = flip 0.5 in
+let ogden_to_orem     = if arrives_at_ogden &&  ogden then flip 0.999 else false in
+let ogden_to_saltlake = if arrives_at_ogden && !ogden then flip 0.999 else false in
+
+let arrives_at_orem = ogden_to_orem in
+let orem = true  in
+let orem_to_saltlake = if arrives_at_orem && orem then flip 0.999 else false in
+
+let arrives_at_saltlake = orem_to_saltlake || ogden_to_saltlake || bend_to_saltlake || lasvegas_to_saltlake in
+let saltlake = true  in
+let saltlake_to_boise = if arrives_at_saltlake && saltlake then flip 0.999 else false in
+
+let arrives_at_boise = saltlake_to_boise in
+let boise = true  in
+let boise_to_portland = if arrives_at_boise && boise then flip 0.999 else false in
+
+let arrives_at_portland = bend_to_portland || boise_to_portland || sacramento_to_portland in
+let portland = true  in
+let portland_to_seattle = if arrives_at_portland && portland then flip 0.999 else false in
+
+let _ = observe !dallas in
+
+arrives_at_portland
