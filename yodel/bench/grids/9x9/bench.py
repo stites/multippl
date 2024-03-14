@@ -1,1 +1,1 @@
-../3x3/bench.py
+../../bench.py
