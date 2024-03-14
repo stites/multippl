@@ -372,14 +372,18 @@ impl<'a> State<'a> {
                 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 // Score the program:
                 let wmc_params = self.wmc.params();
-                let avars = crate::utils::variables(dist);
-                for (i, var) in avars.iter().enumerate() {
-                    debug!("{}@{:?}: {:?}", i, var, wmc_params.get_var_weight(*var));
-                }
-                debug!("WMCParams  {:?}", wmc_params);
-                debug!("Accept     {}", &dist.print_bdd());
-                // FIXME: should be aggregating these stats somewhere
-                debug!("using opt? {}", self.opts.sample_pruning);
+                // this closure is _always_ run.
+                // span!(Level::DEBUG, "scoring observe").in_scope(|| {
+                //     println!("here...");
+                //     let avars = crate::utils::variables(dist);
+                //     for (i, var) in avars.iter().enumerate() {
+                //         debug!("{}@{:?}: {:?}", i, var, wmc_params.get_var_weight(*var));
+                //     }
+                //     debug!("WMCParams  {:?}", wmc_params);
+                //     debug!("Accept     {}", &dist.print_bdd());
+                //     // FIXME: should be aggregating these stats somewhere
+                //     debug!("using opt? {}", self.opts.sample_pruning);
+                // });
 
                 let ss = ctx.exact.samples(self.mgr, self.opts.sample_pruning);
                 let (wmc, _) = crate::inference::calculate_wmc_prob(
