@@ -1,0 +1,72 @@
+exact fn forward0() -> Int {
+  let s = discrete(1.0 / 2.0, 1.0 / 2.0) in
+  s + 1
+}
+exact fn forward1() -> Int {
+  let s = discrete(1.0 / 2.0, 1.0 / 2.0) in
+  if s == 0 then s else s + 1
+}
+exact fn forward2() -> Int {
+  let s = discrete(1.0 / 2.0, 1.0 / 2.0) in
+  if s == 0 || s == 1 then s else s + 1
+}
+
+exact fn node(nid : Int) -> (Int, Int) {
+  // an infected node will forward two more packets
+  if      nid == 0 then let l = forward0() in let r = forward0() in  (l, r)
+  else if nid == 1 then let l = forward1() in let r = forward1() in  (l, r)
+  else                  let l = forward2() in let r = forward2() in  (l, r)
+}
+
+exact fn network_step(n0 : Bool, n1 : Bool, n2: Bool, n3 : Bool, next : Int) -> (Bool, Bool, Bool, Bool, Int, Int) {
+  // the incoming packet performs the infection
+  let _n0 = n0 || (next == 0) in
+  let _n1 = n1 || (next == 1) in
+  let _n2 = n2 || (next == 2) in
+  // the infected node sends two outgoing packets
+  let fwd = node(next) in
+  let _p1 = fwd[0] in
+  let _p2 = fwd[1] in
+  // and return the new state
+  (_n0, _n1, _n2, _p1, _p2)
+}
+
+sample fn as_num(b : Bool) -> Float {
+  if (b) { 1.0 } else { 0.0 }
+}
+
+sample {
+  // first we sample two packets from the starting node 0
+  p <- exact(let n = node(0) in n);
+
+  p1 <- p[0];
+  p2 <- p[1];
+  i0 <- true;
+  i1 <- false;
+  i2 <- false;
+
+  q  <- [];
+  q  <- push(q, p1);
+  q  <- push(q, p2);
+  num_steps <- 2;
+  while (num_steps > 0) {
+    nxt <- head(q);
+    q   <- tail(q);
+    state <- exact(network_step(i0, i1, i2, nxt));
+
+    i0 <- state[0];
+    // i0 <- state[0];
+    i1 <- state[1];
+    i2 <- state[2];
+    q  <- push(q, state[3]);
+    q  <- push(q, state[4]);
+    num_steps <- num_steps - 1;
+    true
+  };
+  n0 <- as_num(i0);
+  n1 <- as_num(i1);
+  n2 <- as_num(i2);
+  out <- (n0 + n1 + n2);
+  // trace ((n0, n1, n2, n3, out))
+  out
+}
