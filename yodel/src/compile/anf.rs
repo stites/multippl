@@ -8,6 +8,7 @@ use itertools::*;
 use rsdd::builder::bdd_builder::DDNNFPtr;
 use rsdd::builder::bdd_plan::BddPlan;
 use tracing::*;
+use time::OffsetDateTime;
 
 use super::eval::State;
 
@@ -566,7 +567,8 @@ pub fn eval_sanf<'a>(
         }
         AnfTrace(tr, x) => {
             println!(
-                "S) {}",
+                "[{:?}] S>>> {}",
+                OffsetDateTime::now_local(),
                 eval_sanf(state, ctx, tr)?.sample.out.unwrap().pretty()
             );
             eval_sanf(state, ctx, x)
@@ -791,7 +793,13 @@ pub fn eval_eanf<'a>(
             }
         }
         AnfTrace(tr, x) => {
-            println!("E) {}", eval_eanf(state, ctx, tr)?.out.unwrap().pretty());
+            println!(
+                "[{:?}] E) {}\t\t({}\t{})",
+                OffsetDateTime::now_local(),
+                eval_eanf(state, ctx, tr)?.out.unwrap().pretty(),
+                state.mgr.num_recursive_calls(),
+                state.mgr.num_vars()
+            );
             eval_eanf(state, ctx, x)
         }
         AnfVec(anfs) => errors::not_in_exact(),

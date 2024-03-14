@@ -52,6 +52,7 @@ clap-verbosity-flag = "2.0.1"
 serde_json = "1.0.108"
 quickcheck = "1"
 quickcheck_macros = "1"
+time = { version = "0.3.34", features = ["local-offset"] }
 
 [dev-dependencies]
 num-rational = "0.4.1"
