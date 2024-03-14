@@ -11,7 +11,7 @@ import multiprocessing.context as ctx
 
 DEVELOP=False
 USE_NOTI=False if DEVELOP else True
-TIMEOUT_SEC= 20 if DEVELOP else 30 * 60 # = 30min
+TIMEOUT_SEC= 20 if DEVELOP else 10 * 60 # = 30min
 repo_dir = subprocess.Popen(['git', 'rev-parse', '--show-toplevel'], stdout=subprocess.PIPE).communicate()[0].rstrip().decode('utf-8')
 benchdir = f"{repo_dir}/yodel/bench/"
 
