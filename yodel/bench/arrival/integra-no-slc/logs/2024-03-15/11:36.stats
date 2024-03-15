@@ -1,0 +1,12 @@
+main.py                  l1: 2.195934068525879
+expectation-no-slc.dice  l1: 0.0
+main.yo                  l1: 1.493560483057805
+
+main.py                  ms: 47966.4998
+expectation-no-slc.dice  ms: 61.943745613098145
+main.yo                  ms: 3527.6
+
+main.py                   #: 10
+expectation-no-slc.dice   #: 10
+main.yo                   #: 10
+
