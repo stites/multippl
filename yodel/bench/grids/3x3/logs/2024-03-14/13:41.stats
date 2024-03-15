@@ -1,0 +1,24 @@
+grids3x3.py             l1: 0.12682458509442282
+grids3x3-sample-each.yo l1: 0.08726972722147344
+grids3x3.dice           l1: 0.0
+grids3x3.yo             l1: 0.0
+grids3x3.psi            l1: 0.0
+grids3x3-sample.yo      l1: 0.09372868267727394
+grids3x3-diag.yo        l1: 0.03052397381211127
+
+grids3x3.py             ms: 3940.7061000000003
+grids3x3-sample-each.yo ms: 93.1
+grids3x3.dice           ms: 90.39549827575684
+grids3x3.yo             ms: 1.0
+grids3x3.psi            ms: 164529.26926612854
+grids3x3-sample.yo      ms: 152.0
+grids3x3-diag.yo        ms: 88.2
+
+grids3x3.py              #: 10
+grids3x3-sample-each.yo  #: 10
+grids3x3.dice            #: 10
+grids3x3.yo              #: 10
+grids3x3.psi             #: 10
+grids3x3-sample.yo       #: 10
+grids3x3-diag.yo         #: 10
+

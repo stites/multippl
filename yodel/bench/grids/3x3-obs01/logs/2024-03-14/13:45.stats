@@ -1,0 +1,24 @@
+grids3x3-sample-obs01.yo      l1: 0.08437989585993728
+grids3x3-obs01.psi            l1: 0.0
+grids3x3-diag-obs01.yo        l1: 0.02827959837942353
+grids3x3-obs01.py             l1: 0.11408298305935718
+grids3x3-sample-each-obs01.yo l1: 0.08810866057360145
+grids3x3-obs01.yo             l1: 0.0
+grids3x3-obs01.dice           l1: 0.0
+
+grids3x3-sample-obs01.yo      ms: 155.5
+grids3x3-obs01.psi            ms: 55669.90053653717
+grids3x3-diag-obs01.yo        ms: 110.6
+grids3x3-obs01.py             ms: 3818.5865
+grids3x3-sample-each-obs01.yo ms: 89.2
+grids3x3-obs01.yo             ms: 1.0
+grids3x3-obs01.dice           ms: 79.62303161621094
+
+grids3x3-sample-obs01.yo       #: 10
+grids3x3-obs01.psi             #: 10
+grids3x3-diag-obs01.yo         #: 10
+grids3x3-obs01.py              #: 10
+grids3x3-sample-each-obs01.yo  #: 10
+grids3x3-obs01.yo              #: 10
+grids3x3-obs01.dice            #: 10
+

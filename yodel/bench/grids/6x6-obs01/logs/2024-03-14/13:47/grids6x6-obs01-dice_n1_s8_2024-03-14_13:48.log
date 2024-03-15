@@ -1,0 +1,2051 @@
+================[ Joint Distribution ]================
+Value	Probability	
+[]	0	
+[true]	0	
+[false]	0	
+[true, true]	0	
+[true, false]	0	
+[false, true]	0	
+[false, false]	0	
+[true, true, true]	0	
+[true, true, false]	0	
+[true, false, true]	0	
+[true, false, false]	0	
+[false, true, true]	0	
+[false, true, false]	0	
+[false, false, true]	0	
+[false, false, false]	0	
+[true, true, true, true]	0	
+[true, true, true, false]	0	
+[true, true, false, true]	0	
+[true, true, false, false]	0	
+[true, false, true, true]	0	
+[true, false, true, false]	0	
+[true, false, false, true]	0	
+[true, false, false, false]	0	
+[false, true, true, true]	0	
+[false, true, true, false]	0	
+[false, true, false, true]	0	
+[false, true, false, false]	0	
+[false, false, true, true]	0	
+[false, false, true, false]	0	
+[false, false, false, true]	0	
+[false, false, false, false]	0	
+[true, true, true, true, true]	0	
+[true, true, true, true, false]	0	
+[true, true, true, false, true]	0	
+[true, true, true, false, false]	0	
+[true, true, false, true, true]	0	
+[true, true, false, true, false]	0	
+[true, true, false, false, true]	0	
+[true, true, false, false, false]	0	
+[true, false, true, true, true]	0	
+[true, false, true, true, false]	0	
+[true, false, true, false, true]	0	
+[true, false, true, false, false]	0	
+[true, false, false, true, true]	0	
+[true, false, false, true, false]	0	
+[true, false, false, false, true]	0	
+[true, false, false, false, false]	0	
+[false, true, true, true, true]	0	
+[false, true, true, true, false]	0	
+[false, true, true, false, true]	0	
+[false, true, true, false, false]	0	
+[false, true, false, true, true]	0	
+[false, true, false, true, false]	0	
+[false, true, false, false, true]	0	
+[false, true, false, false, false]	0	
+[false, false, true, true, true]	0	
+[false, false, true, true, false]	0	
+[false, false, true, false, true]	0	
+[false, false, true, false, false]	0	
+[false, false, false, true, true]	0	
+[false, false, false, true, false]	0	
+[false, false, false, false, true]	0	
+[false, false, false, false, false]	0	
+[true, true, true, true, true, true]	0	
+[true, true, true, true, true, false]	0	
+[true, true, true, true, false, true]	0	
+[true, true, true, true, false, false]	0	
+[true, true, true, false, true, true]	0	
+[true, true, true, false, true, false]	0	
+[true, true, true, false, false, true]	0	
+[true, true, true, false, false, false]	0	
+[true, true, false, true, true, true]	0	
+[true, true, false, true, true, false]	0	
+[true, true, false, true, false, true]	0	
+[true, true, false, true, false, false]	0	
+[true, true, false, false, true, true]	0	
+[true, true, false, false, true, false]	0	
+[true, true, false, false, false, true]	0	
+[true, true, false, false, false, false]	0	
+[true, false, true, true, true, true]	0	
+[true, false, true, true, true, false]	0	
+[true, false, true, true, false, true]	0	
+[true, false, true, true, false, false]	0	
+[true, false, true, false, true, true]	0	
+[true, false, true, false, true, false]	0	
+[true, false, true, false, false, true]	0	
+[true, false, true, false, false, false]	0	
+[true, false, false, true, true, true]	0	
+[true, false, false, true, true, false]	0	
+[true, false, false, true, false, true]	0	
+[true, false, false, true, false, false]	0	
+[true, false, false, false, true, true]	0	
+[true, false, false, false, true, false]	0	
+[true, false, false, false, false, true]	0	
+[true, false, false, false, false, false]	0	
+[false, true, true, true, true, true]	0	
+[false, true, true, true, true, false]	0	
+[false, true, true, true, false, true]	0	
+[false, true, true, true, false, false]	0	
+[false, true, true, false, true, true]	0	
+[false, true, true, false, true, false]	0	
+[false, true, true, false, false, true]	0	
+[false, true, true, false, false, false]	0	
+[false, true, false, true, true, true]	0	
+[false, true, false, true, true, false]	0	
+[false, true, false, true, false, true]	0	
+[false, true, false, true, false, false]	0	
+[false, true, false, false, true, true]	0	
+[false, true, false, false, true, false]	0	
+[false, true, false, false, false, true]	0	
+[false, true, false, false, false, false]	0	
+[false, false, true, true, true, true]	0	
+[false, false, true, true, true, false]	0	
+[false, false, true, true, false, true]	0	
+[false, false, true, true, false, false]	0	
+[false, false, true, false, true, true]	0	
+[false, false, true, false, true, false]	0	
+[false, false, true, false, false, true]	0	
+[false, false, true, false, false, false]	0	
+[false, false, false, true, true, true]	0	
+[false, false, false, true, true, false]	0	
+[false, false, false, true, false, true]	0	
+[false, false, false, true, false, false]	0	
+[false, false, false, false, true, true]	0	
+[false, false, false, false, true, false]	0	
+[false, false, false, false, false, true]	0	
+[false, false, false, false, false, false]	0	
+[true, true, true, true, true, true, true]	0	
+[true, true, true, true, true, true, false]	0	
+[true, true, true, true, true, false, true]	0	
+[true, true, true, true, true, false, false]	0	
+[true, true, true, true, false, true, true]	0	
+[true, true, true, true, false, true, false]	0	
+[true, true, true, true, false, false, true]	0	
+[true, true, true, true, false, false, false]	0	
+[true, true, true, false, true, true, true]	0	
+[true, true, true, false, true, true, false]	0	
+[true, true, true, false, true, false, true]	0	
+[true, true, true, false, true, false, false]	0	
+[true, true, true, false, false, true, true]	0	
+[true, true, true, false, false, true, false]	0	
+[true, true, true, false, false, false, true]	0	
+[true, true, true, false, false, false, false]	0	
+[true, true, false, true, true, true, true]	0	
+[true, true, false, true, true, true, false]	0	
+[true, true, false, true, true, false, true]	0	
+[true, true, false, true, true, false, false]	0	
+[true, true, false, true, false, true, true]	0	
+[true, true, false, true, false, true, false]	0	
+[true, true, false, true, false, false, true]	0	
+[true, true, false, true, false, false, false]	0	
+[true, true, false, false, true, true, true]	0	
+[true, true, false, false, true, true, false]	0	
+[true, true, false, false, true, false, true]	0	
+[true, true, false, false, true, false, false]	0	
+[true, true, false, false, false, true, true]	0	
+[true, true, false, false, false, true, false]	0	
+[true, true, false, false, false, false, true]	0	
+[true, true, false, false, false, false, false]	0	
+[true, false, true, true, true, true, true]	0	
+[true, false, true, true, true, true, false]	0	
+[true, false, true, true, true, false, true]	0	
+[true, false, true, true, true, false, false]	0	
+[true, false, true, true, false, true, true]	0	
+[true, false, true, true, false, true, false]	0	
+[true, false, true, true, false, false, true]	0	
+[true, false, true, true, false, false, false]	0	
+[true, false, true, false, true, true, true]	0	
+[true, false, true, false, true, true, false]	0	
+[true, false, true, false, true, false, true]	0	
+[true, false, true, false, true, false, false]	0	
+[true, false, true, false, false, true, true]	0	
+[true, false, true, false, false, true, false]	0	
+[true, false, true, false, false, false, true]	0	
+[true, false, true, false, false, false, false]	0	
+[true, false, false, true, true, true, true]	0	
+[true, false, false, true, true, true, false]	0	
+[true, false, false, true, true, false, true]	0	
+[true, false, false, true, true, false, false]	0	
+[true, false, false, true, false, true, true]	0	
+[true, false, false, true, false, true, false]	0	
+[true, false, false, true, false, false, true]	0	
+[true, false, false, true, false, false, false]	0	
+[true, false, false, false, true, true, true]	0	
+[true, false, false, false, true, true, false]	0	
+[true, false, false, false, true, false, true]	0	
+[true, false, false, false, true, false, false]	0	
+[true, false, false, false, false, true, true]	0	
+[true, false, false, false, false, true, false]	0	
+[true, false, false, false, false, false, true]	0	
+[true, false, false, false, false, false, false]	0	
+[false, true, true, true, true, true, true]	0	
+[false, true, true, true, true, true, false]	0	
+[false, true, true, true, true, false, true]	0	
+[false, true, true, true, true, false, false]	0	
+[false, true, true, true, false, true, true]	0	
+[false, true, true, true, false, true, false]	0	
+[false, true, true, true, false, false, true]	0	
+[false, true, true, true, false, false, false]	0	
+[false, true, true, false, true, true, true]	0	
+[false, true, true, false, true, true, false]	0	
+[false, true, true, false, true, false, true]	0	
+[false, true, true, false, true, false, false]	0	
+[false, true, true, false, false, true, true]	0	
+[false, true, true, false, false, true, false]	0	
+[false, true, true, false, false, false, true]	0	
+[false, true, true, false, false, false, false]	0	
+[false, true, false, true, true, true, true]	0	
+[false, true, false, true, true, true, false]	0	
+[false, true, false, true, true, false, true]	0	
+[false, true, false, true, true, false, false]	0	
+[false, true, false, true, false, true, true]	0	
+[false, true, false, true, false, true, false]	0	
+[false, true, false, true, false, false, true]	0	
+[false, true, false, true, false, false, false]	0	
+[false, true, false, false, true, true, true]	0	
+[false, true, false, false, true, true, false]	0	
+[false, true, false, false, true, false, true]	0	
+[false, true, false, false, true, false, false]	0	
+[false, true, false, false, false, true, true]	0	
+[false, true, false, false, false, true, false]	0	
+[false, true, false, false, false, false, true]	0	
+[false, true, false, false, false, false, false]	0	
+[false, false, true, true, true, true, true]	0	
+[false, false, true, true, true, true, false]	0	
+[false, false, true, true, true, false, true]	0	
+[false, false, true, true, true, false, false]	0	
+[false, false, true, true, false, true, true]	0	
+[false, false, true, true, false, true, false]	0	
+[false, false, true, true, false, false, true]	0	
+[false, false, true, true, false, false, false]	0	
+[false, false, true, false, true, true, true]	0	
+[false, false, true, false, true, true, false]	0	
+[false, false, true, false, true, false, true]	0	
+[false, false, true, false, true, false, false]	0	
+[false, false, true, false, false, true, true]	0	
+[false, false, true, false, false, true, false]	0	
+[false, false, true, false, false, false, true]	0	
+[false, false, true, false, false, false, false]	0	
+[false, false, false, true, true, true, true]	0	
+[false, false, false, true, true, true, false]	0	
+[false, false, false, true, true, false, true]	0	
+[false, false, false, true, true, false, false]	0	
+[false, false, false, true, false, true, true]	0	
+[false, false, false, true, false, true, false]	0	
+[false, false, false, true, false, false, true]	0	
+[false, false, false, true, false, false, false]	0	
+[false, false, false, false, true, true, true]	0	
+[false, false, false, false, true, true, false]	0	
+[false, false, false, false, true, false, true]	0	
+[false, false, false, false, true, false, false]	0	
+[false, false, false, false, false, true, true]	0	
+[false, false, false, false, false, true, false]	0	
+[false, false, false, false, false, false, true]	0	
+[false, false, false, false, false, false, false]	0	
+[true, true, true, true, true, true, true, true]	0	
+[true, true, true, true, true, true, true, false]	0	
+[true, true, true, true, true, true, false, true]	0	
+[true, true, true, true, true, true, false, false]	0	
+[true, true, true, true, true, false, true, true]	0	
+[true, true, true, true, true, false, true, false]	0	
+[true, true, true, true, true, false, false, true]	0	
+[true, true, true, true, true, false, false, false]	0	
+[true, true, true, true, false, true, true, true]	0	
+[true, true, true, true, false, true, true, false]	0	
+[true, true, true, true, false, true, false, true]	0	
+[true, true, true, true, false, true, false, false]	0	
+[true, true, true, true, false, false, true, true]	0	
+[true, true, true, true, false, false, true, false]	0	
+[true, true, true, true, false, false, false, true]	0	
+[true, true, true, true, false, false, false, false]	0	
+[true, true, true, false, true, true, true, true]	0	
+[true, true, true, false, true, true, true, false]	0	
+[true, true, true, false, true, true, false, true]	0	
+[true, true, true, false, true, true, false, false]	0	
+[true, true, true, false, true, false, true, true]	0	
+[true, true, true, false, true, false, true, false]	0	
+[true, true, true, false, true, false, false, true]	0	
+[true, true, true, false, true, false, false, false]	0	
+[true, true, true, false, false, true, true, true]	0	
+[true, true, true, false, false, true, true, false]	0	
+[true, true, true, false, false, true, false, true]	0	
+[true, true, true, false, false, true, false, false]	0	
+[true, true, true, false, false, false, true, true]	0	
+[true, true, true, false, false, false, true, false]	0	
+[true, true, true, false, false, false, false, true]	0	
+[true, true, true, false, false, false, false, false]	0	
+[true, true, false, true, true, true, true, true]	0	
+[true, true, false, true, true, true, true, false]	0	
+[true, true, false, true, true, true, false, true]	0	
+[true, true, false, true, true, true, false, false]	0	
+[true, true, false, true, true, false, true, true]	0	
+[true, true, false, true, true, false, true, false]	0	
+[true, true, false, true, true, false, false, true]	0	
+[true, true, false, true, true, false, false, false]	0	
+[true, true, false, true, false, true, true, true]	0	
+[true, true, false, true, false, true, true, false]	0	
+[true, true, false, true, false, true, false, true]	0	
+[true, true, false, true, false, true, false, false]	0	
+[true, true, false, true, false, false, true, true]	0	
+[true, true, false, true, false, false, true, false]	0	
+[true, true, false, true, false, false, false, true]	0	
+[true, true, false, true, false, false, false, false]	0	
+[true, true, false, false, true, true, true, true]	0	
+[true, true, false, false, true, true, true, false]	0	
+[true, true, false, false, true, true, false, true]	0	
+[true, true, false, false, true, true, false, false]	0	
+[true, true, false, false, true, false, true, true]	0	
+[true, true, false, false, true, false, true, false]	0	
+[true, true, false, false, true, false, false, true]	0	
+[true, true, false, false, true, false, false, false]	0	
+[true, true, false, false, false, true, true, true]	0	
+[true, true, false, false, false, true, true, false]	0	
+[true, true, false, false, false, true, false, true]	0	
+[true, true, false, false, false, true, false, false]	0	
+[true, true, false, false, false, false, true, true]	0	
+[true, true, false, false, false, false, true, false]	0	
+[true, true, false, false, false, false, false, true]	0	
+[true, true, false, false, false, false, false, false]	0	
+[true, false, true, true, true, true, true, true]	0	
+[true, false, true, true, true, true, true, false]	0	
+[true, false, true, true, true, true, false, true]	0	
+[true, false, true, true, true, true, false, false]	0	
+[true, false, true, true, true, false, true, true]	0	
+[true, false, true, true, true, false, true, false]	0	
+[true, false, true, true, true, false, false, true]	0	
+[true, false, true, true, true, false, false, false]	0	
+[true, false, true, true, false, true, true, true]	0	
+[true, false, true, true, false, true, true, false]	0	
+[true, false, true, true, false, true, false, true]	0	
+[true, false, true, true, false, true, false, false]	0	
+[true, false, true, true, false, false, true, true]	0	
+[true, false, true, true, false, false, true, false]	0	
+[true, false, true, true, false, false, false, true]	0	
+[true, false, true, true, false, false, false, false]	0	
+[true, false, true, false, true, true, true, true]	0	
+[true, false, true, false, true, true, true, false]	0	
+[true, false, true, false, true, true, false, true]	0	
+[true, false, true, false, true, true, false, false]	0	
+[true, false, true, false, true, false, true, true]	0	
+[true, false, true, false, true, false, true, false]	0	
+[true, false, true, false, true, false, false, true]	0	
+[true, false, true, false, true, false, false, false]	0	
+[true, false, true, false, false, true, true, true]	0	
+[true, false, true, false, false, true, true, false]	0	
+[true, false, true, false, false, true, false, true]	0	
+[true, false, true, false, false, true, false, false]	0	
+[true, false, true, false, false, false, true, true]	0	
+[true, false, true, false, false, false, true, false]	0	
+[true, false, true, false, false, false, false, true]	0	
+[true, false, true, false, false, false, false, false]	0	
+[true, false, false, true, true, true, true, true]	0	
+[true, false, false, true, true, true, true, false]	0	
+[true, false, false, true, true, true, false, true]	0	
+[true, false, false, true, true, true, false, false]	0	
+[true, false, false, true, true, false, true, true]	0	
+[true, false, false, true, true, false, true, false]	0	
+[true, false, false, true, true, false, false, true]	0	
+[true, false, false, true, true, false, false, false]	0	
+[true, false, false, true, false, true, true, true]	0	
+[true, false, false, true, false, true, true, false]	0	
+[true, false, false, true, false, true, false, true]	0	
+[true, false, false, true, false, true, false, false]	0	
+[true, false, false, true, false, false, true, true]	0	
+[true, false, false, true, false, false, true, false]	0	
+[true, false, false, true, false, false, false, true]	0	
+[true, false, false, true, false, false, false, false]	0	
+[true, false, false, false, true, true, true, true]	0	
+[true, false, false, false, true, true, true, false]	0	
+[true, false, false, false, true, true, false, true]	0	
+[true, false, false, false, true, true, false, false]	0	
+[true, false, false, false, true, false, true, true]	0	
+[true, false, false, false, true, false, true, false]	0	
+[true, false, false, false, true, false, false, true]	0	
+[true, false, false, false, true, false, false, false]	0	
+[true, false, false, false, false, true, true, true]	0	
+[true, false, false, false, false, true, true, false]	0	
+[true, false, false, false, false, true, false, true]	0	
+[true, false, false, false, false, true, false, false]	0	
+[true, false, false, false, false, false, true, true]	0	
+[true, false, false, false, false, false, true, false]	0	
+[true, false, false, false, false, false, false, true]	0	
+[true, false, false, false, false, false, false, false]	0	
+[false, true, true, true, true, true, true, true]	0	
+[false, true, true, true, true, true, true, false]	0	
+[false, true, true, true, true, true, false, true]	0	
+[false, true, true, true, true, true, false, false]	0	
+[false, true, true, true, true, false, true, true]	0	
+[false, true, true, true, true, false, true, false]	0	
+[false, true, true, true, true, false, false, true]	0	
+[false, true, true, true, true, false, false, false]	0	
+[false, true, true, true, false, true, true, true]	0	
+[false, true, true, true, false, true, true, false]	0	
+[false, true, true, true, false, true, false, true]	0	
+[false, true, true, true, false, true, false, false]	0	
+[false, true, true, true, false, false, true, true]	0	
+[false, true, true, true, false, false, true, false]	0	
+[false, true, true, true, false, false, false, true]	0	
+[false, true, true, true, false, false, false, false]	0	
+[false, true, true, false, true, true, true, true]	0	
+[false, true, true, false, true, true, true, false]	0	
+[false, true, true, false, true, true, false, true]	0	
+[false, true, true, false, true, true, false, false]	0	
+[false, true, true, false, true, false, true, true]	0	
+[false, true, true, false, true, false, true, false]	0	
+[false, true, true, false, true, false, false, true]	0	
+[false, true, true, false, true, false, false, false]	0	
+[false, true, true, false, false, true, true, true]	0	
+[false, true, true, false, false, true, true, false]	0	
+[false, true, true, false, false, true, false, true]	0	
+[false, true, true, false, false, true, false, false]	0	
+[false, true, true, false, false, false, true, true]	0	
+[false, true, true, false, false, false, true, false]	0	
+[false, true, true, false, false, false, false, true]	0	
+[false, true, true, false, false, false, false, false]	0	
+[false, true, false, true, true, true, true, true]	0	
+[false, true, false, true, true, true, true, false]	0	
+[false, true, false, true, true, true, false, true]	0	
+[false, true, false, true, true, true, false, false]	0	
+[false, true, false, true, true, false, true, true]	0	
+[false, true, false, true, true, false, true, false]	0	
+[false, true, false, true, true, false, false, true]	0	
+[false, true, false, true, true, false, false, false]	0	
+[false, true, false, true, false, true, true, true]	0	
+[false, true, false, true, false, true, true, false]	0	
+[false, true, false, true, false, true, false, true]	0	
+[false, true, false, true, false, true, false, false]	0	
+[false, true, false, true, false, false, true, true]	0	
+[false, true, false, true, false, false, true, false]	0	
+[false, true, false, true, false, false, false, true]	0	
+[false, true, false, true, false, false, false, false]	0	
+[false, true, false, false, true, true, true, true]	0	
+[false, true, false, false, true, true, true, false]	0	
+[false, true, false, false, true, true, false, true]	0	
+[false, true, false, false, true, true, false, false]	0	
+[false, true, false, false, true, false, true, true]	0	
+[false, true, false, false, true, false, true, false]	0	
+[false, true, false, false, true, false, false, true]	0	
+[false, true, false, false, true, false, false, false]	0	
+[false, true, false, false, false, true, true, true]	0	
+[false, true, false, false, false, true, true, false]	0	
+[false, true, false, false, false, true, false, true]	0	
+[false, true, false, false, false, true, false, false]	0	
+[false, true, false, false, false, false, true, true]	0	
+[false, true, false, false, false, false, true, false]	0	
+[false, true, false, false, false, false, false, true]	0	
+[false, true, false, false, false, false, false, false]	0	
+[false, false, true, true, true, true, true, true]	0	
+[false, false, true, true, true, true, true, false]	0	
+[false, false, true, true, true, true, false, true]	0	
+[false, false, true, true, true, true, false, false]	0	
+[false, false, true, true, true, false, true, true]	0	
+[false, false, true, true, true, false, true, false]	0	
+[false, false, true, true, true, false, false, true]	0	
+[false, false, true, true, true, false, false, false]	0	
+[false, false, true, true, false, true, true, true]	0	
+[false, false, true, true, false, true, true, false]	0	
+[false, false, true, true, false, true, false, true]	0	
+[false, false, true, true, false, true, false, false]	0	
+[false, false, true, true, false, false, true, true]	0	
+[false, false, true, true, false, false, true, false]	0	
+[false, false, true, true, false, false, false, true]	0	
+[false, false, true, true, false, false, false, false]	0	
+[false, false, true, false, true, true, true, true]	0	
+[false, false, true, false, true, true, true, false]	0	
+[false, false, true, false, true, true, false, true]	0	
+[false, false, true, false, true, true, false, false]	0	
+[false, false, true, false, true, false, true, true]	0	
+[false, false, true, false, true, false, true, false]	0	
+[false, false, true, false, true, false, false, true]	0	
+[false, false, true, false, true, false, false, false]	0	
+[false, false, true, false, false, true, true, true]	0	
+[false, false, true, false, false, true, true, false]	0	
+[false, false, true, false, false, true, false, true]	0	
+[false, false, true, false, false, true, false, false]	0	
+[false, false, true, false, false, false, true, true]	0	
+[false, false, true, false, false, false, true, false]	0	
+[false, false, true, false, false, false, false, true]	0	
+[false, false, true, false, false, false, false, false]	0	
+[false, false, false, true, true, true, true, true]	0	
+[false, false, false, true, true, true, true, false]	0	
+[false, false, false, true, true, true, false, true]	0	
+[false, false, false, true, true, true, false, false]	0	
+[false, false, false, true, true, false, true, true]	0	
+[false, false, false, true, true, false, true, false]	0	
+[false, false, false, true, true, false, false, true]	0	
+[false, false, false, true, true, false, false, false]	0	
+[false, false, false, true, false, true, true, true]	0	
+[false, false, false, true, false, true, true, false]	0	
+[false, false, false, true, false, true, false, true]	0	
+[false, false, false, true, false, true, false, false]	0	
+[false, false, false, true, false, false, true, true]	0	
+[false, false, false, true, false, false, true, false]	0	
+[false, false, false, true, false, false, false, true]	0	
+[false, false, false, true, false, false, false, false]	0	
+[false, false, false, false, true, true, true, true]	0	
+[false, false, false, false, true, true, true, false]	0	
+[false, false, false, false, true, true, false, true]	0	
+[false, false, false, false, true, true, false, false]	0	
+[false, false, false, false, true, false, true, true]	0	
+[false, false, false, false, true, false, true, false]	0	
+[false, false, false, false, true, false, false, true]	0	
+[false, false, false, false, true, false, false, false]	0	
+[false, false, false, false, false, true, true, true]	0	
+[false, false, false, false, false, true, true, false]	0	
+[false, false, false, false, false, true, false, true]	0	
+[false, false, false, false, false, true, false, false]	0	
+[false, false, false, false, false, false, true, true]	0	
+[false, false, false, false, false, false, true, false]	0	
+[false, false, false, false, false, false, false, true]	0	
+[false, false, false, false, false, false, false, false]	0	
+[true, true, true, true, true, true, true, true, true]	0	
+[true, true, true, true, true, true, true, true, false]	0	
+[true, true, true, true, true, true, true, false, true]	0	
+[true, true, true, true, true, true, true, false, false]	0	
+[true, true, true, true, true, true, false, true, true]	0	
+[true, true, true, true, true, true, false, true, false]	0	
+[true, true, true, true, true, true, false, false, true]	0	
+[true, true, true, true, true, true, false, false, false]	0	
+[true, true, true, true, true, false, true, true, true]	0	
+[true, true, true, true, true, false, true, true, false]	0	
+[true, true, true, true, true, false, true, false, true]	0	
+[true, true, true, true, true, false, true, false, false]	0	
+[true, true, true, true, true, false, false, true, true]	0	
+[true, true, true, true, true, false, false, true, false]	0	
+[true, true, true, true, true, false, false, false, true]	0	
+[true, true, true, true, true, false, false, false, false]	0	
+[true, true, true, true, false, true, true, true, true]	0	
+[true, true, true, true, false, true, true, true, false]	0	
+[true, true, true, true, false, true, true, false, true]	0	
+[true, true, true, true, false, true, true, false, false]	0	
+[true, true, true, true, false, true, false, true, true]	0	
+[true, true, true, true, false, true, false, true, false]	0	
+[true, true, true, true, false, true, false, false, true]	0	
+[true, true, true, true, false, true, false, false, false]	0	
+[true, true, true, true, false, false, true, true, true]	0	
+[true, true, true, true, false, false, true, true, false]	0	
+[true, true, true, true, false, false, true, false, true]	0	
+[true, true, true, true, false, false, true, false, false]	0	
+[true, true, true, true, false, false, false, true, true]	0	
+[true, true, true, true, false, false, false, true, false]	0	
+[true, true, true, true, false, false, false, false, true]	0	
+[true, true, true, true, false, false, false, false, false]	0	
+[true, true, true, false, true, true, true, true, true]	0	
+[true, true, true, false, true, true, true, true, false]	0	
+[true, true, true, false, true, true, true, false, true]	0	
+[true, true, true, false, true, true, true, false, false]	0	
+[true, true, true, false, true, true, false, true, true]	0	
+[true, true, true, false, true, true, false, true, false]	0	
+[true, true, true, false, true, true, false, false, true]	0	
+[true, true, true, false, true, true, false, false, false]	0	
+[true, true, true, false, true, false, true, true, true]	0	
+[true, true, true, false, true, false, true, true, false]	0	
+[true, true, true, false, true, false, true, false, true]	0	
+[true, true, true, false, true, false, true, false, false]	0	
+[true, true, true, false, true, false, false, true, true]	0	
+[true, true, true, false, true, false, false, true, false]	0	
+[true, true, true, false, true, false, false, false, true]	0	
+[true, true, true, false, true, false, false, false, false]	0	
+[true, true, true, false, false, true, true, true, true]	0	
+[true, true, true, false, false, true, true, true, false]	0	
+[true, true, true, false, false, true, true, false, true]	0	
+[true, true, true, false, false, true, true, false, false]	0	
+[true, true, true, false, false, true, false, true, true]	0	
+[true, true, true, false, false, true, false, true, false]	0	
+[true, true, true, false, false, true, false, false, true]	0	
+[true, true, true, false, false, true, false, false, false]	0	
+[true, true, true, false, false, false, true, true, true]	0	
+[true, true, true, false, false, false, true, true, false]	0	
+[true, true, true, false, false, false, true, false, true]	0	
+[true, true, true, false, false, false, true, false, false]	0	
+[true, true, true, false, false, false, false, true, true]	0	
+[true, true, true, false, false, false, false, true, false]	0	
+[true, true, true, false, false, false, false, false, true]	0	
+[true, true, true, false, false, false, false, false, false]	0	
+[true, true, false, true, true, true, true, true, true]	0	
+[true, true, false, true, true, true, true, true, false]	0	
+[true, true, false, true, true, true, true, false, true]	0	
+[true, true, false, true, true, true, true, false, false]	0	
+[true, true, false, true, true, true, false, true, true]	0	
+[true, true, false, true, true, true, false, true, false]	0	
+[true, true, false, true, true, true, false, false, true]	0	
+[true, true, false, true, true, true, false, false, false]	0	
+[true, true, false, true, true, false, true, true, true]	0	
+[true, true, false, true, true, false, true, true, false]	0	
+[true, true, false, true, true, false, true, false, true]	0	
+[true, true, false, true, true, false, true, false, false]	0	
+[true, true, false, true, true, false, false, true, true]	0	
+[true, true, false, true, true, false, false, true, false]	0	
+[true, true, false, true, true, false, false, false, true]	0	
+[true, true, false, true, true, false, false, false, false]	0	
+[true, true, false, true, false, true, true, true, true]	0	
+[true, true, false, true, false, true, true, true, false]	0	
+[true, true, false, true, false, true, true, false, true]	0	
+[true, true, false, true, false, true, true, false, false]	0	
+[true, true, false, true, false, true, false, true, true]	0	
+[true, true, false, true, false, true, false, true, false]	0	
+[true, true, false, true, false, true, false, false, true]	0	
+[true, true, false, true, false, true, false, false, false]	0	
+[true, true, false, true, false, false, true, true, true]	0	
+[true, true, false, true, false, false, true, true, false]	0	
+[true, true, false, true, false, false, true, false, true]	0	
+[true, true, false, true, false, false, true, false, false]	0	
+[true, true, false, true, false, false, false, true, true]	0	
+[true, true, false, true, false, false, false, true, false]	0	
+[true, true, false, true, false, false, false, false, true]	0	
+[true, true, false, true, false, false, false, false, false]	0	
+[true, true, false, false, true, true, true, true, true]	0	
+[true, true, false, false, true, true, true, true, false]	0	
+[true, true, false, false, true, true, true, false, true]	0	
+[true, true, false, false, true, true, true, false, false]	0	
+[true, true, false, false, true, true, false, true, true]	0	
+[true, true, false, false, true, true, false, true, false]	0	
+[true, true, false, false, true, true, false, false, true]	0	
+[true, true, false, false, true, true, false, false, false]	0	
+[true, true, false, false, true, false, true, true, true]	0	
+[true, true, false, false, true, false, true, true, false]	0	
+[true, true, false, false, true, false, true, false, true]	0	
+[true, true, false, false, true, false, true, false, false]	0	
+[true, true, false, false, true, false, false, true, true]	0	
+[true, true, false, false, true, false, false, true, false]	0	
+[true, true, false, false, true, false, false, false, true]	0	
+[true, true, false, false, true, false, false, false, false]	0	
+[true, true, false, false, false, true, true, true, true]	0	
+[true, true, false, false, false, true, true, true, false]	0	
+[true, true, false, false, false, true, true, false, true]	0	
+[true, true, false, false, false, true, true, false, false]	0	
+[true, true, false, false, false, true, false, true, true]	0	
+[true, true, false, false, false, true, false, true, false]	0	
+[true, true, false, false, false, true, false, false, true]	0	
+[true, true, false, false, false, true, false, false, false]	0	
+[true, true, false, false, false, false, true, true, true]	0	
+[true, true, false, false, false, false, true, true, false]	0	
+[true, true, false, false, false, false, true, false, true]	0	
+[true, true, false, false, false, false, true, false, false]	0	
+[true, true, false, false, false, false, false, true, true]	0	
+[true, true, false, false, false, false, false, true, false]	0	
+[true, true, false, false, false, false, false, false, true]	0	
+[true, true, false, false, false, false, false, false, false]	0	
+[true, false, true, true, true, true, true, true, true]	0	
+[true, false, true, true, true, true, true, true, false]	0	
+[true, false, true, true, true, true, true, false, true]	0	
+[true, false, true, true, true, true, true, false, false]	0	
+[true, false, true, true, true, true, false, true, true]	0	
+[true, false, true, true, true, true, false, true, false]	0	
+[true, false, true, true, true, true, false, false, true]	0	
+[true, false, true, true, true, true, false, false, false]	0	
+[true, false, true, true, true, false, true, true, true]	0	
+[true, false, true, true, true, false, true, true, false]	0	
+[true, false, true, true, true, false, true, false, true]	0	
+[true, false, true, true, true, false, true, false, false]	0	
+[true, false, true, true, true, false, false, true, true]	0	
+[true, false, true, true, true, false, false, true, false]	0	
+[true, false, true, true, true, false, false, false, true]	0	
+[true, false, true, true, true, false, false, false, false]	0	
+[true, false, true, true, false, true, true, true, true]	0	
+[true, false, true, true, false, true, true, true, false]	0	
+[true, false, true, true, false, true, true, false, true]	0	
+[true, false, true, true, false, true, true, false, false]	0	
+[true, false, true, true, false, true, false, true, true]	0	
+[true, false, true, true, false, true, false, true, false]	0	
+[true, false, true, true, false, true, false, false, true]	0	
+[true, false, true, true, false, true, false, false, false]	0	
+[true, false, true, true, false, false, true, true, true]	0	
+[true, false, true, true, false, false, true, true, false]	0	
+[true, false, true, true, false, false, true, false, true]	0	
+[true, false, true, true, false, false, true, false, false]	0	
+[true, false, true, true, false, false, false, true, true]	0	
+[true, false, true, true, false, false, false, true, false]	0	
+[true, false, true, true, false, false, false, false, true]	0	
+[true, false, true, true, false, false, false, false, false]	0	
+[true, false, true, false, true, true, true, true, true]	0	
+[true, false, true, false, true, true, true, true, false]	0	
+[true, false, true, false, true, true, true, false, true]	0	
+[true, false, true, false, true, true, true, false, false]	0	
+[true, false, true, false, true, true, false, true, true]	0	
+[true, false, true, false, true, true, false, true, false]	0	
+[true, false, true, false, true, true, false, false, true]	0	
+[true, false, true, false, true, true, false, false, false]	0	
+[true, false, true, false, true, false, true, true, true]	0	
+[true, false, true, false, true, false, true, true, false]	0	
+[true, false, true, false, true, false, true, false, true]	0	
+[true, false, true, false, true, false, true, false, false]	0	
+[true, false, true, false, true, false, false, true, true]	0	
+[true, false, true, false, true, false, false, true, false]	0	
+[true, false, true, false, true, false, false, false, true]	0	
+[true, false, true, false, true, false, false, false, false]	0	
+[true, false, true, false, false, true, true, true, true]	0	
+[true, false, true, false, false, true, true, true, false]	0	
+[true, false, true, false, false, true, true, false, true]	0	
+[true, false, true, false, false, true, true, false, false]	0	
+[true, false, true, false, false, true, false, true, true]	0	
+[true, false, true, false, false, true, false, true, false]	0	
+[true, false, true, false, false, true, false, false, true]	0	
+[true, false, true, false, false, true, false, false, false]	0	
+[true, false, true, false, false, false, true, true, true]	0	
+[true, false, true, false, false, false, true, true, false]	0	
+[true, false, true, false, false, false, true, false, true]	0	
+[true, false, true, false, false, false, true, false, false]	0	
+[true, false, true, false, false, false, false, true, true]	0	
+[true, false, true, false, false, false, false, true, false]	0	
+[true, false, true, false, false, false, false, false, true]	0	
+[true, false, true, false, false, false, false, false, false]	0	
+[true, false, false, true, true, true, true, true, true]	0	
+[true, false, false, true, true, true, true, true, false]	0	
+[true, false, false, true, true, true, true, false, true]	0	
+[true, false, false, true, true, true, true, false, false]	0	
+[true, false, false, true, true, true, false, true, true]	0	
+[true, false, false, true, true, true, false, true, false]	0	
+[true, false, false, true, true, true, false, false, true]	0	
+[true, false, false, true, true, true, false, false, false]	0	
+[true, false, false, true, true, false, true, true, true]	0	
+[true, false, false, true, true, false, true, true, false]	0	
+[true, false, false, true, true, false, true, false, true]	0	
+[true, false, false, true, true, false, true, false, false]	0	
+[true, false, false, true, true, false, false, true, true]	0	
+[true, false, false, true, true, false, false, true, false]	0	
+[true, false, false, true, true, false, false, false, true]	0	
+[true, false, false, true, true, false, false, false, false]	0	
+[true, false, false, true, false, true, true, true, true]	0	
+[true, false, false, true, false, true, true, true, false]	0	
+[true, false, false, true, false, true, true, false, true]	0	
+[true, false, false, true, false, true, true, false, false]	0	
+[true, false, false, true, false, true, false, true, true]	0	
+[true, false, false, true, false, true, false, true, false]	0	
+[true, false, false, true, false, true, false, false, true]	0	
+[true, false, false, true, false, true, false, false, false]	0	
+[true, false, false, true, false, false, true, true, true]	0	
+[true, false, false, true, false, false, true, true, false]	0	
+[true, false, false, true, false, false, true, false, true]	0	
+[true, false, false, true, false, false, true, false, false]	0	
+[true, false, false, true, false, false, false, true, true]	0	
+[true, false, false, true, false, false, false, true, false]	0	
+[true, false, false, true, false, false, false, false, true]	0	
+[true, false, false, true, false, false, false, false, false]	0	
+[true, false, false, false, true, true, true, true, true]	0	
+[true, false, false, false, true, true, true, true, false]	0	
+[true, false, false, false, true, true, true, false, true]	0	
+[true, false, false, false, true, true, true, false, false]	0	
+[true, false, false, false, true, true, false, true, true]	0	
+[true, false, false, false, true, true, false, true, false]	0	
+[true, false, false, false, true, true, false, false, true]	0	
+[true, false, false, false, true, true, false, false, false]	0	
+[true, false, false, false, true, false, true, true, true]	0	
+[true, false, false, false, true, false, true, true, false]	0	
+[true, false, false, false, true, false, true, false, true]	0	
+[true, false, false, false, true, false, true, false, false]	0	
+[true, false, false, false, true, false, false, true, true]	0	
+[true, false, false, false, true, false, false, true, false]	0	
+[true, false, false, false, true, false, false, false, true]	0	
+[true, false, false, false, true, false, false, false, false]	0	
+[true, false, false, false, false, true, true, true, true]	0	
+[true, false, false, false, false, true, true, true, false]	0	
+[true, false, false, false, false, true, true, false, true]	0	
+[true, false, false, false, false, true, true, false, false]	0	
+[true, false, false, false, false, true, false, true, true]	0	
+[true, false, false, false, false, true, false, true, false]	0	
+[true, false, false, false, false, true, false, false, true]	0	
+[true, false, false, false, false, true, false, false, false]	0	
+[true, false, false, false, false, false, true, true, true]	0	
+[true, false, false, false, false, false, true, true, false]	0	
+[true, false, false, false, false, false, true, false, true]	0	
+[true, false, false, false, false, false, true, false, false]	0	
+[true, false, false, false, false, false, false, true, true]	0	
+[true, false, false, false, false, false, false, true, false]	0	
+[true, false, false, false, false, false, false, false, true]	0	
+[true, false, false, false, false, false, false, false, false]	0	
+[false, true, true, true, true, true, true, true, true]	0	
+[false, true, true, true, true, true, true, true, false]	0	
+[false, true, true, true, true, true, true, false, true]	0	
+[false, true, true, true, true, true, true, false, false]	0	
+[false, true, true, true, true, true, false, true, true]	0	
+[false, true, true, true, true, true, false, true, false]	0	
+[false, true, true, true, true, true, false, false, true]	0	
+[false, true, true, true, true, true, false, false, false]	0	
+[false, true, true, true, true, false, true, true, true]	0	
+[false, true, true, true, true, false, true, true, false]	0	
+[false, true, true, true, true, false, true, false, true]	0	
+[false, true, true, true, true, false, true, false, false]	0	
+[false, true, true, true, true, false, false, true, true]	0	
+[false, true, true, true, true, false, false, true, false]	0	
+[false, true, true, true, true, false, false, false, true]	0	
+[false, true, true, true, true, false, false, false, false]	0	
+[false, true, true, true, false, true, true, true, true]	0	
+[false, true, true, true, false, true, true, true, false]	0	
+[false, true, true, true, false, true, true, false, true]	0	
+[false, true, true, true, false, true, true, false, false]	0	
+[false, true, true, true, false, true, false, true, true]	0	
+[false, true, true, true, false, true, false, true, false]	0	
+[false, true, true, true, false, true, false, false, true]	0	
+[false, true, true, true, false, true, false, false, false]	0	
+[false, true, true, true, false, false, true, true, true]	0	
+[false, true, true, true, false, false, true, true, false]	0	
+[false, true, true, true, false, false, true, false, true]	0	
+[false, true, true, true, false, false, true, false, false]	0	
+[false, true, true, true, false, false, false, true, true]	0	
+[false, true, true, true, false, false, false, true, false]	0	
+[false, true, true, true, false, false, false, false, true]	0	
+[false, true, true, true, false, false, false, false, false]	0	
+[false, true, true, false, true, true, true, true, true]	0	
+[false, true, true, false, true, true, true, true, false]	0	
+[false, true, true, false, true, true, true, false, true]	0	
+[false, true, true, false, true, true, true, false, false]	0	
+[false, true, true, false, true, true, false, true, true]	0	
+[false, true, true, false, true, true, false, true, false]	0	
+[false, true, true, false, true, true, false, false, true]	0	
+[false, true, true, false, true, true, false, false, false]	0	
+[false, true, true, false, true, false, true, true, true]	0	
+[false, true, true, false, true, false, true, true, false]	0	
+[false, true, true, false, true, false, true, false, true]	0	
+[false, true, true, false, true, false, true, false, false]	0	
+[false, true, true, false, true, false, false, true, true]	0	
+[false, true, true, false, true, false, false, true, false]	0	
+[false, true, true, false, true, false, false, false, true]	0	
+[false, true, true, false, true, false, false, false, false]	0	
+[false, true, true, false, false, true, true, true, true]	0	
+[false, true, true, false, false, true, true, true, false]	0	
+[false, true, true, false, false, true, true, false, true]	0	
+[false, true, true, false, false, true, true, false, false]	0	
+[false, true, true, false, false, true, false, true, true]	0	
+[false, true, true, false, false, true, false, true, false]	0	
+[false, true, true, false, false, true, false, false, true]	0	
+[false, true, true, false, false, true, false, false, false]	0	
+[false, true, true, false, false, false, true, true, true]	0	
+[false, true, true, false, false, false, true, true, false]	0	
+[false, true, true, false, false, false, true, false, true]	0	
+[false, true, true, false, false, false, true, false, false]	0	
+[false, true, true, false, false, false, false, true, true]	0	
+[false, true, true, false, false, false, false, true, false]	0	
+[false, true, true, false, false, false, false, false, true]	0	
+[false, true, true, false, false, false, false, false, false]	0	
+[false, true, false, true, true, true, true, true, true]	0	
+[false, true, false, true, true, true, true, true, false]	0	
+[false, true, false, true, true, true, true, false, true]	0	
+[false, true, false, true, true, true, true, false, false]	0	
+[false, true, false, true, true, true, false, true, true]	0	
+[false, true, false, true, true, true, false, true, false]	0	
+[false, true, false, true, true, true, false, false, true]	0	
+[false, true, false, true, true, true, false, false, false]	0	
+[false, true, false, true, true, false, true, true, true]	0	
+[false, true, false, true, true, false, true, true, false]	0	
+[false, true, false, true, true, false, true, false, true]	0	
+[false, true, false, true, true, false, true, false, false]	0	
+[false, true, false, true, true, false, false, true, true]	0	
+[false, true, false, true, true, false, false, true, false]	0	
+[false, true, false, true, true, false, false, false, true]	0	
+[false, true, false, true, true, false, false, false, false]	0	
+[false, true, false, true, false, true, true, true, true]	0	
+[false, true, false, true, false, true, true, true, false]	0	
+[false, true, false, true, false, true, true, false, true]	0	
+[false, true, false, true, false, true, true, false, false]	0	
+[false, true, false, true, false, true, false, true, true]	0	
+[false, true, false, true, false, true, false, true, false]	0	
+[false, true, false, true, false, true, false, false, true]	0	
+[false, true, false, true, false, true, false, false, false]	0	
+[false, true, false, true, false, false, true, true, true]	0	
+[false, true, false, true, false, false, true, true, false]	0	
+[false, true, false, true, false, false, true, false, true]	0	
+[false, true, false, true, false, false, true, false, false]	0	
+[false, true, false, true, false, false, false, true, true]	0	
+[false, true, false, true, false, false, false, true, false]	0	
+[false, true, false, true, false, false, false, false, true]	0	
+[false, true, false, true, false, false, false, false, false]	0	
+[false, true, false, false, true, true, true, true, true]	0	
+[false, true, false, false, true, true, true, true, false]	0	
+[false, true, false, false, true, true, true, false, true]	0	
+[false, true, false, false, true, true, true, false, false]	0	
+[false, true, false, false, true, true, false, true, true]	0	
+[false, true, false, false, true, true, false, true, false]	0	
+[false, true, false, false, true, true, false, false, true]	0	
+[false, true, false, false, true, true, false, false, false]	0	
+[false, true, false, false, true, false, true, true, true]	0	
+[false, true, false, false, true, false, true, true, false]	0	
+[false, true, false, false, true, false, true, false, true]	0	
+[false, true, false, false, true, false, true, false, false]	0	
+[false, true, false, false, true, false, false, true, true]	0	
+[false, true, false, false, true, false, false, true, false]	0	
+[false, true, false, false, true, false, false, false, true]	0	
+[false, true, false, false, true, false, false, false, false]	0	
+[false, true, false, false, false, true, true, true, true]	0	
+[false, true, false, false, false, true, true, true, false]	0	
+[false, true, false, false, false, true, true, false, true]	0	
+[false, true, false, false, false, true, true, false, false]	0	
+[false, true, false, false, false, true, false, true, true]	0	
+[false, true, false, false, false, true, false, true, false]	0	
+[false, true, false, false, false, true, false, false, true]	0	
+[false, true, false, false, false, true, false, false, false]	0	
+[false, true, false, false, false, false, true, true, true]	0	
+[false, true, false, false, false, false, true, true, false]	0	
+[false, true, false, false, false, false, true, false, true]	0	
+[false, true, false, false, false, false, true, false, false]	0	
+[false, true, false, false, false, false, false, true, true]	0	
+[false, true, false, false, false, false, false, true, false]	0	
+[false, true, false, false, false, false, false, false, true]	0	
+[false, true, false, false, false, false, false, false, false]	0	
+[false, false, true, true, true, true, true, true, true]	0	
+[false, false, true, true, true, true, true, true, false]	0	
+[false, false, true, true, true, true, true, false, true]	0	
+[false, false, true, true, true, true, true, false, false]	0	
+[false, false, true, true, true, true, false, true, true]	0	
+[false, false, true, true, true, true, false, true, false]	0	
+[false, false, true, true, true, true, false, false, true]	0	
+[false, false, true, true, true, true, false, false, false]	0	
+[false, false, true, true, true, false, true, true, true]	0	
+[false, false, true, true, true, false, true, true, false]	0	
+[false, false, true, true, true, false, true, false, true]	0	
+[false, false, true, true, true, false, true, false, false]	0	
+[false, false, true, true, true, false, false, true, true]	0	
+[false, false, true, true, true, false, false, true, false]	0	
+[false, false, true, true, true, false, false, false, true]	0	
+[false, false, true, true, true, false, false, false, false]	0	
+[false, false, true, true, false, true, true, true, true]	0	
+[false, false, true, true, false, true, true, true, false]	0	
+[false, false, true, true, false, true, true, false, true]	0	
+[false, false, true, true, false, true, true, false, false]	0	
+[false, false, true, true, false, true, false, true, true]	0	
+[false, false, true, true, false, true, false, true, false]	0	
+[false, false, true, true, false, true, false, false, true]	0	
+[false, false, true, true, false, true, false, false, false]	0	
+[false, false, true, true, false, false, true, true, true]	0	
+[false, false, true, true, false, false, true, true, false]	0	
+[false, false, true, true, false, false, true, false, true]	0	
+[false, false, true, true, false, false, true, false, false]	0	
+[false, false, true, true, false, false, false, true, true]	0	
+[false, false, true, true, false, false, false, true, false]	0	
+[false, false, true, true, false, false, false, false, true]	0	
+[false, false, true, true, false, false, false, false, false]	0	
+[false, false, true, false, true, true, true, true, true]	0	
+[false, false, true, false, true, true, true, true, false]	0	
+[false, false, true, false, true, true, true, false, true]	0	
+[false, false, true, false, true, true, true, false, false]	0	
+[false, false, true, false, true, true, false, true, true]	0	
+[false, false, true, false, true, true, false, true, false]	0	
+[false, false, true, false, true, true, false, false, true]	0	
+[false, false, true, false, true, true, false, false, false]	0	
+[false, false, true, false, true, false, true, true, true]	0	
+[false, false, true, false, true, false, true, true, false]	0	
+[false, false, true, false, true, false, true, false, true]	0	
+[false, false, true, false, true, false, true, false, false]	0	
+[false, false, true, false, true, false, false, true, true]	0	
+[false, false, true, false, true, false, false, true, false]	0	
+[false, false, true, false, true, false, false, false, true]	0	
+[false, false, true, false, true, false, false, false, false]	0	
+[false, false, true, false, false, true, true, true, true]	0	
+[false, false, true, false, false, true, true, true, false]	0	
+[false, false, true, false, false, true, true, false, true]	0	
+[false, false, true, false, false, true, true, false, false]	0	
+[false, false, true, false, false, true, false, true, true]	0	
+[false, false, true, false, false, true, false, true, false]	0	
+[false, false, true, false, false, true, false, false, true]	0	
+[false, false, true, false, false, true, false, false, false]	0	
+[false, false, true, false, false, false, true, true, true]	0	
+[false, false, true, false, false, false, true, true, false]	0	
+[false, false, true, false, false, false, true, false, true]	0	
+[false, false, true, false, false, false, true, false, false]	0	
+[false, false, true, false, false, false, false, true, true]	0	
+[false, false, true, false, false, false, false, true, false]	0	
+[false, false, true, false, false, false, false, false, true]	0	
+[false, false, true, false, false, false, false, false, false]	0	
+[false, false, false, true, true, true, true, true, true]	0	
+[false, false, false, true, true, true, true, true, false]	0	
+[false, false, false, true, true, true, true, false, true]	0	
+[false, false, false, true, true, true, true, false, false]	0	
+[false, false, false, true, true, true, false, true, true]	0	
+[false, false, false, true, true, true, false, true, false]	0	
+[false, false, false, true, true, true, false, false, true]	0	
+[false, false, false, true, true, true, false, false, false]	0	
+[false, false, false, true, true, false, true, true, true]	0	
+[false, false, false, true, true, false, true, true, false]	0	
+[false, false, false, true, true, false, true, false, true]	0	
+[false, false, false, true, true, false, true, false, false]	0	
+[false, false, false, true, true, false, false, true, true]	0	
+[false, false, false, true, true, false, false, true, false]	0	
+[false, false, false, true, true, false, false, false, true]	0	
+[false, false, false, true, true, false, false, false, false]	0	
+[false, false, false, true, false, true, true, true, true]	0	
+[false, false, false, true, false, true, true, true, false]	0	
+[false, false, false, true, false, true, true, false, true]	0	
+[false, false, false, true, false, true, true, false, false]	0	
+[false, false, false, true, false, true, false, true, true]	0	
+[false, false, false, true, false, true, false, true, false]	0	
+[false, false, false, true, false, true, false, false, true]	0	
+[false, false, false, true, false, true, false, false, false]	0	
+[false, false, false, true, false, false, true, true, true]	0	
+[false, false, false, true, false, false, true, true, false]	0	
+[false, false, false, true, false, false, true, false, true]	0	
+[false, false, false, true, false, false, true, false, false]	0	
+[false, false, false, true, false, false, false, true, true]	0	
+[false, false, false, true, false, false, false, true, false]	0	
+[false, false, false, true, false, false, false, false, true]	0	
+[false, false, false, true, false, false, false, false, false]	0	
+[false, false, false, false, true, true, true, true, true]	0	
+[false, false, false, false, true, true, true, true, false]	0	
+[false, false, false, false, true, true, true, false, true]	0	
+[false, false, false, false, true, true, true, false, false]	0	
+[false, false, false, false, true, true, false, true, true]	0	
+[false, false, false, false, true, true, false, true, false]	0	
+[false, false, false, false, true, true, false, false, true]	0	
+[false, false, false, false, true, true, false, false, false]	0	
+[false, false, false, false, true, false, true, true, true]	0	
+[false, false, false, false, true, false, true, true, false]	0	
+[false, false, false, false, true, false, true, false, true]	0	
+[false, false, false, false, true, false, true, false, false]	0	
+[false, false, false, false, true, false, false, true, true]	0	
+[false, false, false, false, true, false, false, true, false]	0	
+[false, false, false, false, true, false, false, false, true]	0	
+[false, false, false, false, true, false, false, false, false]	0	
+[false, false, false, false, false, true, true, true, true]	0	
+[false, false, false, false, false, true, true, true, false]	0	
+[false, false, false, false, false, true, true, false, true]	0	
+[false, false, false, false, false, true, true, false, false]	0	
+[false, false, false, false, false, true, false, true, true]	0	
+[false, false, false, false, false, true, false, true, false]	0	
+[false, false, false, false, false, true, false, false, true]	0	
+[false, false, false, false, false, true, false, false, false]	0	
+[false, false, false, false, false, false, true, true, true]	0	
+[false, false, false, false, false, false, true, true, false]	0	
+[false, false, false, false, false, false, true, false, true]	0	
+[false, false, false, false, false, false, true, false, false]	0	
+[false, false, false, false, false, false, false, true, true]	0	
+[false, false, false, false, false, false, false, true, false]	0	
+[false, false, false, false, false, false, false, false, true]	0	
+[false, false, false, false, false, false, false, false, false]	0	
+[true, true, true, true, true, true, true, true, true, true]	0	
+[true, true, true, true, true, true, true, true, true, false]	0	
+[true, true, true, true, true, true, true, true, false, true]	0	
+[true, true, true, true, true, true, true, true, false, false]	0	
+[true, true, true, true, true, true, true, false, true, true]	0	
+[true, true, true, true, true, true, true, false, true, false]	0	
+[true, true, true, true, true, true, true, false, false, true]	0	
+[true, true, true, true, true, true, true, false, false, false]	0	
+[true, true, true, true, true, true, false, true, true, true]	0	
+[true, true, true, true, true, true, false, true, true, false]	0	
+[true, true, true, true, true, true, false, true, false, true]	0	
+[true, true, true, true, true, true, false, true, false, false]	0	
+[true, true, true, true, true, true, false, false, true, true]	0	
+[true, true, true, true, true, true, false, false, true, false]	0	
+[true, true, true, true, true, true, false, false, false, true]	0	
+[true, true, true, true, true, true, false, false, false, false]	0	
+[true, true, true, true, true, false, true, true, true, true]	0	
+[true, true, true, true, true, false, true, true, true, false]	0	
+[true, true, true, true, true, false, true, true, false, true]	0	
+[true, true, true, true, true, false, true, true, false, false]	0	
+[true, true, true, true, true, false, true, false, true, true]	0	
+[true, true, true, true, true, false, true, false, true, false]	0	
+[true, true, true, true, true, false, true, false, false, true]	0	
+[true, true, true, true, true, false, true, false, false, false]	0	
+[true, true, true, true, true, false, false, true, true, true]	0	
+[true, true, true, true, true, false, false, true, true, false]	0	
+[true, true, true, true, true, false, false, true, false, true]	0	
+[true, true, true, true, true, false, false, true, false, false]	0	
+[true, true, true, true, true, false, false, false, true, true]	0	
+[true, true, true, true, true, false, false, false, true, false]	0	
+[true, true, true, true, true, false, false, false, false, true]	0	
+[true, true, true, true, true, false, false, false, false, false]	0	
+[true, true, true, true, false, true, true, true, true, true]	0	
+[true, true, true, true, false, true, true, true, true, false]	0	
+[true, true, true, true, false, true, true, true, false, true]	0	
+[true, true, true, true, false, true, true, true, false, false]	0	
+[true, true, true, true, false, true, true, false, true, true]	0	
+[true, true, true, true, false, true, true, false, true, false]	0	
+[true, true, true, true, false, true, true, false, false, true]	0	
+[true, true, true, true, false, true, true, false, false, false]	0	
+[true, true, true, true, false, true, false, true, true, true]	0	
+[true, true, true, true, false, true, false, true, true, false]	0	
+[true, true, true, true, false, true, false, true, false, true]	0	
+[true, true, true, true, false, true, false, true, false, false]	0	
+[true, true, true, true, false, true, false, false, true, true]	0	
+[true, true, true, true, false, true, false, false, true, false]	0	
+[true, true, true, true, false, true, false, false, false, true]	0	
+[true, true, true, true, false, true, false, false, false, false]	0	
+[true, true, true, true, false, false, true, true, true, true]	0	
+[true, true, true, true, false, false, true, true, true, false]	0	
+[true, true, true, true, false, false, true, true, false, true]	0	
+[true, true, true, true, false, false, true, true, false, false]	0	
+[true, true, true, true, false, false, true, false, true, true]	0	
+[true, true, true, true, false, false, true, false, true, false]	0	
+[true, true, true, true, false, false, true, false, false, true]	0	
+[true, true, true, true, false, false, true, false, false, false]	0	
+[true, true, true, true, false, false, false, true, true, true]	0	
+[true, true, true, true, false, false, false, true, true, false]	0	
+[true, true, true, true, false, false, false, true, false, true]	0	
+[true, true, true, true, false, false, false, true, false, false]	0	
+[true, true, true, true, false, false, false, false, true, true]	0	
+[true, true, true, true, false, false, false, false, true, false]	0	
+[true, true, true, true, false, false, false, false, false, true]	0	
+[true, true, true, true, false, false, false, false, false, false]	0	
+[true, true, true, false, true, true, true, true, true, true]	0	
+[true, true, true, false, true, true, true, true, true, false]	0	
+[true, true, true, false, true, true, true, true, false, true]	0	
+[true, true, true, false, true, true, true, true, false, false]	0	
+[true, true, true, false, true, true, true, false, true, true]	0	
+[true, true, true, false, true, true, true, false, true, false]	0	
+[true, true, true, false, true, true, true, false, false, true]	0	
+[true, true, true, false, true, true, true, false, false, false]	0	
+[true, true, true, false, true, true, false, true, true, true]	0	
+[true, true, true, false, true, true, false, true, true, false]	0	
+[true, true, true, false, true, true, false, true, false, true]	0	
+[true, true, true, false, true, true, false, true, false, false]	0	
+[true, true, true, false, true, true, false, false, true, true]	0	
+[true, true, true, false, true, true, false, false, true, false]	0	
+[true, true, true, false, true, true, false, false, false, true]	0	
+[true, true, true, false, true, true, false, false, false, false]	0	
+[true, true, true, false, true, false, true, true, true, true]	0	
+[true, true, true, false, true, false, true, true, true, false]	0	
+[true, true, true, false, true, false, true, true, false, true]	0	
+[true, true, true, false, true, false, true, true, false, false]	0	
+[true, true, true, false, true, false, true, false, true, true]	0	
+[true, true, true, false, true, false, true, false, true, false]	0	
+[true, true, true, false, true, false, true, false, false, true]	0	
+[true, true, true, false, true, false, true, false, false, false]	0	
+[true, true, true, false, true, false, false, true, true, true]	0	
+[true, true, true, false, true, false, false, true, true, false]	0	
+[true, true, true, false, true, false, false, true, false, true]	0	
+[true, true, true, false, true, false, false, true, false, false]	0	
+[true, true, true, false, true, false, false, false, true, true]	0	
+[true, true, true, false, true, false, false, false, true, false]	0	
+[true, true, true, false, true, false, false, false, false, true]	0	
+[true, true, true, false, true, false, false, false, false, false]	0	
+[true, true, true, false, false, true, true, true, true, true]	0	
+[true, true, true, false, false, true, true, true, true, false]	0	
+[true, true, true, false, false, true, true, true, false, true]	0	
+[true, true, true, false, false, true, true, true, false, false]	0	
+[true, true, true, false, false, true, true, false, true, true]	0	
+[true, true, true, false, false, true, true, false, true, false]	0	
+[true, true, true, false, false, true, true, false, false, true]	0	
+[true, true, true, false, false, true, true, false, false, false]	0	
+[true, true, true, false, false, true, false, true, true, true]	0	
+[true, true, true, false, false, true, false, true, true, false]	0	
+[true, true, true, false, false, true, false, true, false, true]	0	
+[true, true, true, false, false, true, false, true, false, false]	0	
+[true, true, true, false, false, true, false, false, true, true]	0	
+[true, true, true, false, false, true, false, false, true, false]	0	
+[true, true, true, false, false, true, false, false, false, true]	0	
+[true, true, true, false, false, true, false, false, false, false]	0	
+[true, true, true, false, false, false, true, true, true, true]	0	
+[true, true, true, false, false, false, true, true, true, false]	0	
+[true, true, true, false, false, false, true, true, false, true]	0	
+[true, true, true, false, false, false, true, true, false, false]	0	
+[true, true, true, false, false, false, true, false, true, true]	0	
+[true, true, true, false, false, false, true, false, true, false]	0	
+[true, true, true, false, false, false, true, false, false, true]	0	
+[true, true, true, false, false, false, true, false, false, false]	0	
+[true, true, true, false, false, false, false, true, true, true]	0	
+[true, true, true, false, false, false, false, true, true, false]	0	
+[true, true, true, false, false, false, false, true, false, true]	0	
+[true, true, true, false, false, false, false, true, false, false]	0	
+[true, true, true, false, false, false, false, false, true, true]	0	
+[true, true, true, false, false, false, false, false, true, false]	0	
+[true, true, true, false, false, false, false, false, false, true]	0	
+[true, true, true, false, false, false, false, false, false, false]	0	
+[true, true, false, true, true, true, true, true, true, true]	0	
+[true, true, false, true, true, true, true, true, true, false]	0	
+[true, true, false, true, true, true, true, true, false, true]	0	
+[true, true, false, true, true, true, true, true, false, false]	0	
+[true, true, false, true, true, true, true, false, true, true]	0	
+[true, true, false, true, true, true, true, false, true, false]	0	
+[true, true, false, true, true, true, true, false, false, true]	0	
+[true, true, false, true, true, true, true, false, false, false]	0	
+[true, true, false, true, true, true, false, true, true, true]	0	
+[true, true, false, true, true, true, false, true, true, false]	0	
+[true, true, false, true, true, true, false, true, false, true]	0	
+[true, true, false, true, true, true, false, true, false, false]	0	
+[true, true, false, true, true, true, false, false, true, true]	0	
+[true, true, false, true, true, true, false, false, true, false]	0	
+[true, true, false, true, true, true, false, false, false, true]	0	
+[true, true, false, true, true, true, false, false, false, false]	0	
+[true, true, false, true, true, false, true, true, true, true]	0	
+[true, true, false, true, true, false, true, true, true, false]	0	
+[true, true, false, true, true, false, true, true, false, true]	0	
+[true, true, false, true, true, false, true, true, false, false]	0	
+[true, true, false, true, true, false, true, false, true, true]	0	
+[true, true, false, true, true, false, true, false, true, false]	0	
+[true, true, false, true, true, false, true, false, false, true]	0	
+[true, true, false, true, true, false, true, false, false, false]	0	
+[true, true, false, true, true, false, false, true, true, true]	0	
+[true, true, false, true, true, false, false, true, true, false]	0	
+[true, true, false, true, true, false, false, true, false, true]	0	
+[true, true, false, true, true, false, false, true, false, false]	0	
+[true, true, false, true, true, false, false, false, true, true]	0	
+[true, true, false, true, true, false, false, false, true, false]	0	
+[true, true, false, true, true, false, false, false, false, true]	0	
+[true, true, false, true, true, false, false, false, false, false]	0	
+[true, true, false, true, false, true, true, true, true, true]	0	
+[true, true, false, true, false, true, true, true, true, false]	0	
+[true, true, false, true, false, true, true, true, false, true]	0	
+[true, true, false, true, false, true, true, true, false, false]	0	
+[true, true, false, true, false, true, true, false, true, true]	0	
+[true, true, false, true, false, true, true, false, true, false]	0	
+[true, true, false, true, false, true, true, false, false, true]	0	
+[true, true, false, true, false, true, true, false, false, false]	0	
+[true, true, false, true, false, true, false, true, true, true]	0	
+[true, true, false, true, false, true, false, true, true, false]	0	
+[true, true, false, true, false, true, false, true, false, true]	0	
+[true, true, false, true, false, true, false, true, false, false]	0	
+[true, true, false, true, false, true, false, false, true, true]	0	
+[true, true, false, true, false, true, false, false, true, false]	0	
+[true, true, false, true, false, true, false, false, false, true]	0	
+[true, true, false, true, false, true, false, false, false, false]	0	
+[true, true, false, true, false, false, true, true, true, true]	0	
+[true, true, false, true, false, false, true, true, true, false]	0	
+[true, true, false, true, false, false, true, true, false, true]	0	
+[true, true, false, true, false, false, true, true, false, false]	0	
+[true, true, false, true, false, false, true, false, true, true]	0	
+[true, true, false, true, false, false, true, false, true, false]	0	
+[true, true, false, true, false, false, true, false, false, true]	0	
+[true, true, false, true, false, false, true, false, false, false]	0	
+[true, true, false, true, false, false, false, true, true, true]	0	
+[true, true, false, true, false, false, false, true, true, false]	0	
+[true, true, false, true, false, false, false, true, false, true]	0	
+[true, true, false, true, false, false, false, true, false, false]	0	
+[true, true, false, true, false, false, false, false, true, true]	0	
+[true, true, false, true, false, false, false, false, true, false]	0	
+[true, true, false, true, false, false, false, false, false, true]	0	
+[true, true, false, true, false, false, false, false, false, false]	0	
+[true, true, false, false, true, true, true, true, true, true]	0	
+[true, true, false, false, true, true, true, true, true, false]	0	
+[true, true, false, false, true, true, true, true, false, true]	0	
+[true, true, false, false, true, true, true, true, false, false]	0	
+[true, true, false, false, true, true, true, false, true, true]	0	
+[true, true, false, false, true, true, true, false, true, false]	0	
+[true, true, false, false, true, true, true, false, false, true]	0	
+[true, true, false, false, true, true, true, false, false, false]	0	
+[true, true, false, false, true, true, false, true, true, true]	0	
+[true, true, false, false, true, true, false, true, true, false]	0	
+[true, true, false, false, true, true, false, true, false, true]	0	
+[true, true, false, false, true, true, false, true, false, false]	0	
+[true, true, false, false, true, true, false, false, true, true]	0	
+[true, true, false, false, true, true, false, false, true, false]	0	
+[true, true, false, false, true, true, false, false, false, true]	0	
+[true, true, false, false, true, true, false, false, false, false]	0	
+[true, true, false, false, true, false, true, true, true, true]	0	
+[true, true, false, false, true, false, true, true, true, false]	0	
+[true, true, false, false, true, false, true, true, false, true]	0	
+[true, true, false, false, true, false, true, true, false, false]	0	
+[true, true, false, false, true, false, true, false, true, true]	0	
+[true, true, false, false, true, false, true, false, true, false]	0	
+[true, true, false, false, true, false, true, false, false, true]	0	
+[true, true, false, false, true, false, true, false, false, false]	0	
+[true, true, false, false, true, false, false, true, true, true]	0	
+[true, true, false, false, true, false, false, true, true, false]	0	
+[true, true, false, false, true, false, false, true, false, true]	0	
+[true, true, false, false, true, false, false, true, false, false]	0	
+[true, true, false, false, true, false, false, false, true, true]	0	
+[true, true, false, false, true, false, false, false, true, false]	0	
+[true, true, false, false, true, false, false, false, false, true]	0	
+[true, true, false, false, true, false, false, false, false, false]	0	
+[true, true, false, false, false, true, true, true, true, true]	0	
+[true, true, false, false, false, true, true, true, true, false]	0	
+[true, true, false, false, false, true, true, true, false, true]	0	
+[true, true, false, false, false, true, true, true, false, false]	0	
+[true, true, false, false, false, true, true, false, true, true]	0	
+[true, true, false, false, false, true, true, false, true, false]	0	
+[true, true, false, false, false, true, true, false, false, true]	0	
+[true, true, false, false, false, true, true, false, false, false]	0	
+[true, true, false, false, false, true, false, true, true, true]	0	
+[true, true, false, false, false, true, false, true, true, false]	0	
+[true, true, false, false, false, true, false, true, false, true]	0	
+[true, true, false, false, false, true, false, true, false, false]	0	
+[true, true, false, false, false, true, false, false, true, true]	0	
+[true, true, false, false, false, true, false, false, true, false]	0	
+[true, true, false, false, false, true, false, false, false, true]	0	
+[true, true, false, false, false, true, false, false, false, false]	0	
+[true, true, false, false, false, false, true, true, true, true]	0	
+[true, true, false, false, false, false, true, true, true, false]	0	
+[true, true, false, false, false, false, true, true, false, true]	0	
+[true, true, false, false, false, false, true, true, false, false]	0	
+[true, true, false, false, false, false, true, false, true, true]	0	
+[true, true, false, false, false, false, true, false, true, false]	0	
+[true, true, false, false, false, false, true, false, false, true]	0	
+[true, true, false, false, false, false, true, false, false, false]	0	
+[true, true, false, false, false, false, false, true, true, true]	0	
+[true, true, false, false, false, false, false, true, true, false]	0	
+[true, true, false, false, false, false, false, true, false, true]	0	
+[true, true, false, false, false, false, false, true, false, false]	0	
+[true, true, false, false, false, false, false, false, true, true]	0	
+[true, true, false, false, false, false, false, false, true, false]	0	
+[true, true, false, false, false, false, false, false, false, true]	0	
+[true, true, false, false, false, false, false, false, false, false]	0	
+[true, false, true, true, true, true, true, true, true, true]	0.000002223	
+[true, false, true, true, true, true, true, true, true, false]	0.000013339	
+[true, false, true, true, true, true, true, true, false, true]	0.000010375	
+[true, false, true, true, true, true, true, true, false, false]	0.000082996	
+[true, false, true, true, true, true, true, false, true, true]	0.000012104	
+[true, false, true, true, true, true, true, false, true, false]	0.000072622	
+[true, false, true, true, true, true, true, false, false, true]	0.000075311	
+[true, false, true, true, true, true, true, false, false, false]	0.000602491	
+[true, false, true, true, true, true, false, true, true, true]	0.000006467	
+[true, false, true, true, true, true, false, true, true, false]	0.000038803	
+[true, false, true, true, true, true, false, true, false, true]	0.00003018	
+[true, false, true, true, true, true, false, true, false, false]	0.000241443	
+[true, false, true, true, true, true, false, false, true, true]	0.000050301	
+[true, false, true, true, true, true, false, false, true, false]	0.000301804	
+[true, false, true, true, true, true, false, false, false, true]	0.000312982	
+[true, false, true, true, true, true, false, false, false, false]	0.002503857	
+[true, false, true, true, true, false, true, true, true, true]	0.000004446	
+[true, false, true, true, true, false, true, true, true, false]	0.000026677	
+[true, false, true, true, true, false, true, true, false, true]	0.000020749	
+[true, false, true, true, true, false, true, true, false, false]	0.000165992	
+[true, false, true, true, true, false, true, false, true, true]	0.000024207	
+[true, false, true, true, true, false, true, false, true, false]	0.000145243	
+[true, false, true, true, true, false, true, false, false, true]	0.000150623	
+[true, false, true, true, true, false, true, false, false, false]	0.001204981	
+[true, false, true, true, true, false, false, true, true, true]	0.000012934	
+[true, false, true, true, true, false, false, true, true, false]	0.000077607	
+[true, false, true, true, true, false, false, true, false, true]	0.000060361	
+[true, false, true, true, true, false, false, true, false, false]	0.000482887	
+[true, false, true, true, true, false, false, false, true, true]	0.000100601	
+[true, false, true, true, true, false, false, false, true, false]	0.000603608	
+[true, false, true, true, true, false, false, false, false, true]	0.000625964	
+[true, false, true, true, true, false, false, false, false, false]	0.005007715	
+[true, false, true, true, false, true, true, true, true, true]	0.000003335	
+[true, false, true, true, false, true, true, true, true, false]	0.000020008	
+[true, false, true, true, false, true, true, true, false, true]	0.000015562	
+[true, false, true, true, false, true, true, true, false, false]	0.000124494	
+[true, false, true, true, false, true, true, false, true, true]	0.000018155	
+[true, false, true, true, false, true, true, false, true, false]	0.000108932	
+[true, false, true, true, false, true, true, false, false, true]	0.000112967	
+[true, false, true, true, false, true, true, false, false, false]	0.000903736	
+[true, false, true, true, false, true, false, true, true, true]	0.000009701	
+[true, false, true, true, false, true, false, true, true, false]	0.000058205	
+[true, false, true, true, false, true, false, true, false, true]	0.000045271	
+[true, false, true, true, false, true, false, true, false, false]	0.000362165	
+[true, false, true, true, false, true, false, false, true, true]	0.000075451	
+[true, false, true, true, false, true, false, false, true, false]	0.000452706	
+[true, false, true, true, false, true, false, false, false, true]	0.000469473	
+[true, false, true, true, false, true, false, false, false, false]	0.003755786	
+[true, false, true, true, false, false, true, true, true, true]	0.000010004	
+[true, false, true, true, false, false, true, true, true, false]	0.000060024	
+[true, false, true, true, false, false, true, true, false, true]	0.000046685	
+[true, false, true, true, false, false, true, true, false, false]	0.000373483	
+[true, false, true, true, false, false, true, false, true, true]	0.000054466	
+[true, false, true, true, false, false, true, false, true, false]	0.000326797	
+[true, false, true, true, false, false, true, false, false, true]	0.000338901	
+[true, false, true, true, false, false, true, false, false, false]	0.002711208	
+[true, false, true, true, false, false, false, true, true, true]	0.000029103	
+[true, false, true, true, false, false, false, true, true, false]	0.000174615	
+[true, false, true, true, false, false, false, true, false, true]	0.000135812	
+[true, false, true, true, false, false, false, true, false, false]	0.001086495	
+[true, false, true, true, false, false, false, false, true, true]	0.000226353	
+[true, false, true, true, false, false, false, false, true, false]	0.001358119	
+[true, false, true, true, false, false, false, false, false, true]	0.00140842	
+[true, false, true, true, false, false, false, false, false, false]	0.011267358	
+[true, false, true, false, true, true, true, true, true, true]	0.000002918	
+[true, false, true, false, true, true, true, true, true, false]	0.000020425	
+[true, false, true, false, true, true, true, true, false, true]	0.000012732	
+[true, false, true, false, true, true, true, true, false, false]	0.000127324	
+[true, false, true, false, true, true, true, false, true, true]	0.000015886	
+[true, false, true, false, true, true, true, false, true, false]	0.000111202	
+[true, false, true, false, true, true, true, false, false, true]	0.000092428	
+[true, false, true, false, true, true, true, false, false, false]	0.000924275	
+[true, false, true, false, true, true, false, true, true, true]	0.000008488	
+[true, false, true, false, true, true, false, true, true, false]	0.000059418	
+[true, false, true, false, true, true, false, true, false, true]	0.00003704	
+[true, false, true, false, true, true, false, true, false, false]	0.000370396	
+[true, false, true, false, true, true, false, false, true, true]	0.00006602	
+[true, false, true, false, true, true, false, false, true, false]	0.000462138	
+[true, false, true, false, true, true, false, false, false, true]	0.000384114	
+[true, false, true, false, true, true, false, false, false, false]	0.003841145	
+[true, false, true, false, true, false, true, true, true, true]	0.000005836	
+[true, false, true, false, true, false, true, true, true, false]	0.00004085	
+[true, false, true, false, true, false, true, true, false, true]	0.000025465	
+[true, false, true, false, true, false, true, true, false, false]	0.000254647	
+[true, false, true, false, true, false, true, false, true, true]	0.000031772	
+[true, false, true, false, true, false, true, false, true, false]	0.000222404	
+[true, false, true, false, true, false, true, false, false, true]	0.000184855	
+[true, false, true, false, true, false, true, false, false, false]	0.001848551	
+[true, false, true, false, true, false, false, true, true, true]	0.000016976	
+[true, false, true, false, true, false, false, true, true, false]	0.000118835	
+[true, false, true, false, true, false, false, true, false, true]	0.000074079	
+[true, false, true, false, true, false, false, true, false, false]	0.000740792	
+[true, false, true, false, true, false, false, false, true, true]	0.000132039	
+[true, false, true, false, true, false, false, false, true, false]	0.000924275	
+[true, false, true, false, true, false, false, false, false, true]	0.000768229	
+[true, false, true, false, true, false, false, false, false, false]	0.007682289	
+[true, false, true, false, false, true, true, true, true, true]	0.000006565	
+[true, false, true, false, false, true, true, true, true, false]	0.000045956	
+[true, false, true, false, false, true, true, true, false, true]	0.000028648	
+[true, false, true, false, false, true, true, true, false, false]	0.000286478	
+[true, false, true, false, false, true, true, false, true, true]	0.000035743	
+[true, false, true, false, false, true, true, false, true, false]	0.000250204	
+[true, false, true, false, false, true, true, false, false, true]	0.000207962	
+[true, false, true, false, false, true, true, false, false, false]	0.00207962	
+[true, false, true, false, false, true, false, true, true, true]	0.000019099	
+[true, false, true, false, false, true, false, true, true, false]	0.00013369	
+[true, false, true, false, false, true, false, true, false, true]	0.000083339	
+[true, false, true, false, false, true, false, true, false, false]	0.000833391	
+[true, false, true, false, false, true, false, false, true, true]	0.000148544	
+[true, false, true, false, false, true, false, false, true, false]	0.00103981	
+[true, false, true, false, false, true, false, false, false, true]	0.000864258	
+[true, false, true, false, false, true, false, false, false, false]	0.008642575	
+[true, false, true, false, false, false, true, true, true, true]	0.000019695	
+[true, false, true, false, false, false, true, true, true, false]	0.000137868	
+[true, false, true, false, false, false, true, true, false, true]	0.000085943	
+[true, false, true, false, false, false, true, true, false, false]	0.000859435	
+[true, false, true, false, false, false, true, false, true, true]	0.00010723	
+[true, false, true, false, false, false, true, false, true, false]	0.000750613	
+[true, false, true, false, false, false, true, false, false, true]	0.000623886	
+[true, false, true, false, false, false, true, false, false, false]	0.006238859	
+[true, false, true, false, false, false, false, true, true, true]	0.000057296	
+[true, false, true, false, false, false, false, true, true, false]	0.00040107	
+[true, false, true, false, false, false, false, true, false, true]	0.000250017	
+[true, false, true, false, false, false, false, true, false, false]	0.002500174	
+[true, false, true, false, false, false, false, false, true, true]	0.000445633	
+[true, false, true, false, false, false, false, false, true, false]	0.00311943	
+[true, false, true, false, false, false, false, false, false, true]	0.002592773	
+[true, false, true, false, false, false, false, false, false, false]	0.025927726	
+[true, false, false, true, true, true, true, true, true, true]	0.000004377	
+[true, false, false, true, true, true, true, true, true, false]	0.000026261	
+[true, false, false, true, true, true, true, true, false, true]	0.000023829	
+[true, false, false, true, true, true, true, true, false, false]	0.000190632	
+[true, false, false, true, true, true, true, false, true, true]	0.000022282	
+[true, false, false, true, true, true, true, false, true, false]	0.00013369	
+[true, false, false, true, true, true, true, false, false, true]	0.000173302	
+[true, false, false, true, true, true, true, false, false, false]	0.001386413	
+[true, false, false, true, true, true, false, true, true, true]	0.000012732	
+[true, false, false, true, true, true, false, true, true, false]	0.000076394	
+[true, false, false, true, true, true, false, true, false, true]	0.000069321	
+[true, false, false, true, true, true, false, true, false, false]	0.000554565	
+[true, false, false, true, true, true, false, false, true, true]	0.000092599	
+[true, false, false, true, true, true, false, false, true, false]	0.000555594	
+[true, false, false, true, true, true, false, false, false, true]	0.000720215	
+[true, false, false, true, true, true, false, false, false, false]	0.005761717	
+[true, false, false, true, true, false, true, true, true, true]	0.000008754	
+[true, false, false, true, true, false, true, true, true, false]	0.000052521	
+[true, false, false, true, true, false, true, true, false, true]	0.000047658	
+[true, false, false, true, true, false, true, true, false, false]	0.000381264	
+[true, false, false, true, true, false, true, false, true, true]	0.000044563	
+[true, false, false, true, true, false, true, false, true, false]	0.00026738	
+[true, false, false, true, true, false, true, false, false, true]	0.000346603	
+[true, false, false, true, true, false, true, false, false, false]	0.002772826	
+[true, false, false, true, true, false, false, true, true, true]	0.000025465	
+[true, false, false, true, true, false, false, true, true, false]	0.000152788	
+[true, false, false, true, true, false, false, true, false, true]	0.000138641	
+[true, false, false, true, true, false, false, true, false, false]	0.001109131	
+[true, false, false, true, true, false, false, false, true, true]	0.000185198	
+[true, false, false, true, true, false, false, false, true, false]	0.001111188	
+[true, false, false, true, true, false, false, false, false, true]	0.001440429	
+[true, false, false, true, true, false, false, false, false, false]	0.011523434	
+[true, false, false, true, false, true, true, true, true, true]	0.000006565	
+[true, false, false, true, false, true, true, true, true, false]	0.000039391	
+[true, false, false, true, false, true, true, true, false, true]	0.000035743	
+[true, false, false, true, false, true, true, true, false, false]	0.000285948	
+[true, false, false, true, false, true, true, false, true, true]	0.000033422	
+[true, false, false, true, false, true, true, false, true, false]	0.000200535	
+[true, false, false, true, false, true, true, false, false, true]	0.000259952	
+[true, false, false, true, false, true, true, false, false, false]	0.00207962	
+[true, false, false, true, false, true, false, true, true, true]	0.000019099	
+[true, false, false, true, false, true, false, true, true, false]	0.000114591	
+[true, false, false, true, false, true, false, true, false, true]	0.000103981	
+[true, false, false, true, false, true, false, true, false, false]	0.000831848	
+[true, false, false, true, false, true, false, false, true, true]	0.000138899	
+[true, false, false, true, false, true, false, false, true, false]	0.000833391	
+[true, false, false, true, false, true, false, false, false, true]	0.001080322	
+[true, false, false, true, false, true, false, false, false, false]	0.008642575	
+[true, false, false, true, false, false, true, true, true, true]	0.000019695	
+[true, false, false, true, false, false, true, true, true, false]	0.000118172	
+[true, false, false, true, false, false, true, true, false, true]	0.00010723	
+[true, false, false, true, false, false, true, true, false, false]	0.000857843	
+[true, false, false, true, false, false, true, false, true, true]	0.000100267	
+[true, false, false, true, false, false, true, false, true, false]	0.000601604	
+[true, false, false, true, false, false, true, false, false, true]	0.000779857	
+[true, false, false, true, false, false, true, false, false, false]	0.006238859	
+[true, false, false, true, false, false, false, true, true, true]	0.000057296	
+[true, false, false, true, false, false, false, true, true, false]	0.000343774	
+[true, false, false, true, false, false, false, true, false, true]	0.000311943	
+[true, false, false, true, false, false, false, true, false, false]	0.002495544	
+[true, false, false, true, false, false, false, false, true, true]	0.000416696	
+[true, false, false, true, false, false, false, false, true, false]	0.002500174	
+[true, false, false, true, false, false, false, false, false, true]	0.003240966	
+[true, false, false, true, false, false, false, false, false, false]	0.025927726	
+[true, false, false, false, true, true, true, true, true, true]	0.000008617	
+[true, false, false, false, true, true, true, true, true, false]	0.000060317	
+[true, false, false, false, true, true, true, true, false, true]	0.000043867	
+[true, false, false, false, true, true, true, true, false, false]	0.00043867	
+[true, false, false, false, true, true, true, false, true, true]	0.000043867	
+[true, false, false, false, true, true, true, false, true, false]	0.000307069	
+[true, false, false, false, true, true, true, false, false, true]	0.000319033	
+[true, false, false, false, true, true, true, false, false, false]	0.003190326	
+[true, false, false, false, true, true, false, true, true, true]	0.000025067	
+[true, false, false, false, true, true, false, true, true, false]	0.000175468	
+[true, false, false, false, true, true, false, true, false, true]	0.000127613	
+[true, false, false, false, true, true, false, true, false, false]	0.00127613	
+[true, false, false, false, true, true, false, false, true, true]	0.000182304	
+[true, false, false, false, true, true, false, false, true, false]	0.00127613	
+[true, false, false, false, true, true, false, false, false, true]	0.00132585	
+[true, false, false, false, true, true, false, false, false, false]	0.013258496	
+[true, false, false, false, true, false, true, true, true, true]	0.000017233	
+[true, false, false, false, true, false, true, true, true, false]	0.000120634	
+[true, false, false, false, true, false, true, true, false, true]	0.000087734	
+[true, false, false, false, true, false, true, true, false, false]	0.00087734	
+[true, false, false, false, true, false, true, false, true, true]	0.000087734	
+[true, false, false, false, true, false, true, false, true, false]	0.000614138	
+[true, false, false, false, true, false, true, false, false, true]	0.000638065	
+[true, false, false, false, true, false, true, false, false, false]	0.006380651	
+[true, false, false, false, true, false, false, true, true, true]	0.000050134	
+[true, false, false, false, true, false, false, true, true, false]	0.000350936	
+[true, false, false, false, true, false, false, true, false, true]	0.000255226	
+[true, false, false, false, true, false, false, true, false, false]	0.002552261	
+[true, false, false, false, true, false, false, false, true, true]	0.000364609	
+[true, false, false, false, true, false, false, false, true, false]	0.002552261	
+[true, false, false, false, true, false, false, false, false, true]	0.002651699	
+[true, false, false, false, true, false, false, false, false, false]	0.026516993	
+[true, false, false, false, false, true, true, true, true, true]	0.000019388	
+[true, false, false, false, false, true, true, true, true, false]	0.000135713	
+[true, false, false, false, false, true, true, true, false, true]	0.000098701	
+[true, false, false, false, false, true, true, true, false, false]	0.000987007	
+[true, false, false, false, false, true, true, false, true, true]	0.000098701	
+[true, false, false, false, false, true, true, false, true, false]	0.000690905	
+[true, false, false, false, false, true, true, false, false, true]	0.000717823	
+[true, false, false, false, false, true, true, false, false, false]	0.007178233	
+[true, false, false, false, false, true, false, true, true, true]	0.0000564	
+[true, false, false, false, false, true, false, true, true, false]	0.000394803	
+[true, false, false, false, false, true, false, true, false, true]	0.000287129	
+[true, false, false, false, false, true, false, true, false, false]	0.002871293	
+[true, false, false, false, false, true, false, false, true, true]	0.000410185	
+[true, false, false, false, false, true, false, false, true, false]	0.002871293	
+[true, false, false, false, false, true, false, false, false, true]	0.002983162	
+[true, false, false, false, false, true, false, false, false, false]	0.029831617	
+[true, false, false, false, false, false, true, true, true, true]	0.000058163	
+[true, false, false, false, false, false, true, true, true, false]	0.00040714	
+[true, false, false, false, false, false, true, true, false, true]	0.000296102	
+[true, false, false, false, false, false, true, true, false, false]	0.002961021	
+[true, false, false, false, false, false, true, false, true, true]	0.000296102	
+[true, false, false, false, false, false, true, false, true, false]	0.002072715	
+[true, false, false, false, false, false, true, false, false, true]	0.00215347	
+[true, false, false, false, false, false, true, false, false, false]	0.021534699	
+[true, false, false, false, false, false, false, true, true, true]	0.000169201	
+[true, false, false, false, false, false, false, true, true, false]	0.001184408	
+[true, false, false, false, false, false, false, true, false, true]	0.000861388	
+[true, false, false, false, false, false, false, true, false, false]	0.008613879	
+[true, false, false, false, false, false, false, false, true, true]	0.001230554	
+[true, false, false, false, false, false, false, false, true, false]	0.008613879	
+[true, false, false, false, false, false, false, false, false, true]	0.008949485	
+[true, false, false, false, false, false, false, false, false, false]	0.089494851	
+[false, true, true, true, true, true, true, true, true, true]	0	
+[false, true, true, true, true, true, true, true, true, false]	0	
+[false, true, true, true, true, true, true, true, false, true]	0	
+[false, true, true, true, true, true, true, true, false, false]	0	
+[false, true, true, true, true, true, true, false, true, true]	0	
+[false, true, true, true, true, true, true, false, true, false]	0	
+[false, true, true, true, true, true, true, false, false, true]	0	
+[false, true, true, true, true, true, true, false, false, false]	0	
+[false, true, true, true, true, true, false, true, true, true]	0	
+[false, true, true, true, true, true, false, true, true, false]	0	
+[false, true, true, true, true, true, false, true, false, true]	0	
+[false, true, true, true, true, true, false, true, false, false]	0	
+[false, true, true, true, true, true, false, false, true, true]	0	
+[false, true, true, true, true, true, false, false, true, false]	0	
+[false, true, true, true, true, true, false, false, false, true]	0	
+[false, true, true, true, true, true, false, false, false, false]	0	
+[false, true, true, true, true, false, true, true, true, true]	0	
+[false, true, true, true, true, false, true, true, true, false]	0	
+[false, true, true, true, true, false, true, true, false, true]	0	
+[false, true, true, true, true, false, true, true, false, false]	0	
+[false, true, true, true, true, false, true, false, true, true]	0	
+[false, true, true, true, true, false, true, false, true, false]	0	
+[false, true, true, true, true, false, true, false, false, true]	0	
+[false, true, true, true, true, false, true, false, false, false]	0	
+[false, true, true, true, true, false, false, true, true, true]	0	
+[false, true, true, true, true, false, false, true, true, false]	0	
+[false, true, true, true, true, false, false, true, false, true]	0	
+[false, true, true, true, true, false, false, true, false, false]	0	
+[false, true, true, true, true, false, false, false, true, true]	0	
+[false, true, true, true, true, false, false, false, true, false]	0	
+[false, true, true, true, true, false, false, false, false, true]	0	
+[false, true, true, true, true, false, false, false, false, false]	0	
+[false, true, true, true, false, true, true, true, true, true]	0	
+[false, true, true, true, false, true, true, true, true, false]	0	
+[false, true, true, true, false, true, true, true, false, true]	0	
+[false, true, true, true, false, true, true, true, false, false]	0	
+[false, true, true, true, false, true, true, false, true, true]	0	
+[false, true, true, true, false, true, true, false, true, false]	0	
+[false, true, true, true, false, true, true, false, false, true]	0	
+[false, true, true, true, false, true, true, false, false, false]	0	
+[false, true, true, true, false, true, false, true, true, true]	0	
+[false, true, true, true, false, true, false, true, true, false]	0	
+[false, true, true, true, false, true, false, true, false, true]	0	
+[false, true, true, true, false, true, false, true, false, false]	0	
+[false, true, true, true, false, true, false, false, true, true]	0	
+[false, true, true, true, false, true, false, false, true, false]	0	
+[false, true, true, true, false, true, false, false, false, true]	0	
+[false, true, true, true, false, true, false, false, false, false]	0	
+[false, true, true, true, false, false, true, true, true, true]	0	
+[false, true, true, true, false, false, true, true, true, false]	0	
+[false, true, true, true, false, false, true, true, false, true]	0	
+[false, true, true, true, false, false, true, true, false, false]	0	
+[false, true, true, true, false, false, true, false, true, true]	0	
+[false, true, true, true, false, false, true, false, true, false]	0	
+[false, true, true, true, false, false, true, false, false, true]	0	
+[false, true, true, true, false, false, true, false, false, false]	0	
+[false, true, true, true, false, false, false, true, true, true]	0	
+[false, true, true, true, false, false, false, true, true, false]	0	
+[false, true, true, true, false, false, false, true, false, true]	0	
+[false, true, true, true, false, false, false, true, false, false]	0	
+[false, true, true, true, false, false, false, false, true, true]	0	
+[false, true, true, true, false, false, false, false, true, false]	0	
+[false, true, true, true, false, false, false, false, false, true]	0	
+[false, true, true, true, false, false, false, false, false, false]	0	
+[false, true, true, false, true, true, true, true, true, true]	0	
+[false, true, true, false, true, true, true, true, true, false]	0	
+[false, true, true, false, true, true, true, true, false, true]	0	
+[false, true, true, false, true, true, true, true, false, false]	0	
+[false, true, true, false, true, true, true, false, true, true]	0	
+[false, true, true, false, true, true, true, false, true, false]	0	
+[false, true, true, false, true, true, true, false, false, true]	0	
+[false, true, true, false, true, true, true, false, false, false]	0	
+[false, true, true, false, true, true, false, true, true, true]	0	
+[false, true, true, false, true, true, false, true, true, false]	0	
+[false, true, true, false, true, true, false, true, false, true]	0	
+[false, true, true, false, true, true, false, true, false, false]	0	
+[false, true, true, false, true, true, false, false, true, true]	0	
+[false, true, true, false, true, true, false, false, true, false]	0	
+[false, true, true, false, true, true, false, false, false, true]	0	
+[false, true, true, false, true, true, false, false, false, false]	0	
+[false, true, true, false, true, false, true, true, true, true]	0	
+[false, true, true, false, true, false, true, true, true, false]	0	
+[false, true, true, false, true, false, true, true, false, true]	0	
+[false, true, true, false, true, false, true, true, false, false]	0	
+[false, true, true, false, true, false, true, false, true, true]	0	
+[false, true, true, false, true, false, true, false, true, false]	0	
+[false, true, true, false, true, false, true, false, false, true]	0	
+[false, true, true, false, true, false, true, false, false, false]	0	
+[false, true, true, false, true, false, false, true, true, true]	0	
+[false, true, true, false, true, false, false, true, true, false]	0	
+[false, true, true, false, true, false, false, true, false, true]	0	
+[false, true, true, false, true, false, false, true, false, false]	0	
+[false, true, true, false, true, false, false, false, true, true]	0	
+[false, true, true, false, true, false, false, false, true, false]	0	
+[false, true, true, false, true, false, false, false, false, true]	0	
+[false, true, true, false, true, false, false, false, false, false]	0	
+[false, true, true, false, false, true, true, true, true, true]	0	
+[false, true, true, false, false, true, true, true, true, false]	0	
+[false, true, true, false, false, true, true, true, false, true]	0	
+[false, true, true, false, false, true, true, true, false, false]	0	
+[false, true, true, false, false, true, true, false, true, true]	0	
+[false, true, true, false, false, true, true, false, true, false]	0	
+[false, true, true, false, false, true, true, false, false, true]	0	
+[false, true, true, false, false, true, true, false, false, false]	0	
+[false, true, true, false, false, true, false, true, true, true]	0	
+[false, true, true, false, false, true, false, true, true, false]	0	
+[false, true, true, false, false, true, false, true, false, true]	0	
+[false, true, true, false, false, true, false, true, false, false]	0	
+[false, true, true, false, false, true, false, false, true, true]	0	
+[false, true, true, false, false, true, false, false, true, false]	0	
+[false, true, true, false, false, true, false, false, false, true]	0	
+[false, true, true, false, false, true, false, false, false, false]	0	
+[false, true, true, false, false, false, true, true, true, true]	0	
+[false, true, true, false, false, false, true, true, true, false]	0	
+[false, true, true, false, false, false, true, true, false, true]	0	
+[false, true, true, false, false, false, true, true, false, false]	0	
+[false, true, true, false, false, false, true, false, true, true]	0	
+[false, true, true, false, false, false, true, false, true, false]	0	
+[false, true, true, false, false, false, true, false, false, true]	0	
+[false, true, true, false, false, false, true, false, false, false]	0	
+[false, true, true, false, false, false, false, true, true, true]	0	
+[false, true, true, false, false, false, false, true, true, false]	0	
+[false, true, true, false, false, false, false, true, false, true]	0	
+[false, true, true, false, false, false, false, true, false, false]	0	
+[false, true, true, false, false, false, false, false, true, true]	0	
+[false, true, true, false, false, false, false, false, true, false]	0	
+[false, true, true, false, false, false, false, false, false, true]	0	
+[false, true, true, false, false, false, false, false, false, false]	0	
+[false, true, false, true, true, true, true, true, true, true]	0	
+[false, true, false, true, true, true, true, true, true, false]	0	
+[false, true, false, true, true, true, true, true, false, true]	0	
+[false, true, false, true, true, true, true, true, false, false]	0	
+[false, true, false, true, true, true, true, false, true, true]	0	
+[false, true, false, true, true, true, true, false, true, false]	0	
+[false, true, false, true, true, true, true, false, false, true]	0	
+[false, true, false, true, true, true, true, false, false, false]	0	
+[false, true, false, true, true, true, false, true, true, true]	0	
+[false, true, false, true, true, true, false, true, true, false]	0	
+[false, true, false, true, true, true, false, true, false, true]	0	
+[false, true, false, true, true, true, false, true, false, false]	0	
+[false, true, false, true, true, true, false, false, true, true]	0	
+[false, true, false, true, true, true, false, false, true, false]	0	
+[false, true, false, true, true, true, false, false, false, true]	0	
+[false, true, false, true, true, true, false, false, false, false]	0	
+[false, true, false, true, true, false, true, true, true, true]	0	
+[false, true, false, true, true, false, true, true, true, false]	0	
+[false, true, false, true, true, false, true, true, false, true]	0	
+[false, true, false, true, true, false, true, true, false, false]	0	
+[false, true, false, true, true, false, true, false, true, true]	0	
+[false, true, false, true, true, false, true, false, true, false]	0	
+[false, true, false, true, true, false, true, false, false, true]	0	
+[false, true, false, true, true, false, true, false, false, false]	0	
+[false, true, false, true, true, false, false, true, true, true]	0	
+[false, true, false, true, true, false, false, true, true, false]	0	
+[false, true, false, true, true, false, false, true, false, true]	0	
+[false, true, false, true, true, false, false, true, false, false]	0	
+[false, true, false, true, true, false, false, false, true, true]	0	
+[false, true, false, true, true, false, false, false, true, false]	0	
+[false, true, false, true, true, false, false, false, false, true]	0	
+[false, true, false, true, true, false, false, false, false, false]	0	
+[false, true, false, true, false, true, true, true, true, true]	0	
+[false, true, false, true, false, true, true, true, true, false]	0	
+[false, true, false, true, false, true, true, true, false, true]	0	
+[false, true, false, true, false, true, true, true, false, false]	0	
+[false, true, false, true, false, true, true, false, true, true]	0	
+[false, true, false, true, false, true, true, false, true, false]	0	
+[false, true, false, true, false, true, true, false, false, true]	0	
+[false, true, false, true, false, true, true, false, false, false]	0	
+[false, true, false, true, false, true, false, true, true, true]	0	
+[false, true, false, true, false, true, false, true, true, false]	0	
+[false, true, false, true, false, true, false, true, false, true]	0	
+[false, true, false, true, false, true, false, true, false, false]	0	
+[false, true, false, true, false, true, false, false, true, true]	0	
+[false, true, false, true, false, true, false, false, true, false]	0	
+[false, true, false, true, false, true, false, false, false, true]	0	
+[false, true, false, true, false, true, false, false, false, false]	0	
+[false, true, false, true, false, false, true, true, true, true]	0	
+[false, true, false, true, false, false, true, true, true, false]	0	
+[false, true, false, true, false, false, true, true, false, true]	0	
+[false, true, false, true, false, false, true, true, false, false]	0	
+[false, true, false, true, false, false, true, false, true, true]	0	
+[false, true, false, true, false, false, true, false, true, false]	0	
+[false, true, false, true, false, false, true, false, false, true]	0	
+[false, true, false, true, false, false, true, false, false, false]	0	
+[false, true, false, true, false, false, false, true, true, true]	0	
+[false, true, false, true, false, false, false, true, true, false]	0	
+[false, true, false, true, false, false, false, true, false, true]	0	
+[false, true, false, true, false, false, false, true, false, false]	0	
+[false, true, false, true, false, false, false, false, true, true]	0	
+[false, true, false, true, false, false, false, false, true, false]	0	
+[false, true, false, true, false, false, false, false, false, true]	0	
+[false, true, false, true, false, false, false, false, false, false]	0	
+[false, true, false, false, true, true, true, true, true, true]	0	
+[false, true, false, false, true, true, true, true, true, false]	0	
+[false, true, false, false, true, true, true, true, false, true]	0	
+[false, true, false, false, true, true, true, true, false, false]	0	
+[false, true, false, false, true, true, true, false, true, true]	0	
+[false, true, false, false, true, true, true, false, true, false]	0	
+[false, true, false, false, true, true, true, false, false, true]	0	
+[false, true, false, false, true, true, true, false, false, false]	0	
+[false, true, false, false, true, true, false, true, true, true]	0	
+[false, true, false, false, true, true, false, true, true, false]	0	
+[false, true, false, false, true, true, false, true, false, true]	0	
+[false, true, false, false, true, true, false, true, false, false]	0	
+[false, true, false, false, true, true, false, false, true, true]	0	
+[false, true, false, false, true, true, false, false, true, false]	0	
+[false, true, false, false, true, true, false, false, false, true]	0	
+[false, true, false, false, true, true, false, false, false, false]	0	
+[false, true, false, false, true, false, true, true, true, true]	0	
+[false, true, false, false, true, false, true, true, true, false]	0	
+[false, true, false, false, true, false, true, true, false, true]	0	
+[false, true, false, false, true, false, true, true, false, false]	0	
+[false, true, false, false, true, false, true, false, true, true]	0	
+[false, true, false, false, true, false, true, false, true, false]	0	
+[false, true, false, false, true, false, true, false, false, true]	0	
+[false, true, false, false, true, false, true, false, false, false]	0	
+[false, true, false, false, true, false, false, true, true, true]	0	
+[false, true, false, false, true, false, false, true, true, false]	0	
+[false, true, false, false, true, false, false, true, false, true]	0	
+[false, true, false, false, true, false, false, true, false, false]	0	
+[false, true, false, false, true, false, false, false, true, true]	0	
+[false, true, false, false, true, false, false, false, true, false]	0	
+[false, true, false, false, true, false, false, false, false, true]	0	
+[false, true, false, false, true, false, false, false, false, false]	0	
+[false, true, false, false, false, true, true, true, true, true]	0	
+[false, true, false, false, false, true, true, true, true, false]	0	
+[false, true, false, false, false, true, true, true, false, true]	0	
+[false, true, false, false, false, true, true, true, false, false]	0	
+[false, true, false, false, false, true, true, false, true, true]	0	
+[false, true, false, false, false, true, true, false, true, false]	0	
+[false, true, false, false, false, true, true, false, false, true]	0	
+[false, true, false, false, false, true, true, false, false, false]	0	
+[false, true, false, false, false, true, false, true, true, true]	0	
+[false, true, false, false, false, true, false, true, true, false]	0	
+[false, true, false, false, false, true, false, true, false, true]	0	
+[false, true, false, false, false, true, false, true, false, false]	0	
+[false, true, false, false, false, true, false, false, true, true]	0	
+[false, true, false, false, false, true, false, false, true, false]	0	
+[false, true, false, false, false, true, false, false, false, true]	0	
+[false, true, false, false, false, true, false, false, false, false]	0	
+[false, true, false, false, false, false, true, true, true, true]	0	
+[false, true, false, false, false, false, true, true, true, false]	0	
+[false, true, false, false, false, false, true, true, false, true]	0	
+[false, true, false, false, false, false, true, true, false, false]	0	
+[false, true, false, false, false, false, true, false, true, true]	0	
+[false, true, false, false, false, false, true, false, true, false]	0	
+[false, true, false, false, false, false, true, false, false, true]	0	
+[false, true, false, false, false, false, true, false, false, false]	0	
+[false, true, false, false, false, false, false, true, true, true]	0	
+[false, true, false, false, false, false, false, true, true, false]	0	
+[false, true, false, false, false, false, false, true, false, true]	0	
+[false, true, false, false, false, false, false, true, false, false]	0	
+[false, true, false, false, false, false, false, false, true, true]	0	
+[false, true, false, false, false, false, false, false, true, false]	0	
+[false, true, false, false, false, false, false, false, false, true]	0	
+[false, true, false, false, false, false, false, false, false, false]	0	
+[false, false, true, true, true, true, true, true, true, true]	0.000002084	
+[false, false, true, true, true, true, true, true, true, false]	0.000012505	
+[false, false, true, true, true, true, true, true, false, true]	0.000009726	
+[false, false, true, true, true, true, true, true, false, false]	0.000077809	
+[false, false, true, true, true, true, true, false, true, true]	0.000011347	
+[false, false, true, true, true, true, true, false, true, false]	0.000068083	
+[false, false, true, true, true, true, true, false, false, true]	0.000070604	
+[false, false, true, true, true, true, true, false, false, false]	0.000564835	
+[false, false, true, true, true, true, false, true, true, true]	0.000007579	
+[false, false, true, true, true, true, false, true, true, false]	0.000045473	
+[false, false, true, true, true, true, false, true, false, true]	0.000035368	
+[false, false, true, true, true, true, false, true, false, false]	0.000282941	
+[false, false, true, true, true, true, false, false, true, true]	0.000058946	
+[false, false, true, true, true, true, false, false, true, false]	0.000353677	
+[false, false, true, true, true, true, false, false, false, true]	0.000366776	
+[false, false, true, true, true, true, false, false, false, false]	0.002934208	
+[false, false, true, true, true, false, true, true, true, true]	0.000004168	
+[false, false, true, true, true, false, true, true, true, false]	0.00002501	
+[false, false, true, true, true, false, true, true, false, true]	0.000019452	
+[false, false, true, true, true, false, true, true, false, false]	0.000155618	
+[false, false, true, true, true, false, true, false, true, true]	0.000022694	
+[false, false, true, true, true, false, true, false, true, false]	0.000136166	
+[false, false, true, true, true, false, true, false, false, true]	0.000141209	
+[false, false, true, true, true, false, true, false, false, false]	0.00112967	
+[false, false, true, true, true, false, false, true, true, true]	0.000015158	
+[false, false, true, true, true, false, false, true, true, false]	0.000090945	
+[false, false, true, true, true, false, false, true, false, true]	0.000070735	
+[false, false, true, true, true, false, false, true, false, false]	0.000565883	
+[false, false, true, true, true, false, false, false, true, true]	0.000117892	
+[false, false, true, true, true, false, false, false, true, false]	0.000707354	
+[false, false, true, true, true, false, false, false, false, true]	0.000733552	
+[false, false, true, true, true, false, false, false, false, false]	0.005868415	
+[false, false, true, true, false, true, true, true, true, true]	0.000003126	
+[false, false, true, true, false, true, true, true, true, false]	0.000018758	
+[false, false, true, true, false, true, true, true, false, true]	0.000014589	
+[false, false, true, true, false, true, true, true, false, false]	0.000116713	
+[false, false, true, true, false, true, true, false, true, true]	0.000017021	
+[false, false, true, true, false, true, true, false, true, false]	0.000102124	
+[false, false, true, true, false, true, true, false, false, true]	0.000105907	
+[false, false, true, true, false, true, true, false, false, false]	0.000847252	
+[false, false, true, true, false, true, false, true, true, true]	0.000011368	
+[false, false, true, true, false, true, false, true, true, false]	0.000068209	
+[false, false, true, true, false, true, false, true, false, true]	0.000053052	
+[false, false, true, true, false, true, false, true, false, false]	0.000424412	
+[false, false, true, true, false, true, false, false, true, true]	0.000088419	
+[false, false, true, true, false, true, false, false, true, false]	0.000530515	
+[false, false, true, true, false, true, false, false, false, true]	0.000550164	
+[false, false, true, true, false, true, false, false, false, false]	0.004401312	
+[false, false, true, true, false, false, true, true, true, true]	0.000009379	
+[false, false, true, true, false, false, true, true, true, false]	0.000056273	
+[false, false, true, true, false, false, true, true, false, true]	0.000043768	
+[false, false, true, true, false, false, true, true, false, false]	0.00035014	
+[false, false, true, true, false, false, true, false, true, true]	0.000051062	
+[false, false, true, true, false, false, true, false, true, false]	0.000306373	
+[false, false, true, true, false, false, true, false, false, true]	0.00031772	
+[false, false, true, true, false, false, true, false, false, false]	0.002541757	
+[false, false, true, true, false, false, false, true, true, true]	0.000034105	
+[false, false, true, true, false, false, false, true, true, false]	0.000204627	
+[false, false, true, true, false, false, false, true, false, true]	0.000159155	
+[false, false, true, true, false, false, false, true, false, false]	0.001273237	
+[false, false, true, true, false, false, false, false, true, true]	0.000265258	
+[false, false, true, true, false, false, false, false, true, false]	0.001591546	
+[false, false, true, true, false, false, false, false, false, true]	0.001650492	
+[false, false, true, true, false, false, false, false, false, false]	0.013203935	
+[false, false, true, false, true, true, true, true, true, true]	0.000002735	
+[false, false, true, false, true, true, true, true, true, false]	0.000019148	
+[false, false, true, false, true, true, true, true, false, true]	0.000011937	
+[false, false, true, false, true, true, true, true, false, false]	0.000119366	
+[false, false, true, false, true, true, true, false, true, true]	0.000014893	
+[false, false, true, false, true, true, true, false, true, false]	0.000104252	
+[false, false, true, false, true, true, true, false, false, true]	0.000086651	
+[false, false, true, false, true, true, true, false, false, false]	0.000866508	
+[false, false, true, false, true, true, false, true, true, true]	0.000009947	
+[false, false, true, false, true, true, false, true, true, false]	0.00006963	
+[false, false, true, false, true, true, false, true, false, true]	0.000043406	
+[false, false, true, false, true, true, false, true, false, false]	0.000434058	
+[false, false, true, false, true, true, false, false, true, true]	0.000077367	
+[false, false, true, false, true, true, false, false, true, false]	0.000541568	
+[false, false, true, false, true, true, false, false, false, true]	0.000450134	
+[false, false, true, false, true, true, false, false, false, false]	0.004501341	
+[false, false, true, false, true, false, true, true, true, true]	0.000005471	
+[false, false, true, false, true, false, true, true, true, false]	0.000038297	
+[false, false, true, false, true, false, true, true, false, true]	0.000023873	
+[false, false, true, false, true, false, true, true, false, false]	0.000238732	
+[false, false, true, false, true, false, true, false, true, true]	0.000029786	
+[false, false, true, false, true, false, true, false, true, false]	0.000208504	
+[false, false, true, false, true, false, true, false, false, true]	0.000173302	
+[false, false, true, false, true, false, true, false, false, false]	0.001733016	
+[false, false, true, false, true, false, false, true, true, true]	0.000019894	
+[false, false, true, false, true, false, false, true, true, false]	0.00013926	
+[false, false, true, false, true, false, false, true, false, true]	0.000086812	
+[false, false, true, false, true, false, false, true, false, false]	0.000868116	
+[false, false, true, false, true, false, false, false, true, true]	0.000154734	
+[false, false, true, false, true, false, false, false, true, false]	0.001083135	
+[false, false, true, false, true, false, false, false, false, true]	0.000900268	
+[false, false, true, false, true, false, false, false, false, false]	0.009002683	
+[false, false, true, false, false, true, true, true, true, true]	0.000006155	
+[false, false, true, false, false, true, true, true, true, false]	0.000043084	
+[false, false, true, false, false, true, true, true, false, true]	0.000026857	
+[false, false, true, false, false, true, true, true, false, false]	0.000268573	
+[false, false, true, false, false, true, true, false, true, true]	0.000033509	
+[false, false, true, false, false, true, true, false, true, false]	0.000234566	
+[false, false, true, false, false, true, true, false, false, true]	0.000194964	
+[false, false, true, false, false, true, true, false, false, false]	0.001949643	
+[false, false, true, false, false, true, false, true, true, true]	0.000022381	
+[false, false, true, false, false, true, false, true, true, false]	0.000156668	
+[false, false, true, false, false, true, false, true, false, true]	0.000097663	
+[false, false, true, false, false, true, false, true, false, false]	0.00097663	
+[false, false, true, false, false, true, false, false, true, true]	0.000174075	
+[false, false, true, false, false, true, false, false, true, false]	0.001218527	
+[false, false, true, false, false, true, false, false, false, true]	0.001012802	
+[false, false, true, false, false, true, false, false, false, false]	0.010128018	
+[false, false, true, false, false, false, true, true, true, true]	0.000018464	
+[false, false, true, false, false, false, true, true, true, false]	0.000129251	
+[false, false, true, false, false, false, true, true, false, true]	0.000080572	
+[false, false, true, false, false, false, true, true, false, false]	0.00080572	
+[false, false, true, false, false, false, true, false, true, true]	0.000100528	
+[false, false, true, false, false, false, true, false, true, false]	0.000703699	
+[false, false, true, false, false, false, true, false, false, true]	0.000584893	
+[false, false, true, false, false, false, true, false, false, false]	0.00584893	
+[false, false, true, false, false, false, false, true, true, true]	0.000067143	
+[false, false, true, false, false, false, false, true, true, false]	0.000470003	
+[false, false, true, false, false, false, false, true, false, true]	0.000292989	
+[false, false, true, false, false, false, false, true, false, false]	0.002929891	
+[false, false, true, false, false, false, false, false, true, true]	0.000522226	
+[false, false, true, false, false, false, false, false, true, false]	0.003655582	
+[false, false, true, false, false, false, false, false, false, true]	0.003038405	
+[false, false, true, false, false, false, false, false, false, false]	0.030384054	
+[false, false, false, true, true, true, true, true, true, true]	0.000004103	
+[false, false, false, true, true, true, true, true, true, false]	0.000024619	
+[false, false, false, true, true, true, true, true, false, true]	0.00002234	
+[false, false, false, true, true, true, true, true, false, false]	0.000178717	
+[false, false, false, true, true, true, true, false, true, true]	0.000020889	
+[false, false, false, true, true, true, true, false, true, false]	0.000125334	
+[false, false, false, true, true, true, true, false, false, true]	0.00016247	
+[false, false, false, true, true, true, true, false, false, false]	0.001299762	
+[false, false, false, true, true, true, false, true, true, true]	0.000014921	
+[false, false, false, true, true, true, false, true, true, false]	0.000089524	
+[false, false, false, true, true, true, false, true, false, true]	0.000081235	
+[false, false, false, true, true, true, false, true, false, false]	0.000649881	
+[false, false, false, true, true, true, false, false, true, true]	0.000108514	
+[false, false, false, true, true, true, false, false, true, false]	0.000651087	
+[false, false, false, true, true, true, false, false, false, true]	0.000844002	
+[false, false, false, true, true, true, false, false, false, false]	0.006752012	
+[false, false, false, true, true, false, true, true, true, true]	0.000008206	
+[false, false, false, true, true, false, true, true, true, false]	0.000049238	
+[false, false, false, true, true, false, true, true, false, true]	0.000044679	
+[false, false, false, true, true, false, true, true, false, false]	0.000357435	
+[false, false, false, true, true, false, true, false, true, true]	0.000041778	
+[false, false, false, true, true, false, true, false, true, false]	0.000250668	
+[false, false, false, true, true, false, true, false, false, true]	0.000324941	
+[false, false, false, true, true, false, true, false, false, false]	0.002599525	
+[false, false, false, true, true, false, false, true, true, true]	0.000029841	
+[false, false, false, true, true, false, false, true, true, false]	0.000179049	
+[false, false, false, true, true, false, false, true, false, true]	0.00016247	
+[false, false, false, true, true, false, false, true, false, false]	0.001299762	
+[false, false, false, true, true, false, false, false, true, true]	0.000217029	
+[false, false, false, true, true, false, false, false, true, false]	0.001302174	
+[false, false, false, true, true, false, false, false, false, true]	0.001688003	
+[false, false, false, true, true, false, false, false, false, false]	0.013504024	
+[false, false, false, true, false, true, true, true, true, true]	0.000006155	
+[false, false, false, true, false, true, true, true, true, false]	0.000036929	
+[false, false, false, true, false, true, true, true, false, true]	0.000033509	
+[false, false, false, true, false, true, true, true, false, false]	0.000268076	
+[false, false, false, true, false, true, true, false, true, true]	0.000031334	
+[false, false, false, true, false, true, true, false, true, false]	0.000188001	
+[false, false, false, true, false, true, true, false, false, true]	0.000243705	
+[false, false, false, true, false, true, true, false, false, false]	0.001949643	
+[false, false, false, true, false, true, false, true, true, true]	0.000022381	
+[false, false, false, true, false, true, false, true, true, false]	0.000134287	
+[false, false, false, true, false, true, false, true, false, true]	0.000121853	
+[false, false, false, true, false, true, false, true, false, false]	0.000974822	
+[false, false, false, true, false, true, false, false, true, true]	0.000162772	
+[false, false, false, true, false, true, false, false, true, false]	0.00097663	
+[false, false, false, true, false, true, false, false, false, true]	0.001266002	
+[false, false, false, true, false, true, false, false, false, false]	0.010128018	
+[false, false, false, true, false, false, true, true, true, true]	0.000018464	
+[false, false, false, true, false, false, true, true, true, false]	0.000110787	
+[false, false, false, true, false, false, true, true, false, true]	0.000100528	
+[false, false, false, true, false, false, true, true, false, false]	0.000804228	
+[false, false, false, true, false, false, true, false, true, true]	0.000094001	
+[false, false, false, true, false, false, true, false, true, false]	0.000564004	
+[false, false, false, true, false, false, true, false, false, true]	0.000731116	
+[false, false, false, true, false, false, true, false, false, false]	0.00584893	
+[false, false, false, true, false, false, false, true, true, true]	0.000067143	
+[false, false, false, true, false, false, false, true, true, false]	0.00040286	
+[false, false, false, true, false, false, false, true, false, true]	0.000365558	
+[false, false, false, true, false, false, false, true, false, false]	0.002924465	
+[false, false, false, true, false, false, false, false, true, true]	0.000488315	
+[false, false, false, true, false, false, false, false, true, false]	0.002929891	
+[false, false, false, true, false, false, false, false, false, true]	0.003798007	
+[false, false, false, true, false, false, false, false, false, false]	0.030384054	
+[false, false, false, false, true, true, true, true, true, true]	0.000008078	
+[false, false, false, false, true, true, true, true, true, false]	0.000056547	
+[false, false, false, false, true, true, true, true, false, true]	0.000041125	
+[false, false, false, false, true, true, true, true, false, false]	0.000411253	
+[false, false, false, false, true, true, true, false, true, true]	0.000041125	
+[false, false, false, false, true, true, true, false, true, false]	0.000287877	
+[false, false, false, false, true, true, true, false, false, true]	0.000299093	
+[false, false, false, false, true, true, true, false, false, false]	0.00299093	
+[false, false, false, false, true, true, false, true, true, true]	0.000029375	
+[false, false, false, false, true, true, false, true, true, false]	0.000205626	
+[false, false, false, false, true, true, false, true, false, true]	0.000149547	
+[false, false, false, false, true, true, false, true, false, false]	0.001495465	
+[false, false, false, false, true, true, false, false, true, true]	0.000213638	
+[false, false, false, false, true, true, false, false, true, false]	0.001495465	
+[false, false, false, false, true, true, false, false, false, true]	0.00155373	
+[false, false, false, false, true, true, false, false, false, false]	0.015537301	
+[false, false, false, false, true, false, true, true, true, true]	0.000016156	
+[false, false, false, false, true, false, true, true, true, false]	0.000113095	
+[false, false, false, false, true, false, true, true, false, true]	0.000082251	
+[false, false, false, false, true, false, true, true, false, false]	0.000822506	
+[false, false, false, false, true, false, true, false, true, true]	0.000082251	
+[false, false, false, false, true, false, true, false, true, false]	0.000575754	
+[false, false, false, false, true, false, true, false, false, true]	0.000598186	
+[false, false, false, false, true, false, true, false, false, false]	0.005981861	
+[false, false, false, false, true, false, false, true, true, true]	0.00005875	
+[false, false, false, false, true, false, false, true, true, false]	0.000411253	
+[false, false, false, false, true, false, false, true, false, true]	0.000299093	
+[false, false, false, false, true, false, false, true, false, false]	0.00299093	
+[false, false, false, false, true, false, false, false, true, true]	0.000427276	
+[false, false, false, false, true, false, false, false, true, false]	0.00299093	
+[false, false, false, false, true, false, false, false, false, true]	0.00310746	
+[false, false, false, false, true, false, false, false, false, false]	0.031074601	
+[false, false, false, false, false, true, true, true, true, true]	0.000018176	
+[false, false, false, false, false, true, true, true, true, false]	0.000127231	
+[false, false, false, false, false, true, true, true, false, true]	0.000092532	
+[false, false, false, false, false, true, true, true, false, false]	0.000925319	
+[false, false, false, false, false, true, true, false, true, true]	0.000092532	
+[false, false, false, false, false, true, true, false, true, false]	0.000647723	
+[false, false, false, false, false, true, true, false, false, true]	0.000672959	
+[false, false, false, false, false, true, true, false, false, false]	0.006729593	
+[false, false, false, false, false, true, false, true, true, true]	0.000066094	
+[false, false, false, false, false, true, false, true, true, false]	0.00046266	
+[false, false, false, false, false, true, false, true, false, true]	0.00033648	
+[false, false, false, false, false, true, false, true, false, false]	0.003364797	
+[false, false, false, false, false, true, false, false, true, true]	0.000480685	
+[false, false, false, false, false, true, false, false, true, false]	0.003364797	
+[false, false, false, false, false, true, false, false, false, true]	0.003495893	
+[false, false, false, false, false, true, false, false, false, false]	0.034958926	
+[false, false, false, false, false, false, true, true, true, true]	0.000054528	
+[false, false, false, false, false, false, true, true, true, false]	0.000381694	
+[false, false, false, false, false, false, true, true, false, true]	0.000277596	
+[false, false, false, false, false, false, true, true, false, false]	0.002775957	
+[false, false, false, false, false, false, true, false, true, true]	0.000277596	
+[false, false, false, false, false, false, true, false, true, false]	0.00194317	
+[false, false, false, false, false, false, true, false, false, true]	0.002018878	
+[false, false, false, false, false, false, true, false, false, false]	0.02018878	
+[false, false, false, false, false, false, false, true, true, true]	0.000198283	
+[false, false, false, false, false, false, false, true, true, false]	0.001387979	
+[false, false, false, false, false, false, false, true, false, true]	0.001009439	
+[false, false, false, false, false, false, false, true, false, false]	0.01009439	
+[false, false, false, false, false, false, false, false, true, true]	0.001442056	
+[false, false, false, false, false, false, false, false, true, false]	0.01009439	
+[false, false, false, false, false, false, false, false, false, true]	0.010487678	
+[false, false, false, false, false, false, false, false, false, false]	0.104876779	
+
+165.09437561035156ms

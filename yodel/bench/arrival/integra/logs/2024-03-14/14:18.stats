@@ -1,0 +1,12 @@
+expectation.dice l1: 0.0
+main.py          l1: 0.9741639595258789
+main.yo          l1: 0.15423604199999988
+
+expectation.dice ms: 52.40635871887207
+main.py          ms: 47045.5732
+main.yo          ms: 4208.6
+
+expectation.dice  #: 10
+main.py           #: 10
+main.yo           #: 10
+

@@ -1,0 +1,21 @@
+grids9x9-obs01.yo             l1: 0.0
+grids9x9-sample-each-obs01.yo l1: 1.0384463304853513
+grids9x9-obs01.py             l1: 1.316942715443714
+grids9x9-diag-obs01.yo        l1: 0.30991478354239244
+grids9x9-obs01.dice           l1: 0.0
+grids9x9-sample-obs01.yo      l1: 0.893286513403282
+
+grids9x9-obs01.yo             ms: 410.0
+grids9x9-sample-each-obs01.yo ms: 2341.0
+grids9x9-obs01.py             ms: 33180.027400000006
+grids9x9-diag-obs01.yo        ms: 9532.1
+grids9x9-obs01.dice           ms: 415.76972007751465
+grids9x9-sample-obs01.yo      ms: 380216.2
+
+grids9x9-obs01.yo              #: 10
+grids9x9-sample-each-obs01.yo  #: 10
+grids9x9-obs01.py              #: 10
+grids9x9-diag-obs01.yo         #: 10
+grids9x9-obs01.dice            #: 10
+grids9x9-sample-obs01.yo       #: 10
+
