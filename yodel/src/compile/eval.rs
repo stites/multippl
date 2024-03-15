@@ -62,6 +62,10 @@ pub fn eval_eite_predicate(
     )
     .0;
     let wmc_false = 1.0 - wmc_true;
+    debug!("=============================");
+    debug!("wmc_true {}, wmc_false {}", wmc_true, wmc_false);
+    debug!("=============================");
+
     Ok((
         pred_dist,
         (Probability::new(wmc_true), Probability::new(wmc_false)),
@@ -86,11 +90,9 @@ pub fn eval_eite_output(
     state: &mut super::eval::State,
     ctx: &Ctx,
     guard: BddPtr,
-    truthy_branch: (Probability, Output),
-    falsey_branch: (Probability, Output),
+    truthy: Output,
+    falsey: Output,
 ) -> Result<EOutput> {
-    let (wmc_true, truthy) = truthy_branch;
-    let (wmc_false, falsey) = falsey_branch;
     let dist = match (&truthy.exact.out, &falsey.exact.out) {
         (Some(EVal::EBdd(tdist)), Some(EVal::EBdd(fdist))) => {
             EVal::EBdd(state.mgr.ite(guard, *tdist, *fdist))
@@ -415,11 +417,15 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 tracing::debug!("ite");
 
-                let (pred_dist, (wmc_true, wmc_false)) = eval_eite_predicate(self, &ctx, cond)?;
-
-                debug!("=============================");
-                debug!("wmc_true {}, wmc_false {}", wmc_true, wmc_false);
-                debug!("=============================");
+                let pred = eval_eanf(self, &ctx, cond)?;
+                let pred_dist = pred.dists();
+                if !pred_dist.len() == 1 {
+                    return Err(TypeError(format!(
+                        "Expected EBool for ITE condition\nGot: {cond:?}\n{ctx:?}",
+                    )));
+                }
+                let pred_dist = pred_dist[0];
+                // let (pred_dist, (wmc_true, wmc_false)) = eval_eite_predicate(self, &ctx, cond)?;
 
                 let tspan = tracing::span!(tracing::Level::DEBUG, "tru");
                 let _tenter = tspan.enter();
@@ -438,8 +444,8 @@ impl<'a> State<'a> {
                     self,
                     &ctx,
                     pred_dist,
-                    (wmc_true, truthy),
-                    (wmc_false, falsey),
+                    truthy,
+                    falsey,
                 )?;
                 debug_step_ng!("ite", ctx, &o);
                 let out = ctx.mk_eoutput(o);
