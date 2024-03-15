@@ -33,7 +33,8 @@ MODE=run_benchmark
 #MODE=run_avgs
 #MODE=run_clean
 
-for exp_meta in grids arrival gossip; do
+for exp_meta in arrival; do
+# for exp_meta in grids arrival gossip; do
     for exp in "$exp_meta"/*; do
         if elementIn "$exp" "${SKIP[@]}"; then
             echo "skipping $exp"

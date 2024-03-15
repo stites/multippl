@@ -85,6 +85,40 @@ fn mk_ite_output_samples(
     }
 }
 
+pub fn ite_bdds(state: &mut super::eval::State, guard: BddPtr, l: &EVal, r: &EVal) -> EVal {
+    use EVal::*;
+    match (l, r) {
+        (EBdd(tdist), EBdd(fdist)) => EBdd(state.mgr.ite(guard, *tdist, *fdist)),
+        (EProd(ts), EProd(fs)) => {
+            let (l, r) = if ts.len() < fs.len() {
+                let diff = fs.len() - ts.len();
+                (
+                    [ts.clone(), vec![EBdd(BddPtr::PtrFalse); diff]].concat(),
+                    fs.clone(),
+                )
+            } else if ts.len() < fs.len() {
+                let diff = ts.len() - fs.len();
+                (
+                    ts.clone(),
+                    [fs.clone(), vec![EBdd(BddPtr::PtrFalse); diff]].concat(),
+                )
+            } else {
+                (ts.clone(), fs.clone())
+            };
+
+            EProd(
+                izip!(l, r)
+                    .map(|(t, f)| ite_bdds(state, guard, &t, &f))
+                    .collect_vec(),
+            )
+        }
+        (t, f) => panic!(
+            "typecheck failed to catch EIte unification with\ntruthy: {t:?}\nfalsey: {f:?}",
+            t = t,
+            f = f
+        ),
+    }
+}
 #[inline(always)]
 pub fn eval_eite_output(
     state: &mut super::eval::State,
@@ -94,17 +128,18 @@ pub fn eval_eite_output(
     falsey: Output,
 ) -> Result<EOutput> {
     let dist = match (&truthy.exact.out, &falsey.exact.out) {
-        (Some(EVal::EBdd(tdist)), Some(EVal::EBdd(fdist))) => {
-            EVal::EBdd(state.mgr.ite(guard, *tdist, *fdist))
-        }
-        (Some(EVal::EProd(ts)), Some(EVal::EProd(fs))) => EVal::EProd(
-            izip!(ts, fs)
-                .map(|tf| match tf {
-                    (EVal::EBdd(t), EVal::EBdd(f)) => EVal::EBdd(state.mgr.ite(guard, *t, *f)),
-                    _ => panic!("typecheck failed to unify ITE-statement with products of BDDs"),
-                })
-                .collect_vec(),
-        ),
+        (Some(l), Some(r)) => ite_bdds(state, guard, l, r),
+        // (Some(EVal::EBdd(tdist)), Some(EVal::EBdd(fdist))) => {
+        //     EVal::EBdd(state.mgr.ite(guard, *tdist, *fdist))
+        // }
+        // (Some(EVal::EProd(ts)), Some(EVal::EProd(fs))) => EVal::EProd(
+        //     izip!(ts, fs)
+        //         .map(|tf| match tf {
+        //             (EVal::EBdd(t), EVal::EBdd(f)) => EVal::EBdd(state.mgr.ite(guard, *t, *f)),
+        //             _ => panic!("typecheck failed to unify ITE-statement with products of BDDs"),
+        //         })
+        //         .collect_vec(),
+        // ),
         (t, f) => panic!(
             "typecheck failed to catch EIte with\ntruthy: {t:?}\nfalsey: {f:?}",
             t = t,
@@ -913,34 +948,88 @@ impl<'a> State<'a> {
 
                 let mut out = self.eval_eexpr(ctx.clone(), eexpr)?;
                 let eval = out.exact.out.clone().unwrap();
-                let val = match (&eval, SExpr::<Trace>::embed(&eval)) {
-                    (_, Ok(sv)) => sv,
-                    (EVal::EBdd(dist), Err(_)) => {
-                        let sample = exact2sample_bdd_eff(self, &mut out, dist);
-                        SVal::SBool(sample)
-                    }
-                    // best effort for prods
-                    (EVal::EProd(vs), Err(e)) => SVal::SProd(
-                        vs.iter()
-                            .map(|v| {
-                                Ok(match (&v, SExpr::<Trace>::embed(v)) {
-                                    (EVal::EBdd(dist), Err(_)) => {
-                                        let sample = exact2sample_bdd_eff(self, &mut out, dist);
-                                        SVal::SBool(sample)
-                                    }
-                                    (_, Ok(v)) => v,
-                                    (_, Err(e)) => return Err(e),
-                                })
-                            })
-                            .collect::<Result<Vec<_>>>()?,
-                    ),
-                    (_, Err(e)) => return Err(e),
-                };
+                let sval = self.sexact_embed(&mut out, &eval)?;
+                let val = Self::sexact_embed_oh(eval, sval);
+
+                // let val = match (&eval, SExpr::<Trace>::embed(&eval)) {
+                //     (_, Ok(sv)) => sv,
+                //     (EVal::EBdd(dist), Err(_)) => {
+                //         let sample = exact2sample_bdd_eff(self, &mut out, dist);
+                //         SVal::SBool(sample)
+                //     }
+                //     // best effort for prods
+                //     (EVal::EProd(vs), Err(e)) => SVal::SProd(
+                //         vs.iter()
+                //             .map(|v| {
+                //                 Ok(match (&v, SExpr::<Trace>::embed(v)) {
+                //                     (EVal::EBdd(dist), Err(_)) => {
+                //                         let sample = exact2sample_bdd_eff(self, &mut out, dist);
+                //                         SVal::SBool(sample)
+                //                     }
+                //                     (_, Ok(v)) => v,
+                //                     (_, Err(e)) => return Err(e),
+                //                 })
+                //             })
+                //             .collect::<Result<Vec<_>>>()?,
+                //     ),
+                //     (_, Err(e)) => return Err(e),
+                // };
                 trace!("boundary sample: {:?}", val);
                 out.sample.out = Some(val);
                 Ok(out)
             }
             SLetSample(_, _, _, _) => errors::erased(Trace, "let-sample"),
+        }
+    }
+    pub fn sexact_embed(&mut self, eout: &mut Output, eval: &EVal) -> Result<SVal> {
+        match eval {
+            EVal::EBdd(dist) => {
+                let sample = exact2sample_bdd_eff(self, eout, dist);
+                Ok(SVal::SBool(sample))
+            }
+            EVal::EProd(vs) => Ok(SVal::SProd(
+                vs.iter()
+                    .map(|v| self.sexact_embed(eout, v))
+                    .collect::<Result<Vec<_>>>()?,
+            )),
+            e => SExpr::<Trace>::embed(e),
+        }
+    }
+    pub fn sexact_embed_oh(eval: EVal, sval: SVal) -> SVal {
+        use EVal::*;
+        use SVal::*;
+        match (eval, sval) {
+            (EProd(es), SProd(ss)) => {
+                let outs = izip!(es, ss)
+                    .map(|(e, s)| match (e, s) {
+                        (EProd(_es), SProd(_ss)) => {
+                            if EVal::is_bdd_vec(&_es) {
+                                let x = Self::one_hot(&_ss);
+                                SInt(x.unwrap().try_into().unwrap())
+                            } else {
+                                SProd(_ss)
+                            }
+                        }
+                        (_, s) => s,
+                    })
+                    .collect_vec();
+                SProd(outs)
+            }
+            (_, s) => s,
+        }
+    }
+    pub fn one_hot(ss: &[SVal]) -> Option<usize> {
+        let oh = ss
+            .iter()
+            .map(|v| match v {
+                SVal::SBool(b) => Some(if *b { 1 } else { 0 }),
+                _ => None,
+            })
+            .collect::<Option<Vec<_>>>()?;
+        if oh.iter().sum::<usize>() == 1 {
+            oh.iter().position(|&r| r == 1)
+        } else {
+            None
         }
     }
 }

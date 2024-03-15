@@ -157,29 +157,15 @@ pub fn eval_eanf_numop<'a>(
             Ok(out)
         }
         (Some(EVal::EProd(bdds)), Some(EVal::EInteger(r))) => {
-            todo!("this one is actually just a left/right shift with false to the OH vector");
-            // let l = bdds.iter().position(|b| !as_bdd(&b).is_neg()).unwrap();
-            // let x = iop(l, *r);
-            // assert!(x < bdds.len());
-            // tracing::debug!("{l} <iop> {r} = {x}");
-            // // let out = ctx.exact.as_output(Some(integers::as_onehot(x)));
-            // let plus = bdds
-            //     .iter()
-            //     .enumerate()
-            //     .map(|(ix, b)| {
-            //         let b = as_bdd(&b);
-            //         if ix == x && b.is_neg() {
-            //            b.neg() // make positive
-            //         } else if !b.is_neg() {
-            //             b.neg() // make everything else positive
-            //         } else {
-            //             b
-            //         }
-            //     })
-            //     .map(EVal::EBdd)
-            //     .collect_vec();
-            // let out = ctx.exact.as_output(Some(EVal::EProd(plus)));
-            // Ok(out)
+            let sz = iop(bdds.len(), *r);
+            if sz < bdds.len() {
+                todo!("unimplemented");
+            } else {
+                let pad = vec![EVal::EBdd(BddPtr::PtrFalse); *r];
+                let new_oh = [pad, bdds.to_vec()].concat();
+                let out = ctx.exact.as_output(Some(EVal::EProd(new_oh)));
+                Ok(out)
+            }
         }
         // (Some(EVal::EInteger(l)], _) => return errors::erased(),
         // (_, [EVal::EInteger(r))) => return errors::erased(),

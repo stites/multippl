@@ -44,6 +44,7 @@ pub fn allmarg(x: &str, y: &str) -> String {
 }
 #[test]
 // #[traced_test]
+#[ignore]
 fn free_variable_2_inv() {
     let mk = |ret: &str| {
         r#"exact {

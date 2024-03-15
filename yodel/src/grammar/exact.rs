@@ -89,6 +89,21 @@ pub enum EVal {
     EInteger(usize),
 }
 impl EVal {
+    pub fn is_bdd(&self) -> bool {
+        match self {
+            EVal::EBdd(x) => true,
+            _ => false,
+        }
+    }
+    pub fn is_bdd_vec(xs: &[EVal]) -> bool {
+        xs.iter().all(|x| x.is_bdd())
+    }
+    pub fn is_bdd_prod(&self) -> bool {
+        match self {
+            EVal::EProd(xs) => Self::is_bdd_vec(xs),
+            _ => false,
+        }
+    }
     pub fn pretty(&self) -> String {
         match self {
             EVal::EBdd(x) => format!("{}", x.print_bdd()),
