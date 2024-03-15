@@ -7,8 +7,8 @@ use itertools::Itertools;
 use itertools::*;
 use rsdd::builder::bdd_builder::DDNNFPtr;
 use rsdd::builder::bdd_plan::BddPlan;
-use tracing::*;
 use time::OffsetDateTime;
+use tracing::*;
 
 use super::eval::State;
 
@@ -336,7 +336,7 @@ pub fn eval_eanf_cop(
                 }
                 Some(mut bop) => {
                     // println!("comparing {:?} == {}", bdds, r);
-                    let oh = crate::desugar::integers::as_onehot_(*r);
+                    let oh = crate::desugar::integers::as_onehot_(*r, bdds.len());
                     let fin = izip!(bdds, oh).fold(Ok(BddPtr::PtrTrue), |acc, (b, o)| match b {
                         EVal::EBdd(b) => {
                             let apply = bop(state.mgr, Box::new(*b), Box::new(o));

@@ -11,7 +11,7 @@ import pyro
 import time
 #from utils import *
 
-truth = [0.914754964 * 3.0]
+truth = [0.549155311 * 3.0]
 
 def network(suffix=""):
     def flip(n, p):
@@ -149,7 +149,7 @@ def model_with_obs():
     npackets = pyro.sample("npackets", dist.Poisson(3))
     arrives = 0.0
     for ix in pyro.plate("packet", int(npackets.item())+1):
-        o = pyro.condition(network, {f"dallas_{ix}": torch.zeros(1)})(suffix=f"_{ix}")
+        o = pyro.condition(network, {f"arrives_at_saltlake_{ix}": torch.zeros(1)})(suffix=f"_{ix}")
         arrives += o
     return arrives
 

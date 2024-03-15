@@ -112,14 +112,13 @@ exact fn network () -> Bool {
   let portland = true  in
   let portland_to_seattle = if arrives_at_portland && portland then flip 0.999 else false in
 
-  observe !dallas in
+  observe !arrives_at_saltlake in
 
   arrives_at_portland
 }
 
 sample {
-  p ~ poisson(3.0);
-  ix <- p;
+  ix ~ poisson(3.0);
   npackets <- 0;
   while ix > 0 {
     arrives <- exact(network());

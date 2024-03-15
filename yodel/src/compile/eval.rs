@@ -440,13 +440,7 @@ impl<'a> State<'a> {
                 // if truthy.exact.out.is_none() != falsey.exact.out.len() {
                 //     return Err(TypeError(format!("Expected both branches of ITE to return same len tuple\nGot (left): {:?}\nGot (right):{:?}", truthy.exact.out.len(), falsey.exact.out.len(),)));
                 // }
-                let o: EOutput = eval_eite_output(
-                    self,
-                    &ctx,
-                    pred_dist,
-                    truthy,
-                    falsey,
-                )?;
+                let o: EOutput = eval_eite_output(self, &ctx, pred_dist, truthy, falsey)?;
                 debug_step_ng!("ite", ctx, &o);
                 let out = ctx.mk_eoutput(o);
                 Ok(out)

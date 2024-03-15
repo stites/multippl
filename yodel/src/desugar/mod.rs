@@ -279,19 +279,19 @@ impl SugarMagicEnv {
 
 pub mod integers {
     use super::*;
-    pub fn as_onehot_(i: usize) -> Vec<BddPtr> {
-        match i {
-            0 => vec![BddPtr::PtrFalse; 8],
-            _ => {
-                let mut val = vec![BddPtr::PtrFalse; i - 1];
-                val.push(BddPtr::PtrTrue);
-                val
-            }
+    pub fn as_onehot_(i: usize, sz: usize) -> Vec<BddPtr> {
+        use BddPtr::*;
+        let mut val = vec![BddPtr::PtrFalse; i];
+        val.push(BddPtr::PtrTrue);
+        while val.len() < sz {
+            val.push(BddPtr::PtrFalse);
         }
+        // println!("{i} => val[{}/{sz}]>>>{v:?}", v.len());
+        val
     }
     pub fn as_onehot(i: usize) -> EVal {
         EVal::EProd(
-            self::as_onehot_(i)
+            self::as_onehot_(i, 100)
                 .into_iter()
                 .map(EVal::EBdd)
                 .collect_vec(),
@@ -329,7 +329,7 @@ pub mod integers {
         #[test]
         fn test_onehot() {
             for x in [0, 1, 5, 10] {
-                let oh = as_onehot(x);
+                let oh = as_onehot(x, 10);
                 assert_eq!(from_prod_val(&oh).unwrap(), x);
             }
         }
