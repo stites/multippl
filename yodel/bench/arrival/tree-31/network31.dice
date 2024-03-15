@@ -1,0 +1,42 @@
+let n40r = true in
+let n30r = if  n40r then flip 1 / 2 else false in
+let n41r = if !n30r then flip 1 / 2 else false in
+
+let n20r = if  n30r then flip 1 / 2 else false in
+
+let n31r = if !n20r then flip 1 / 2 else false in
+let n42r = if  n31r then flip 1 / 2 else false in
+let n43r = if !n31r then flip 1 / 2 else false in
+
+let n10r = if  n20r then flip 1 / 2 else false in
+let n21r = if !n10r then flip 1 / 2 else false in
+let n32r = if  n21r then flip 1 / 2 else false in
+let n33r = if !n21r then flip 1 / 2 else false in
+
+let n44r = if  n32r then flip 1 / 2 else false in
+let n45r = if !n32r then flip 1 / 2 else false in
+let n46r = if  n33r then flip 1 / 2 else false in
+let n47r = if !n33r then flip 1 / 2 else false in
+
+let n0   = n10r in
+
+let n10l = if n0   then flip 1 / 2 else false in
+
+let n20l = if  n10l then flip 1 / 2 else false in
+let n21l = if !n10l then flip 1 / 2 else false in
+
+let n30l = if  n20l then flip 1 / 2 else false in
+let n31l = if !n20l then flip 1 / 2 else false in
+let n32l = if  n21l then flip 1 / 2 else false in
+let n33l = if !n21l then flip 1 / 2 else false in
+
+let n40l = if  n30l then flip 1 / 2 else false in
+let n41l = if !n30l then flip 1 / 2 else false in
+let n42l = if  n31l then flip 1 / 2 else false in
+let n43l = if !n31l then flip 1 / 2 else false in
+let n44l = if  n32l then flip 1 / 2 else false in
+let n45l = if !n32l then flip 1 / 2 else false in
+let n46l = if  n33l then flip 1 / 2 else false in
+let n47l = if !n33l then flip 1 / 2 else false in
+
+n47l
