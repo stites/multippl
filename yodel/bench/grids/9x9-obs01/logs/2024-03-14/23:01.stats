@@ -1,0 +1,15 @@
+grids9x9-obs01.yo             l1: 0.0
+grids9x9-sample-each-obs01.yo l1: 1.0384463304853515
+grids9x9-diag-obs01.yo        l1: 0.3099147835423925
+grids9x9-sample-obs01.yo      l1: 0.893286513403282
+
+grids9x9-obs01.yo             ms: 394.1
+grids9x9-sample-each-obs01.yo ms: 1777.6
+grids9x9-diag-obs01.yo        ms: 8171.8
+grids9x9-sample-obs01.yo      ms: 362784.0
+
+grids9x9-obs01.yo              #: 10
+grids9x9-sample-each-obs01.yo  #: 10
+grids9x9-diag-obs01.yo         #: 10
+grids9x9-sample-obs01.yo       #: 10
+

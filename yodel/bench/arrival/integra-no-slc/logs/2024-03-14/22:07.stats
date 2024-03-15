@@ -1,0 +1,9 @@
+main.yo                      l1: 1.532849768375754
+expectation-dallas-down.dice l1: 0.0
+
+main.yo                      ms: 9444.2
+expectation-dallas-down.dice ms: 230.7464361190796
+
+main.yo                       #: 10
+expectation-dallas-down.dice  #: 10
+
