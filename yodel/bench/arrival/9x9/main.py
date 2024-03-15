@@ -2,9 +2,7 @@ import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import torch
-import pyro
-import pyro.distributions as dist
-from pyro.infer import Importance, EmpiricalMarginal
+from pyro.infer import Importance
 from utils import *
 
 
@@ -27,40 +25,12 @@ sites = ["npackets"]
 truth = [1.7718846855216892]
 model = lambda: mkarrival(9, probfn)
 
-# if __name__ == "__main__":
-#     num_samples = 1_000
-#     num_runs = 2
-#     start_seed = 0
-#     args = {}
-#     l1s = []
-#     times = []
-#     for run, seedoffset in enumerate(range(1,num_runs+1)):
-#         seed = start_seed + seedoffset
-#         print(f"starting run {run+1}/{num_runs} (with seed: {seed})", flush=True)
-#         torch.manual_seed(seed)
-#         np.random.seed(seed)
-#         random.seed(seed)
-#         start = time.time()
-
-#         importance = Importance(model, num_samples=num_samples)
-#         posterior = importance.run(*args)
-
-#         ms = allmarg(posterior, sites, num_samples=num_samples) # don't think need a full
-#         print("am")
-#         end = time.time()
-#         times.append(end - start)
-#         print(times[-1], "s", flush=True)
-#         l1 = compute_l1(ms, truth)
-#         printit(sites, ms, l1)
-#         l1s.append(sum(l1))
-#     #return (l1s, times)
-
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="generate data for simple HMMs")
-    parser.add_argument("--num-samples", default=10_000, type=int,)
-    parser.add_argument("--num-runs", default=10, type=int,)
+    parser.add_argument("--num-samples", default=1_000, type=int,)
+    parser.add_argument("--num-runs", default=1, type=int,)
     parser.add_argument("--seed", default=0, type=int,)
     args = parser.parse_args()
 
@@ -79,7 +49,7 @@ if __name__ == "__main__":
         start = time.time()
         importance = Importance(model, num_samples=args.num_samples)
         posterior = importance.run()
-        xs = allmarg(posterior, sites, num_samples=args.num_samples)
+        xs = [torch.tensor([tr.nodes["_RETURN"]["value"] for tr in importance.exec_traces]).mean()]
         end = time.time()
         s = end - start
         print(" ".join([f"{x}" for x in xs]))

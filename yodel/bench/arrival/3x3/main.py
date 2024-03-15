@@ -77,8 +77,8 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="generate data for simple HMMs")
-    parser.add_argument("--num-samples", default=10_000, type=int,)
-    parser.add_argument("--num-runs", default=10, type=int,)
+    parser.add_argument("--num-samples", default=1_000, type=int,)
+    parser.add_argument("--num-runs", default=1, type=int,)
     parser.add_argument("--seed", default=0, type=int,)
     args = parser.parse_args()
 
@@ -97,7 +97,7 @@ if __name__ == "__main__":
         start = time.time()
         importance = Importance(model, num_samples=args.num_samples)
         posterior = importance.run()
-        xs = allmarg(posterior, sites, num_samples=args.num_samples)
+        xs = [torch.tensor([tr.nodes["_RETURN"]["value"] for tr in importance.exec_traces]).mean()]
         end = time.time()
         s = end - start
         print(" ".join([f"{x}" for x in xs]))
