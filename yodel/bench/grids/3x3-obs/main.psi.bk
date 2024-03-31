@@ -1,0 +1,18 @@
+def model(){
+  x00 := flip(1 / 3);
+  x01 := if x00 { flip(1 / 4 ) } else { flip(1 / 5) };
+  x02 := if x01 { flip(1 / 4 ) } else { flip(1 / 5) };
+  x10 := if x00 { flip(1 / 4 ) } else { flip(1 / 5) };
+  x20 := if x10 { flip(1 / 4 ) } else { flip(1 / 5) };
+  x11 := if  x10 &&  x01 { flip(1 / 6 ) } else { if  x10 && !x01 { flip(1 / 7 ) } else { if !x10 &&  x01 { flip(1 / 8 ) } else { flip(1 / 9) }}};
+  x12 := if  x11 &&  x02 { flip(1 / 6 ) } else { if  x11 && !x02 { flip(1 / 7 ) } else { if !x11 &&  x02 { flip(1 / 8 ) } else { flip(1 / 9) }}};
+  x21 := if  x20 &&  x11 { flip(1 / 6 ) } else { if  x20 && !x11 { flip(1 / 7 ) } else { if !x20 &&  x11 { flip(1 / 8 ) } else { flip(1 / 9) }}};
+  x22 := if  x21 &&  x12 { flip(1 / 6 ) } else { if  x21 && !x12 { flip(1 / 7 ) } else { if !x21 &&  x12 { flip(1 / 8 ) } else { flip(1 / 9) }}};
+  observe(x22);
+
+  return ( x00, x01, x02 , x10, x11, x12 , x20, x21, x22)
+}
+
+def main() {
+  return Marginal(model());
+}
