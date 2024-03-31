@@ -1389,12 +1389,8 @@
       "type": "CHOICE",
       "members": [
         {
-          "type": "PREC",
-          "value": 10,
-          "content": {
-            "type": "SYMBOL",
-            "name": "eanfprod"
-          }
+          "type": "SYMBOL",
+          "name": "eanfprod"
         },
         {
           "type": "SYMBOL",

@@ -779,14 +779,39 @@ pub fn eval_eanf<'a>(
             }
         }
         AnfTrace(tr, x) => {
-            println!(
-                "[{:?}] E) {}\t\t({}\t{})",
-                OffsetDateTime::now_local(),
-                eval_eanf(state, ctx, tr)?.out.unwrap().pretty(),
-                state.mgr.num_recursive_calls(),
-                state.mgr.num_vars()
-            );
-            eval_eanf(state, ctx, x)
+            let o = eval_eanf(state, ctx, tr)?;
+            let fin = eval_eanf(state, ctx, x)?;
+            match o.out.unwrap() {
+                EVal::EBdd(BddPtr::PtrFalse) => match fin.out.clone().unwrap() {
+                    EVal::EBdd(dist) => {
+                        let conj = state.mgr.and(o.accept, dist);
+                        println!(
+                            "[{:?}] E)  α: {}",
+                            OffsetDateTime::now_local(),
+                            o.accept.print_bdd(),
+                        );
+                        println!(
+                            "[{:?}] E)  𝞅: {}",
+                            OffsetDateTime::now_local(),
+                            dist.print_bdd(),
+                        );
+                        println!(
+                            "[{:?}] E) 𝞅α: {}",
+                            OffsetDateTime::now_local(),
+                            conj.print_bdd(),
+                        );
+                    }
+                    _ => println!("didn't print a bdd"),
+                },
+                out => println!(
+                    "[{:?}] E) {}\t\t({}\t{})",
+                    OffsetDateTime::now_local(),
+                    out.pretty(),
+                    state.mgr.num_recursive_calls(),
+                    state.mgr.num_vars()
+                ),
+            };
+            Ok(fin)
         }
         AnfVec(anfs) => errors::not_in_exact(),
         AnfPush(xs, x) => errors::not_in_exact(),

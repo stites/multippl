@@ -35,6 +35,11 @@ pub fn exact2sample_bdd_eff(
     let theta_q = crate::inference::calculate_wmc_prob(state.mgr, wmc_params, *dist, accept, ss).0;
     debug!(" #rec calls: {}", state.mgr.num_recursive_calls());
 
+    // for v in crate::utils::variables(*dist) {
+    //     debug!("w {:?}: {:?}", v, wmc_params.get_var_weight(v));
+    // }
+
+    // println!("x {}", theta_q);
     let bern = statrs::distribution::Bernoulli::new(theta_q).unwrap();
     let s = sample_from(state, bern) == 1.0;
 
@@ -46,5 +51,6 @@ pub fn exact2sample_bdd_eff(
     // with rsdd's fold
     let new_samples = mk_output_samples(state.mgr, &out.exact.samples, *dist, s);
     out.exact.samples = new_samples;
+    out.exact.accept = BddPtr::PtrTrue; // reset the accepting criteria
     s
 }

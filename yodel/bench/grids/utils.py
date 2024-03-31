@@ -61,18 +61,6 @@ def mkgrid(n, probfn, **kwargs):
     # import sys; sys.exit(0)
     return g
 
-def mkarrival(n, probfn, conditions=[]):
-    npackets = pyro.sample("npackets", dist.Poisson(3))
-    arrives = torch.zeros(1)
-    if npackets.item() == 0.0:
-        return arrives
-
-    for ix in pyro.plate("packet", int(npackets.item())):
-        m = pyro.condition(mkgrid, data={k(ix): v for k, v in conditions})
-        o = m(n, probfn, suffix="_"+str(ix))
-        arrives += o[-1][-1].item()
-    return arrives
-
 def arrival_sites(sites):
     return [s + "_0" for s in sites]
 

@@ -66,6 +66,27 @@ pub fn calculate_wmc_prob(
     calculate_wmc_prob_hf64(mgr, params, dist, accept)
 }
 
+#[inline(always)]
+pub fn calculate_wmc_prob_debug(
+    mgr: &mut Mgr,
+    params: &WmcParams<RealSemiring>,
+    dist: BddPtr,
+    accept: BddPtr,
+    samples: BddPtr,
+) -> (f64, Option<WmcStats>) {
+    let span = tracing::span!(tracing::Level::DEBUG, "calculate_wmc_prob");
+    let _enter = span.enter();
+    let accept = mgr.and(samples, accept);
+    println!("sample: {}", &samples.print_bdd());
+    println!("accept: {}", &accept.print_bdd());
+    println!("dist  : {}", &dist.print_bdd());
+    let ad = mgr.and(dist, accept);
+    println!("a && d: {}", &ad.print_bdd());
+    let wmc = calculate_wmc_prob_hf64(mgr, params, dist, accept);
+    println!("wmc   : {}", &wmc.0);
+    wmc
+}
+
 pub fn wmc_prob(mgr: &mut Mgr, wmc: &WmcP, c: &EOutput) -> (Vec<f64>, Option<WmcStats>) {
     let span = tracing::span!(tracing::Level::DEBUG, "wmc_prob");
     let _enter = span.enter();

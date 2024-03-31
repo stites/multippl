@@ -233,7 +233,7 @@ pub struct State<'a> {
     pub funs: &'a HashMap<FnId, Fun>,
     pub fun_stats: &'a HashMap<FnId, FnCounts>,
     pub call_counter: HashMap<FnId, u64>,
-    next: Option<VarLabel>,
+    pub next: Option<VarLabel>,
     while_index: u64,
     log_weight: Ln,
     pub fnctx: Option<FnCall>,
@@ -360,15 +360,19 @@ impl<'a> State<'a> {
                 let out = ctx.mk_eoutput(o);
                 Ok(out)
             }
-            EFlip(d, param) => {
+            EFlip(d, eparam) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "flip");
                 let _enter = span.enter();
                 tracing::debug!("flip: {:?}", e);
-                let o = eval_eanf(self, &ctx, param)?;
+                let o = eval_eanf(self, &ctx, eparam)?;
                 tracing::debug!("flip done");
                 let o = match &o.out {
                     Some(EVal::EFloat(param)) => {
                         let (lbl, var) = self.next_bdd(d.clone());
+                        if Float::is_nan(*param) {
+                            println!("{eparam:?}");
+                            println!("{:?} {param}", d);
+                        }
                         self.wmc.insert_high(lbl, *param);
                         let var = self.mgr.var(lbl, true);
                         Ok(EOutput {
@@ -430,7 +434,16 @@ impl<'a> State<'a> {
                     ctx.exact.accept,
                     ss,
                 );
-                debug!("WMC        {}", &wmc);
+                // let (wmc, _) = crate::inference::calculate_wmc_prob_debug(
+                //     self.mgr,
+                //     wmc_params,
+                //     dist,
+                //     ctx.exact.accept,
+                //     ss,
+                // );
+                // println!("dist       {}", &dist.print_bdd());
+                // println!("accept     {}", &ctx.exact.accept.print_bdd());
+                // println!("WMC        {}", &wmc);
 
                 self.score(wmc);
                 // // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -669,7 +682,10 @@ impl<'a> State<'a> {
                 match &guardout.sample.out {
                     Some(SVal::SBool(true)) => self.eval_sexpr(ctx.clone(), truthy),
                     Some(SVal::SBool(false)) => self.eval_sexpr(ctx.clone(), falsey),
-                    _ => errors::typecheck_failed("s-ite guard"),
+                    Some(s) => errors::typecheck_failed(&format!(
+                        "s-ite guard. Expected bool, found {s:?}"
+                    )),
+                    None => errors::typecheck_failed(&format!("s-ite guard empty!")),
                 }
             }
             SMap(d, argname, body, arg) => {
@@ -871,6 +887,7 @@ impl<'a> State<'a> {
                             let dist = statrs::distribution::Poisson::new(*p).unwrap();
                             let v = sample_from(self, dist) as u64;
                             let q = dist.pmf(v);
+                            println!("P({v}) = {q}");
                             let v = SVal::SInt(v);
                             (q, v, d)
                         }
@@ -974,7 +991,7 @@ impl<'a> State<'a> {
                 //     ),
                 //     (_, Err(e)) => return Err(e),
                 // };
-                trace!("boundary sample: {:?}", val);
+                // println!("boundary sample: {:?}", val);
                 out.sample.out = Some(val);
                 Ok(out)
             }

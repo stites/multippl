@@ -375,13 +375,39 @@ pub mod discrete {
     use std::hash::{Hash, Hasher};
     use tracing::*;
 
+    fn _floateval(a: &AnfUD<EVal>) -> Option<f64> {
+        use Anf::*;
+        match a {
+            AVal(_, v) => match v {
+                EVal::EFloat(f) => Some(*f),
+                _ => None,
+            },
+            Plus(bl, br) => Some(_floateval(bl)? + _floateval(br)?),
+            Minus(bl, br) => Some(_floateval(bl)? - _floateval(br)?),
+            Mult(bl, br) => Some(_floateval(bl)? * _floateval(br)?),
+            Div(bl, br) => {
+                let num = _floateval(bl)?;
+                let den = _floateval(br)?;
+                if (num == 0.0) {
+                    Some(0.0)
+                } else {
+                    Some(num / den)
+                }
+            }
+            _ => None,
+        }
+    }
+
     /// assumes normalized probs
     fn params2partitions(params: &[AnfUD<EVal>]) -> Vec<AnfUD<EVal>> {
         let mut parts = params
             .iter()
             .fold(vec![Anf::AVal((), EVal::EFloat(1.0))], |mut zs, p| {
                 let z = Anf::Minus(Box::new(zs.last().unwrap().clone()), Box::new(p.clone()));
-                zs.push(z);
+                match _floateval(&z) {
+                    Some(f) => zs.push(Anf::AVal((), EVal::EFloat(f))),
+                    None => zs.push(z),
+                }
                 zs
             });
         parts.pop(); // last element is always 0.
@@ -396,6 +422,10 @@ pub mod discrete {
         params
             .iter()
             .map(|p| Anf::Div(Box::new(p.clone()), Box::new(z.clone())))
+            .map(|z| match _floateval(&z) {
+                Some(f) => Anf::AVal((), EVal::EFloat(f)),
+                None => z,
+            })
             .collect()
     }
     fn params2probs(params: &[AnfUD<EVal>]) -> Vec<AnfUD<EVal>> {
@@ -406,6 +436,10 @@ pub mod discrete {
             .into_iter()
             .zip(partitions)
             .map(|(phat, z)| Anf::Div(Box::new(phat), Box::new(z)))
+            .map(|p| match _floateval(&p) {
+                Some(f) => Anf::AVal((), EVal::EFloat(f)),
+                None => p,
+            })
             .collect()
     }
     #[allow(clippy::needless_borrow)]
@@ -591,11 +625,7 @@ pub mod discrete {
             std::cmp::Ordering::Less => {
                 errors::generic("parameters must be normalized with cardinality of >1")
             }
-            std::cmp::Ordering::Equal => Ok((
-                vec![],
-                EExpr::EFlip((), Box::new(normalize(params)[0].clone())),
-            )),
-            std::cmp::Ordering::Greater => {
+            std::cmp::Ordering::Equal | std::cmp::Ordering::Greater => {
                 let (statements, ret, oh) = params2named_statements(namespace, names, params);
                 let mut binding = ret;
                 for (label, bindee) in statements.into_iter().rev() {
@@ -726,6 +756,23 @@ pub mod discrete {
             let bindings = from_params(&params);
             println!("{:?}", bindings);
             // assert!(false);
+        }
+        #[test]
+        #[ignore = "saw a let binding, too little time to test"]
+        pub fn test_params2bindings_next() {
+            let params = floats2eanf(vec![0.2, 0.8]);
+            let bindings = from_params(&params);
+            println!("{:?}", bindings);
+            // assert!(false); should be a let binding
+        }
+
+        #[test]
+        #[ignore = "just for validation at the moment"]
+        pub fn test_params2bindings_next_next() {
+            let params = floats2eanf(vec![1.0, 0.0, 0.0]);
+            let bindings = from_params(&params);
+            println!("{:?}", bindings);
+            assert!(false);
         }
 
         #[test]

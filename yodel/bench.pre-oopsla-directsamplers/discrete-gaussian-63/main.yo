@@ -1,0 +1,127 @@
+exact fn network () -> Bool {
+let n50r = true in
+let n40r = if  n50r then flip 1.0 / 2.0 else false in
+let n51r = if !n40r then flip 1.0 / 2.0 else false in
+
+let n30r = if  n40r then flip 1.0 / 2.0 else false in
+let n41r = if !n30r then flip 1.0 / 2.0 else false in
+
+let n20r = if  n30r then flip 1.0 / 2.0 else false in
+
+let n31r = if !n20r then flip 1.0 / 2.0 else false in
+let n42r = if  n31r then flip 1.0 / 2.0 else false in
+let n43r = if !n31r then flip 1.0 / 2.0 else false in
+
+let n10r = if  n20r then flip 1.0 / 2.0 else false in
+let n21r = if !n10r then flip 1.0 / 2.0 else false in
+let n32r = if  n21r then flip 1.0 / 2.0 else false in
+let n33r = if !n21r then flip 1.0 / 2.0 else false in
+
+let n44r = if  n32r then flip 1.0 / 2.0 else false in
+let n45r = if !n32r then flip 1.0 / 2.0 else false in
+let n46r = if  n33r then flip 1.0 / 2.0 else false in
+let n47r = if !n33r then flip 1.0 / 2.0 else false in
+
+let n52r = if  n41r then flip 1.0 / 2.0 else false in
+let n53r = if !n41r then flip 1.0 / 2.0 else false in
+let n54r = if  n42r then flip 1.0 / 2.0 else false in
+let n55r = if !n42r then flip 1.0 / 2.0 else false in
+let n56r = if  n43r then flip 1.0 / 2.0 else false in
+let n57r = if !n43r then flip 1.0 / 2.0 else false in
+
+let n58r = if  n44r then flip 1.0 / 2.0 else false in
+let n59r = if !n44r then flip 1.0 / 2.0 else false in
+let n510r = if  n45r then flip 1.0 / 2.0 else false in
+let n511r = if !n45r then flip 1.0 / 2.0 else false in
+let n512r = if  n46r then flip 1.0 / 2.0 else false in
+let n513r = if !n46r then flip 1.0 / 2.0 else false in
+let n514r = if  n47r then flip 1.0 / 2.0 else false in
+let n515r = if !n47r then flip 1.0 / 2.0 else false in
+
+let n0   = n10r in
+
+let n10l = if n0   then flip 1.0 / 2.0 else false in
+
+let n20l = if  n10l then flip 1.0 / 2.0 else false in
+let n21l = if !n10l then flip 1.0 / 2.0 else false in
+
+let n30l = if  n20l then flip 1.0 / 2.0 else false in
+let n31l = if !n20l then flip 1.0 / 2.0 else false in
+let n32l = if  n21l then flip 1.0 / 2.0 else false in
+let n33l = if !n21l then flip 1.0 / 2.0 else false in
+
+let n40l = if  n30l then flip 1.0 / 2.0 else false in
+let n41l = if !n30l then flip 1.0 / 2.0 else false in
+let n42l = if  n31l then flip 1.0 / 2.0 else false in
+let n43l = if !n31l then flip 1.0 / 2.0 else false in
+let n44l = if  n32l then flip 1.0 / 2.0 else false in
+let n45l = if !n32l then flip 1.0 / 2.0 else false in
+let n46l = if  n33l then flip 1.0 / 2.0 else false in
+let n47l = if !n33l then flip 1.0 / 2.0 else false in
+
+let n50l = if  n40l then flip 1.0 / 2.0 else false in
+let n51l = if !n40l then flip 1.0 / 2.0 else false in
+let n52l = if  n41l then flip 1.0 / 2.0 else false in
+let n53l = if !n41l then flip 1.0 / 2.0 else false in
+let n54l = if  n42l then flip 1.0 / 2.0 else false in
+let n55l = if !n42l then flip 1.0 / 2.0 else false in
+let n56l = if  n43l then flip 1.0 / 2.0 else false in
+let n57l = if !n43l then flip 1.0 / 2.0 else false in
+
+let n58l = if  n44l then flip 1.0 / 2.0 else false in
+let n59l = if !n44l then flip 1.0 / 2.0 else false in
+let n510l = if  n45l then flip 1.0 / 2.0 else false in
+let n511l = if !n45l then flip 1.0 / 2.0 else false in
+let n512l = if  n46l then flip 1.0 / 2.0 else false in
+let n513l = if !n46l then flip 1.0 / 2.0 else false in
+let n514l = if  n47l then flip 1.0 / 2.0 else false in
+let n515l = if !n47l then flip 1.0 / 2.0 else false in
+observe !n40l in
+(n50l , n51l , n52l , n53l , n54l , n55l , n56l , n57l , n58l , n59l , n510l , n511l , n512l , n513l , n514l , n515l)
+}
+
+
+sample {
+  p ~ poisson(3.0);
+  ix <- p;
+  expt <- 0.0;
+  while ix > 0 {
+    pkts <- exact(network());
+    p0 <- if pkts[0] then 2.0 else -2.0;
+    p1 <- if pkts[1] then 2.0 else -2.0;
+    p2 <- if pkts[2] then 2.0 else -2.0;
+    p3 <- if pkts[3] then 2.0 else -2.0;
+    p4 <- if pkts[4] then 2.0 else -2.0;
+    p5 <- if pkts[5] then 2.0 else -2.0;
+    p6 <- if pkts[6] then 2.0 else -2.0;
+    p7 <- if pkts[7] then 2.0 else -2.0;
+    p8 <- if pkts[8] then 2.0 else -2.0;
+    p9 <- if pkts[9] then 2.0 else -2.0;
+    p10 <- if pkts[10] then 2.0 else -2.0;
+    p11 <- if pkts[11] then 2.0 else -2.0;
+    p12 <- if pkts[12] then 2.0 else -2.0;
+    p13 <- if pkts[13] then 2.0 else -2.0;
+    p14 <- if pkts[14] then 2.0 else -2.0;
+    p15 <- if pkts[15] then 2.0 else -2.0;
+    s0 ~ normal(p0, 1.0);
+    s1 ~ normal(p1, 1.0);
+    s2 ~ normal(p2, 1.0);
+    s3 ~ normal(p3, 1.0);
+    s4 ~ normal(p4, 1.0);
+    s5 ~ normal(p5, 1.0);
+    s6 ~ normal(p6, 1.0);
+    s7 ~ normal(p7, 1.0);
+    s8 ~ normal(p8, 1.0);
+    s9 ~ normal(p9, 1.0);
+    s10 ~ normal(p10, 1.0);
+    s11 ~ normal(p11, 1.0);
+    s12 ~ normal(p12, 1.0);
+    s13 ~ normal(p13, 1.0);
+    s14 ~ normal(p14, 1.0);
+    s15 ~ normal(p15, 1.0);
+    expt <- expt + s0 + s1 + s2 + s3 + s4 + s5 + s6 + s7 + s8 + s9 + s10 + s11 + s12 + s13 + s14 + s15;
+    ix <- ix - 1;
+    true
+  };
+  expt
+}

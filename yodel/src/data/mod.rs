@@ -13,6 +13,7 @@ pub use crate::data::importance::*;
 pub use crate::data::output::*;
 pub use crate::data::weight::*;
 pub use crate::data::wmcstats::*;
+use num_traits::Float;
 
 // reexports and aliases
 pub use rsdd::builder::bdd_builder::BddManager;
@@ -35,7 +36,7 @@ pub type HashMap<K, V> = FxHashMap<K, V>;
 pub type HashSet<V> = FxHashSet<V>;
 
 #[derive(Debug)]
-pub struct WmcP(WmcParams<RealSemiring>);
+pub struct WmcP(pub WmcParams<RealSemiring>);
 
 impl Default for WmcP {
     fn default() -> Self {
@@ -47,8 +48,9 @@ impl WmcP {
         &self.0
     }
     pub fn insert_high(&mut self, lbl: VarLabel, param: f64) {
-        self.0
-            .set_weight(lbl, RealSemiring(1.0 - param), RealSemiring(param))
+        let lo = (1.0 - param);
+        let hi = param;
+        self.0.set_weight(lbl, RealSemiring(lo), RealSemiring(hi))
     }
     pub fn new_with_size(sz: usize) -> Self {
         WmcP(WmcParams::new_with_size(

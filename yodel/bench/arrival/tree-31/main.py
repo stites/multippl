@@ -48,27 +48,26 @@ truth = [0.3671875 * 3] # = 1.1015625
 
 def model():
     npackets = pyro.sample("npackets", dist.Poisson(3))
-    arrives = 0.0
-    for ix in pyro.plate("packet", int(npackets.item())+1):
+    arrives = torch.tensor(0.0)
+    if npackets.item() == 0.0:
+        return arrives
+    for ix in pyro.plate("packet", int(npackets.item())):
         arrives += network(suffix=f"_{ix}").item()
     return arrives
 
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="generate data for simple HMMs")
+    parser = argparse.ArgumentParser(description="")
     parser.add_argument("--num-samples", default=1_000, type=int,)
     parser.add_argument("--num-runs", default=1, type=int,)
     parser.add_argument("--seed", default=0, type=int,)
     args = parser.parse_args()
 
     if args.num_runs > 1:
-        (l1s, times) = runall(model, sites, truth, num_runs=args.num_runs, num_samples=args.num_samples, start_seed=args.seed)
-        print("--------")
-        runs = len(l1s)
-        print(f"averages over {runs} runs:")
-        print("wallclock:", sum(times) / len(times), "s")
-        print("       L1:", sum(l1s) / len(l1s))
+        print("not supported")
+        import sys; sys.exit(1)
+
     else:
         # we are benchmarking, expect the same output as yodel
         torch.manual_seed(args.seed)
@@ -76,9 +75,10 @@ if __name__ == "__main__":
         random.seed(args.seed)
         start = time.time()
         importance = Importance(model, num_samples=args.num_samples)
-        posterior = importance.run()
-        xs = [torch.tensor([tr.nodes["_RETURN"]["value"] for tr in importance.exec_traces]).mean()]
+        marginal = EmpiricalMarginal(importance.run())
+        xs = marginal.mean.flatten()
         end = time.time()
         s = end - start
         print(" ".join([f"{x}" for x in xs]))
         print("{:.3f}ms".format(s * 1000))
+        print(sum(compute_l1(xs, truth)))

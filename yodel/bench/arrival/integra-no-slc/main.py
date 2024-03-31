@@ -132,48 +132,54 @@ def network(suffix=""):
     portland = True
     portland_to_seattle = flip("portland_to_seattle", reliability) if arrives_at_portland and portland else False
 
-    return arrives_at_portland
+    return torch.tensor(1.0 if arrives_at_portland else 0.0)
 
 
 reliability = 0.999
 
 def model():
     npackets = pyro.sample("npackets", dist.Poisson(3))
-    arrives = 0.0
-    for ix in pyro.plate("packet", int(npackets.item())+1):
-        o = network(suffix=f"_{ix}")
-        arrives += o
+    arrives = torch.tensor(0.0)
+    if npackets.item() == 0.0:
+        return arrives
+    for ix in pyro.plate("packet", int(npackets.item())):
+        arrives += network(suffix=f"_{ix}").item()
     return arrives
+
 
 def model_with_obs():
     npackets = pyro.sample("npackets", dist.Poisson(3))
-    arrives = 0.0
-    for ix in pyro.plate("packet", int(npackets.item())+1):
-        o = pyro.condition(network, {f"arrives_at_saltlake_{ix}": torch.zeros(1)})(suffix=f"_{ix}")
-        arrives += o
+    arrives = torch.tensor(0.0)
+    if npackets.item() == 0.0:
+        return arrives
+    for ix in pyro.plate("packet", int(npackets.item())):
+        arrives += pyro.condition(network, {f"orem_to_saltlake_{ix}": torch.zeros(1),f"ogden_to_saltlake_{ix}": torch.zeros(1), f"lasvegas_to_saltlake_{ix}": torch.zeros(1), f"bend_to_saltlake_{ix}": torch.zeros(1)})(suffix=f"_{ix}")
     return arrives
-
 
 if __name__ == "__main__":
     import argparse
 
-    parser = argparse.ArgumentParser(description="generate data for simple HMMs")
+    parser = argparse.ArgumentParser(description="")
     parser.add_argument("--num-samples", default=1_000, type=int,)
-    parser.add_argument("--num-runs", default=1, type=int,) # no-op
+    parser.add_argument("--num-runs", default=1, type=int,)
     parser.add_argument("--seed", default=0, type=int,)
     args = parser.parse_args()
 
-    # we are benchmarkg, expect the same output as yodel
-    torch.manual_seed(args.seed)
-    np.random.seed(args.seed)
-    random.seed(args.seed)
+    if args.num_runs > 1:
+        print("not supported")
+        import sys; sys.exit(1)
 
-    start = time.time()
-    importance = Importance(model_with_obs, num_samples=args.num_samples)
-    posterior = importance.run()
-    xs = [sum([tr.nodes["_RETURN"]["value"] for tr in importance.exec_traces]) / args.num_samples]
-    end = time.time()
-
-    s = end - start
-    print(" ".join([f"{x}" for x in xs]))
-    print("{:.3f}ms".format(s * 1000))
+    else:
+        # we are benchmarking, expect the same output as yodel
+        torch.manual_seed(args.seed)
+        np.random.seed(args.seed)
+        random.seed(args.seed)
+        start = time.time()
+        importance = Importance(model_with_obs, num_samples=args.num_samples)
+        marginal = EmpiricalMarginal(importance.run())
+        xs = marginal.mean.flatten()
+        end = time.time()
+        s = end - start
+        print(" ".join([f"{x}" for x in xs]))
+        print("{:.3f}ms".format(s * 1000))
+        print(sum(list(map(lambda x: abs(x[0] - x[1]), zip(xs, truth)))))

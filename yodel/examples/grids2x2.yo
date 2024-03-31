@@ -1,11 +1,84 @@
-  exact {
-    let x00 = flip 0.5 in
-    let x01 = if x00 then flip 0.3333333333333333 else flip 0.25 in
-    let x10 = if x00 then flip 0.2 else flip 0.16666666666666666 in
-    let x11 =
-      if  x10 &&  x01 then flip 0.14285714285714285 else
-      if  x10 && !x01 then flip 0.125 else
-      if !x10 &&  x01 then flip 0.1111111111111111 else
-                             flip 0.09090909090909091 in
-    (x00, x01, x10, x11)
+sample{
+exact {
+  let st  = flip 0.5 in
+  // let st  = sample(exact(flip 0.5)) in
+  let r24 = flip 1.0 / 4.0 in
+  let r34 = flip 1.0 / 5.0 in
+  observe !(st && r24) in
+  let r4l = (st && r24) in
+  let r4r = (!st && r34) in
+  let r4 = r4l || r4r in
+  trace (false) r4
 }
+}
+
+
+// exact {
+//   let st = flip 0.5 in
+//   let l = if  !st then flip 1.0 / 2.0 else false in
+//   let r = if   st then flip 1.0 / 2.0 else false in
+//   let fin = r || l in
+//   observe !r in
+//   fin
+// };
+
+// sample {
+//   sl <- exact {
+//     let st = flip 0.5 in
+//     let l = if  !st then flip 1.0 / 2.0 else false in
+//     (st, l)
+//   };
+//   exact {
+//     let r = if sl[0] then flip 1.0 / 2.0 else false in
+//     let fin = r || sl[1] in
+//     observe !r in
+//     trace (false) fin
+//   }
+// }
+
+
+
+// exact {
+//   let st  = flip 0.5 in
+//   let l   = if  st then flip 1.0 / 2.0 else false in
+//   let r   = if !st then flip 1.0 / 2.0 else false in
+//   let fin = l || r in
+//   observe !st in
+//   trace (false) fin
+// }
+
+// exact {
+//   // "or"
+//   let l   = flip 1.0 / 2.0 in
+//   let r   = flip 1.0 / 2.0 in
+//   let fin = l || r
+//   trace (fin) fin
+// }
+// sample {
+//   st ~ bern(0.5);
+//   l <- if ( st) { ~( bern(0.5)) } else { false };
+//   r <- if (!st) { ~( bern(0.5)) } else { false };
+
+//   fin <- if (l || r) { ~(bern(0.5)) } else { false };
+//   trace (fin) fin
+// }
+
+// sample {
+//   lr <- exact {
+//     let st = flip 0.5 in
+//     let l = if  st then flip 1.0 / 2.0 else false in
+//     let r = if !st then flip 1.0 / 2.0 else false in
+//     (l, r)
+//   };
+//   exact {
+//     let fin = if lr[0] || lr[1] then flip 0.5 else false in
+//     trace (fin) fin
+//   }
+// }
+// exact {
+//   let st  = flip 0.5 in
+//   let l   = if  st then flip 1.0 / 2.0 else false in
+//   let r   = if !st then flip 1.0 / 2.0 else false in
+//   let fin = if l || r then flip 0.5 else false in
+//   trace (fin) fin
+// }

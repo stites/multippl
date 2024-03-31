@@ -1,0 +1,23 @@
+let x00 = flip 0.5 in
+let x01 = if x00 then flip 0.3333333333333333 else flip 0.25 in
+let x10 = if x00 then flip 0.2 else flip 0.16666666666666666 in
+let x20 = if x10 then flip 0.2 else flip 0.16666666666666666 in
+
+let x02 = if x01 then flip 0.3333333333333333 else flip 0.25 in
+
+let x12 =
+  if  x02 then flip 0.8571428571428571 else
+                       flip 0.5454545454545454 in
+
+let x21 =
+  if  x20 then flip 0.25 else
+                       flip 0.18181818181818182 in
+
+let x22 =
+  if  x21 &&  x12 then flip 0.42857142857142855 else
+  if  x21 && !x12 then flip 0.375 else
+  if !x21 &&  x12 then flip 0.8888888888888888 else
+                       flip 0.8181818181818182 in
+let _ = observe !x22 in
+
+x20

@@ -144,7 +144,8 @@ if __name__ == "__main__":
             args["num_steps"] = num_steps
             pass
         elif (f[:5] == "grids" and f[-3:] == ".yo" and len(f) == 11) or (   # grids#x#.yo
-              f[:5] == "grids" and f[-9:] == "-obs01.yo" and len(f) == 17): # grids#x#-obs01.yo
+              f[:5] == "grids" and f[-9:] == "-obs01.yo" and len(f) == 17) or ( # grids#x#-obs01.yo
+              f == "exact.yo"): # exact.yo
             # we are compiling exactly, only use one sample
             args["num_steps"] = 1
             yorunner(f, logdir=logdir, **args)

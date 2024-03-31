@@ -140,7 +140,7 @@ module.exports = grammar({
       prec.left(5, seq($.bool_unop, $.eanf)),
     ),
     eanf: $ => choice(
-      prec(10, $.eanfprod),
+      $.eanfprod,
       $.identifier,
       prec(6, $.evalue),
       $.eanfprj,

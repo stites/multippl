@@ -1,0 +1,34 @@
+let n30r = true in
+let n20r = if  n30r then flip 1 / 2 else false in
+let n31r = if !n20r then flip 1 / 2 else false in
+
+let n10r = if  n20r then flip 1 / 2 else false in
+let n21r = if !n10r then flip 1 / 2 else false in
+let n32r = if  n21r then flip 1 / 2 else false in
+let n33r = if !n21r then flip 1 / 2 else false in
+
+let n0   = n10r in
+let _ = observe n0 in
+
+let n10l = if n0   then flip 1 / 2 else false in
+
+let n20l = if  n10l then flip 1 / 2 else false in
+let n21l = if !n10l then flip 1 / 2 else false in
+
+let n30l = if  n20l then flip 1 / 2 else false in
+let n31l = if !n20l then flip 1 / 2 else false in
+let n32l = if  n21l then flip 1 / 2 else false in
+let n33l = if !n21l then flip 1 / 2 else false in
+let _ = observe !n20l in
+// Pr(n30l | !n20l) = 0.0
+// Pr(n31l | !n20l) = 0.5
+// Pr(n32l | !n20l) = 0.1666
+// Pr(n33l | !n20l) = 0.3333
+
+
+// Pr(n30l) = 0.125
+// Pr(n31l) = 0.375
+// Pr(n32l) = 0.125
+// Pr(n33l) = 0.375
+
+n33l
