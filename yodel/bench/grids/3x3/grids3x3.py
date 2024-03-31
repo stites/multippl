@@ -3,6 +3,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils import *
 from yodel import sites3, truth3
+truth = truth3
 
 def ising_model():
     x00 = flip("00", 1.0 / 2.0)
@@ -42,15 +43,8 @@ if __name__ == "__main__":
     model = lambda: mkgrid(3, probfn)
 
     if args.num_runs > 1:
-        (l1s, times) = runall(model, sites3, truth3, num_runs=args.num_runs, num_samples=args.num_samples, start_seed=args.seed)
-        print("--------")
-        runs = len(l1s)
-        print(f"averages over {runs} runs:")
-        print("wallclock:", sum(times) / len(times), "s")
-        print("       L1:", sum(l1s) / len(l1s))
-        # averages over 10 runs:
-        # wallclock: 42.63511703014374 s
-        #        L1: 0.41128323336703865
+        print("not supported")
+        sys.exit(1)
     else:
         # we are benchmarking, expect the same output as yodel
         torch.manual_seed(args.seed)
@@ -58,13 +52,10 @@ if __name__ == "__main__":
         random.seed(args.seed)
         start = time.time()
         importance = Importance(model, num_samples=args.num_samples)
-        posterior = importance.run()
-        xs = allmarg(posterior, sites3, num_samples=args.num_samples)
+        marginal = EmpiricalMarginal(importance.run())
+        xs = marginal.mean.flatten()
         end = time.time()
         s = end - start
         print(" ".join([f"{x}" for x in xs]))
         print("{:.3f}ms".format(s * 1000))
-        # if s < 1.0:
-        #     print("{:.3f}ms".format(s / 1000))
-        # else:
-        #     print("{:.3f}s".format(s))
+        #print(sum(list(map(lambda x: abs(x[0] - x[1]), zip(xs, truth)))))

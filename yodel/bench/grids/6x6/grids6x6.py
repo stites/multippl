@@ -4,6 +4,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from utils import *
 from yodel import sites6, truth6
+truth = truth6
 
 def probfn(i, j):
    match (i, j):
@@ -22,20 +23,15 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="generate data for simple HMMs")
     parser.add_argument("--num-samples", default=1_000, type=int,)
-    parser.add_argument("--num-runs", default=10, type=int,)
+    parser.add_argument("--num-runs", default=1, type=int,)
     parser.add_argument("--seed", default=0, type=int,)
     args = parser.parse_args()
-
 
     model = lambda: mkgrid(6, probfn)
 
     if args.num_runs > 1:
-        (l1s, times) = runall(model, sites6, truth6, num_runs=args.num_runs, num_samples=args.num_samples, start_seed=args.seed)
-        print("--------")
-        runs = len(l1s)
-        print(f"averages over {runs} runs:")
-        print("wallclock:", sum(times) / len(times), "s")
-        print("       L1:", sum(l1s) / len(l1s))
+        print("not supported")
+        sys.exit(1)
     else:
         # we are benchmarking, expect the same output as yodel
         torch.manual_seed(args.seed)
@@ -43,13 +39,10 @@ if __name__ == "__main__":
         random.seed(args.seed)
         start = time.time()
         importance = Importance(model, num_samples=args.num_samples)
-        posterior = importance.run()
-        xs = allmarg(posterior, sites6, num_samples=args.num_samples)
+        marginal = EmpiricalMarginal(importance.run())
+        xs = marginal.mean.flatten()
         end = time.time()
         s = end - start
         print(" ".join([f"{x}" for x in xs]))
         print("{:.3f}ms".format(s * 1000))
-        # if s < 1.0:
-        #     print("{:.3f}ms".format(s / 1000))
-        # else:
-        #     print("{:.3f}s".format(s))
+        #print(sum(list(map(lambda x: abs(x[0] - x[1]), zip(xs, truth)))))

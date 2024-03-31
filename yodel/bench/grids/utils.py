@@ -51,30 +51,34 @@ def mkgrid(n, probfn, **kwargs):
     for i in range(0,n):
         grid.append([])
         for j in range(0,n):
-            grid[i].append(mk(i, j, *parents(grid, i, j), *probfn(i, j), **kwargs))
+            val = mk(i, j, *parents(grid, i, j), *probfn(i, j), **kwargs)
+            grid[i].append(val)
 
         g[i] = torch.stack(grid[i])
+
+    # (x00, x01, x02, x10, x11, x12, x20, x21, x22)
+    # print(g.flatten())
+    # import sys; sys.exit(0)
     return g
 
-def mkarrival(n, probfn):
+def mkarrival(n, probfn, conditions=[]):
     npackets = pyro.sample("npackets", dist.Poisson(3))
-    arrives = 0.0
-    for ix in pyro.plate("packet", int(npackets.item())+1):
-        o = mkgrid(n, probfn, suffix="_"+str(ix))
+    arrives = torch.zeros(1)
+    if npackets.item() == 0.0:
+        return arrives
+
+    for ix in pyro.plate("packet", int(npackets.item())):
+        m = pyro.condition(mkgrid, data={k(ix): v for k, v in conditions})
+        o = m(n, probfn, suffix="_"+str(ix))
         arrives += o[-1][-1].item()
     return arrives
 
 def arrival_sites(sites):
     return [s + "_0" for s in sites]
 
-
-def allmarg(posterior, sites, num_samples):
-    marginal = EmpiricalMarginal(posterior, sites = sites)
-    tensor = torch.sum(torch.cat([marginal().unsqueeze(0) for _ in range(num_samples)]), dim=0) / num_samples
-    return [t.item() for t in tensor]
-
 def compute_l1(ms, truth):
     return list(map(lambda x: abs(x[0] - x[1]), zip(ms, truth)))
+
 
 def printit(sites, ms, l1s):
     for d, t, l1 in zip(sites, ms, l1s):
