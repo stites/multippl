@@ -74,18 +74,19 @@ def network(suffix=""):
     n514l = flip("n514l", 1.0 / 2.0) if     n47l else torch.zeros(1)
     n515l = flip("n515l", 1.0 / 2.0) if not n47l else torch.zeros(1)
 
-    return n515l
+    return n0
 
 sites = ["npackets"]
-truth = [0.314453125 * 3] # = 0.943359375
+truth = [0.090909091 * 3] # = 0.272727273
 
 def model():
     npackets = pyro.sample("npackets", dist.Poisson(3))
-    arrives = torch.tensor(0.0)
+    arrives = torch.zeros(1)
     if npackets.item() == 0.0:
         return arrives
     for ix in pyro.plate("packet", int(npackets.item())):
-        arrives += network(suffix=f"_{ix}").item()
+        m = pyro.condition(network, data={f"n512l_{ix}": torch.tensor(0.0)})
+        arrives += m(suffix=f"_{ix}").item()
     return arrives
 
 if __name__ == "__main__":
@@ -114,4 +115,4 @@ if __name__ == "__main__":
         s = end - start
         print(" ".join([f"{x}" for x in xs]))
         print("{:.3f}ms".format(s * 1000))
-        print(sum(compute_l1(xs, truth)))
+        #print(sum(compute_l1(xs, truth)))

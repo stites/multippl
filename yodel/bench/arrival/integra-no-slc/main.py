@@ -182,4 +182,4 @@ if __name__ == "__main__":
         s = end - start
         print(" ".join([f"{x}" for x in xs]))
         print("{:.3f}ms".format(s * 1000))
-        print(sum(list(map(lambda x: abs(x[0] - x[1]), zip(xs, truth)))))
+        #print(sum(list(map(lambda x: abs(x[0] - x[1]), zip(xs, truth)))))

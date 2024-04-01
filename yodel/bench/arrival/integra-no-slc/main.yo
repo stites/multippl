@@ -112,7 +112,8 @@ exact fn network () -> Bool {
   let portland = true  in
   let portland_to_seattle = if arrives_at_portland && portland then flip 0.999 else false in
 
-  observe !arrives_at_saltlake in
+  // observe !arrives_at_saltlake in
+  observe !orem_to_saltlake && !ogden_to_saltlake && !bend_to_saltlake && !lasvegas_to_saltlake in
 
   arrives_at_portland
 }

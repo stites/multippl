@@ -77,7 +77,9 @@ let n513l = if !n46l then flip 1.0 / 2.0 else false in
 let n514l = if  n47l then flip 1.0 / 2.0 else false in
 let n515l = if !n47l then flip 1.0 / 2.0 else false in
 
-n515l
+observe n512l in
+
+n0
 }
 
 
