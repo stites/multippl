@@ -117,6 +117,16 @@ pub fn eval_sanf_numop<'a>(
             let out = ctx.mk_soutput(out);
             Ok(out)
         }
+        (Some(SVal::SInt(l)), Some(SVal::SFloat(r))) => {
+            let out = ctx.sample.as_output(Some(SVal::SFloat(fop(*l as f64, *r))));
+            let out = ctx.mk_soutput(out);
+            Ok(out)
+        }
+        (Some(SVal::SFloat(l)), Some(SVal::SInt(r))) => {
+            let out = ctx.sample.as_output(Some(SVal::SFloat(fop(*l, *r as f64))));
+            let out = ctx.mk_soutput(out);
+            Ok(out)
+        }
         _ => errors::typecheck_failed("sanf numop"),
     }
 }

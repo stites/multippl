@@ -388,7 +388,7 @@ pub mod discrete {
             Div(bl, br) => {
                 let num = _floateval(bl)?;
                 let den = _floateval(br)?;
-                if (num == 0.0) {
+                if num == 0.0 {
                     Some(0.0)
                 } else {
                     Some(num / den)
