@@ -44,15 +44,15 @@ def network(suffix=""):
     return n0
 
 sites = ["npackets"]
-truth = [0.176470588 * 3] # = 0.529411764
-
+#truth = [0.176470588 * 3] # = 0.529411764 $ 46l
+truth = [0.066666667 * 3] # = 44l
 def model():
     npackets = pyro.sample("npackets", dist.Poisson(3))
     arrives = torch.zeros(1)
     if npackets.item() == 0.0:
         return arrives
     for ix in pyro.plate("packet", int(npackets.item())):
-        m = pyro.condition(network, data={f"n46l_{ix}": torch.tensor(0.0)})
+        m = pyro.condition(network, data={f"n44l_{ix}": torch.tensor(1.0)})
         arrives += m(suffix=f"_{ix}").item()
     return arrives
 

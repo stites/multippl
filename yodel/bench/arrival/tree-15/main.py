@@ -32,7 +32,8 @@ def network(suffix=""):
 
     return n0
 
-truth = [0.142857143 * 3]
+truth = [0.142857143 * 3] # 32l
+#truth = [0.333333333 * 3] # 33l
 
 def model():
     npackets = pyro.sample("npackets", dist.Poisson(3))
@@ -40,7 +41,7 @@ def model():
     if npackets.item() == 0.0:
         return arrives
     for ix in pyro.plate("packet", int(npackets.item())):
-        m = pyro.condition(network, data={f"n32l_{ix}": torch.tensor(0.0)})
+        m = pyro.condition(network, data={f"n32l_{ix}": torch.tensor(1.0)})
         arrives += m(suffix=f"_{ix}").item()
     return arrives
 

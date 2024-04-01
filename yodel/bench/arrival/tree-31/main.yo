@@ -40,7 +40,7 @@ let n45l = if !n32l then flip 1.0 / 2.0 else false in
 let n46l = if  n33l then flip 1.0 / 2.0 else false in
 let n47l = if !n33l then flip 1.0 / 2.0 else false in
 
-observe n46l in
+observe n44l in
 
 n0
 

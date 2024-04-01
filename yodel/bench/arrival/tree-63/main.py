@@ -85,7 +85,7 @@ def model():
     if npackets.item() == 0.0:
         return arrives
     for ix in pyro.plate("packet", int(npackets.item())):
-        m = pyro.condition(network, data={f"n512l_{ix}": torch.tensor(0.0)})
+        m = pyro.condition(network, data={f"n512l_{ix}": torch.tensor(1.0)})
         arrives += m(suffix=f"_{ix}").item()
     return arrives
 
