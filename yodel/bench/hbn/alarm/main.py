@@ -3,48 +3,113 @@
 import os, sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from pyro.infer import Importance, EmpiricalMarginal
 import torch
+torch.set_num_threads(1)
 import pyro
+import numpy as np
+import random
+from pyro import poutine
 import pyro.distributions as dist
 from pyro.infer import Importance, EmpiricalMarginal
-from utils import *
+from pyro.infer import config_enumerate
+import time
 
-def network(suffix=""):
-    def flip(n, p):
-        return pyro.sample(n+suffix, dist.Bernoulli(p))
-    n30r = True
-    n20r = flip("n20r", 1.0 / 2.0) if     n30r else torch.zeros(1)
-    n31r = flip("n31r", 1.0 / 2.0) if not n20r else torch.zeros(1)
-    n10r = flip("n10r", 1.0 / 2.0) if     n20r else torch.zeros(1)
-    n21r = flip("n21r", 1.0 / 2.0) if not n10r else torch.zeros(1)
-    n32r = flip("n32r", 1.0 / 2.0) if     n21r else torch.zeros(1)
-    n33r = flip("n33r", 1.0 / 2.0) if not n21r else torch.zeros(1)
-    n0   = n10r
-    n10l = flip("n10l", 1.0 / 2.0) if     n0   else torch.zeros(1)
-    n20l = flip("n20l", 1.0 / 2.0) if     n10l else torch.zeros(1)
-    n21l = flip("n21l", 1.0 / 2.0) if not n10l else torch.zeros(1)
-    n30l = flip("n30l", 1.0 / 2.0) if     n20l else torch.zeros(1)
-    n31l = flip("n31l", 1.0 / 2.0) if not n20l else torch.zeros(1)
-    n32l = flip("n32l", 1.0 / 2.0) if     n21l else torch.zeros(1)
-    n33l = flip("n33l", 1.0 / 2.0) if not n21l else torch.zeros(1)
 
-    return (n30l, n31l, n32l, n33l)
 
-sites = ["npackets"]
-truth = [12] 
+def network():
+    HYPOVOLEMIA = pyro.sample("HYPOVOLEMIA", dist.Categorical(probs=torch.tensor([0.200000,0.800000])))
+    LVFAILURE = pyro.sample("LVFAILURE", dist.Categorical(probs=torch.tensor([0.050000,0.950000])))
+    STROKEVOLUME = pyro.sample("STROKEVOLUME", ((dist.Categorical(probs=torch.tensor([0.980000,0.010000,0.010000]))) if ((LVFAILURE == 0)) else (dist.Categorical(probs=torch.tensor([0.500000,0.490000,0.010000])))) if ((HYPOVOLEMIA == 0)) else ((dist.Categorical(probs=torch.tensor([0.950000,0.040000,0.010000]))) if ((LVFAILURE == 0)) else (dist.Categorical(probs=torch.tensor([0.050000,0.900000,0.050000])))))
+    LVEDVOLUME = pyro.sample("LVEDVOLUME", ((dist.Categorical(probs=torch.tensor([0.950000,0.040000,0.010000]))) if ((LVFAILURE == 0))  else (dist.Categorical(probs=torch.tensor([0.010000,0.090000,0.900000])))) if ((HYPOVOLEMIA == 0)) else ((dist.Categorical(probs=torch.tensor([0.980000,0.010000,0.010000]))) if ((LVFAILURE == 0))  else (dist.Categorical(probs=torch.tensor([0.050000,0.900000,0.050000])))))
+    PCWP = pyro.sample("PCWP", (dist.Categorical(probs=torch.tensor([0.950000,0.040000,0.010000]))) if ((LVEDVOLUME == 0)) else ((dist.Categorical(probs=torch.tensor([0.040000,0.950000,0.010000]))) if ((LVEDVOLUME == 1))  else (dist.Categorical(probs=torch.tensor([0.010000,0.040000,0.950000])))))
+    CVP = pyro.sample("CVP", (dist.Categorical(probs=torch.tensor([0.950000,0.040000,0.010000]))) if ((LVEDVOLUME == 0))  else ((dist.Categorical(probs=torch.tensor([0.040000,0.950000,0.010000]))) if ((LVEDVOLUME == 1))  else (dist.Categorical(probs=torch.tensor([0.010000,0.290000,0.700000])))))
+    HISTORY = pyro.sample("HISTORY", (dist.Categorical(probs=torch.tensor([0.900000,0.100000]))) if ((LVFAILURE == 0))  else (dist.Categorical(probs=torch.tensor([0.010000,0.990000]))))
+    ERRLOWOUTPUT = pyro.sample("ERRLOWOUTPUT", dist.Categorical(probs=torch.tensor([0.050000,0.950000])))
+    ERRCAUTER = pyro.sample("ERRCAUTER", dist.Categorical(probs=torch.tensor([0.100000,0.900000])))
+    INSUFFANESTH = pyro.sample("INSUFFANESTH", dist.Categorical(probs=torch.tensor([0.100000,0.900000])))
+    ANAPHYLAXIS = pyro.sample("ANAPHYLAXIS", dist.Categorical(probs=torch.tensor([0.010000,0.990000])))
+    TPR = pyro.sample("TPR", (dist.Categorical(probs=torch.tensor([0.980000,0.010000,0.010000]))) if ((ANAPHYLAXIS == 0))  else (dist.Categorical(probs=torch.tensor([0.300000,0.400000,0.300000]))))
+    KINKEDTUBE = pyro.sample("KINKEDTUBE", dist.Categorical(probs=torch.tensor([0.040000,0.960000])))
+    FIO2 = pyro.sample("FIO2", dist.Categorical(probs=torch.tensor([0.050000,0.950000])))
+    PULMEMBOLUS = pyro.sample("PULMEMBOLUS", dist.Categorical(probs=torch.tensor([0.010000,0.990000])))
+    PAP = pyro.sample("PAP", (dist.Categorical(probs=torch.tensor([0.010000,0.190000,0.800000]))) if ((PULMEMBOLUS == 0))  else (dist.Categorical(probs=torch.tensor([0.050000,0.900000,0.050000]))))
+    INTUBATION = pyro.sample("INTUBATION", dist.Categorical(probs=torch.tensor([0.920000,0.030000,0.050000])))
+    SHUNT = pyro.sample("SHUNT", ((dist.Categorical(probs=torch.tensor([0.100000,0.900000]))) if ((PULMEMBOLUS == 0))  else (dist.Categorical(probs=torch.tensor([0.950000,0.050000])))) if ((INTUBATION == 0))  else (((dist.Categorical(probs=torch.tensor([0.100000,0.900000]))) if ((PULMEMBOLUS == 0))  else (dist.Categorical(probs=torch.tensor([0.950000,0.050000])))) if ((INTUBATION == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((PULMEMBOLUS == 0))  else (dist.Categorical(probs=torch.tensor([0.050000,0.950000]))))))
+    DISCONNECT = pyro.sample("DISCONNECT", dist.Categorical(probs=torch.tensor([0.100000,0.900000])))
+    MINVOLSET = pyro.sample("MINVOLSET", dist.Categorical(probs=torch.tensor([0.050000,0.900000,0.050000])))
+    VENTMACH = pyro.sample("VENTMACH", (dist.Categorical(probs=torch.tensor([0.050000,0.930000,0.010000,0.010000]))) if ((MINVOLSET == 0))  else ((dist.Categorical(probs=torch.tensor([0.050000,0.010000,0.930000,0.010000]))) if ((MINVOLSET == 1))  else (dist.Categorical(probs=torch.tensor([0.050000,0.010000,0.010000,0.930000])))))
+    VENTTUBE = pyro.sample("VENTTUBE", (((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTMACH == 0))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTMACH == 1))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTMACH == 2))  else (dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.970000,0.010000])))))) if ((DISCONNECT == 0))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTMACH == 0))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTMACH == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.970000,0.010000,0.010000]))) if ((VENTMACH == 2))  else (dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.010000,0.970000]))))))))
+    VENTLUNG = pyro.sample("VENTLUNG", (((((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTTUBE == 0))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTTUBE == 1))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTTUBE == 2))  else (dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000])))))) if ((KINKEDTUBE == 0))  else ((dist.Categorical(probs=torch.tensor([0.300000,0.680000,0.010000,0.010000]))) if ((VENTTUBE == 0))  else ((dist.Categorical(probs=torch.tensor([0.950000,0.030000,0.010000,0.010000]))) if ((VENTTUBE == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.010000,0.970000]))) if ((VENTTUBE == 2))  else (dist.Categorical(probs=torch.tensor([0.010000,0.970000,0.010000,0.010000]))))))) if ((INTUBATION == 0))  else ((((dist.Categorical(probs=torch.tensor([0.950000,0.030000,0.010000,0.010000]))) if ((VENTTUBE == 0))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTTUBE == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.970000,0.010000,0.010000]))) if ((VENTTUBE == 2))  else (dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000])))))) if ((KINKEDTUBE == 0))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTTUBE == 0))  else ((dist.Categorical(probs=torch.tensor([0.500000,0.480000,0.010000,0.010000]))) if ((VENTTUBE == 1))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTTUBE == 2))  else (dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.970000,0.010000]))))))) if ((INTUBATION == 1))  else (((dist.Categorical(probs=torch.tensor([0.400000,0.580000,0.010000,0.010000]))) if ((VENTTUBE == 0))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTTUBE == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.970000,0.010000]))) if ((VENTTUBE == 2))  else (dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000])))))) if ((KINKEDTUBE == 0))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTTUBE == 0))  else ((dist.Categorical(probs=torch.tensor([0.300000,0.680000,0.010000,0.010000]))) if ((VENTTUBE == 1))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTTUBE == 2))  else (dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.010000,0.970000])))))))))))
+    VENTALV = pyro.sample("VENTALV", ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTLUNG == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.010000,0.970000]))) if ((VENTLUNG == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.970000,0.010000]))) if ((VENTLUNG == 2))  else (dist.Categorical(probs=torch.tensor([0.030000,0.950000,0.010000,0.010000])))))) if ((INTUBATION == 0))  else (((dist.Categorical(probs=torch.tensor([0.010000,0.970000,0.010000,0.010000]))) if ((VENTLUNG == 0))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTLUNG == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.010000,0.970000]))) if ((VENTLUNG == 2))  else (dist.Categorical(probs=torch.tensor([0.010000,0.940000,0.040000,0.010000])))))) if ((INTUBATION == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.970000,0.010000]))) if ((VENTLUNG == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.970000,0.010000,0.010000]))) if ((VENTLUNG == 1))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTLUNG == 2))  else (dist.Categorical(probs=torch.tensor([0.010000,0.880000,0.100000,0.010000]))))))))
+    ARTCO2 = pyro.sample("ARTCO2", (dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.980000]))) if ((VENTALV == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.980000]))) if ((VENTALV == 1))  else ((dist.Categorical(probs=torch.tensor([0.040000,0.920000,0.040000]))) if ((VENTALV == 2))  else (dist.Categorical(probs=torch.tensor([0.900000,0.090000,0.010000]))))))
+    PVSAT = pyro.sample("PVSAT", ((dist.Categorical(probs=torch.tensor([1.000000,0.000000,0.000000]))) if ((VENTALV == 0))  else ((dist.Categorical(probs=torch.tensor([0.950000,0.040000,0.010000]))) if ((VENTALV == 1))  else ((dist.Categorical(probs=torch.tensor([1.000000,0.000000,0.000000]))) if ((VENTALV == 2))  else (dist.Categorical(probs=torch.tensor([0.010000,0.950000,0.040000])))))) if ((FIO2 == 0))  else ((dist.Categorical(probs=torch.tensor([0.990000,0.010000,0.000000]))) if ((VENTALV == 0))  else ((dist.Categorical(probs=torch.tensor([0.950000,0.040000,0.010000]))) if ((VENTALV == 1))  else ((dist.Categorical(probs=torch.tensor([0.950000,0.040000,0.010000]))) if ((VENTALV == 2))  else (dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.980000])))))))
+    SAO2 = pyro.sample("SAO2", ((dist.Categorical(probs=torch.tensor([0.980000,0.010000,0.010000]))) if ((SHUNT == 0))  else (dist.Categorical(probs=torch.tensor([0.980000,0.010000,0.010000])))) if ((PVSAT == 0))  else (((dist.Categorical(probs=torch.tensor([0.010000,0.980000,0.010000]))) if ((SHUNT == 0))  else (dist.Categorical(probs=torch.tensor([0.980000,0.010000,0.010000])))) if ((PVSAT == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.980000]))) if ((SHUNT == 0))  else (dist.Categorical(probs=torch.tensor([0.690000,0.300000,0.010000]))))))
+    CATECHOL = pyro.sample("CATECHOL", ((((((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.700000,0.300000]))))) if ((SAO2 == 0))  else (((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.050000,0.950000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.700000,0.300000]))))) if ((SAO2 == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.050000,0.950000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.950000,0.050000]))))))) if ((INSUFFANESTH == 0))  else (((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.050000,0.950000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.700000,0.300000]))))) if ((SAO2 == 0))  else (((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.050000,0.950000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.950000,0.050000]))))) if ((SAO2 == 1))  else ((dist.Categorical(probs=torch.tensor([0.050000,0.950000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.050000,0.950000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.950000,0.050000])))))))) if ((ARTCO2 == 0))  else (((((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.700000,0.300000]))))) if ((SAO2 == 0))  else (((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.050000,0.950000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.700000,0.300000]))))) if ((SAO2 == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.050000,0.950000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.990000,0.010000]))))))) if ((INSUFFANESTH == 0))  else (((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.050000,0.950000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.700000,0.300000]))))) if ((SAO2 == 0))  else (((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.050000,0.950000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.990000,0.010000]))))) if ((SAO2 == 1))  else ((dist.Categorical(probs=torch.tensor([0.050000,0.950000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.050000,0.950000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.990000,0.010000])))))))) if ((ARTCO2 == 1))  else ((((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.100000,0.900000]))))) if ((SAO2 == 0))  else (((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.100000,0.900000]))))) if ((SAO2 == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.300000,0.700000]))))))) if ((INSUFFANESTH == 0))  else (((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.100000,0.900000]))))) if ((SAO2 == 0))  else (((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.300000,0.700000]))))) if ((SAO2 == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.990000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.300000,0.700000]))))))))))))
+    HR = pyro.sample("HR", (dist.Categorical(probs=torch.tensor([0.050000,0.900000,0.050000]))) if ((CATECHOL == 0))  else (dist.Categorical(probs=torch.tensor([0.010000,0.090000,0.900000]))))
+    CO = pyro.sample("CO", ((((dist.Categorical(probs=torch.tensor([0.980000,0.010000,0.010000]))) if ((STROKEVOLUME == 0))  else ((dist.Categorical(probs=torch.tensor([0.950000,0.040000,0.010000]))) if ((STROKEVOLUME == 1))  else (dist.Categorical(probs=torch.tensor([0.300000,0.690000,0.010000]))))) if ((HR == 0))  else (((dist.Categorical(probs=torch.tensor([0.950000,0.040000,0.010000]))) if ((STROKEVOLUME == 0))  else ((dist.Categorical(probs=torch.tensor([0.040000,0.950000,0.010000]))) if ((STROKEVOLUME == 1))  else (dist.Categorical(probs=torch.tensor([0.010000,0.300000,0.690000]))))) if ((HR == 1))  else ((dist.Categorical(probs=torch.tensor([0.800000,0.190000,0.010000]))) if ((STROKEVOLUME == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.040000,0.950000]))) if ((STROKEVOLUME == 1))  else (dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.980000])))))))))
+    BP = pyro.sample("BP", ((dist.Categorical(probs=torch.tensor([0.980000,0.010000,0.010000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.980000,0.010000,0.010000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.300000,0.600000,0.100000]))))) if ((CO == 0))  else (((dist.Categorical(probs=torch.tensor([0.980000,0.010000,0.010000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.100000,0.850000,0.050000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.050000,0.400000,0.550000]))))) if ((CO == 1))  else ((dist.Categorical(probs=torch.tensor([0.900000,0.090000,0.010000]))) if ((TPR == 0))  else ((dist.Categorical(probs=torch.tensor([0.050000,0.200000,0.750000]))) if ((TPR == 1))  else (dist.Categorical(probs=torch.tensor([0.010000,0.090000,0.900000])))))))
+    HRSAT = pyro.sample("HRSAT", ((dist.Categorical(probs=torch.tensor([0.333333,0.333333,0.333333]))) if ((HR == 0))  else ((dist.Categorical(probs=torch.tensor([0.333333,0.333333,0.333333]))) if ((HR == 1))  else (dist.Categorical(probs=torch.tensor([0.010000,0.980000,0.010000]))))) if ((ERRCAUTER == 0))  else ((dist.Categorical(probs=torch.tensor([0.333333,0.333333,0.333333]))) if ((HR == 0))  else ((dist.Categorical(probs=torch.tensor([0.980000,0.010000,0.010000]))) if ((HR == 1))  else (dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.980000]))))))
+    HREKG = pyro.sample("HREKG", ((dist.Categorical(probs=torch.tensor([0.333333,0.333333,0.333333]))) if ((HR == 0))  else ((dist.Categorical(probs=torch.tensor([0.333333,0.333333,0.333333]))) if ((HR == 1))  else (dist.Categorical(probs=torch.tensor([0.010000,0.980000,0.010000]))))) if ((ERRCAUTER == 0))  else ((dist.Categorical(probs=torch.tensor([0.333333,0.333333,0.333333]))) if ((HR == 0))  else ((dist.Categorical(probs=torch.tensor([0.980000,0.010000,0.010000]))) if ((HR == 1))  else (dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.980000]))))))
+    HRBP = pyro.sample("HRBP", ((dist.Categorical(probs=torch.tensor([0.980000,0.010000,0.010000]))) if ((HR == 0))  else ((dist.Categorical(probs=torch.tensor([0.300000,0.400000,0.300000]))) if ((HR == 1))  else (dist.Categorical(probs=torch.tensor([0.010000,0.980000,0.010000]))))) if ((ERRLOWOUTPUT == 0))  else ((dist.Categorical(probs=torch.tensor([0.400000,0.590000,0.010000]))) if ((HR == 0))  else ((dist.Categorical(probs=torch.tensor([0.980000,0.010000,0.010000]))) if ((HR == 1))  else (dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.980000]))))))
+    MINVOL = pyro.sample("MINVOL", ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTLUNG == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.010000,0.970000]))) if ((VENTLUNG == 1))  else ((dist.Categorical(probs=torch.tensor([0.500000,0.480000,0.010000,0.010000]))) if ((VENTLUNG == 2))  else (dist.Categorical(probs=torch.tensor([0.010000,0.970000,0.010000,0.010000])))))) if ((INTUBATION == 0))  else (((dist.Categorical(probs=torch.tensor([0.010000,0.970000,0.010000,0.010000]))) if ((VENTLUNG == 0))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTLUNG == 1))  else ((dist.Categorical(probs=torch.tensor([0.500000,0.480000,0.010000,0.010000]))) if ((VENTLUNG == 2))  else (dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.970000,0.010000])))))) if ((INTUBATION == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.970000,0.010000]))) if ((VENTLUNG == 0))  else ((dist.Categorical(probs=torch.tensor([0.600000,0.380000,0.010000,0.010000]))) if ((VENTLUNG == 1))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTLUNG == 2))  else (dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.010000,0.970000]))))))))
+    EXPCO2 = pyro.sample("EXPCO2", ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTLUNG == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.970000,0.010000,0.010000]))) if ((VENTLUNG == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.970000,0.010000]))) if ((VENTLUNG == 2))  else (dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.010000,0.970000])))))) if ((ARTCO2 == 0))  else (((dist.Categorical(probs=torch.tensor([0.010000,0.970000,0.010000,0.010000]))) if ((VENTLUNG == 0))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTLUNG == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.970000,0.010000]))) if ((VENTLUNG == 2))  else (dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.010000,0.970000])))))) if ((ARTCO2 == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.970000,0.010000,0.010000]))) if ((VENTLUNG == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.970000,0.010000]))) if ((VENTLUNG == 1))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTLUNG == 2))  else (dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.010000,0.970000]))))))))
+    PRESS = pyro.sample("PRESS", (((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTTUBE == 0))  else ((dist.Categorical(probs=torch.tensor([0.050000,0.250000,0.250000,0.450000]))) if ((VENTTUBE == 1))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTTUBE == 2))  else (dist.Categorical(probs=torch.tensor([0.200000,0.750000,0.040000,0.010000])))))) if ((KINKEDTUBE == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.010000,0.970000]))) if ((VENTTUBE == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.290000,0.300000,0.400000]))) if ((VENTTUBE == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.010000,0.970000]))) if ((VENTTUBE == 2))  else (dist.Categorical(probs=torch.tensor([0.010000,0.900000,0.080000,0.010000]))))))) if ((INTUBATION == 0))  else ((((dist.Categorical(probs=torch.tensor([0.010000,0.300000,0.490000,0.200000]))) if ((VENTTUBE == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.150000,0.250000,0.590000]))) if ((VENTTUBE == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.970000,0.010000,0.010000]))) if ((VENTTUBE == 2))  else (dist.Categorical(probs=torch.tensor([0.200000,0.700000,0.090000,0.010000])))))) if ((KINKEDTUBE == 0))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTTUBE == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.080000,0.900000]))) if ((VENTTUBE == 1))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTTUBE == 2))  else (dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.380000,0.600000]))))))) if ((INTUBATION == 1))  else (((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.080000,0.900000]))) if ((VENTTUBE == 0))  else ((dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000]))) if ((VENTTUBE == 1))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.970000,0.010000]))) if ((VENTTUBE == 2))  else (dist.Categorical(probs=torch.tensor([0.970000,0.010000,0.010000,0.010000])))))) if ((KINKEDTUBE == 0))  else ((dist.Categorical(probs=torch.tensor([0.100000,0.840000,0.050000,0.010000]))) if ((VENTTUBE == 0))  else ((dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.010000,0.970000]))) if ((VENTTUBE == 1))  else ((dist.Categorical(probs=torch.tensor([0.400000,0.580000,0.010000,0.010000]))) if ((VENTTUBE == 2))  else (dist.Categorical(probs=torch.tensor([0.010000,0.010000,0.010000,0.970000])))))))))
+
+    # let _ = observe CATECHOL == 0 in
+
+    return torch.tensor([HISTORY, PCWP, CVP, BP, HRBP, HRSAT, HREKG, PAP, EXPCO2])
+
+truth = \
+    [ 0  *   0.0545
+    + 1  *   0.9455
+    , 0  *   0.114341
+    + 1  *   0.678729
+    + 2  *   0.20693
+    + 3  *   0
+    , 0  *   0.114341
+    + 1  *   0.731104
+    + 2  *   0.154555
+    + 3  *   0
+    , 0  *   0.163725834
+    + 1  *   0.418567305
+    + 2  *   0.417706861
+    + 3  *   0
+    , 0  *   0.87335
+    + 1  *   0.057525
+    + 2  *   0.069125
+    + 3  *   0
+    , 0  *   0.840966667
+    + 1  *   0.060116667
+    + 2  *   0.098916667
+    + 3  *   0
+    , 0  *   0.840966667
+    + 1  *   0.060116667
+    + 2  *   0.098916667
+    + 3  *   0
+    , 0  *   0.049642833
+    + 1  *   0.893660279
+    + 2  *   0.056696888
+    + 3  *   0
+    , 0  *   0.103576502
+    + 1  *   0.82371607
+    + 2  *   0.050273398
+    + 3  *   0.02243403
+    ]
 
 def model():
-    npackets = pyro.sample("npackets", dist.Poisson(3))
-    cont_arrivals = 0.0
-    for ix in pyro.plate("packet", int(npackets.item())+1):
-        netfwd = pyro.condition(network, data={f"n20l_{ix}": torch.zeros(1)})
-        (a, b, c, d) = netfwd(suffix=f"_{ix}")
-        sample_a = pyro.sample(f"a_{ix}", dist.Normal((2.0 if a.item() else -2.0) * torch.ones(1), torch.ones(1)))
-        sample_b = pyro.sample(f"b_{ix}", dist.Normal((2.0 if b.item() else -2.0) * torch.ones(1), torch.ones(1)))
-        sample_c = pyro.sample(f"c_{ix}", dist.Normal((2.0 if c.item() else -2.0) * torch.ones(1), torch.ones(1)))
-        sample_d = pyro.sample(f"d_{ix}", dist.Normal((2.0 if d.item() else -2.0) * torch.ones(1), torch.ones(1)))
-        cont_arrivals += sample_a + sample_b + sample_c  + sample_d
-    return cont_arrivals
+    ls       = pyro.condition(network, data={"CATECHOL": torch.tensor(0)})()
+    gPAP     = pyro.sample("gPAP", dist.Normal(ls[0] + 0.0, 1.0))
+    gEXPCO   = pyro.sample("gEXPCO", dist.Normal(ls[1] + 0.0, 1.0))
+    gBP      = pyro.sample("gBP", dist.Normal(ls[2] + 0.0, 1.0))
+    gHRBP    = pyro.sample("gHRBP", dist.Normal(ls[3] + 0.0, 1.0))
+    gHRSAT   = pyro.sample("gHRSAT", dist.Normal(ls[4] + 0.0, 1.0))
+    gHREKG   = pyro.sample("gHREKG", dist.Normal(ls[5] + 0.0, 1.0))
+    gCVP     = pyro.sample("gCVP", dist.Normal(ls[6] + 0.0, 1.0))
+    gPCWP    = pyro.sample("gPCWP", dist.Normal(ls[7] + 0.0, 1.0))
+    gHISTORY = pyro.sample("gHISTORY", dist.Normal(ls[8] + 0.0, 1.0))
+    return torch.tensor([gPAP, gEXPCO, gBP, gHRBP, gHRSAT, gHREKG, gCVP, gPCWP, gHISTORY])
+
 
 if __name__ == "__main__":
     import argparse
@@ -65,8 +130,8 @@ if __name__ == "__main__":
         random.seed(args.seed)
         start = time.time()
         importance = Importance(model, num_samples=args.num_samples)
-        posterior = importance.run()
-        xs = [torch.tensor([tr.nodes["_RETURN"]["value"] for tr in importance.exec_traces]).mean()]
+        marginal = EmpiricalMarginal(importance.run())
+        xs = marginal.mean.flatten()
         end = time.time()
         s = end - start
         print(" ".join([f"{x}" for x in xs]))
