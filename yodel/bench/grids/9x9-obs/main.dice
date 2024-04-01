@@ -16,6 +16,7 @@ let x60 = if x50 then flip 1 / 4 else flip 1 / 5 in
 let x70 = if x60 then flip 1 / 4 else flip 1 / 5 in
 let x80 = if x70 then flip 1 / 4 else flip 1 / 5 in
 
+
 let x11 = if  x10 &&  x01 then flip 1 / 6 else if  x10 && !x01 then flip 1 / 7 else if !x10 &&  x01 then flip 1 / 8 else flip 1 / 9 in
 let x12 = if  x11 &&  x02 then flip 1 / 6 else if  x11 && !x02 then flip 1 / 7 else if !x11 &&  x02 then flip 1 / 8 else flip 1 / 9 in
 let x13 = if  x12 &&  x03 then flip 1 / 6 else if  x12 && !x03 then flip 1 / 7 else if !x12 &&  x03 then flip 1 / 8 else flip 1 / 9 in
@@ -101,4 +102,7 @@ let _ = observe x88 in
 // , x80, x81, x82, x83, x84, x85, x86, x87, x88
 // )
 
-x01
+// just return as much as you can
+// [x83, x84, x85, x86, x87, x88, x08, x18, x28, x38]
+// nope, that's kind of unfair to dice, return 2^len(query) = 64 results, which is comparable to 9x9's 81 nodes
+[x83, x84, x85, x86, x87, x88]
