@@ -14,15 +14,15 @@ exact {
   let x21 = if  x20 &&  x11 then flip 1.0 / 6.0 else if  x20 && !x11 then flip 1.0 / 7.0 else if !x20 &&  x11 then flip 1.0 / 8.0 else flip 1.0 / 9.0 in
   let x22 = if  x21 &&  x12 then flip 1.0 / 6.0 else if  x21 && !x12 then flip 1.0 / 7.0 else if !x21 &&  x12 then flip 1.0 / 8.0 else flip 1.0 / 9.0 in
   let x31 = if  x30 &&  x21 then flip 1.0 / 6.0 else if  x30 && !x21 then flip 1.0 / 7.0 else if !x30 &&  x21 then flip 1.0 / 8.0 else flip 1.0 / 9.0 in
-  let diag = sample(exact {
-    let x50 = if x40 then flip 1.0 / 4.0 else flip 1.0 / 5.0 in
-    let x41 = if  x40 &&  x31 then flip 1.0 / 6.0 else if  x40 && !x31 then flip 1.0 / 7.0 else if !x40 &&  x31 then flip 1.0 / 8.0 else flip 1.0 / 9.0 in
-    let x32 = if  x31 &&  x22 then flip 1.0 / 6.0 else if  x31 && !x22 then flip 1.0 / 7.0 else if !x31 &&  x22 then flip 1.0 / 8.0 else flip 1.0 / 9.0 in
-    let x23 = if  x22 &&  x13 then flip 1.0 / 6.0 else if  x22 && !x13 then flip 1.0 / 7.0 else if !x22 &&  x13 then flip 1.0 / 8.0 else flip 1.0 / 9.0 in
-    let x14 = if  x13 &&  x04 then flip 1.0 / 6.0 else if  x13 && !x04 then flip 1.0 / 7.0 else if !x13 &&  x04 then flip 1.0 / 8.0 else flip 1.0 / 9.0 in
-    let x05 = if x04 then flip 1.0 / 4.0 else flip 1.0 / 5.0 in
+  let diag = sample {
+    x50 ~ if x40 then bern(1.0 / 4.0) else bern(1.0 / 5.0);
+    x41 ~ if  x40 &&  x31 then bern(1.0 / 6.0) else if  x40 && !x31 then bern(1.0 / 7.0) else if !x40 &&  x31 then bern(1.0 / 8.0) else bern(1.0 / 9.0);
+    x32 ~ if  x31 &&  x22 then bern(1.0 / 6.0) else if  x31 && !x22 then bern(1.0 / 7.0) else if !x31 &&  x22 then bern(1.0 / 8.0) else bern(1.0 / 9.0);
+    x23 ~ if  x22 &&  x13 then bern(1.0 / 6.0) else if  x22 && !x13 then bern(1.0 / 7.0) else if !x22 &&  x13 then bern(1.0 / 8.0) else bern(1.0 / 9.0);
+    x14 ~ if  x13 &&  x04 then bern(1.0 / 6.0) else if  x13 && !x04 then bern(1.0 / 7.0) else if !x13 &&  x04 then bern(1.0 / 8.0) else bern(1.0 / 9.0);
+    x05 ~ if x04 then bern(1.0 / 4.0) else bern(1.0 / 5.0);
     (x50, x41, x32, x23, x14, x05)
-  }) in
+  } in
   let x50 = diag[0] in
   let x41 = diag[1] in
   let x32 = diag[2] in
