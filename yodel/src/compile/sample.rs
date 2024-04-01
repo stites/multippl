@@ -19,16 +19,6 @@ fn mk_output_samples(mgr: &mut Mgr, prev_samples: &BddPtr, dist: BddPtr, sample:
 }
 
 #[inline]
-pub fn clamp(p: f64) -> f64 {
-    if p > 1.1 || p < -0.1 {
-        panic!("I can't clamp _that_ much! Got {p}");
-    } else if p > 1.0 {
-        1.0
-    } else {
-        0.0
-    }
-}
-#[inline]
 pub fn exact2sample_bdd_eff(
     state: &mut super::eval::State,
     out: &mut Output,
@@ -49,7 +39,8 @@ pub fn exact2sample_bdd_eff(
     //     debug!("w {:?}: {:?}", v, wmc_params.get_var_weight(v));
     // }
 
-    let bern = statrs::distribution::Bernoulli::new(clamp(theta_q)).unwrap();
+    // println!("x {}", theta_q);
+    let bern = statrs::distribution::Bernoulli::new(theta_q).unwrap();
     let s = sample_from(state, bern) == 1.0;
 
     let weight = if s { theta_q } else { 1.0 - theta_q };
