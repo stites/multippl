@@ -40,14 +40,15 @@ let n45l = if !n32l then flip 1.0 / 2.0 else false in
 let n46l = if  n33l then flip 1.0 / 2.0 else false in
 let n47l = if !n33l then flip 1.0 / 2.0 else false in
 
-n47l
+observe n46l in
+
+n0
 
 }
 
 
 sample {
-  p ~ poisson(3.0);
-  ix <- p;
+  ix ~ poisson(3.0);
   npackets <- 0;
   while ix > 0 {
     traverses <- exact(network());
