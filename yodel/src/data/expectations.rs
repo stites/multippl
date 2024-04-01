@@ -13,21 +13,21 @@ pub fn log_space_add(lx: f64, ly: f64) -> f64 {
 #[derive(Debug, Clone)]
 pub struct Exp1 {
     pub wquery_sums: Vec<f64>, // queries *already* multiplied by the log-weight
-    pub lwquery_sums: Vec<f64>, // queries *already* multiplied by the log-weight
-    pub query_sums: Vec<f64>,  // queries (for debugging)
-    pub sum_w: f64,            // sum of weights
-    pub sum_lw: f64,           // sum of log-weights
-    pub sum_w2: f64,           // sum of squared weights
-    pub count: u64,            // number of samples drawn
+    // pub lwquery_sums: Vec<f64>,// queries *already* multiplied by the log-weight
+    // pub query_sums: Vec<(f64, f64)>,  // queries (for debugging)
+    pub sum_w: f64, // sum of weights
+    // pub sum_lw: f64,           // sum of log-weights
+    pub sum_w2: f64, // sum of squared weights
+    pub count: u64,  // number of samples drawn
 }
 impl Exp1 {
     pub fn empty() -> Self {
         Self {
-            query_sums: vec![],
+            // query_sums: vec![],
             wquery_sums: vec![],
-            lwquery_sums: vec![],
+            // lwquery_sums: vec![],
             sum_w: 0.0,
-            sum_lw: 0.0,
+            // sum_lw: 0.0,
             sum_w2: 0.0,
             count: 0,
         }
@@ -35,44 +35,55 @@ impl Exp1 {
     pub fn new(lw: Ln, qs: Vec<f64>) -> Self {
         let w = lw.exp();
         Self {
-            query_sums: qs.iter().copied().collect_vec(),
+            // query_sums: qs.iter().copied().map(|q| (q, w)).collect_vec(),
             wquery_sums: qs.iter().map(|q| w * q).collect_vec(),
-            // lwquery_sums: qs.iter().map(|q| lw.add(*q).val()).collect_vec(),
-            lwquery_sums: vec![],
+            // lwquery_sums: qs.iter().map(|q| lw.add(Ln::new(*q))).collect_vec(),
             sum_w: w,
-            sum_lw: lw.val(),
+            // sum_lw: lw.val(),
             sum_w2: w * w,
             count: 1,
         }
     }
     pub fn add(&mut self, o: Self) {
         if self.count == 0 {
-            self.query_sums = o.query_sums;
+            // self.query_sums = o.query_sums;
             self.wquery_sums = o.wquery_sums;
-            self.lwquery_sums = o.lwquery_sums;
+            // self.lwquery_sums = o.lwquery_sums;
             self.sum_w = o.sum_w;
-            self.sum_lw = o.sum_lw;
+            // self.sum_lw = o.sum_lw;
             self.sum_w2 = o.sum_w2;
             self.count = o.count;
         } else if !o.sum_w.is_nan() {
             self.sum_w += o.sum_w;
-            self.sum_lw = log_space_add(self.sum_lw, o.sum_lw);
+            // self.sum_lw = log_space_add(self.sum_lw, o.sum_lw);
 
             self.sum_w2 += o.sum_w2;
             self.count += o.count;
 
-            self.query_sums = izip!(&self.query_sums, &o.query_sums)
-                .map(|(l, r)| l + r)
-                .collect_vec();
+            // self.query_sums = izip!(&self.query_sums, &o.query_sums)
+            //     .map(|((l, lw), (r, rw))| (l + r, lw.add(*rw)))
+            //     .collect_vec();
             self.wquery_sums = izip!(&self.wquery_sums, &o.wquery_sums)
                 .map(|(l, r)| l + r)
                 .collect_vec();
-            self.lwquery_sums = izip!(&self.lwquery_sums, &o.lwquery_sums)
-                .map(|(l, r)| log_space_add(*l, *r))
-                .collect_vec();
+            // self.lwquery_sums = izip!(&self.lwquery_sums, &o.lwquery_sums)
+            //     .map(|(l, r)| Ln(log_space_add(l.val(), r.val())))
+            //     // .map(|(l, r)| log_space_add(*l, *r))
+            //     .collect_vec();
         }
+        // println!("w: {}\tsum: {}", self.sum_w);
     }
     pub fn query(&self) -> Vec<f64> {
+        // for q in self.lwquery_sums.iter() {
+        //     println!("{} - {}", q.val(), self.sum_lw);
+        // }
+        // let q = self
+        //     .lwquery_sums
+        //     .iter()
+        //     .map(|q| (q.val() - self.sum_lw).exp() )
+        //     .collect_vec();
+        // println!("{q:?}");
+
         let x = self
             .wquery_sums
             .iter()

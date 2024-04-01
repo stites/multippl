@@ -235,6 +235,8 @@ pub struct State<'a> {
     pub call_counter: HashMap<FnId, u64>,
     pub next: Option<VarLabel>,
     while_index: u64,
+    while_cache: u64,
+    pub boundaries_seen: usize,
     log_weight: Ln,
     pub fnctx: Option<FnCall>,
 }
@@ -267,8 +269,10 @@ impl<'a> State<'a> {
             funs,
             fnctx: None,
             while_index: 0,
+            while_cache: 0,
             fun_stats,
             call_counter,
+            boundaries_seen: 0,
             next,
         }
     }
@@ -299,10 +303,13 @@ impl<'a> State<'a> {
 
     #[inline(always)]
     pub fn score(&mut self, s: f64) {
-        // if !(p == q) {
-        self.log_weight = self.log_weight.add(Ln::new(s));
-        // self.log_pq.lq = self.log_pq.lq.add(Ln::new(q));
-        // }
+        if self.while_cache != self.while_index {
+            // loops are iid
+            self.log_weight = Ln(data::log_space_add(self.log_weight.val(), s.ln()));
+            self.while_cache = self.while_index;
+        } else {
+            self.log_weight = self.log_weight.add(Ln::new(s));
+        }
     }
     pub fn eval_program_with_data(
         &mut self,
@@ -887,7 +894,6 @@ impl<'a> State<'a> {
                             let dist = statrs::distribution::Poisson::new(*p).unwrap();
                             let v = sample_from(self, dist) as u64;
                             let q = dist.pmf(v);
-                            println!("P({v}) = {q}");
                             let v = SVal::SInt(v);
                             (q, v, d)
                         }
