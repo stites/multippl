@@ -105,4 +105,4 @@ let _ = observe x88 in
 // just return as much as you can
 // [x83, x84, x85, x86, x87, x88, x08, x18, x28, x38]
 // nope, that's kind of unfair to dice, return 2^len(query) = 64 results, which is comparable to 9x9's 81 nodes
-[x83, x84, x85, x86, x87, x88]
+(x86, x87)

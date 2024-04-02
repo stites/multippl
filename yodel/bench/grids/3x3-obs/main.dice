@@ -9,4 +9,4 @@ let x21 = if  x20 &&  x11 then flip 1 / 6 else if  x20 && !x11 then flip 1 / 7 e
 let x22 = if  x21 &&  x12 then flip 1 / 6 else if  x21 && !x12 then flip 1 / 7 else if !x21 &&  x12 then flip 1 / 8 else flip 1 / 9 in
 let _ = observe x22 in
 
-x01
+(x20, x21)
