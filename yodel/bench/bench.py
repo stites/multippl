@@ -135,11 +135,11 @@ if __name__ == "__main__":
     num_steps = args["num_steps"]
     for f in files:
         if f[-3:] == ".py":
-            if "hbn" in parentpath:
-                args["num_steps"] = 100
+            #if "hbn" in parentpath:
+            #    args["num_steps"] = 100
             pyrunner(f, logdir=logdir, **args)
-            if "hbn" in parentpath:
-                args["num_steps"] = num_steps
+            #if "hbn" in parentpath:
+            #    args["num_steps"] = num_steps
             pass
         elif f[-5:] == ".dice":
             args["num_steps"] = 1
@@ -160,11 +160,11 @@ if __name__ == "__main__":
             args["num_steps"] = num_steps
             pass
         elif f[-3:] == ".yo":
-            if "hbn" in parentpath:
-                args["num_steps"] = 100
+            #if "hbn" in parentpath:
+            #    args["num_steps"] = 100
             yorunner(f, logdir=logdir, **args)
-            if "hbn" in parentpath:
-                args["num_steps"] = num_steps
+            #if "hbn" in parentpath:
+            #    args["num_steps"] = num_steps
             pass
         else:
             print(f"WARNING! saw unexpected file {f}")

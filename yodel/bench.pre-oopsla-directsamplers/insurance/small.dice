@@ -1,0 +1,3 @@
+let Age = discrete(0.200000,0.600000,0.200000) in
+let SocioEcon = if ((Age == int(2, 0))) then (discrete(0.400000,0.400000,0.190000,0.010000)) else (if ((Age == int(2, 1))) then (discrete(0.400000,0.400000,0.190000,0.010000)) else (discrete(0.500000,0.200000,0.290000,0.010000))) in
+(SocioEcon,Age)

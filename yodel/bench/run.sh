@@ -24,8 +24,8 @@ run_benchmark() {
 run_clean() {
     (cd "$1" && rm -rf logs/)
 }
-for exp_meta in arrival; do
-# for exp_meta in grids arrival gossip; do
+# for exp_meta in arrival; do
+for exp_meta in grids arrival gossip hbn; do
     for exp in "$exp_meta"/*; do
         if elementIn "$exp" "${SKIP[@]}"; then
             echo "skipping $exp"
