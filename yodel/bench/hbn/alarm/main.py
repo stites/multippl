@@ -58,57 +58,41 @@ def network():
 
     # let _ = observe CATECHOL == 0 in
 
-    return torch.tensor([HISTORY, PCWP, CVP, BP, HRBP, HRSAT, HREKG, PAP, EXPCO2])
+
+    return torch.tensor([HISTORY, PCWP, CVP, PAP, MINVOL, PRESS, EXPCO2])
 
 truth = \
-    [ 0  *   0.0545
-    + 1  *   0.9455
-    , 0  *   0.114341
-    + 1  *   0.678729
-    + 2  *   0.20693
-    + 3  *   0
-    , 0  *   0.114341
-    + 1  *   0.731104
-    + 2  *   0.154555
-    + 3  *   0
-    , 0  *   0.163725834
-    + 1  *   0.418567305
-    + 2  *   0.417706861
-    + 3  *   0
-    , 0  *   0.87335
-    + 1  *   0.057525
-    + 2  *   0.069125
-    + 3  *   0
-    , 0  *   0.840966667
-    + 1  *   0.060116667
-    + 2  *   0.098916667
-    + 3  *   0
-    , 0  *   0.840966667
-    + 1  *   0.060116667
-    + 2  *   0.098916667
-    + 3  *   0
-    , 0  *   0.049642833
-    + 1  *   0.893660279
-    + 2  *   0.056696888
-    + 3  *   0
-    , 0  *   0.103576502
-    + 1  *   0.82371607
-    + 2  *   0.050273398
-    + 3  *   0.02243403
-    ]
+ [ 0 *      0.0545
+ + 1 *      0.9455
+ , 0 *      0.114341
+ + 1 *      0.678729
+ + 2 *      0.20693
+ + 3 *      0
+ , 0 *      0.114341
+ + 1 *      0.731104
+ + 2 *      0.154555
+ + 3 *      0
+ , 0 *  0.049593406
+ + 1 *  0.892782957
+ + 2 *  0.057623637
+ + 3 *  0
+ , 0 *  0.778395253
+ + 1 *  0.065350213
+ + 2 *  0.026829179
+ + 3 *  0.129425355
+ , 0 *  0.027898466
+ + 1 *  0.251138199
+ + 2 *  0.224484428
+ + 3 *  0.496478906
+ , 0 *  0.032723106
+ + 1 *  0.872013852
+ + 2 *  0.05845093
+ + 3 *  0.036812112
+ ]
 
 def model():
-    ls       = pyro.condition(network, data={"CATECHOL": torch.tensor(0)})()
-    gPAP     = pyro.sample("gPAP", dist.Normal(ls[0] + 0.0, 1.0))
-    gEXPCO   = pyro.sample("gEXPCO", dist.Normal(ls[1] + 0.0, 1.0))
-    gBP      = pyro.sample("gBP", dist.Normal(ls[2] + 0.0, 1.0))
-    gHRBP    = pyro.sample("gHRBP", dist.Normal(ls[3] + 0.0, 1.0))
-    gHRSAT   = pyro.sample("gHRSAT", dist.Normal(ls[4] + 0.0, 1.0))
-    gHREKG   = pyro.sample("gHREKG", dist.Normal(ls[5] + 0.0, 1.0))
-    gCVP     = pyro.sample("gCVP", dist.Normal(ls[6] + 0.0, 1.0))
-    gPCWP    = pyro.sample("gPCWP", dist.Normal(ls[7] + 0.0, 1.0))
-    gHISTORY = pyro.sample("gHISTORY", dist.Normal(ls[8] + 0.0, 1.0))
-    return torch.tensor([gPAP, gEXPCO, gBP, gHRBP, gHRSAT, gHREKG, gCVP, gPCWP, gHISTORY])
+    ls = pyro.condition(network, data={k: torch.tensor(2) for k in ["BP", "HRBP", "HRSAT", "HREKG"]})()
+    return torch.tensor([pyro.sample(f"g{i}", dist.Normal(ls[i] + 0.0, 1.0)) for i in range(len(ls))])
 
 
 if __name__ == "__main__":
@@ -136,3 +120,4 @@ if __name__ == "__main__":
         s = end - start
         print(" ".join([f"{x}" for x in xs]))
         print("{:.3f}ms".format(s * 1000))
+        #print(sum(list(map(lambda x: abs(x[0] - x[1]), zip(xs, truth)))))
