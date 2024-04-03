@@ -10,9 +10,11 @@ import pyro
 import pyro.distributions as dist
 from pyro.infer.importance import Importance
 
-truth = [ 28 / 9 ]
 num_nodes = 4
 num_steps = 3
+truth = [ 28 / 9 ]
+num_steps = 8
+truth = [ 8492 / 2187 ]
 def forward(ix, pkt, node):
     s = pyro.sample(
         f"{ix}_n{node}_{pkt}",

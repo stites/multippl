@@ -13,6 +13,9 @@ from pyro.infer.importance import Importance
 num_nodes = 10
 num_steps = 3 # because /maybe/ psi will finish
 truth = [ 298 / 81 ]
+num_steps = 8 # because psi doesn't finish and 3 is really silly
+truth = [ 31052474/4782969 ]
+
 def forward(ix, pkt, node):
     s = pyro.sample(
         f"{ix}_n{node}_{pkt}",

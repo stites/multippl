@@ -738,8 +738,9 @@ impl<'a> State<'a> {
                     let g = crate::compile::anf::eval_sanf(self, &loopctx, guard)?;
                     match &g.sample.out {
                         Some(SVal::SBool(true)) => {
-                            let out = self.eval_sexpr(loopctx, body)?;
+                            let mut out = self.eval_sexpr(loopctx, body)?;
                             self.while_index += 1;
+                            out.exact.accept = BddPtr::PtrTrue; // reset the accepting criteria
                             loopctx = Ctx::from(&out);
                         }
                         Some(SVal::SBool(false)) => {

@@ -51,7 +51,6 @@ pub fn exact2sample_bdd_eff(
     // with rsdd's fold
     let new_samples = mk_output_samples(state.mgr, &out.exact.samples, *dist, s);
     out.exact.samples = new_samples;
-    out.exact.accept = BddPtr::PtrTrue; // reset the accepting criteria
     state.boundaries_seen += 1;
     s
 }
