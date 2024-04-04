@@ -1,1 +1,1 @@
-../../arrival/3x3/avg.py
+../../avg.py
