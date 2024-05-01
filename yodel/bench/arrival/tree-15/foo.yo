@@ -1,0 +1,15 @@
+sample {
+  mx <- 8;
+  ns <- [0];
+  ix <- 0;
+  // ix <- 1 fixes the problem!?!?>
+  // Asya pointed out that maybe it's an off-by-one where 0 is always returning the thing 2-elements behind
+  // Might be true...
+  while ix < mx {
+    pix <- if ix == 0 then 0 else ix - 1; // this is only around so that we can also use "ix<-0"
+    ns <- push(ns, ns[pix] + 1);
+    ix <- ix + 1;
+    true
+  };
+  ns
+}
