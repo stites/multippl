@@ -11,7 +11,8 @@ from multiprocessing import Pool
 import multiprocessing.context as ctx
 
 DEVELOP=False
-USE_NOTI=False if DEVELOP else True
+#USE_NOTI=False if DEVELOP else True
+USE_NOTI=False
 TIMEOUT_SEC= 20 if DEVELOP else 10 * 60 # = 30min
 repo_dir = subprocess.Popen(['git', 'rev-parse', '--show-toplevel'], stdout=subprocess.PIPE).communicate()[0].rstrip().decode('utf-8')
 benchdir = f"{repo_dir}/yodel/bench/"
@@ -85,7 +86,8 @@ def noti_success(mainfile, run_ix, num_runs, sec_per_run):
     _noti(title, message)
 
 def pyrunner(mainfile, logdir="logs/", **kwargs):
-    cmd = ["python", mainfile, "--num-samples", str(kwargs['num_steps']), "--num-runs", "1", "--seed"]
+    #cmd = ["python", mainfile, "--num-samples", str(kwargs['num_steps']), "--num-runs", "1", "--seed"]
+    cmd = ["python", mainfile, "--num-samples", str(kwargs['num_steps']), "--seed"]
     runner_(mainfile, cmd, with_seed=True, logdir=logdir, needs_timer=False, **kwargs)
 
 def timedrunner(bin, mainfile, logdir="logs/", **kwargs):
@@ -170,5 +172,16 @@ if __name__ == "__main__":
             print(f"WARNING! saw unexpected file {f}")
 
 else:
-    print("please run as main", file=sys.stderr)
-    sys.exit(1)
+    import torch
+    def ismean(em):
+        keepdim=False
+        value = em._samples
+        weights = em._log_weights.reshape(
+            em._log_weights.size()
+            + torch.Size([1] * (value.dim() - em._log_weights.dim()))
+        )
+        dim = em._aggregation_dim
+        probs = weights.exp()
+        return (value * probs).sum(
+            dim=dim, keepdim=keepdim
+        ) / probs.sum(dim=dim, keepdim=keepdim)

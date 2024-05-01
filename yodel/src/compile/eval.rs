@@ -303,13 +303,8 @@ impl<'a> State<'a> {
 
     #[inline(always)]
     pub fn score(&mut self, s: f64) {
-        if self.while_cache != self.while_index {
-            // loops are iid
-            self.log_weight = Ln(data::log_space_add(self.log_weight.val(), s.ln()));
-            self.while_cache = self.while_index;
-        } else {
-            self.log_weight = self.log_weight.add(Ln::new(s));
-        }
+        self.log_weight = self.log_weight.add(Ln::new(s));
+        // println!("\t\t{}>>>{:?}", s, self.log_weight);
     }
     pub fn eval_program_with_data(
         &mut self,
@@ -732,15 +727,12 @@ impl<'a> State<'a> {
                 let _enter = span.enter();
                 tracing::debug!("while");
 
-                self.while_index = 0;
                 let mut loopctx = ctx.clone();
                 let guardout = loop {
                     let g = crate::compile::anf::eval_sanf(self, &loopctx, guard)?;
                     match &g.sample.out {
                         Some(SVal::SBool(true)) => {
-                            let mut out = self.eval_sexpr(loopctx, body)?;
-                            self.while_index += 1;
-                            out.exact.accept = BddPtr::PtrTrue; // reset the accepting criteria
+                            let out = self.eval_sexpr(loopctx, body)?;
                             loopctx = Ctx::from(&out);
                         }
                         Some(SVal::SBool(false)) => {

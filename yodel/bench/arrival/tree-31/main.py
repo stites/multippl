@@ -45,13 +45,11 @@ def network(suffix=""):
 
 sites = ["npackets"]
 #truth = [0.176470588 * 3] # = 0.529411764 $ 46l
-truth = [0.066666667 * 3] # = 44l
+truth = [0.066666667 * (3+1)] # = 44l
 def model():
     npackets = pyro.sample("npackets", dist.Poisson(3))
     arrives = torch.zeros(1)
-    if npackets.item() == 0.0:
-        return arrives
-    for ix in pyro.plate("packet", int(npackets.item())):
+    for ix in pyro.plate("packet", int(npackets.item())+1):
         m = pyro.condition(network, data={f"n44l_{ix}": torch.tensor(1.0)})
         arrives += m(suffix=f"_{ix}").item()
     return arrives
@@ -77,7 +75,8 @@ if __name__ == "__main__":
         start = time.time()
         importance = Importance(model, num_samples=args.num_samples)
         marginal = EmpiricalMarginal(importance.run())
-        xs = marginal.mean.flatten()
+        import bench
+        xs = bench.ismean(marginal).flatten()
         end = time.time()
         s = end - start
         print(" ".join([f"{x}" for x in xs]))

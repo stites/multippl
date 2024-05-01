@@ -28,15 +28,16 @@ exact fn network () -> Bool {
 
 sample {
   ix ~ poisson(3.0);
-  // ix <- 1;
+  ix <- ix + 1;
   npackets <- 0;
-  ps <- [];
+  // ps <- [];
   while ix > 0 {
     traverses <- exact(network());
     npackets <- if traverses { npackets + 1 } else { npackets };
-    ps <- push(ps, npackets);
+    // ps <- push(ps, npackets);
     ix <- ix - 1;
     true
   };
-  trace (ps) npackets
+  // trace (ps) npackets
+  npackets
 }

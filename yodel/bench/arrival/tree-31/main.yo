@@ -49,6 +49,7 @@ n0
 
 sample {
   ix ~ poisson(3.0);
+  ix <- ix + 1;
   npackets <- 0;
   while ix > 0 {
     traverses <- exact(network());
