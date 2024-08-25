@@ -1,0 +1,41 @@
+sample fn network () -> Bool {
+  n30r <- true;
+  n20r <- if  n30r then ~bern(1.0 / 2.0) else false;
+  n31r <- if !n20r then ~bern(1.0 / 2.0) else false;
+
+  n10r <- if  n20r then ~bern(1.0 / 2.0) else false;
+  n21r <- if !n10r then ~bern(1.0 / 2.0) else false;
+  n32r <- if  n21r then ~bern(1.0 / 2.0) else false;
+  n33r <- if !n21r then ~bern(1.0 / 2.0) else false;
+
+  n0   <- n10r;
+
+  n10l <- if  n0   then ~bern(1.0 / 2.0) else false;
+
+  n20l <- if  n10l then ~bern(1.0 / 2.0) else false;
+  n21l <- if !n10l then ~bern(1.0 / 2.0) else false;
+
+  n30l <- if  n20l then ~bern(1.0 / 2.0) else false;
+  n31l <- if !n20l then ~bern(1.0 / 2.0) else false;
+  n32l <- if  n21l then (observe true from bern(1.0 / 2.0); true) else false;
+  n33l <- if !n21l then ~bern(1.0 / 2.0) else false;
+
+  n0
+}
+
+
+sample {
+  ix ~ poisson(3.0);
+  ix <- ix + 1;
+  npackets <- 0;
+  // ps <- [];
+  while ix > 0 {
+    traverses <- network();
+    npackets <- if traverses { npackets + 1 } else { npackets };
+    // ps <- push(ps, npackets);
+    ix <- ix - 1;
+    true
+  };
+  // trace (ps) npackets
+  npackets
+}

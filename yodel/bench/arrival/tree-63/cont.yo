@@ -1,0 +1,95 @@
+sample fn network () -> Bool {
+    n50r <- true;
+    n40r <- if  n50r then ~bern( 1.0 / 2.0) else false;
+    n51r <- if !n40r then ~bern( 1.0 / 2.0) else false;
+
+    n30r <- if  n40r then ~bern( 1.0 / 2.0) else false;
+    n41r <- if !n30r then ~bern( 1.0 / 2.0) else false;
+
+    n20r <- if  n30r then ~bern( 1.0 / 2.0) else false;
+
+    n31r <- if !n20r then ~bern( 1.0 / 2.0) else false;
+    n42r <- if  n31r then ~bern( 1.0 / 2.0) else false;
+    n43r <- if !n31r then ~bern( 1.0 / 2.0) else false;
+
+    n10r <- if  n20r then ~bern( 1.0 / 2.0) else false;
+    n21r <- if !n10r then ~bern( 1.0 / 2.0) else false;
+    n32r <- if  n21r then ~bern( 1.0 / 2.0) else false;
+    n33r <- if !n21r then ~bern( 1.0 / 2.0) else false;
+
+    n44r <- if  n32r then ~bern( 1.0 / 2.0) else false;
+    n45r <- if !n32r then ~bern( 1.0 / 2.0) else false;
+    n46r <- if  n33r then ~bern( 1.0 / 2.0) else false;
+    n47r <- if !n33r then ~bern( 1.0 / 2.0) else false;
+
+    n52r <- if  n41r then ~bern( 1.0 / 2.0) else false;
+    n53r <- if !n41r then ~bern( 1.0 / 2.0) else false;
+    n54r <- if  n42r then ~bern( 1.0 / 2.0) else false;
+    n55r <- if !n42r then ~bern( 1.0 / 2.0) else false;
+    n56r <- if  n43r then ~bern( 1.0 / 2.0) else false;
+    n57r <- if !n43r then ~bern( 1.0 / 2.0) else false;
+
+    n58r <- if  n44r then ~bern( 1.0 / 2.0) else false;
+    n59r <- if !n44r then ~bern( 1.0 / 2.0) else false;
+    n510r <- if  n45r then ~bern( 1.0 / 2.0) else false;
+    n511r <- if !n45r then ~bern( 1.0 / 2.0) else false;
+    n512r <- if  n46r then ~bern( 1.0 / 2.0) else false;
+    n513r <- if !n46r then ~bern( 1.0 / 2.0) else false;
+    n514r <- if  n47r then ~bern( 1.0 / 2.0) else false;
+    n515r <- if !n47r then ~bern( 1.0 / 2.0) else false;
+
+    n0   <- n10r;
+
+    n10l <- if n0   then ~bern( 1.0 / 2.0) else false;
+
+    n20l <- if  n10l then ~bern( 1.0 / 2.0) else false;
+    n21l <- if !n10l then ~bern( 1.0 / 2.0) else false;
+
+    n30l <- if  n20l then ~bern( 1.0 / 2.0) else false;
+    n31l <- if !n20l then ~bern( 1.0 / 2.0) else false;
+    n32l <- if  n21l then ~bern( 1.0 / 2.0) else false;
+    n33l <- if !n21l then ~bern( 1.0 / 2.0) else false;
+
+    n40l <- if  n30l then ~bern( 1.0 / 2.0) else false;
+    n41l <- if !n30l then ~bern( 1.0 / 2.0) else false;
+    n42l <- if  n31l then ~bern( 1.0 / 2.0) else false;
+    n43l <- if !n31l then ~bern( 1.0 / 2.0) else false;
+    n44l <- if  n32l then ~bern( 1.0 / 2.0) else false;
+    n45l <- if !n32l then ~bern( 1.0 / 2.0) else false;
+    n46l <- if  n33l then ~bern( 1.0 / 2.0) else false;
+    n47l <- if !n33l then ~bern( 1.0 / 2.0) else false;
+
+    n50l <- if  n40l then ~bern( 1.0 / 2.0) else false;
+    n51l <- if !n40l then ~bern( 1.0 / 2.0) else false;
+    n52l <- if  n41l then ~bern( 1.0 / 2.0) else false;
+    n53l <- if !n41l then ~bern( 1.0 / 2.0) else false;
+    n54l <- if  n42l then ~bern( 1.0 / 2.0) else false;
+    n55l <- if !n42l then ~bern( 1.0 / 2.0) else false;
+    n56l <- if  n43l then ~bern( 1.0 / 2.0) else false;
+    n57l <- if !n43l then ~bern( 1.0 / 2.0) else false;
+
+    n58l <- if  n44l then (observe true from bern( 1.0 / 2.0); true) else false;
+    n59l <- if !n44l then ~bern( 1.0 / 2.0) else false;
+    n510l <- if  n45l then ~bern( 1.0 / 2.0) else false;
+    n511l <- if !n45l then ~bern( 1.0 / 2.0) else false;
+    n512l <- if  n46l then ~bern( 1.0 / 2.0) else false;
+    n513l <- if !n46l then ~bern( 1.0 / 2.0) else false;
+    n514l <- if  n47l then ~bern( 1.0 / 2.0) else false;
+    n515l <- if !n47l then ~bern( 1.0 / 2.0) else false;
+
+    n0
+}
+
+
+sample {
+  ix ~ poisson(3.0);
+  ix <- ix + 1;
+  npackets <- 0;
+  while ix > 0 {
+    traverses <- network();
+    npackets <- if traverses { npackets + 1 } else { npackets };
+    ix <- ix - 1;
+    true
+  };
+  npackets
+}

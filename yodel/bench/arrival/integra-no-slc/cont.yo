@@ -1,0 +1,130 @@
+sample fn network () -> Bool {
+  // Chicago (root)
+  arrives_at_chicago <- true;
+  chicago <- ~discrete(1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0) ;
+  chicago_to_ashburn <- if arrives_at_chicago && chicago == 0 then ~bern( 0.999) else false;
+  chicago_to_minneap <- if arrives_at_chicago && chicago == 1 then ~bern( 0.999) else false;
+  chicago_to_denver  <- if arrives_at_chicago && chicago == 2 then ~bern( 0.999) else false;
+
+  // Dallas (root)
+  arrives_at_dallas <- true;
+  dallas <- ~bern(0.5);
+  dallas_to_denver  <- if arrives_at_dallas &&  dallas then ~bern( 0.999) else false;
+  dallas_to_pheonix <- if arrives_at_dallas && !dallas then ~bern( 0.999) else false;
+
+
+  // St Cloud (root)
+  arrives_at_stcloud <- true;
+  stcloud <- ~bern(0.5);
+  stcloud_to_fargo   <- if arrives_at_stcloud &&  stcloud then ~bern( 0.999) else false;
+  stcloud_to_minneap <- if arrives_at_stcloud && !stcloud then ~bern( 0.999) else false;
+
+  // Minneapolis
+  arrives_at_minneap <- stcloud_to_minneap || chicago_to_minneap;
+  minneap <- ~discrete(1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0) ;
+  minneap_to_fargo   <- if arrives_at_minneap && minneap == 0 then ~bern( 0.999) else false;
+  minneap_to_seattle <- if arrives_at_minneap && minneap == 1 then ~bern( 0.999) else false;
+  minneap_to_newyork <- if arrives_at_minneap && minneap == 2 then ~bern( 0.999) else false;
+
+  // Los Angeles (root)
+  arrives_at_losangeles <- true;
+  losangeles <- ~discrete(1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0) ;
+  losangeles_to_santaclara <- if arrives_at_losangeles && losangeles == 0 then ~bern( 0.999) else false;
+  losangeles_to_lasvegas   <- if arrives_at_losangeles && losangeles == 1 then ~bern( 0.999) else false;
+  losangeles_to_phoenix    <- if arrives_at_losangeles && losangeles == 2 then ~bern( 0.999) else false;
+
+  // Santa Clara
+  arrives_at_santaclara <- losangeles_to_santaclara;
+  santaclara <- true; // is deterministic
+  santaclara_to_sacramento <- if arrives_at_santaclara then ~bern( 0.999) else false;
+
+  // LasVegas
+  arrives_at_lasvegas <- losangeles_to_lasvegas;
+  lasvegas <- ~bern(0.5);
+  lasvegas_to_saltlake <- if arrives_at_lasvegas &&  lasvegas then (observe false from bern( 0.999); false) else false;
+  lasvegas_to_pheonix  <- if arrives_at_lasvegas && !lasvegas then ~bern( 0.999) else false;
+
+  // Sacramento
+  arrives_at_sacramento <- santaclara_to_sacramento;
+  sacramento <- ~discrete(1.0 / 4.0, 1.0 / 4.0, 1.0 / 4.0, 1.0 / 4.0) ;
+  sacramento_to_santarose <- if arrives_at_sacramento && sacramento == 0 then ~bern( 0.999) else false;
+  sacramento_to_reno      <- if arrives_at_sacramento && sacramento == 1 then ~bern( 0.999) else false;
+  sacramento_to_rancho    <- if arrives_at_sacramento && sacramento == 2 then ~bern( 0.999) else false;
+  sacramento_to_portland  <- if arrives_at_sacramento && sacramento == 3 then ~bern( 0.999) else false;
+
+  // Salem (root)
+  arrives_at_salem <- true;
+  salem <- ~bern(0.5);
+  salem_to_portland <- if arrives_at_salem &&  salem then ~bern( 0.999) else false;
+  salem_to_eugene   <- if arrives_at_salem && !salem then ~bern( 0.999) else false;
+
+  // Bend (root)
+  arrives_at_bend <- true;
+  bend <- ~discrete(1.0 / 3.0, 1.0 / 3.0, 1.0 / 3.0) ;
+  bend_to_portland <- if arrives_at_bend && bend == 0 then ~bern( 0.999) else false;
+  bend_to_seattle  <- if arrives_at_bend && bend == 1 then ~bern( 0.999) else false;
+  bend_to_saltlake <- if arrives_at_bend && bend == 2 then (observe false from bern( 0.999); false) else false;
+
+  // New York (root, deterministic)
+  arrives_at_newyork <- true;
+  newyork <- true ;
+  newyork_to_ashburn <- if arrives_at_newyork && newyork then ~bern( 0.999) else false;
+
+  // Spokane (root)
+  arrives_at_spokane <- true;
+  spokane <- ~bern(0.5);
+  spokane_to_seattle  <- if arrives_at_spokane &&  spokane then ~bern( 0.999) else false;
+  spokane_to_billings <- if arrives_at_spokane && !spokane then ~bern( 0.999) else false;
+
+  // Billings (deterministic)
+  arrives_at_billings <- spokane_to_billings;
+  billings <- true ;
+  billings_to_denver <- if arrives_at_billings && billings then ~bern( 0.999) else false;
+
+  // Denver (deterministic)
+  arrives_at_denver <- billings_to_denver || dallas_to_denver || chicago_to_denver;
+  denver <- true ;
+  denver_to_ogden <- if arrives_at_denver && denver then ~bern( 0.999) else false;
+
+  // Ogden
+  arrives_at_ogden <- denver_to_ogden;
+  ogden <- ~bern(0.5);
+  ogden_to_orem     <- if arrives_at_ogden &&  ogden then ~bern( 0.999) else false;
+  ogden_to_saltlake <- if arrives_at_ogden && !ogden then (observe false from bern( 0.999); false) else false;
+
+  // Orem (deterministic)
+  arrives_at_orem <- ogden_to_orem;
+  orem <- true ;
+  orem_to_saltlake <- if arrives_at_orem && orem then (observe false from bern( 0.999); false) else false;
+
+  // SaltLakeCity (deterministic)
+  arrives_at_saltlake <- orem_to_saltlake || ogden_to_saltlake || bend_to_saltlake || lasvegas_to_saltlake;
+  saltlake <- true ;
+  saltlake_to_boise <- if arrives_at_saltlake && saltlake then ~bern( 0.999) else false;
+
+  // Boise (deterministic)
+  arrives_at_boise <- saltlake_to_boise;
+  boise <- true ;
+  boise_to_portland <- if arrives_at_boise && boise then ~bern( 0.999) else false;
+
+  // Portland (deterministic)
+  arrives_at_portland <- bend_to_portland || boise_to_portland || sacramento_to_portland;
+  portland <- true ;
+  portland_to_seattle <- if arrives_at_portland && portland then ~bern( 0.999) else false;
+
+  // observe !arrives_at_saltlake;
+
+  arrives_at_portland
+}
+
+sample {
+  ix ~ poisson(3.0);
+  npackets <- 0;
+  while ix > 0 {
+    arrives <- network();
+    npackets <- if arrives { npackets + 1 } else { npackets };
+    ix <- ix - 1;
+    true
+  };
+  npackets
+}
