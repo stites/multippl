@@ -1,0 +1,549 @@
+#!/usr/bin/env python3
+
+import os, sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from pyro.infer import Importance, EmpiricalMarginal
+import torch
+torch.set_num_threads(1)
+import pyro
+import numpy as np
+import random
+from pyro import poutine
+import pyro.distributions as dist
+from pyro.infer import Importance, EmpiricalMarginal
+from pyro.infer import config_enumerate
+import time
+
+
+
+def network():
+    Age = pyro.sample("Age", dist.Categorical(probs=torch.tensor([0.2, 0.6, 0.2])))
+    Milage = pyro.sample("Milage", dist.Categorical(probs=torch.tensor([0.1, 0.4, 0.4, 0.1])))
+    SocioEcon = pyro.sample("SocioEcon",
+      dist.Categorical(probs=torch.tensor([0.40, 0.40, 0.19, 0.01])) if (Age == 0)
+      else (dist.Categorical(probs=torch.tensor([0.40, 0.40, 0.19, 0.01])) if (Age == 0)
+      else                    dist.Categorical(probs=torch.tensor([0.50, 0.20, 0.29, 0.01]))))
+
+    GoodStudent = pyro.sample("GoodStudent",
+            dist.Categorical(probs=torch.tensor([0.1, 0.9])) if ((SocioEcon == 0) and (Age == 0))
+      else (dist.Categorical(probs=torch.tensor([0.2, 0.8])) if ((SocioEcon == 1) and (Age == 0))
+      else (dist.Categorical(probs=torch.tensor([0.5, 0.5])) if ((SocioEcon == 2) and (Age == 0))
+      else (dist.Categorical(probs=torch.tensor([0.4, 0.6])) if ((SocioEcon == 3) and (Age == 0))
+      else (dist.Categorical(probs=torch.tensor([0.0, 1.0])) if ((SocioEcon == 0) and (Age == 1))
+      else (dist.Categorical(probs=torch.tensor([0.0, 1.0])) if ((SocioEcon == 1) and (Age == 1))
+      else (dist.Categorical(probs=torch.tensor([0.0, 1.0])) if ((SocioEcon == 2) and (Age == 1))
+      else (dist.Categorical(probs=torch.tensor([0.0, 1.0])) if ((SocioEcon == 3) and (Age == 1))
+      else (dist.Categorical(probs=torch.tensor([0.0, 1.0])) if ((SocioEcon == 0) and (Age == 2))
+      else (dist.Categorical(probs=torch.tensor([0.0, 1.0])) if ((SocioEcon == 1) and (Age == 2))
+      else (dist.Categorical(probs=torch.tensor([0.0, 1.0])) if ((SocioEcon == 2) and (Age == 2))
+      else (dist.Categorical(probs=torch.tensor([0.0, 1.0]))                                     ))))))))))))
+
+    RiskAversion = pyro.sample("RiskAversion",
+            dist.Categorical(probs=torch.tensor([0.02, 0.58, 0.30, 0.10]))     if ((Age == 0) and (SocioEcon == 0))
+      else (dist.Categorical(probs=torch.tensor([0.015, 0.285, 0.500, 0.200])) if ((Age == 1) and (SocioEcon == 0))
+      else (dist.Categorical(probs=torch.tensor([0.01, 0.09, 0.40, 0.50]))     if ((Age == 2) and (SocioEcon == 0))
+      else (dist.Categorical(probs=torch.tensor([0.02, 0.38, 0.50, 0.10]))     if ((Age == 0) and (SocioEcon == 1))
+      else (dist.Categorical(probs=torch.tensor([0.015, 0.185, 0.600, 0.200])) if ((Age == 1) and (SocioEcon == 1))
+      else (dist.Categorical(probs=torch.tensor([0.01, 0.04, 0.35, 0.60]))     if ((Age == 2) and (SocioEcon == 1))
+      else (dist.Categorical(probs=torch.tensor([0.02, 0.48, 0.40, 0.10]))     if ((Age == 0) and (SocioEcon == 2))
+      else (dist.Categorical(probs=torch.tensor([0.015, 0.285, 0.500, 0.200])) if ((Age == 1) and (SocioEcon == 2))
+      else (dist.Categorical(probs=torch.tensor([0.01, 0.09, 0.40, 0.50]))     if ((Age == 2) and (SocioEcon == 2))
+      else (dist.Categorical(probs=torch.tensor([0.02, 0.58, 0.30, 0.10]))     if ((Age == 0) and (SocioEcon == 3))
+      else (dist.Categorical(probs=torch.tensor([0.015, 0.285, 0.400, 0.300])) if ((Age == 1) and (SocioEcon == 3))
+      else (dist.Categorical(probs=torch.tensor([0.01, 0.09, 0.40, 0.50])))                                        )))))))))))
+
+  VehicleYear = pyro.sample("VehicleYear",
+          dist.Categorical(probs=torch.tensor([0.15, 0.85]))  if ((SocioEcon == 0) and (RiskAversion == 0))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.7]))    if ((SocioEcon == 1) and (RiskAversion == 0))
+    else (dist.Categorical(probs=torch.tensor([0.8, 0.2]))    if ((SocioEcon == 2) and (RiskAversion == 0))
+    else (dist.Categorical(probs=torch.tensor([0.9, 0.1]))    if ((SocioEcon == 3) and (RiskAversion == 0))
+    else (dist.Categorical(probs=torch.tensor([0.15, 0.85]))  if ((SocioEcon == 0) and (RiskAversion == 1))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.7]))    if ((SocioEcon == 1) and (RiskAversion == 1))
+    else (dist.Categorical(probs=torch.tensor([0.8, 0.2]))    if ((SocioEcon == 2) and (RiskAversion == 1))
+    else (dist.Categorical(probs=torch.tensor([0.9, 0.1]))    if ((SocioEcon == 3) and (RiskAversion == 1))
+    else (dist.Categorical(probs=torch.tensor([0.15, 0.85]))  if ((SocioEcon == 0) and (RiskAversion == 2))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.7]))    if ((SocioEcon == 1) and (RiskAversion == 2))
+    else (dist.Categorical(probs=torch.tensor([0.8, 0.2]))    if ((SocioEcon == 2) and (RiskAversion == 2))
+    else (dist.Categorical(probs=torch.tensor([0.9, 0.1]))    if ((SocioEcon == 3) and (RiskAversion == 2))
+    else (dist.Categorical(probs=torch.tensor([0.15, 0.85]))  if ((SocioEcon == 0) and (RiskAversion == 3))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.7]))    if ((SocioEcon == 1) and (RiskAversion == 3))
+    else (dist.Categorical(probs=torch.tensor([0.8, 0.2]))    if ((SocioEcon == 2) and (RiskAversion == 3))
+    else ( dist.Categorical(probs=torch.tensor([0.9, 0.1]))))))))))))))))))
+
+  MakeModel = pyro.sample("MakeModel",
+         dist.Categorical(probs=torch.tensor([0.1, 0.7, 0.2, 0.0, 0.0]))      if ((SocioEcon == 0) and (RiskAversion == 0))
+    else (dist.Categorical(probs=torch.tensor([0.15, 0.20, 0.65, 0.00, 0.00])) if ((SocioEcon == 1) and (RiskAversion == 0))
+    else (dist.Categorical(probs=torch.tensor([0.20, 0.05, 0.30, 0.45, 0.00])) if ((SocioEcon == 2) and (RiskAversion == 0))
+    else (dist.Categorical(probs=torch.tensor([0.30, 0.01, 0.09, 0.40, 0.20])) if ((SocioEcon == 3) and (RiskAversion == 0))
+    else (dist.Categorical(probs=torch.tensor([0.1, 0.7, 0.2, 0.0, 0.0]))      if ((SocioEcon == 0) and (RiskAversion == 1))
+    else (dist.Categorical(probs=torch.tensor([0.15, 0.20, 0.65, 0.00, 0.00])) if ((SocioEcon == 1) and (RiskAversion == 1))
+    else (dist.Categorical(probs=torch.tensor([0.20, 0.05, 0.30, 0.45, 0.00])) if ((SocioEcon == 2) and (RiskAversion == 1))
+    else (dist.Categorical(probs=torch.tensor([0.30, 0.01, 0.09, 0.40, 0.20])) if ((SocioEcon == 3) and (RiskAversion == 1))
+    else (dist.Categorical(probs=torch.tensor([0.1, 0.7, 0.2, 0.0, 0.0]))      if ((SocioEcon == 0) and (RiskAversion == 2))
+    else (dist.Categorical(probs=torch.tensor([0.15, 0.20, 0.65, 0.00, 0.00])) if ((SocioEcon == 1) and (RiskAversion == 2))
+    else (dist.Categorical(probs=torch.tensor([0.20, 0.05, 0.30, 0.45, 0.00])) if ((SocioEcon == 2) and (RiskAversion == 2))
+    else (dist.Categorical(probs=torch.tensor([0.30, 0.01, 0.09, 0.40, 0.20])) if ((SocioEcon == 3) and (RiskAversion == 2))
+    else (dist.Categorical(probs=torch.tensor([0.1, 0.7, 0.2, 0.0, 0.0]))      if ((SocioEcon == 0) and (RiskAversion == 3))
+    else (dist.Categorical(probs=torch.tensor([0.15, 0.20, 0.65, 0.00, 0.00])) if ((SocioEcon == 1) and (RiskAversion == 3))
+    else (dist.Categorical(probs=torch.tensor([0.20, 0.05, 0.30, 0.45, 0.00])) if ((SocioEcon == 2) and (RiskAversion == 3))
+    else (dist.Categorical(probs=torch.tensor([0.30, 0.01, 0.09, 0.40, 0.20])))                                             )))))))))))))))
+
+  Antilock = pyro.sample("Antilock",
+         dist.Categorical(probs=torch.tensor([0.9, 0.1]))     if ((MakeModel == 0) and (VehicleYear == 0))
+    else (dist.Categorical(probs=torch.tensor([0.001, 0.999])) if ((MakeModel == 1) and (VehicleYear == 0))
+    else (dist.Categorical(probs=torch.tensor([0.4, 0.6]))     if ((MakeModel == 2) and (VehicleYear == 0))
+    else (dist.Categorical(probs=torch.tensor([0.99, 0.01]))   if ((MakeModel == 3) and (VehicleYear == 0))
+    else (dist.Categorical(probs=torch.tensor([0.99, 0.01]))   if ((MakeModel == 4) and (VehicleYear == 0))
+    else (dist.Categorical(probs=torch.tensor([0.1, 0.9]))     if ((MakeModel == 0) and (VehicleYear == 1))
+    else (dist.Categorical(probs=torch.tensor([0.0, 1.0]))     if ((MakeModel == 1) and (VehicleYear == 1))
+    else (dist.Categorical(probs=torch.tensor([0.0, 1.0]))     if ((MakeModel == 2) and (VehicleYear == 1))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.7]))     if ((MakeModel == 3) and (VehicleYear == 1))
+    else (dist.Categorical(probs=torch.tensor([0.15, 0.85])))                                             )))))))))
+
+  SeniorTrain = pyro.sample("SeniorTrain",
+         dist.Categorical(probs=torch.tensor([0.0, 1.0]))           if ((Age == 0) and (RiskAversion == 0))
+    else (dist.Categorical(probs=torch.tensor([0.0, 1.0]))           if ((Age == 1) and (RiskAversion == 0))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.999999])) if ((Age == 2) and (RiskAversion == 0))
+    else (dist.Categorical(probs=torch.tensor([0.0, 1.0]))           if ((Age == 0) and (RiskAversion == 1))
+    else (dist.Categorical(probs=torch.tensor([0.0, 1.0]))           if ((Age == 1) and (RiskAversion == 1))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.999999])) if ((Age == 2) and (RiskAversion == 1))
+    else (dist.Categorical(probs=torch.tensor([0.0, 1.0]))           if ((Age == 0) and (RiskAversion == 2))
+    else (dist.Categorical(probs=torch.tensor([0.0, 1.0]))           if ((Age == 1) and (RiskAversion == 2))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.7]))           if ((Age == 2) and (RiskAversion == 2))
+    else (dist.Categorical(probs=torch.tensor([0.0, 1.0]))           if ((Age == 0) and (RiskAversion == 3))
+    else (dist.Categorical(probs=torch.tensor([0.0, 1.0]))           if ((Age == 1) and (RiskAversion == 3))
+    else (dist.Categorical(probs=torch.tensor([0.9, 0.1])))                                                )))))))))))
+
+  DrivingSkill = pyro.sample("DrivingSkill",
+         dist.Categorical(probs=torch.tensor([0.50, 0.45, 0.05])) if ((Age == 0) and (SeniorTrain == 0))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.6, 0.1]))    if ((Age == 1) and (SeniorTrain == 0))
+    else (dist.Categorical(probs=torch.tensor([0.1, 0.6, 0.3]))    if ((Age == 2) and (SeniorTrain == 0))
+    else (dist.Categorical(probs=torch.tensor([0.50, 0.45, 0.05])) if ((Age == 0) and (SeniorTrain == 1))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.6, 0.1]))    if ((Age == 1) and (SeniorTrain == 1))
+    else (dist.Categorical(probs=torch.tensor([0.4, 0.5, 0.1])))                                         )))))
+
+  DrivQuality = pyro.sample("DrivQuality",
+          dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0]))    if ((DrivingSkill == 0) and (RiskAversion == 0))
+    else (dist.Categorical(probs=torch.tensor([0.5, 0.2, 0.3]))    if ((DrivingSkill == 1) and (RiskAversion == 0))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.2, 0.5]))    if ((DrivingSkill == 2) and (RiskAversion == 0))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0]))    if ((DrivingSkill == 0) and (RiskAversion == 1))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.4, 0.3]))    if ((DrivingSkill == 1) and (RiskAversion == 1))
+    else (dist.Categorical(probs=torch.tensor([0.01, 0.01, 0.98])) if ((DrivingSkill == 2) and (RiskAversion == 1))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0]))    if ((DrivingSkill == 0) and (RiskAversion == 2))
+    else (dist.Categorical(probs=torch.tensor([0.0, 1.0, 0.0]))    if ((DrivingSkill == 1) and (RiskAversion == 2))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 1.0]))    if ((DrivingSkill == 2) and (RiskAversion == 2))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0]))    if ((DrivingSkill == 0) and (RiskAversion == 3))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.8, 0.2]))    if ((DrivingSkill == 1) and (RiskAversion == 3))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 1.0])))                                                  )))))))))))
+
+  Accident = pyro.sample("Accident",
+
+         dist.Categorical(probs=torch.tensor([0.70, 0.20, 0.07, 0.03])) if ((Antilock == 0) and (Milage == 0) and (DrivQuality == 0))
+    else (dist.Categorical(probs=torch.tensor([0.6, 0.2, 0.1, 0.1])) if ((Antilock == 1) and (Milage == 0) and (DrivQuality == 0))
+    else (dist.Categorical(probs=torch.tensor([0.4, 0.3, 0.2, 0.1])) if ((Antilock == 0) and (Milage == 1) and (DrivQuality == 0))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.2, 0.2, 0.3])) if ((Antilock == 1) and (Milage == 1) and (DrivQuality == 0))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.3, 0.2, 0.2])) if ((Antilock == 0) and (Milage == 2) and (DrivQuality == 0))
+    else (dist.Categorical(probs=torch.tensor([0.2, 0.2, 0.2, 0.4])) if ((Antilock == 1) and (Milage == 2) and (DrivQuality == 0))
+    else (dist.Categorical(probs=torch.tensor([0.2, 0.2, 0.3, 0.3])) if ((Antilock == 0) and (Milage == 3) and (DrivQuality == 0))
+    else (dist.Categorical(probs=torch.tensor([0.1, 0.1, 0.3, 0.5])) if ((Antilock == 1) and (Milage == 3) and (DrivQuality == 0))
+    else (dist.Categorical(probs=torch.tensor([0.990, 0.007, 0.002, 0.001])) if ((Antilock == 0) and (Milage == 0) and (DrivQuality == 1))
+    else (dist.Categorical(probs=torch.tensor([0.980, 0.010, 0.005, 0.005])) if ((Antilock == 1) and (Milage == 0) and (DrivQuality == 1))
+    else (dist.Categorical(probs=torch.tensor([0.980, 0.010, 0.005, 0.005])) if ((Antilock == 0) and (Milage == 1) and (DrivQuality == 1))
+    else (dist.Categorical(probs=torch.tensor([0.960, 0.020, 0.015, 0.005])) if ((Antilock == 1) and (Milage == 1) and (DrivQuality == 1))
+    else (dist.Categorical(probs=torch.tensor([0.970, 0.020, 0.007, 0.003])) if ((Antilock == 0) and (Milage == 2) and (DrivQuality == 1))
+    else (dist.Categorical(probs=torch.tensor([0.950, 0.030, 0.015, 0.005])) if ((Antilock == 1) and (Milage == 2) and (DrivQuality == 1))
+    else (dist.Categorical(probs=torch.tensor([0.95, 0.03, 0.01, 0.01])) if ((Antilock == 0) and (Milage == 3) and (DrivQuality == 1))
+    else (dist.Categorical(probs=torch.tensor([0.94, 0.03, 0.02, 0.01])) if ((Antilock == 1) and (Milage == 3) and (DrivQuality == 1))
+    else (dist.Categorical(probs=torch.tensor([0.9990, 0.0007, 0.0002, 0.0001])) if ((Antilock == 0) and (Milage == 0) and (DrivQuality == 2))
+    else (dist.Categorical(probs=torch.tensor([0.995, 0.003, 0.001, 0.001])) if ((Antilock == 1) and (Milage == 0) and (DrivQuality == 2))
+    else (dist.Categorical(probs=torch.tensor([0.995, 0.003, 0.001, 0.001])) if ((Antilock == 0) and (Milage == 1) and (DrivQuality == 2))
+    else (dist.Categorical(probs=torch.tensor([0.990, 0.007, 0.002, 0.001])) if ((Antilock == 1) and (Milage == 1) and (DrivQuality == 2))
+    else (dist.Categorical(probs=torch.tensor([0.990, 0.007, 0.002, 0.001])) if ((Antilock == 0) and (Milage == 2) and (DrivQuality == 2))
+    else (dist.Categorical(probs=torch.tensor([0.980, 0.010, 0.005, 0.005])) if ((Antilock == 1) and (Milage == 2) and (DrivQuality == 2))
+    else (dist.Categorical(probs=torch.tensor([0.985, 0.010, 0.003, 0.002])) if ((Antilock == 0) and (Milage == 3) and (DrivQuality == 2))
+    else (                                                                 dist.Categorical(probs=torch.tensor([0.980, 0.010, 0.007, 0.003]))))))))))))))))))))))))))
+
+  CarValue = pyro.sample("CarValue",
+         dist.Categorical(probs=torch.tensor([0.00, 0.10, 0.80, 0.09, 0.01])) if ((MakeModel == 0) and (VehicleYear == 0) and (Milage == 0))
+    else (dist.Categorical(probs=torch.tensor([0.1, 0.8, 0.1, 0.0, 0.0])) if ((MakeModel == 1) and (VehicleYear == 0) and (Milage == 0))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.1, 0.9, 0.0, 0.0])) if ((MakeModel == 2) and (VehicleYear == 0) and (Milage == 0))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.0, 1.0, 0.0])) if ((MakeModel == 3) and (VehicleYear == 0) and (Milage == 0))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.0, 0.0, 1.0])) if ((MakeModel == 4) and (VehicleYear == 0) and (Milage == 0))
+    else (dist.Categorical(probs=torch.tensor([0.03, 0.30, 0.60, 0.06, 0.01])) if ((MakeModel == 0) and (VehicleYear == 1) and (Milage == 0))
+    else (dist.Categorical(probs=torch.tensor([0.25, 0.70, 0.05, 0.00, 0.00])) if ((MakeModel == 1) and (VehicleYear == 1) and (Milage == 0))
+    else (dist.Categorical(probs=torch.tensor([0.2, 0.3, 0.5, 0.0, 0.0])) if ((MakeModel == 2) and (VehicleYear == 1) and (Milage == 0))
+    else (dist.Categorical(probs=torch.tensor([0.01, 0.09, 0.20, 0.70, 0.00])) if ((MakeModel == 3) and (VehicleYear == 1) and (Milage == 0))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.000001, 0.000001, 0.000001, 0.999996])) if ((MakeModel == 4) and (VehicleYear == 1) and (Milage == 0))
+    else (dist.Categorical(probs=torch.tensor([0.00, 0.10, 0.80, 0.09, 0.01])) if ((MakeModel == 0) and (VehicleYear == 0) and (Milage == 1))
+    else (dist.Categorical(probs=torch.tensor([0.1, 0.8, 0.1, 0.0, 0.0])) if ((MakeModel == 1) and (VehicleYear == 0) and (Milage == 1))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.1, 0.9, 0.0, 0.0])) if ((MakeModel == 2) and (VehicleYear == 0) and (Milage == 1))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.0, 1.0, 0.0])) if ((MakeModel == 3) and (VehicleYear == 0) and (Milage == 1))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.0, 0.0, 1.0])) if ((MakeModel == 4) and (VehicleYear == 0) and (Milage == 1))
+    else (dist.Categorical(probs=torch.tensor([0.16, 0.50, 0.30, 0.03, 0.01])) if ((MakeModel == 0) and (VehicleYear == 1) and (Milage == 1))
+    else (dist.Categorical(probs=torch.tensor([0.7000, 0.2999, 0.0001, 0.0000, 0.0000])) if ((MakeModel == 1) and (VehicleYear == 1) and (Milage == 1))
+    else (dist.Categorical(probs=torch.tensor([0.5, 0.3, 0.2, 0.0, 0.0])) if ((MakeModel == 2) and (VehicleYear == 1) and (Milage == 1))
+    else (dist.Categorical(probs=torch.tensor([0.05, 0.15, 0.30, 0.50, 0.00])) if ((MakeModel == 3) and (VehicleYear == 1) and (Milage == 1))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.000001, 0.000001, 0.000001, 0.999996])) if ((MakeModel == 4) and (VehicleYear == 1) and (Milage == 1))
+    else (dist.Categorical(probs=torch.tensor([0.00, 0.10, 0.80, 0.09, 0.01])) if ((MakeModel == 0) and (VehicleYear == 0) and (Milage == 2))
+    else (dist.Categorical(probs=torch.tensor([0.1, 0.8, 0.1, 0.0, 0.0])) if ((MakeModel == 1) and (VehicleYear == 0) and (Milage == 2))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.1, 0.9, 0.0, 0.0])) if ((MakeModel == 2) and (VehicleYear == 0) and (Milage == 2))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.0, 1.0, 0.0])) if ((MakeModel == 3) and (VehicleYear == 0) and (Milage == 2))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.0, 0.0, 1.0])) if ((MakeModel == 4) and (VehicleYear == 0) and (Milage == 2))
+    else (dist.Categorical(probs=torch.tensor([0.40, 0.47, 0.10, 0.02, 0.01])) if ((MakeModel == 0) and (VehicleYear == 1) and (Milage == 2))
+    else (dist.Categorical(probs=torch.tensor([0.990000, 0.009999, 0.000001, 0.000000, 0.000000])) if ((MakeModel == 1) and (VehicleYear == 1) and (Milage == 2))
+    else (dist.Categorical(probs=torch.tensor([0.7, 0.2, 0.1, 0.0, 0.0])) if ((MakeModel == 2) and (VehicleYear == 1) and (Milage == 2))
+    else (dist.Categorical(probs=torch.tensor([0.1, 0.3, 0.3, 0.3, 0.0])) if ((MakeModel == 3) and (VehicleYear == 1) and (Milage == 2))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.000001, 0.000001, 0.000001, 0.999996])) if ((MakeModel == 4) and (VehicleYear == 1) and (Milage == 2))
+    else (dist.Categorical(probs=torch.tensor([0.00, 0.10, 0.80, 0.09, 0.01])) if ((MakeModel == 0) and (VehicleYear == 0) and (Milage == 3))
+    else (dist.Categorical(probs=torch.tensor([0.1, 0.8, 0.1, 0.0, 0.0])) if ((MakeModel == 1) and (VehicleYear == 0) and (Milage == 3))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.1, 0.9, 0.0, 0.0])) if ((MakeModel == 2) and (VehicleYear == 0) and (Milage == 3))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.0, 1.0, 0.0])) if ((MakeModel == 3) and (VehicleYear == 0) and (Milage == 3))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.0, 0.0, 1.0])) if ((MakeModel == 4) and (VehicleYear == 0) and (Milage == 3))
+    else (dist.Categorical(probs=torch.tensor([0.90, 0.06, 0.02, 0.01, 0.01])) if ((MakeModel == 0) and (VehicleYear == 1) and (Milage == 3))
+    else (dist.Categorical(probs=torch.tensor([0.999998, 0.000001, 0.000001, 0.000000, 0.000000])) if ((MakeModel == 1) and (VehicleYear == 1) and (Milage == 3))
+    else (dist.Categorical(probs=torch.tensor([0.990000, 0.009999, 0.000001, 0.000000, 0.000000])) if ((MakeModel == 2) and (VehicleYear == 1) and (Milage == 3))
+    else (dist.Categorical(probs=torch.tensor([0.2, 0.2, 0.3, 0.3, 0.0])) if ((MakeModel == 3) and (VehicleYear == 1) and (Milage == 3))
+    else                                                                   dist.Categorical(probs=torch.tensor([0.000001, 0.000001, 0.000001, 0.000001, 0.999996])))))))))))))))))))))))))))))))))))))))))
+
+  HomeBase = pyro.sample("HomeBase",
+         dist.Categorical(probs=torch.tensor([0.000001, 0.800000, 0.049999, 0.150000])) if ((RiskAversion == 0) and (SocioEcon == 0))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.800000, 0.050000, 0.149999])) if ((RiskAversion == 1) and (SocioEcon == 0))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.800000, 0.050000, 0.149999])) if ((RiskAversion == 2) and (SocioEcon == 0))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.800000, 0.050000, 0.149999])) if ((RiskAversion == 3) and (SocioEcon == 0))
+    else (dist.Categorical(probs=torch.tensor([0.15, 0.80, 0.04, 0.01])) if ((RiskAversion == 0) and (SocioEcon == 1))
+    else (dist.Categorical(probs=torch.tensor([0.01, 0.25, 0.60, 0.14])) if ((RiskAversion == 1) and (SocioEcon == 1))
+    else (dist.Categorical(probs=torch.tensor([0.299999, 0.000001, 0.600000, 0.100000])) if ((RiskAversion == 2) and (SocioEcon == 1))
+    else (dist.Categorical(probs=torch.tensor([0.950000, 0.000001, 0.024445, 0.025554])) if ((RiskAversion == 3) and (SocioEcon == 1))
+    else (dist.Categorical(probs=torch.tensor([0.35, 0.60, 0.04, 0.01])) if ((RiskAversion == 0) and (SocioEcon == 2))
+    else (dist.Categorical(probs=torch.tensor([0.2, 0.4, 0.3, 0.1])) if ((RiskAversion == 1) and (SocioEcon == 2))
+    else (dist.Categorical(probs=torch.tensor([0.500000, 0.000001, 0.400000, 0.099999])) if ((RiskAversion == 2) and (SocioEcon == 2))
+    else (dist.Categorical(probs=torch.tensor([0.999997, 0.000001, 0.000001, 0.000001])) if ((RiskAversion == 3) and (SocioEcon == 2))
+    else (dist.Categorical(probs=torch.tensor([0.489999, 0.500000, 0.000001, 0.010000])) if ((RiskAversion == 0) and (SocioEcon == 3))
+    else (dist.Categorical(probs=torch.tensor([0.950000, 0.000001, 0.000001, 0.049998])) if ((RiskAversion == 1) and (SocioEcon == 3))
+    else (dist.Categorical(probs=torch.tensor([0.850000, 0.000001, 0.001000, 0.148999])) if ((RiskAversion == 2) and (SocioEcon == 3))
+    else                                                   dist.Categorical(probs=torch.tensor([0.999997, 0.000001, 0.000001, 0.000001])))))))))))))))))
+
+  AntiTheft = pyro.sample("AntiTheft",
+         dist.Categorical(probs=torch.tensor([0.000001, 0.999999])) if ((RiskAversion == 0) and (SocioEcon == 0))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.999999])) if ((RiskAversion == 1) and (SocioEcon == 0))
+    else (dist.Categorical(probs=torch.tensor([0.1, 0.9])) if ((RiskAversion == 2) and (SocioEcon == 0))
+    else (dist.Categorical(probs=torch.tensor([0.95, 0.05])) if ((RiskAversion == 3) and (SocioEcon == 0))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.999999])) if ((RiskAversion == 0) and (SocioEcon == 1))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.999999])) if ((RiskAversion == 1) and (SocioEcon == 1))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.7])) if ((RiskAversion == 2) and (SocioEcon == 1))
+    else (dist.Categorical(probs=torch.tensor([0.999999, 0.000001])) if ((RiskAversion == 3) and (SocioEcon == 1))
+    else (dist.Categorical(probs=torch.tensor([0.05, 0.95])) if ((RiskAversion == 0) and (SocioEcon == 2))
+    else (dist.Categorical(probs=torch.tensor([0.2, 0.8])) if ((RiskAversion == 1) and (SocioEcon == 2))
+    else (dist.Categorical(probs=torch.tensor([0.9, 0.1])) if ((RiskAversion == 2) and (SocioEcon == 2))
+    else (dist.Categorical(probs=torch.tensor([0.999999, 0.000001])) if ((RiskAversion == 3) and (SocioEcon == 2))
+    else (dist.Categorical(probs=torch.tensor([0.5, 0.5])) if ((RiskAversion == 0) and (SocioEcon == 3))
+    else (dist.Categorical(probs=torch.tensor([0.5, 0.5])) if ((RiskAversion == 1) and (SocioEcon == 3))
+    else (dist.Categorical(probs=torch.tensor([0.8, 0.2])) if ((RiskAversion == 2) and (SocioEcon == 3))
+    else                                                   dist.Categorical(probs=torch.tensor([0.999999, 0.000001])))))))))))))))))
+
+  Theft = pyro.sample("Theft",
+         dist.Categorical(probs=torch.tensor([0.000001, 0.999999])) if ((AntiTheft == 0) and (HomeBase == 0) and (CarValue == 0))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.999999])) if ((AntiTheft == 1) and (HomeBase == 0) and (CarValue == 0))
+    else (dist.Categorical(probs=torch.tensor([0.0005, 0.9995])) if ((AntiTheft == 0) and (HomeBase == 1) and (CarValue == 0))
+    else (dist.Categorical(probs=torch.tensor([0.001, 0.999])) if ((AntiTheft == 1) and (HomeBase == 1) and (CarValue == 0))
+    else (dist.Categorical(probs=torch.tensor([0.00001, 0.99999])) if ((AntiTheft == 0) and (HomeBase == 2) and (CarValue == 0))
+    else (dist.Categorical(probs=torch.tensor([0.00001, 0.99999])) if ((AntiTheft == 1) and (HomeBase == 2) and (CarValue == 0))
+    else (dist.Categorical(probs=torch.tensor([0.00001, 0.99999])) if ((AntiTheft == 0) and (HomeBase == 3) and (CarValue == 0))
+    else (dist.Categorical(probs=torch.tensor([0.00001, 0.99999])) if ((AntiTheft == 1) and (HomeBase == 3) and (CarValue == 0))
+    else (dist.Categorical(probs=torch.tensor([0.000002, 0.999998])) if ((AntiTheft == 0) and (HomeBase == 0) and (CarValue == 1))
+    else (dist.Categorical(probs=torch.tensor([0.000002, 0.999998])) if ((AntiTheft == 1) and (HomeBase == 0) and (CarValue == 1))
+    else (dist.Categorical(probs=torch.tensor([0.002, 0.998])) if ((AntiTheft == 0) and (HomeBase == 1) and (CarValue == 1))
+    else (dist.Categorical(probs=torch.tensor([0.005, 0.995])) if ((AntiTheft == 1) and (HomeBase == 1) and (CarValue == 1))
+    else (dist.Categorical(probs=torch.tensor([0.0001, 0.9999])) if ((AntiTheft == 0) and (HomeBase == 2) and (CarValue == 1))
+    else (dist.Categorical(probs=torch.tensor([0.0002, 0.9998])) if ((AntiTheft == 1) and (HomeBase == 2) and (CarValue == 1))
+    else (dist.Categorical(probs=torch.tensor([0.00002, 0.99998])) if ((AntiTheft == 0) and (HomeBase == 3) and (CarValue == 1))
+    else (dist.Categorical(probs=torch.tensor([0.0001, 0.9999])) if ((AntiTheft == 1) and (HomeBase == 3) and (CarValue == 1))
+    else (dist.Categorical(probs=torch.tensor([0.000003, 0.999997])) if ((AntiTheft == 0) and (HomeBase == 0) and (CarValue == 2))
+    else (dist.Categorical(probs=torch.tensor([0.000003, 0.999997])) if ((AntiTheft == 1) and (HomeBase == 0) and (CarValue == 2))
+    else (dist.Categorical(probs=torch.tensor([0.005, 0.995])) if ((AntiTheft == 0) and (HomeBase == 1) and (CarValue == 2))
+    else (dist.Categorical(probs=torch.tensor([0.01, 0.99])) if ((AntiTheft == 1) and (HomeBase == 1) and (CarValue == 2))
+    else (dist.Categorical(probs=torch.tensor([0.0003, 0.9997])) if ((AntiTheft == 0) and (HomeBase == 2) and (CarValue == 2))
+    else (dist.Categorical(probs=torch.tensor([0.0005, 0.9995])) if ((AntiTheft == 1) and (HomeBase == 2) and (CarValue == 2))
+    else (dist.Categorical(probs=torch.tensor([0.00005, 0.99995])) if ((AntiTheft == 0) and (HomeBase == 3) and (CarValue == 2))
+    else (dist.Categorical(probs=torch.tensor([0.0002, 0.9998])) if ((AntiTheft == 1) and (HomeBase == 3) and (CarValue == 2))
+    else (dist.Categorical(probs=torch.tensor([0.000002, 0.999998])) if ((AntiTheft == 0) and (HomeBase == 0) and (CarValue == 3))
+    else (dist.Categorical(probs=torch.tensor([0.000002, 0.999998])) if ((AntiTheft == 1) and (HomeBase == 0) and (CarValue == 3))
+    else (dist.Categorical(probs=torch.tensor([0.005, 0.995])) if ((AntiTheft == 0) and (HomeBase == 1) and (CarValue == 3))
+    else (dist.Categorical(probs=torch.tensor([0.01, 0.99])) if ((AntiTheft == 1) and (HomeBase == 1) and (CarValue == 3))
+    else (dist.Categorical(probs=torch.tensor([0.0003, 0.9997])) if ((AntiTheft == 0) and (HomeBase == 2) and (CarValue == 3))
+    else (dist.Categorical(probs=torch.tensor([0.0005, 0.9995])) if ((AntiTheft == 1) and (HomeBase == 2) and (CarValue == 3))
+    else (dist.Categorical(probs=torch.tensor([0.00005, 0.99995])) if ((AntiTheft == 0) and (HomeBase == 3) and (CarValue == 3))
+    else (dist.Categorical(probs=torch.tensor([0.0002, 0.9998])) if ((AntiTheft == 1) and (HomeBase == 3) and (CarValue == 3))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.999999])) if ((AntiTheft == 0) and (HomeBase == 0) and (CarValue == 4))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.999999])) if ((AntiTheft == 1) and (HomeBase == 0) and (CarValue == 4))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.999999])) if ((AntiTheft == 0) and (HomeBase == 1) and (CarValue == 4))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.999999])) if ((AntiTheft == 1) and (HomeBase == 1) and (CarValue == 4))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.999999])) if ((AntiTheft == 0) and (HomeBase == 2) and (CarValue == 4))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.999999])) if ((AntiTheft == 1) and (HomeBase == 2) and (CarValue == 4))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.999999])) if ((AntiTheft == 0) and (HomeBase == 3) and (CarValue == 4))
+    else                                                                  dist.Categorical(probs=torch.tensor([0.000001, 0.999999])))))))))))))))))))))))))))))))))))))))))
+
+
+  ILiCost = pyro.sample("ILiCost",
+         dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if (Accident == 0)
+    else (dist.Categorical(probs=torch.tensor([0.999000, 0.000998, 0.000001, 0.000001])) if (Accident == 1)
+    else (dist.Categorical(probs=torch.tensor([0.90, 0.05, 0.03, 0.02])) if (Accident == 2)
+    else                         dist.Categorical(probs=torch.tensor([0.80, 0.10, 0.06, 0.04])))))
+
+  OtherCar = pyro.sample("OtherCar",
+         dist.Categorical(probs=torch.tensor([0.5, 0.5])) if (SocioEcon == 0)
+    else (dist.Categorical(probs=torch.tensor([0.8, 0.2])) if (SocioEcon == 1)
+    else (dist.Categorical(probs=torch.tensor([0.9, 0.1])) if (SocioEcon == 2)
+    else                          dist.Categorical(probs=torch.tensor([0.95, 0.05])))))
+
+  RuggedAuto = pyro.sample("RuggedAuto",
+         dist.Categorical(probs=torch.tensor([0.95, 0.04, 0.01])) if ((MakeModel == 0) and (VehicleYear == 0))
+    else (dist.Categorical(probs=torch.tensor([0.5, 0.5, 0.0])) if ((MakeModel == 1) and (VehicleYear == 0))
+    else (dist.Categorical(probs=torch.tensor([0.2, 0.6, 0.2])) if ((MakeModel == 2) and (VehicleYear == 0))
+    else (dist.Categorical(probs=torch.tensor([0.1, 0.6, 0.3])) if ((MakeModel == 3) and (VehicleYear == 0))
+    else (dist.Categorical(probs=torch.tensor([0.05, 0.55, 0.40])) if ((MakeModel == 4) and (VehicleYear == 0))
+    else (dist.Categorical(probs=torch.tensor([0.95, 0.04, 0.01])) if ((MakeModel == 0) and (VehicleYear == 1))
+    else (dist.Categorical(probs=torch.tensor([0.9, 0.1, 0.0])) if ((MakeModel == 1) and (VehicleYear == 1))
+    else (dist.Categorical(probs=torch.tensor([0.05, 0.55, 0.40])) if ((MakeModel == 2) and (VehicleYear == 1))
+    else (dist.Categorical(probs=torch.tensor([0.1, 0.6, 0.3])) if ((MakeModel == 3) and (VehicleYear == 1))
+    else                                                  dist.Categorical(probs=torch.tensor([0.05, 0.55, 0.40])))))))))))
+
+  ThisCarDam = pyro.sample("ThisCarDam",
+         dist.Categorical(probs=torch.tensor([1.0     , 0.0     , 0.0     , 0.0])) if ((Accident == 0) and (RuggedAuto == 0))
+    else (dist.Categorical(probs=torch.tensor([0.001   , 0.900   , 0.098   , 0.001])) if ((Accident == 1) and (RuggedAuto == 0))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.000999, 0.700000, 0.299000])) if ((Accident == 2) and (RuggedAuto == 0))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.000009, 0.000090, 0.999900])) if ((Accident == 3) and (RuggedAuto == 0))
+    else (dist.Categorical(probs=torch.tensor([1.0     , 0.0     , 0.0     , 0.0])) if ((Accident == 0) and (RuggedAuto == 1))
+    else (dist.Categorical(probs=torch.tensor([0.200000, 0.750000, 0.049999, 0.000001])) if ((Accident == 1) and (RuggedAuto == 1))
+    else (dist.Categorical(probs=torch.tensor([0.001   , 0.099   , 0.800   , 0.100])) if ((Accident == 2) and (RuggedAuto == 1))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.000999, 0.009000, 0.990000])) if ((Accident == 3) and (RuggedAuto == 1))
+    else (dist.Categorical(probs=torch.tensor([1.0     , 0.0     , 0.0     , 0.0])) if ((Accident == 0) and (RuggedAuto == 2))
+    else (dist.Categorical(probs=torch.tensor([0.700000, 0.290000, 0.009999, 0.000001])) if ((Accident == 1) and (RuggedAuto == 2))
+    else (dist.Categorical(probs=torch.tensor([0.05    , 0.60    , 0.30    , 0.05])) if ((Accident == 2) and (RuggedAuto == 2))
+    else                                                dist.Categorical(probs=torch.tensor([0.05    , 0.20    , 0.20    , 0.55])))))))))))))
+
+  ThisCarCost = pyro.sample("ThisCarCost",
+         dist.Categorical(probs=torch.tensor([0.2, 0.8, 0.0, 0.0])) if ((ThisCarDam == 0) and (CarValue == 0) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.15, 0.85, 0.00, 0.00])) if ((ThisCarDam == 1) and (CarValue == 0) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.05, 0.95, 0.00, 0.00])) if ((ThisCarDam == 2) and (CarValue == 0) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.03, 0.97, 0.00, 0.00])) if ((ThisCarDam == 3) and (CarValue == 0) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.05, 0.95, 0.00, 0.00])) if ((ThisCarDam == 0) and (CarValue == 1) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.03, 0.97, 0.00, 0.00])) if ((ThisCarDam == 1) and (CarValue == 1) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.01, 0.99, 0.00, 0.00])) if ((ThisCarDam == 2) and (CarValue == 1) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.999999, 0.000000, 0.000000])) if ((ThisCarDam == 3) and (CarValue == 1) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.04, 0.01, 0.95, 0.00])) if ((ThisCarDam == 0) and (CarValue == 2) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.03, 0.02, 0.95, 0.00])) if ((ThisCarDam == 1) and (CarValue == 2) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.001, 0.001, 0.998, 0.000])) if ((ThisCarDam == 2) and (CarValue == 2) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.000001, 0.999998, 0.000000])) if ((ThisCarDam == 3) and (CarValue == 2) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.04, 0.01, 0.95, 0.00])) if ((ThisCarDam == 0) and (CarValue == 3) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.03, 0.02, 0.95, 0.00])) if ((ThisCarDam == 1) and (CarValue == 3) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.001, 0.001, 0.998, 0.000])) if ((ThisCarDam == 2) and (CarValue == 3) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.000001, 0.999998, 0.000000])) if ((ThisCarDam == 3) and (CarValue == 3) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.04, 0.01, 0.20, 0.75])) if ((ThisCarDam == 0) and (CarValue == 4) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.02, 0.03, 0.25, 0.70])) if ((ThisCarDam == 1) and (CarValue == 4) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.001, 0.001, 0.018, 0.980])) if ((ThisCarDam == 2) and (CarValue == 4) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([0.000001, 0.000001, 0.009998, 0.990000])) if ((ThisCarDam == 3) and (CarValue == 4) and (Theft == 0))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((ThisCarDam == 0) and (CarValue == 0) and (Theft == 1))
+    else (dist.Categorical(probs=torch.tensor([0.95, 0.05, 0.00, 0.00])) if ((ThisCarDam == 1) and (CarValue == 0) and (Theft == 1))
+    else (dist.Categorical(probs=torch.tensor([0.25, 0.75, 0.00, 0.00])) if ((ThisCarDam == 2) and (CarValue == 0) and (Theft == 1))
+    else (dist.Categorical(probs=torch.tensor([0.05, 0.95, 0.00, 0.00])) if ((ThisCarDam == 3) and (CarValue == 0) and (Theft == 1))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((ThisCarDam == 0) and (CarValue == 1) and (Theft == 1))
+    else (dist.Categorical(probs=torch.tensor([0.95, 0.05, 0.00, 0.00])) if ((ThisCarDam == 1) and (CarValue == 1) and (Theft == 1))
+    else (dist.Categorical(probs=torch.tensor([0.15, 0.85, 0.00, 0.00])) if ((ThisCarDam == 2) and (CarValue == 1) and (Theft == 1))
+    else (dist.Categorical(probs=torch.tensor([0.01, 0.99, 0.00, 0.00])) if ((ThisCarDam == 3) and (CarValue == 1) and (Theft == 1))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((ThisCarDam == 0) and (CarValue == 2) and (Theft == 1))
+    else (dist.Categorical(probs=torch.tensor([0.99, 0.01, 0.00, 0.00])) if ((ThisCarDam == 1) and (CarValue == 2) and (Theft == 1))
+    else (dist.Categorical(probs=torch.tensor([0.01, 0.01, 0.98, 0.00])) if ((ThisCarDam == 2) and (CarValue == 2) and (Theft == 1))
+    else (dist.Categorical(probs=torch.tensor([0.005, 0.005, 0.990, 0.000])) if ((ThisCarDam == 3) and (CarValue == 2) and (Theft == 1))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((ThisCarDam == 0) and (CarValue == 3) and (Theft == 1))
+    else (dist.Categorical(probs=torch.tensor([0.99, 0.01, 0.00, 0.00])) if ((ThisCarDam == 1) and (CarValue == 3) and (Theft == 1))
+    else (dist.Categorical(probs=torch.tensor([0.005, 0.005, 0.990, 0.000])) if ((ThisCarDam == 2) and (CarValue == 3) and (Theft == 1))
+    else (dist.Categorical(probs=torch.tensor([0.001, 0.001, 0.998, 0.000])) if ((ThisCarDam == 3) and (CarValue == 3) and (Theft == 1))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((ThisCarDam == 0) and (CarValue == 4) and (Theft == 1))
+    else (dist.Categorical(probs=torch.tensor([0.98, 0.01, 0.01, 0.00])) if ((ThisCarDam == 1) and (CarValue == 4) and (Theft == 1))
+    else (dist.Categorical(probs=torch.tensor([0.003, 0.003, 0.044, 0.950])) if ((ThisCarDam == 2) and (CarValue == 4) and (Theft == 1))
+    else                                                                dist.Categorical(probs=torch.tensor([0.000001, 0.000001, 0.029998, 0.970000])))))))))))))))))))))))))))))))))))))))))
+
+  OtherCarCost = pyro.sample("OtherCarCost",
+         dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((Accident == 0) and (RuggedAuto == 0))
+    else (dist.Categorical(probs=torch.tensor([0.99000, 0.00500, 0.00499, 0.00001])) if ((Accident == 1) and (RuggedAuto == 0))
+    else (dist.Categorical(probs=torch.tensor([0.60000, 0.20000, 0.19998, 0.00002])) if ((Accident == 2) and (RuggedAuto == 0))
+    else (dist.Categorical(probs=torch.tensor([0.20000, 0.40000, 0.39996, 0.00004])) if ((Accident == 3) and (RuggedAuto == 0))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((Accident == 0) and (RuggedAuto == 1))
+    else (dist.Categorical(probs=torch.tensor([0.9799657, 0.009999650, 0.009984651, 0.00004999825])) if ((Accident == 1) and (RuggedAuto == 1))
+    else (dist.Categorical(probs=torch.tensor([0.50000, 0.20000, 0.29997, 0.00003])) if ((Accident == 2) and (RuggedAuto == 1))
+    else (dist.Categorical(probs=torch.tensor([0.10000, 0.50000, 0.39994, 0.00006])) if ((Accident == 3) and (RuggedAuto == 1))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((Accident == 0) and (RuggedAuto == 2))
+    else (dist.Categorical(probs=torch.tensor([0.95000, 0.03000, 0.01998, 0.00002])) if ((Accident == 1) and (RuggedAuto == 2))
+    else (dist.Categorical(probs=torch.tensor([0.40000, 0.30000, 0.29996, 0.00004])) if ((Accident == 2) and (RuggedAuto == 2))
+    else                                                dist.Categorical(probs=torch.tensor([0.0050, 0.5500, 0.4449, 0.0001])))))))))))))
+
+  Airbag = pyro.sample("Airbag",
+         dist.Categorical(probs=torch.tensor([1.0, 0.0])) if ((MakeModel == 0) and (VehicleYear == 0))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0])) if ((MakeModel == 1) and (VehicleYear == 0))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0])) if ((MakeModel == 2) and (VehicleYear == 0))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0])) if ((MakeModel == 3) and (VehicleYear == 0))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0])) if ((MakeModel == 4) and (VehicleYear == 0))
+    else (dist.Categorical(probs=torch.tensor([0.1, 0.9])) if ((MakeModel == 0) and (VehicleYear == 1))
+    else (dist.Categorical(probs=torch.tensor([0.05, 0.95])) if ((MakeModel == 1) and (VehicleYear == 1))
+    else (dist.Categorical(probs=torch.tensor([0.2, 0.8])) if ((MakeModel == 2) and (VehicleYear == 1))
+    else (dist.Categorical(probs=torch.tensor([0.6, 0.4])) if ((MakeModel == 3) and (VehicleYear == 1))
+    else                                                  dist.Categorical(probs=torch.tensor([0.1, 0.9])))))))))))
+
+
+  PropCost = pyro.sample("PropCost",
+         dist.Categorical(probs=torch.tensor([0.7, 0.3, 0.0, 0.0])) if ((OtherCarCost == 0) and (ThisCarCost == 0))
+    else (dist.Categorical(probs=torch.tensor([0.00, 0.95, 0.05, 0.00])) if ((OtherCarCost == 1) and (ThisCarCost == 0))
+    else (dist.Categorical(probs=torch.tensor([0.00, 0.00, 0.98, 0.02])) if ((OtherCarCost == 2) and (ThisCarCost == 0))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.0, 1.0])) if ((OtherCarCost == 3) and (ThisCarCost == 0))
+    else (dist.Categorical(probs=torch.tensor([0.00, 0.95, 0.05, 0.00])) if ((OtherCarCost == 0) and (ThisCarCost == 1))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.6, 0.4, 0.0])) if ((OtherCarCost == 1) and (ThisCarCost == 1))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.8, 0.2])) if ((OtherCarCost == 2) and (ThisCarCost == 1))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.0, 1.0])) if ((OtherCarCost == 3) and (ThisCarCost == 1))
+    else (dist.Categorical(probs=torch.tensor([0.00, 0.00, 0.98, 0.02])) if ((OtherCarCost == 0) and (ThisCarCost == 2))
+    else (dist.Categorical(probs=torch.tensor([0.00, 0.00, 0.95, 0.05])) if ((OtherCarCost == 1) and (ThisCarCost == 2))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.6, 0.4])) if ((OtherCarCost == 2) and (ThisCarCost == 2))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.0, 1.0])) if ((OtherCarCost == 3) and (ThisCarCost == 2))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.0, 1.0])) if ((OtherCarCost == 0) and (ThisCarCost == 3))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.0, 1.0])) if ((OtherCarCost == 1) and (ThisCarCost == 3))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.0, 1.0])) if ((OtherCarCost == 2) and (ThisCarCost == 3))
+    else                                                     dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.0, 1.0])))))))))))))))))
+
+  Cushioning = pyro.sample("Cushioning",
+         dist.Categorical(probs=torch.tensor([0.5, 0.3, 0.2, 0.0])) if ((RuggedAuto == 0) and (Airbag == 0))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.1, 0.6, 0.3])) if ((RuggedAuto == 1) and (Airbag == 0))
+    else (dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.0, 1.0])) if ((RuggedAuto == 2) and (Airbag == 0))
+    else (dist.Categorical(probs=torch.tensor([0.7, 0.3, 0.0, 0.0])) if ((RuggedAuto == 0) and (Airbag == 1))
+    else (dist.Categorical(probs=torch.tensor([0.1, 0.6, 0.3, 0.0])) if ((RuggedAuto == 1) and (Airbag == 1))
+    else                                              dist.Categorical(probs=torch.tensor([0.0, 0.0, 0.7, 0.3])))))))
+
+  DrivHist = pyro.sample("DrivHist",
+         dist.Categorical(probs=torch.tensor([0.001, 0.004, 0.995])) if ((DrivingSkill == 0) and (RiskAversion == 0))
+    else (dist.Categorical(probs=torch.tensor([0.1, 0.3, 0.6])) if ((DrivingSkill == 1) and (RiskAversion == 0))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.3, 0.4])) if ((DrivingSkill == 2) and (RiskAversion == 0))
+    else (dist.Categorical(probs=torch.tensor([0.002, 0.008, 0.990])) if ((DrivingSkill == 0) and (RiskAversion == 1))
+    else (dist.Categorical(probs=torch.tensor([0.5, 0.3, 0.2])) if ((DrivingSkill == 1) and (RiskAversion == 1))
+    else (dist.Categorical(probs=torch.tensor([0.6, 0.3, 0.1])) if ((DrivingSkill == 2) and (RiskAversion == 1))
+    else (dist.Categorical(probs=torch.tensor([0.03, 0.15, 0.82])) if ((DrivingSkill == 0) and (RiskAversion == 2))
+    else (dist.Categorical(probs=torch.tensor([0.90, 0.07, 0.03])) if ((DrivingSkill == 1) and (RiskAversion == 2))
+    else (dist.Categorical(probs=torch.tensor([0.990000, 0.009999, 0.000001])) if ((DrivingSkill == 2) and (RiskAversion == 2))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.3, 0.4])) if ((DrivingSkill == 0) and (RiskAversion == 3))
+    else (dist.Categorical(probs=torch.tensor([0.95, 0.04, 0.01])) if ((DrivingSkill == 1) and (RiskAversion == 3))
+    else                                                      dist.Categorical(probs=torch.tensor([0.999998, 0.000001, 0.000001])))))))))))))
+
+  MedCost = pyro.sample("MedCost",
+         dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((Accident == 0) and (Age == 0) and (Cushioning == 0))
+    else (dist.Categorical(probs=torch.tensor([0.960, 0.030, 0.009, 0.001])) if ((Accident == 1) and (Age == 0) and (Cushioning == 0))
+    else (dist.Categorical(probs=torch.tensor([0.5, 0.2, 0.2, 0.1])) if ((Accident == 2) and (Age == 0) and (Cushioning == 0))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.3, 0.2, 0.2])) if ((Accident == 3) and (Age == 0) and (Cushioning == 0))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((Accident == 0) and (Age == 1) and (Cushioning == 0))
+    else (dist.Categorical(probs=torch.tensor([0.960, 0.030, 0.009, 0.001])) if ((Accident == 1) and (Age == 1) and (Cushioning == 0))
+    else (dist.Categorical(probs=torch.tensor([0.5, 0.2, 0.2, 0.1])) if ((Accident == 2) and (Age == 1) and (Cushioning == 0))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.3, 0.2, 0.2])) if ((Accident == 3) and (Age == 1) and (Cushioning == 0))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((Accident == 0) and (Age == 2) and (Cushioning == 0))
+    else (dist.Categorical(probs=torch.tensor([0.90, 0.07, 0.02, 0.01])) if ((Accident == 1) and (Age == 2) and (Cushioning == 0))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.3, 0.2, 0.2])) if ((Accident == 2) and (Age == 2) and (Cushioning == 0))
+    else (dist.Categorical(probs=torch.tensor([0.2, 0.2, 0.3, 0.3])) if ((Accident == 3) and (Age == 2) and (Cushioning == 0))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((Accident == 0) and (Age == 0) and (Cushioning == 1))
+    else (dist.Categorical(probs=torch.tensor([0.9800, 0.0190, 0.0009, 0.0001])) if ((Accident == 1) and (Age == 0) and (Cushioning == 1))
+    else (dist.Categorical(probs=torch.tensor([0.80, 0.15, 0.03, 0.02])) if ((Accident == 2) and (Age == 0) and (Cushioning == 1))
+    else (dist.Categorical(probs=torch.tensor([0.5, 0.2, 0.2, 0.1])) if ((Accident == 3) and (Age == 0) and (Cushioning == 1))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((Accident == 0) and (Age == 1) and (Cushioning == 1))
+    else (dist.Categorical(probs=torch.tensor([0.9800, 0.0190, 0.0009, 0.0001])) if ((Accident == 1) and (Age == 1) and (Cushioning == 1))
+    else (dist.Categorical(probs=torch.tensor([0.80, 0.15, 0.03, 0.02])) if ((Accident == 2) and (Age == 1) and (Cushioning == 1))
+    else (dist.Categorical(probs=torch.tensor([0.5, 0.2, 0.2, 0.1])) if ((Accident == 3) and (Age == 1) and (Cushioning == 1))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((Accident == 0) and (Age == 2) and (Cushioning == 1))
+    else (dist.Categorical(probs=torch.tensor([0.950, 0.040, 0.007, 0.003])) if ((Accident == 1) and (Age == 2) and (Cushioning == 1))
+    else (dist.Categorical(probs=torch.tensor([0.5, 0.2, 0.2, 0.1])) if ((Accident == 2) and (Age == 2) and (Cushioning == 1))
+    else (dist.Categorical(probs=torch.tensor([0.3, 0.3, 0.2, 0.2])) if ((Accident == 3) and (Age == 2) and (Cushioning == 1))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((Accident == 0) and (Age == 0) and (Cushioning == 2))
+    else (dist.Categorical(probs=torch.tensor([0.99000, 0.00990, 0.00009, 0.00001])) if ((Accident == 1) and (Age == 0) and (Cushioning == 2))
+    else (dist.Categorical(probs=torch.tensor([0.95, 0.02, 0.02, 0.01])) if ((Accident == 2) and (Age == 0) and (Cushioning == 2))
+    else (dist.Categorical(probs=torch.tensor([0.90, 0.07, 0.02, 0.01])) if ((Accident == 3) and (Age == 0) and (Cushioning == 2))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((Accident == 0) and (Age == 1) and (Cushioning == 2))
+    else (dist.Categorical(probs=torch.tensor([0.99000, 0.00990, 0.00009, 0.00001])) if ((Accident == 1) and (Age == 1) and (Cushioning == 2))
+    else (dist.Categorical(probs=torch.tensor([0.95, 0.02, 0.02, 0.01])) if ((Accident == 2) and (Age == 1) and (Cushioning == 2))
+    else (dist.Categorical(probs=torch.tensor([0.90, 0.07, 0.02, 0.01])) if ((Accident == 3) and (Age == 1) and (Cushioning == 2))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((Accident == 0) and (Age == 2) and (Cushioning == 2))
+    else (dist.Categorical(probs=torch.tensor([0.970, 0.025, 0.003, 0.002])) if ((Accident == 1) and (Age == 2) and (Cushioning == 2))
+    else (dist.Categorical(probs=torch.tensor([0.90, 0.07, 0.02, 0.01])) if ((Accident == 2) and (Age == 2) and (Cushioning == 2))
+    else (dist.Categorical(probs=torch.tensor([0.60, 0.30, 0.07, 0.03])) if ((Accident == 3) and (Age == 2) and (Cushioning == 2))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((Accident == 0) and (Age == 0) and (Cushioning == 3))
+    else (dist.Categorical(probs=torch.tensor([0.999000, 0.000990, 0.000009, 0.000001])) if ((Accident == 1) and (Age == 0) and (Cushioning == 3))
+    else (dist.Categorical(probs=torch.tensor([0.990, 0.007, 0.002, 0.001])) if ((Accident == 2) and (Age == 0) and (Cushioning == 3))
+    else (dist.Categorical(probs=torch.tensor([0.95, 0.03, 0.01, 0.01])) if ((Accident == 3) and (Age == 0) and (Cushioning == 3))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((Accident == 0) and (Age == 1) and (Cushioning == 3))
+    else (dist.Categorical(probs=torch.tensor([0.999000, 0.000990, 0.000009, 0.000001])) if ((Accident == 1) and (Age == 1) and (Cushioning == 3))
+    else (dist.Categorical(probs=torch.tensor([0.990, 0.007, 0.002, 0.001])) if ((Accident == 2) and (Age == 1) and (Cushioning == 3))
+    else (dist.Categorical(probs=torch.tensor([0.95, 0.03, 0.01, 0.01])) if ((Accident == 3) and (Age == 1) and (Cushioning == 3))
+    else (dist.Categorical(probs=torch.tensor([1.0, 0.0, 0.0, 0.0])) if ((Accident == 0) and (Age == 2) and (Cushioning == 3))
+    else (dist.Categorical(probs=torch.tensor([0.990, 0.007, 0.002, 0.001])) if ((Accident == 1) and (Age == 2) and (Cushioning == 3))
+    else (dist.Categorical(probs=torch.tensor([0.95, 0.03, 0.01, 0.01])) if ((Accident == 2) and (Age == 2) and (Cushioning == 3))
+    else                                                              dist.Categorical(probs=torch.tensor([0.90, 0.05, 0.03, 0.02])))))))))))))))))))))))))))))))))))))))))))))))))
+
+    # let _ = observe CATECHOL == 0)
+
+
+    return torch.tensor([Age , Milage , SocioEcon , GoodStudent , RiskAversion , VehicleYear , MakeModel , Antilock , SeniorTrain , DrivingSkill , DrivQuality , Accident , CarValue , HomeBase , AntiTheft , Theft , ILiCost , OtherCar , RuggedAuto , ThisCarDam , ThisCarCost , OtherCarCost , Airbag , PropCost , Cushioning , DrivHist , MedCost])
+
+# truth = \
+#  [ 0 *      0.0545
+#  + 1 *      0.9455
+#  , 0 *      0.114341
+#  + 1 *      0.678729
+#  + 2 *      0.20693
+#  + 3 *      0
+#  , 0 *      0.114341
+#  + 1 *      0.731104
+#  + 2 *      0.154555
+#  + 3 *      0
+#  , 0 *  0.049593406
+#  + 1 *  0.892782957
+#  + 2 *  0.057623637
+#  + 3 *  0
+#  , 0 *  0.778395253
+#  + 1 *  0.065350213
+#  + 2 *  0.026829179
+#  + 3 *  0.129425355
+#  , 0 *  0.027898466
+#  + 1 *  0.251138199
+#  + 2 *  0.224484428
+#  + 3 *  0.496478906
+#  , 0 *  0.032723106
+#  + 1 *  0.872013852
+#  + 2 *  0.05845093
+#  + 3 *  0.036812112
+#  ]
+
+# def model():
+#     ls = pyro.condition(network, data={k: torch.tensor(2) for k) ["BP", "HRBP", "HRSAT", "HREKG"]})()
+#     return torch.tensor([pyro.sample(f"g{i}", dist.Normal(ls[i] + 0.0, 1.0)) for i) range(len(ls))])
+
+
+# if __name__ == "__main__":
+#     import argparse
+
+#     parser = argparse.ArgumentParser(description="generate data for simple HMMs")
+#     parser.add_argument("--num-samples", default=1_000, type=int,)
+#     parser.add_argument("--num-runs", default=1, type=int,)
+#     parser.add_argument("--seed", default=0, type=int,)
+#     args = parser.parse_args()
+
+#     if args.num_runs > 1:
+#         print("not supported")
+#         sys.exit(1)
+#     else:
+#         # we are benchmarking, expect the same output as yodel
+#         torch.manual_seed(args.seed)
+#         np.random.seed(args.seed)
+#         random.seed(args.seed)
+#         start = time.time()
+#         importance = Importance(model, num_samples=args.num_samples)
+#         marginal = EmpiricalMarginal(importance.run())
+#         xs = marginal.mean.flatten()
+#         end = time.time()
+#         s = end - start
+#         print(" ".join([f"{x}" for x) xs]))
+#         print("{:.3f}ms".format(s * 1000))
+#         #print(sum(list(map(lambda x: abs(x[0] - x[1]), zip(xs, truth)))))
