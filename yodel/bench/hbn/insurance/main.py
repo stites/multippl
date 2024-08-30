@@ -482,9 +482,10 @@ def network():
       else (dist.Categorical(probs=torch.tensor([0.95, 0.03, 0.01, 0.01])) if ((Accident == 2) and (Age == 2) and (Cushioning == 3))
       else                                                              dist.Categorical(probs=torch.tensor([0.90, 0.05, 0.03, 0.02])))))))))))))))))))))))))))))))))))))))))))))))))
 
-    return torch.tensor([PropCost, OtherCarCost, MedCost, ILiCost, ThisCarDam])
+    # return torch.tensor([PropCost, OtherCarCost, MedCost, ILiCost, ThisCarDam])
+    return torch.tensor([PropCost, OtherCarCost, MedCost, OtherCar, DrivHist])
 
-shift = 0.0
+shift = 1.0
 ix0 = shift
 ix1 = ix0 + 1.0
 ix2 = ix1 + 1.0
@@ -499,33 +500,39 @@ ix4 = ix3 + 1.0
 # - ThisCarDam (damage to this car): a four-level factor with levels None, Mild, Moderate and Severe.
 
 truth = [
-  # ix0 * 0.2        + ix1 * 0.6        + ix2 * 0.2,                                            # Age         { "Adolescent", "Adult",      "Senior" }
-  # ix0 * 0.1        + ix1 * 0.4        + ix2 * 0.4        + ix3 * 0.1,                         # Mileage     { "FiveThou", "TwentyThou", "FiftyThou", "Domino" }
-  # ix0 * 0.4333333  + ix1 * 0.3333333  + ix2 * 0.2233333  + ix3 * 0.0100 ,                     # SocioEcon   {      "Prole", "Middle", "UpperMiddle", "Wealthy" }
-  # ix0 * 0.1        + ix1 * 0.9,                                                               # GoodStudent {       "True", "False" };
-  # ix0 * 0.0150000  + ix1 * 0.2808333  + ix2 * 0.4208333  + ix3 * 0.2833333,                   # RiskAversion  { "Psychopath", "Adventurous", "Normal", "Cautious" }
-  # ix0 * 0.5375     + ix1 * 0.4625,                                                            # VehicleYear { "Current", "Older" }
-  # ix0 * 0.1875     + ix1 * 0.2400     + ix2 * 0.3100     + ix3 * 0.2125    + ix4 * 0.0500,    # MakeModel { "SportsCar", "Economy", "FamilySedan", "Luxury", "SuperLuxury" }
-  # ix0 * 0.3831     + ix1 * 0.6169,                                                            # Antilock         { "True", "False" }
-  # ix0 * 0.1000002  + ix1 * 0.8999998,                                                         # SeniorTrain { "True", "False" }
-  # ix0 * 0.0        + ix1 * 1.0        + ix2 * 0.0,                                            # DrivingSkill  { "SubStandard", "Normal", "Expert" }
-  # ix0 * 0.2        + ix1 * 0.6        + ix2 * 0.2,                                            # DrivQuality { "Poor", "Normal", "Excellent" }
-  # ix0 * 0.0        + ix1 * 0.0        + ix2 * 1.0        + ix3 * 0.0,                         # Accident { "None", "Mild", "Moderate", "Severe" }
-  # ix0 * 0.1895001  + ix1 * 0.1972476  + ix2 * 0.2542527  + ix3 * 0.1570001 + ix4 * 0.2019996, # CarValue { "FiveThou", "TenThou", "TwentyThou", "FiftyThou", "Million" }
-  # ix0 * 0.42187475 + ix1 * 0.35937544 + ix2 * 0.13784050 + ix3 * 0.08090931,                  # HomeBase { "Secure", "City", "Suburb", "Rural" }
-  # ix0 * 0.4562501  + ix1 * 0.5437499,                                                         # AntiTheft { "True", "False" }
-  # ix0 * 0.0        + ix1 * 1.0,                                                               # Theft { "True", "False" }
-  # ix0 * 0.7875     + ix1 * 0.2125,                                                            # OtherCar { "True", "False" }
-  # ix0 * 0.385      + ix1 * 0.413      + ix2 * 0.202,                                          # RuggedAuto { "EggShell", "Football", "Tank" }
-  # ix0 * 0.5172001  + ix1 * 0.1847001  + ix2 * 0.2020999  + ix3 * 0.0960000,                   # ThisCarCost { "Thousand", "TenThou", "HundredThou", "Million" }
-  # ix0 * 1.0        + ix1 * 0.0,                                                               # Airbag { "True", "False" }
-  # ix0 * 0.1666667  + ix1 * 0.1333333  + ix2 * 0.2666667  + ix3 * 0.4333333,                   # Cushioning { "Poor", "Fair", "Good", "Excellent" }
-  # ix0 * 0.6125     + ix1 * 0.1775     + ix2 * 0.2100,                                         # DrivHist { "Zero", "One", "Many" }
+  # # ix0 * 0.2        + ix1 * 0.6        + ix2 * 0.2,                                            # Age         { "Adolescent", "Adult",      "Senior" }
+  # # ix0 * 0.1        + ix1 * 0.4        + ix2 * 0.4        + ix3 * 0.1,                         # Mileage     { "FiveThou", "TwentyThou", "FiftyThou", "Domino" }
+  # # ix0 * 0.4333333  + ix1 * 0.3333333  + ix2 * 0.2233333  + ix3 * 0.0100 ,                     # SocioEcon   {      "Prole", "Middle", "UpperMiddle", "Wealthy" }
+  # # ix0 * 0.1        + ix1 * 0.9,                                                               # GoodStudent {       "True", "False" };
+  # # ix0 * 0.0150000  + ix1 * 0.2808333  + ix2 * 0.4208333  + ix3 * 0.2833333,                   # RiskAversion  { "Psychopath", "Adventurous", "Normal", "Cautious" }
+  # # ix0 * 0.5375     + ix1 * 0.4625,                                                            # VehicleYear { "Current", "Older" }
+  # # ix0 * 0.1875     + ix1 * 0.2400     + ix2 * 0.3100     + ix3 * 0.2125    + ix4 * 0.0500,    # MakeModel { "SportsCar", "Economy", "FamilySedan", "Luxury", "SuperLuxury" }
+  # # ix0 * 0.3831     + ix1 * 0.6169,                                                            # Antilock         { "True", "False" }
+  # # ix0 * 0.1000002  + ix1 * 0.8999998,                                                         # SeniorTrain { "True", "False" }
+  # # ix0 * 0.0        + ix1 * 1.0        + ix2 * 0.0,                                            # DrivingSkill  { "SubStandard", "Normal", "Expert" }
+  # # ix0 * 0.2        + ix1 * 0.6        + ix2 * 0.2,                                            # DrivQuality { "Poor", "Normal", "Excellent" }
+  # # ix0 * 0.0        + ix1 * 0.0        + ix2 * 1.0        + ix3 * 0.0,                         # Accident { "None", "Mild", "Moderate", "Severe" }
+  # # ix0 * 0.1895001  + ix1 * 0.1972476  + ix2 * 0.2542527  + ix3 * 0.1570001 + ix4 * 0.2019996, # CarValue { "FiveThou", "TenThou", "TwentyThou", "FiftyThou", "Million" }
+  # # ix0 * 0.42187475 + ix1 * 0.35937544 + ix2 * 0.13784050 + ix3 * 0.08090931,                  # HomeBase { "Secure", "City", "Suburb", "Rural" }
+  # # ix0 * 0.4562501  + ix1 * 0.5437499,                                                         # AntiTheft { "True", "False" }
+  # # ix0 * 0.0        + ix1 * 1.0,                                                               # Theft { "True", "False" }
+  # # ix0 * 0.7875     + ix1 * 0.2125,                                                            # OtherCar { "True", "False" }
+  # # ix0 * 0.385      + ix1 * 0.413      + ix2 * 0.202,                                          # RuggedAuto { "EggShell", "Football", "Tank" }
+  # # ix0 * 0.5172001  + ix1 * 0.1847001  + ix2 * 0.2020999  + ix3 * 0.0960000,                   # ThisCarCost { "Thousand", "TenThou", "HundredThou", "Million" }
+  # # ix0 * 1.0        + ix1 * 0.0,                                                               # Airbag { "True", "False" }
+  # # ix0 * 0.1666667  + ix1 * 0.1333333  + ix2 * 0.2666667  + ix3 * 0.4333333,                   # Cushioning { "Poor", "Fair", "Good", "Excellent" }
+  # # ix0 * 0.6125     + ix1 * 0.1775     + ix2 * 0.2100,                                         # DrivHist { "Zero", "One", "Many" }
+  #   ix0 * 0.043750   + ix1 * 0.175000   + ix2 * 0.300625   + ix3 * 0.480625,                    # PropCost  { "Thousand", "TenThou", "HundredThou", "Million" }
+  #   ix0 * 0.5000000  + ix1 * 0.2333333  + ix2 * 0.2666367  + ix3 * 0.0000300,                   # OtherCarCost { "Thousand", "TenThou", "HundredThou", "Million" }
+  #   ix0 * 0.76083333 + ix1 * 0.11283333 + ix2 * 0.07783333 + ix3 * 0.04850000,                  # MedCost { "Thousand", "TenThou", "HundredThou", "Million" }
+  #   ix0 * 0.90       + ix1 *  0.05      + ix2 * 0.03       + ix3 * 0.02,                        # ILiCost { "Thousand", "TenThou", "HundredThou", "Million" }
+  #   ix0 * 0.01700033 + ix1 * 0.23333300 + ix2 * 0.60000000 + ix3 * 0.14966667,                  # ThisCarDam { "None", "Mild", "Moderate", "Severe" }
+
     ix0 * 0.043750   + ix1 * 0.175000   + ix2 * 0.300625   + ix3 * 0.480625,                    # PropCost  { "Thousand", "TenThou", "HundredThou", "Million" }
     ix0 * 0.5000000  + ix1 * 0.2333333  + ix2 * 0.2666367  + ix3 * 0.0000300,                   # OtherCarCost { "Thousand", "TenThou", "HundredThou", "Million" }
     ix0 * 0.76083333 + ix1 * 0.11283333 + ix2 * 0.07783333 + ix3 * 0.04850000,                  # MedCost { "Thousand", "TenThou", "HundredThou", "Million" }
-    ix0 * 0.90       + ix1 *  0.05      + ix2 * 0.03       + ix3 * 0.02,                        # ILiCost { "Thousand", "TenThou", "HundredThou", "Million" }
-    ix0 * 0.01700033 + ix1 * 0.23333300 + ix2 * 0.60000000 + ix3 * 0.14966667,                  # ThisCarDam { "None", "Mild", "Moderate", "Severe" }
+    ix0 * 0.7875     + ix1 * 0.2125,                                                            # OtherCar { "True", "False" }
+    ix0 * 0.6125     + ix1 * 0.1775     + ix2 * 0.2100,                                         # DrivHist { "Zero", "One", "Many" }
 ]
 
 def model():
@@ -536,7 +543,7 @@ def model():
         DrivingSkill = 2, # Normal (2/3) -- avg driver
     )
     ls = pyro.condition(network, data={k: torch.tensor(v + shift) for k, v in evidence.items()})()
-    return torch.tensor([pyro.sample(f"g{i}", dist.Normal(ls[i] + shift, 1.0)) for i in range(len(ls))])
+    return torch.tensor([pyro.sample(f"g{i}", dist.Normal(ls[i] + shift, 0.25)) for i in range(len(ls))])
 
 if __name__ == "__main__":
     import argparse
