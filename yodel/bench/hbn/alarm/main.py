@@ -92,7 +92,7 @@ truth = \
 
 def model():
     ls = pyro.condition(network, data={k: torch.tensor(2) for k in ["BP", "HRBP", "HRSAT", "HREKG"]})()
-    return torch.tensor([pyro.sample(f"g{i}", dist.Normal(ls[i] + 0.0, 1.0)) for i in range(len(ls))])
+    return torch.tensor([pyro.sample(f"g{i}", dist.Normal(ls[i] + 0.0, 0.25)) for i in range(len(ls))])
 
 
 if __name__ == "__main__":
