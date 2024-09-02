@@ -3,6 +3,7 @@ use crate::*;
 use rand::distributions::Distribution;
 use rsdd::builder::bdd_builder::DDNNFPtr;
 use rsdd::repr::wmc::RealSemiring;
+use std::f64;
 use tracing::*;
 
 #[inline(always)]
@@ -18,6 +19,18 @@ fn mk_output_samples(mgr: &mut Mgr, prev_samples: &BddPtr, dist: BddPtr, sample:
     mgr.and(*prev_samples, new_sample)
 }
 
+pub fn magsafe(theta_q: f64) -> f64 {
+    let tolerance = std::f64::EPSILON * 10.0; // there might be some math on these floats, maybe one order of magnitude more than eps
+    if (1.0 - theta_q).abs() < tolerance {
+        1.0
+    } else {
+        if theta_q.abs() < tolerance {
+            0.0
+        } else {
+            theta_q
+        }
+    }
+}
 #[inline]
 pub fn exact2sample_bdd_eff(
     state: &mut super::eval::State,
@@ -32,14 +45,15 @@ pub fn exact2sample_bdd_eff(
     debug!("csamples: {:?}", ss);
     debug!("  dist size: {}", dist.count_nodes());
     debug!("accept size: {}", accept.count_nodes());
-    let theta_q = crate::inference::calculate_wmc_prob(state.mgr, wmc_params, *dist, accept, ss).0;
+    let theta_q =
+        magsafe(crate::inference::calculate_wmc_prob(state.mgr, wmc_params, *dist, accept, ss).0);
+    debug!("    theta_q: {}", theta_q);
     debug!(" #rec calls: {}", state.mgr.num_recursive_calls());
 
     // for v in crate::utils::variables(*dist) {
     //     debug!("w {:?}: {:?}", v, wmc_params.get_var_weight(v));
     // }
 
-    // println!("x {}", theta_q);
     let bern = statrs::distribution::Bernoulli::new(theta_q).unwrap();
     let s = sample_from(state, bern) == 1.0;
 
