@@ -378,17 +378,14 @@ pub mod discrete {
     fn _floateval(a: &AnfUD<EVal>) -> Option<f64> {
         use Anf::*;
         match a {
-            AVal(_, v) => match v {
-                EVal::EFloat(f) => Some(*f),
-                _ => None,
-            },
+            AVal(_, EVal::EFloat(f)) => Some(*f),
             Plus(bl, br) => Some(_floateval(bl)? + _floateval(br)?),
             Minus(bl, br) => Some(_floateval(bl)? - _floateval(br)?),
             Mult(bl, br) => Some(_floateval(bl)? * _floateval(br)?),
             Div(bl, br) => {
                 let num = _floateval(bl)?;
                 let den = _floateval(br)?;
-                if (num == 0.0) {
+                if num == 0.0 {
                     Some(0.0)
                 } else {
                     Some(num / den)

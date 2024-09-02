@@ -692,7 +692,7 @@ impl<'a> State<'a> {
                     Some(s) => errors::typecheck_failed(&format!(
                         "s-ite guard. Expected bool, found {s:?}"
                     )),
-                    None => errors::typecheck_failed(&format!("s-ite guard empty!")),
+                    None => errors::typecheck_failed(&format!("s-ite guard empty!").to_string()),
                 }
             }
             SMap(d, argname, body, arg) => {

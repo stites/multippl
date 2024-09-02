@@ -90,10 +90,7 @@ pub enum EVal {
 }
 impl EVal {
     pub fn is_bdd(&self) -> bool {
-        match self {
-            EVal::EBdd(x) => true,
-            _ => false,
-        }
+        matches!(self, EVal::EBdd(x))
     }
     pub fn is_bdd_vec(xs: &[EVal]) -> bool {
         xs.iter().all(|x| x.is_bdd())
@@ -106,7 +103,7 @@ impl EVal {
     }
     pub fn pretty(&self) -> String {
         match self {
-            EVal::EBdd(x) => format!("{}", x.print_bdd()),
+            EVal::EBdd(x) => format!("{}", x.print_bdd().to_string()),
             EVal::EFloat(x) => format!("{}", x),
             EVal::EInteger(x) => format!("{:?}", x),
             EVal::EProd(xs) => {

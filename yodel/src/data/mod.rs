@@ -48,7 +48,7 @@ impl WmcP {
         &self.0
     }
     pub fn insert_high(&mut self, lbl: VarLabel, param: f64) {
-        let lo = (1.0 - param);
+        let lo = 1.0 - param;
         let hi = param;
         self.0.set_weight(lbl, RealSemiring(lo), RealSemiring(hi))
     }

@@ -137,11 +137,11 @@ impl EDists {
     #[inline(always)]
     pub fn as_dists(outs: Vec<EVal>) -> Self {
         let ds = Self::_as_dists(outs.clone());
-        if ds.len() > 0 {
-            Self::Bdds(Bdds { bdds: ds })
-        } else {
+        if ds.is_empty() {
             let dds = Self::_as_dist_of_dists(outs);
             Self::Prds(Prds { prods: dds })
+        } else {
+            Self::Bdds(Bdds { bdds: ds })
         }
     }
     #[inline(always)]

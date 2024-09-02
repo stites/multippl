@@ -36,7 +36,7 @@ pub fn importance_weighting_h_h(
     data: DataPoints,
 ) -> (Vec<f64>, Option<WmcStats>) {
     let ds = DataSet::new(data);
-    let (mut mgr, p, lenv, dview) = make_mgr_and_ir_with_data(code, ds).unwrap();
+    let (mgr, p, lenv, dview) = make_mgr_and_ir_with_data(code, ds).unwrap();
     let mut rng = opt.rng();
     let mut e = Exp1::empty();
     let mut wmc = WmcP::new_with_size(lenv.lblsym as usize);
@@ -89,12 +89,11 @@ pub fn importance_weighting_h_h(
                                         let num = mgr.and(*d, final_accept);
 
                                         let RealSemiring(a) = num.wmc(mgr.get_order(), params);
-                                        let foo = a / wmc_final_accept;
+                                        a / wmc_final_accept
                                         // println!("final a && d: {}", &num.print_bdd());
                                         // println!("final wmcnum: {}", a);
                                         // println!("final result: {}", foo);
                                         // println!("final weight: {}", w.0);
-                                        foo
                                     }
                                 })
                                 .collect_vec(),

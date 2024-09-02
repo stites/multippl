@@ -23,12 +23,10 @@ pub fn magsafe(theta_q: f64) -> f64 {
     let tolerance = std::f64::EPSILON * 10.0; // there might be some math on these floats, maybe one order of magnitude more than eps
     if (1.0 - theta_q).abs() < tolerance {
         1.0
+    } else if theta_q.abs() < tolerance {
+        0.0
     } else {
-        if theta_q.abs() < tolerance {
-            0.0
-        } else {
-            theta_q
-        }
+        theta_q
     }
 }
 #[inline]
