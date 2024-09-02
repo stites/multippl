@@ -91,23 +91,26 @@ pub fn wmc_prob(mgr: &mut Mgr, wmc: &WmcP, c: &EOutput) -> (Vec<f64>, Option<Wmc
     let span = tracing::span!(tracing::Level::DEBUG, "wmc_prob");
     let _enter = span.enter();
     let mut last_stats = None;
-    let probs = c
-        .dists()
-        .iter()
-        .map(|d| {
-            let ss = c.samples(mgr);
-            let (p, stats) = calculate_wmc_prob(
-                mgr,
-                // &c.weightmap.as_params(mgr.get_order().num_vars() as u64),
-                wmc.params(),
-                *d,
-                c.accept,
-                ss,
-            );
-            last_stats = stats;
-            p
-        })
-        .collect_vec();
+    let probs = match c.dists() {
+        EDists::Bdds(Bdds { bdds: ds }) => ds
+            .iter()
+            .map(|d| {
+                let ss = c.samples(mgr);
+                let (p, stats) = calculate_wmc_prob(
+                    mgr,
+                    // &c.weightmap.as_params(mgr.get_order().num_vars() as u64),
+                    wmc.params(),
+                    *d,
+                    c.accept,
+                    ss,
+                );
+                last_stats = stats;
+                p
+            })
+            .collect_vec(),
+        EDists::Prds(Prds { prods: dds }) => panic!("wmc_prob foof"),
+    };
+
     (probs, last_stats)
 }
 
@@ -124,15 +127,17 @@ pub fn numerators(mgr: &mut Mgr, wmc: WmcP, c: &EOutput, fold_in_samples: bool) 
     // let params = c.weightmap.as_params(mgr.get_order().num_vars() as u64);
     let params = wmc.params();
 
-    let probs = c
-        .dists()
-        .iter()
-        .map(|dist| {
-            let numerator_formula = mgr.and(*dist, accept);
-            let RealSemiring(num) = numerator_formula.wmc(mgr.get_order(), params);
-            num
-        })
-        .collect_vec();
+    let probs = match c.dists() {
+        EDists::Bdds(Bdds { bdds: ds }) => ds
+            .iter()
+            .map(|dist| {
+                let numerator_formula = mgr.and(*dist, accept);
+                let RealSemiring(num) = numerator_formula.wmc(mgr.get_order(), params);
+                num
+            })
+            .collect_vec(),
+        EDists::Prds(Prds { prods: dds }) => panic!("wmc_prob foof"),
+    };
     probs
 }
 
@@ -142,13 +147,15 @@ pub fn queries(mgr: &mut Mgr, w: &WmcP, c: &EOutput) -> Vec<f64> {
     // let params = c.weightmap.as_params(mgr.get_order().num_vars() as u64);
     let params = w.params();
 
-    let probs = c
-        .dists()
-        .iter()
-        .map(|dist| {
-            let RealSemiring(num) = dist.wmc(mgr.get_order(), params);
-            num
-        })
-        .collect_vec();
+    let probs = match c.dists() {
+        EDists::Bdds(Bdds { bdds: ds }) => ds
+            .iter()
+            .map(|dist| {
+                let RealSemiring(num) = dist.wmc(mgr.get_order(), params);
+                num
+            })
+            .collect_vec(),
+        EDists::Prds(Prds { prods: dds }) => panic!("wmc_prob foof"),
+    };
     probs
 }

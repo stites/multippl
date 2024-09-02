@@ -42,13 +42,15 @@ pub fn eval_eite_predicate(
     cond: &AnfAnn<EVal>,
 ) -> Result<(BddPtr, (Probability, Probability))> {
     let pred = eval_eanf(state, ctx, cond)?;
-    let pred_dist = pred.dists();
-    if !pred_dist.len() == 1 {
-        return Err(TypeError(format!(
-            "Expected EBool for ITE condition\nGot: {cond:?}\n{ctx:?}",
-        )));
-    }
-    let pred_dist = pred_dist[0];
+    let pred_dist = match pred.dists().as_bdd() {
+        None => {
+            return Err(TypeError(format!(
+                "Expected EBool for ITE condition\nGot: {cond:?}\n{ctx:?}",
+            )))
+        }
+        Some(bdd) => bdd,
+    };
+
     let wmc_params = state.wmc.params();
 
     let ss = ctx.exact.samples(state.mgr, state.opts.sample_pruning);
@@ -406,11 +408,12 @@ impl<'a> State<'a> {
                 // and include any sample consistency that is necessary
                 let ss = ctx.exact.samples(self.mgr, self.opts.sample_pruning);
                 let accept = self.mgr.and(accept, ss);
-
-                let dist = comp
-                    .dists()
-                    .into_iter()
-                    .fold(accept, |global, cur| self.mgr.and(global, cur));
+                let dist = match comp.dists() {
+                    EDists::Bdds(Bdds { bdds: ds }) => ds
+                        .into_iter()
+                        .fold(accept, |global, cur| self.mgr.and(global, cur)),
+                    EDists::Prds(Prds { prods: dds }) => panic!("foof"),
+                };
 
                 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 // Score the program:
@@ -468,13 +471,15 @@ impl<'a> State<'a> {
                 tracing::debug!("ite");
 
                 let pred = eval_eanf(self, &ctx, cond)?;
-                let pred_dist = pred.dists();
-                if !pred_dist.len() == 1 {
-                    return Err(TypeError(format!(
-                        "Expected EBool for ITE condition\nGot: {cond:?}\n{ctx:?}",
-                    )));
-                }
-                let pred_dist = pred_dist[0];
+                let pred_dist = match pred.dists().as_bdd() {
+                    None => {
+                        return Err(TypeError(format!(
+                            "Expected EBool for ITE condition\nGot: {cond:?}\n{ctx:?}",
+                        )))
+                    }
+                    Some(bdd) => bdd,
+                };
+
                 // let (pred_dist, (wmc_true, wmc_false)) = eval_eite_predicate(self, &ctx, cond)?;
 
                 let tspan = tracing::span!(tracing::Level::DEBUG, "tru");

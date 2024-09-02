@@ -14,6 +14,22 @@ use rsdd::sample::probability::Probability;
 pub type SubstMap<V> = HashMap<UniqueId, V>;
 pub type Tr = Vec<(SVal, Dist, f64, Option<UniqueId>)>;
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum EDists {
+    Bdds(Bdds),
+    Prds(Prds),
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Bdds {
+    pub bdds: Vec<BddPtr>,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+pub struct Prds {
+    pub prods: Vec<Vec<BddPtr>>,
+}
+
 /// exact compilation context
 #[derive(Debug, Clone, PartialEq)]
 pub struct ECtx {
@@ -103,21 +119,71 @@ impl GetSamples for EOutput {
         self.samples
     }
 }
-#[inline(always)]
-pub fn as_dists(outs: Vec<EVal>) -> Vec<BddPtr> {
-    outs.iter()
-        // .cloned()
-        .filter(|v| match *v {
-            EVal::EBdd(b) => true,
-            a => false,
-        })
-        .cloned()
-        .map(|v| match v {
-            EVal::EBdd(b) => Ok(b),
-            a => errors::typecheck_failed(&format!("eoutput projection into bdds got {a:?}")),
-        })
-        .collect::<Result<Vec<_>>>()
-        .unwrap()
+impl EDists {
+    #[inline(always)]
+    pub fn as_bdd(&self) -> Option<BddPtr> {
+        match &self {
+            Self::Bdds(Bdds { bdds: ds }) => {
+                if ds.len() == 1 {
+                    Some(ds[0])
+                } else {
+                    None
+                }
+            }
+            Self::Prds(Prds { prods: dds }) => None,
+        }
+    }
+
+    #[inline(always)]
+    pub fn as_dists(outs: Vec<EVal>) -> Self {
+        let ds = Self::_as_dists(outs.clone());
+        if ds.len() > 0 {
+            Self::Bdds(Bdds { bdds: ds })
+        } else {
+            let dds = Self::_as_dist_of_dists(outs);
+            Self::Prds(Prds { prods: dds })
+        }
+    }
+    #[inline(always)]
+    pub fn as_dist(bdd: BddPtr) -> Self {
+        Self::Bdds(Bdds { bdds: vec![bdd] })
+    }
+
+    #[inline(always)]
+    fn _as_dists(outs: Vec<EVal>) -> Vec<BddPtr> {
+        outs.iter()
+            // .cloned()
+            .filter(|v| match *v {
+                EVal::EBdd(b) => true,
+                a => false,
+            })
+            .cloned()
+            .map(|v| match v {
+                EVal::EBdd(b) => Ok(b),
+                a => errors::typecheck_failed(&format!("eoutput projection into bdds got {a:?}")),
+            })
+            .collect::<Result<Vec<_>>>()
+            .unwrap()
+    }
+    // how I wish I had a gadt
+    #[inline(always)]
+    fn _as_dist_of_dists(outs: Vec<EVal>) -> Vec<Vec<BddPtr>> {
+        outs.iter()
+            // .cloned()
+            .filter(|v| match *v {
+                EVal::EProd(bs) => true,
+                a => false,
+            })
+            .cloned()
+            .map(|v| match v {
+                EVal::EProd(bs) => Ok(Self::_as_dists(bs)),
+                a => {
+                    errors::typecheck_failed(&format!("eoutput projection into bdd prod got {a:?}"))
+                }
+            })
+            .collect::<Result<Vec<_>>>()
+            .unwrap()
+    }
 }
 impl EOutput {
     pub fn from_anf_out(ctx: &ECtx, out: Option<EVal>) -> Self {
@@ -145,10 +211,10 @@ impl EOutput {
         self.samples
     }
 
-    pub fn dists(&self) -> Vec<BddPtr> {
+    pub fn dists(&self) -> EDists {
         match &self.out {
-            Some(EVal::EBdd(b)) => vec![*b],
-            Some(EVal::EProd(bs)) => as_dists(bs.to_vec()),
+            Some(EVal::EBdd(b)) => EDists::as_dist(*b),
+            Some(EVal::EProd(bs)) => EDists::as_dists(bs.to_vec()),
             a => errors::typecheck_failed(&format!("eoutput projection into bdds got {a:?}"))
                 .unwrap(),
         }

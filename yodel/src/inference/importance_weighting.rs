@@ -78,26 +78,28 @@ pub fn importance_weighting_h_h(
                     // TODO drop this traversal, pre-compute during eval
                     Query::EQuery(_) => {
                         // the final accepting criteria is a & s. Normalize the query.
-                        let lquery = out
-                            .exact
-                            .dists()
-                            .iter()
-                            .map(|d| {
-                                if wmc_final_accept == 0.0 {
-                                    0.0
-                                } else {
-                                    let num = mgr.and(*d, final_accept);
+                        println!("{:?}", out.exact.dists());
+                        let lquery = match out.exact.dists() {
+                            EDists::Bdds(Bdds { bdds: ds }) => ds
+                                .iter()
+                                .map(|d| {
+                                    if wmc_final_accept == 0.0 {
+                                        0.0
+                                    } else {
+                                        let num = mgr.and(*d, final_accept);
 
-                                    let RealSemiring(a) = num.wmc(mgr.get_order(), params);
-                                    let foo = a / wmc_final_accept;
-                                    // println!("final a && d: {}", &num.print_bdd());
-                                    // println!("final wmcnum: {}", a);
-                                    // println!("final result: {}", foo);
-                                    // println!("final weight: {}", w.0);
-                                    foo
-                                }
-                            })
-                            .collect_vec();
+                                        let RealSemiring(a) = num.wmc(mgr.get_order(), params);
+                                        let foo = a / wmc_final_accept;
+                                        // println!("final a && d: {}", &num.print_bdd());
+                                        // println!("final wmcnum: {}", a);
+                                        // println!("final result: {}", foo);
+                                        // println!("final weight: {}", w.0);
+                                        foo
+                                    }
+                                })
+                                .collect_vec(),
+                            EDists::Prds(Prds { prods: dds }) => panic!("IW foof"),
+                        };
 
                         // Weight the query by ratio of a & s : s
                         // let w = Ln::new(wmc_final_accept).sub(Ln::new(wmc_sample));
