@@ -193,7 +193,14 @@ fn main() -> Result<(), Box<dyn Error>> {
         println!("{:?}", stats);
     }
 
-    println!("{}", query.into_iter().map(|f| f.to_string()).join(" "));
+    match query {
+        Either::Left(qs) => println!("{}", qs.into_iter().map(|f| f.to_string()).join(" ")),
+        Either::Right(qss) => {
+            for qs in qss {
+                println!("{}", qs.into_iter().map(|f| f.to_string()).join(" "));
+            }
+        }
+    }
     // if format!("{:?}", query).len() < 80 {
     //     println!("   Computed: {:?}", query);
     // } else {

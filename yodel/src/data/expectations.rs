@@ -11,8 +11,8 @@ pub fn log_space_add(lx: f64, ly: f64) -> f64 {
     }
 }
 #[derive(Debug, Clone)]
-pub struct Exp1 {
-    pub wquery_sums: Vec<f64>, // queries *already* multiplied by the log-weight
+pub struct Exp1<X> {
+    pub wquery_sums: Vec<X>, // queries *already* multiplied by the log-weight
     // pub lwquery_sums: Vec<f64>,// queries *already* multiplied by the log-weight
     // pub query_sums: Vec<(f64, f64)>,  // queries (for debugging)
     pub sum_w: f64, // sum of weights
@@ -20,7 +20,8 @@ pub struct Exp1 {
     pub sum_w2: f64, // sum of squared weights
     pub count: u64,  // number of samples drawn
 }
-impl Exp1 {
+
+impl<X> Exp1<X> {
     pub fn empty() -> Self {
         Self {
             // query_sums: vec![],
@@ -32,11 +33,11 @@ impl Exp1 {
             count: 0,
         }
     }
-    pub fn new(lw: Ln, qs: Vec<f64>) -> Self {
+    pub fn gnew(lw: Ln, qs: Vec<X>, wmult: impl Fn(f64, &X) -> X) -> Self {
         let w = lw.exp();
         Self {
             // query_sums: qs.iter().copied().map(|q| (q, w)).collect_vec(),
-            wquery_sums: qs.iter().map(|q| w * q).collect_vec(),
+            wquery_sums: qs.iter().map(|q| wmult(w, q)).collect_vec(),
             // lwquery_sums: qs.iter().map(|q| lw.add(Ln::new(*q))).collect_vec(),
             sum_w: w,
             // sum_lw: lw.val(),
@@ -44,7 +45,7 @@ impl Exp1 {
             count: 1,
         }
     }
-    pub fn add(&mut self, o: Self) {
+    pub fn gadd(&mut self, o: Self, adder: impl Fn(&X, &X) -> X) {
         if self.count == 0 {
             // self.query_sums = o.query_sums;
             self.wquery_sums = o.wquery_sums;
@@ -55,54 +56,53 @@ impl Exp1 {
             self.count = o.count;
         } else if !o.sum_w.is_nan() {
             self.sum_w += o.sum_w;
-            // self.sum_lw = log_space_add(self.sum_lw, o.sum_lw);
 
             self.sum_w2 += o.sum_w2;
             self.count += o.count;
 
-            // self.query_sums = izip!(&self.query_sums, &o.query_sums)
-            //     .map(|((l, lw), (r, rw))| (l + r, lw.add(*rw)))
-            //     .collect_vec();
             self.wquery_sums = izip!(&self.wquery_sums, &o.wquery_sums)
-                .map(|(l, r)| l + r)
+                .map(|(l, r)| adder(&l, &r))
                 .collect_vec();
-            // self.lwquery_sums = izip!(&self.lwquery_sums, &o.lwquery_sums)
-            //     .map(|(l, r)| Ln(log_space_add(l.val(), r.val())))
-            //     // .map(|(l, r)| log_space_add(*l, *r))
-            //     .collect_vec();
         }
-        // println!("w: {}\tsum: {}", self.sum_w);
     }
-    pub fn query(&self) -> Vec<f64> {
-        // for q in self.lwquery_sums.iter() {
-        //     println!("{} - {}", q.val(), self.sum_lw);
-        // }
-        // let q = self
-        //     .lwquery_sums
-        //     .iter()
-        //     .map(|q| (q.val() - self.sum_lw).exp() )
-        //     .collect_vec();
-        // println!("{q:?}");
-
-        let x = self
-            .wquery_sums
+    pub fn gquery(&self, gdiv: impl Fn(&X, f64) -> X) -> Vec<X> {
+        self.wquery_sums
             .iter()
-            .map(|q| if q == &0.0 { 0.0 } else { q / self.sum_w })
-            .collect_vec();
-
-        // let y = self
-        //     .lwquery_sums
-        //     .iter()
-        //     .map(|q| (q - self.sum_lw).exp())
-        //     .collect_vec();
-        x
+            .map(|q| gdiv(q, self.sum_w))
+            .collect_vec()
     }
-    pub fn var(&self) -> f64 {
+    pub fn variance(&self) -> f64 {
         if self.sum_w2 == 0.0 {
             0.0
         } else {
             self.sum_w2 / self.sum_w
         }
+    }
+}
+impl Exp1<f64> {
+    pub fn new(lw: Ln, qs: Vec<f64>) -> Self {
+        Self::gnew(lw, qs, |w, q| w * q)
+    }
+    pub fn add_f64(&mut self, o: Self) {
+        self.gadd(o, |l, r| l + r)
+    }
+    pub fn query(&self) -> Vec<f64> {
+        self.gquery(|q, sum_w| if q == &0.0 { 0.0 } else { q / sum_w })
+    }
+}
+impl Exp1<Vec<f64>> {
+    pub fn new(lw: Ln, qs: Vec<Vec<f64>>) -> Self {
+        Self::gnew(lw, qs, |w, qs| qs.iter().map(|q| w * q).collect_vec())
+    }
+    pub fn add_vec(&mut self, o: Self) {
+        self.gadd(o, |ls, rs| izip!(ls, rs).map(|(l, r)| l + r).collect_vec())
+    }
+    pub fn query(&self) -> Vec<Vec<f64>> {
+        self.gquery(|qs, sum_w| {
+            qs.iter()
+                .map(|q| if q == &0.0 { 0.0 } else { q / sum_w })
+                .collect_vec()
+        })
     }
 }
 
