@@ -408,13 +408,7 @@ impl<'a> State<'a> {
                 // and include any sample consistency that is necessary
                 let ss = ctx.exact.samples(self.mgr, self.opts.sample_pruning);
                 let accept = self.mgr.and(accept, ss);
-                let dist = match comp.dists() {
-                    EDists::Bdds(Bdds { bdds: ds }) => ds
-                        .into_iter()
-                        .fold(accept, |global, cur| self.mgr.and(global, cur)),
-
-                    EDists::Prds(Prds { prods: dds }) => panic!("foof"),
-                };
+                let dist = comp.dists().as_bdd().unwrap();
 
                 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 // Score the program:

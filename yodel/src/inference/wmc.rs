@@ -108,7 +108,7 @@ pub fn wmc_prob(mgr: &mut Mgr, wmc: &WmcP, c: &EOutput) -> (Vec<f64>, Option<Wmc
                 p
             })
             .collect_vec(),
-        EDists::Prds(Prds { prods: dds }) => panic!("wmc_prob foof"),
+        EDists::Prds(Prds { prods: dds }) => panic!("wmc_prob does not nest"),
     };
 
     (probs, last_stats)
@@ -136,7 +136,7 @@ pub fn numerators(mgr: &mut Mgr, wmc: WmcP, c: &EOutput, fold_in_samples: bool) 
                 num
             })
             .collect_vec(),
-        EDists::Prds(Prds { prods: dds }) => panic!("wmc_prob foof"),
+        EDists::Prds(Prds { prods: dds }) => panic!("wmc_prob does not nest"),
     };
     probs
 }
@@ -155,7 +155,7 @@ pub fn queries(mgr: &mut Mgr, w: &WmcP, c: &EOutput) -> Vec<f64> {
                 num
             })
             .collect_vec(),
-        EDists::Prds(Prds { prods: dds }) => panic!("wmc_prob foof"),
+        EDists::Prds(Prds { prods: dds }) => panic!("wmc_prob does not nest"),
     };
     probs
 }
