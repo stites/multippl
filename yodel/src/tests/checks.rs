@@ -26,6 +26,10 @@ pub fn check_invariant(s: &str, precision: Option<f64>, n: Option<usize>, p: &st
         },
     );
     debug!("exact:  {:?}", exact);
+    let approx = match approx {
+        Either::Left(l) => l,
+        Either::Right(l) => panic!("check_invariant does not have support for returning products"),
+    };
     debug!("approx: {:?}", approx);
 
     assert_eq!(
@@ -94,7 +98,7 @@ pub fn check_inference_h(
 #[allow(clippy::too_many_arguments)]
 pub fn check_inference_h_h(
     infname: &str,
-    inf: &dyn Fn(&str, DataPoints) -> (Vec<f64>, Option<WmcStats>),
+    inf: &dyn Fn(&str, DataPoints) -> (Either<Vec<f64>, Vec<Vec<f64>>>, Option<WmcStats>),
     precision: f64,
     s: &str,
     fs: Vec<f64>,
@@ -102,7 +106,12 @@ pub fn check_inference_h_h(
     do_assert: bool,
     dp: DataPoints,
 ) {
-    let prs = inf(p, dp).0;
+    let prs = match inf(p, dp).0 {
+        Either::Left(l) => l,
+        Either::Right(l) => {
+            panic!("check_inference_h_h does not have support for returning products")
+        }
+    };
     assert_eq!(
         prs.len(),
         fs.len(),
@@ -158,7 +167,12 @@ pub fn check_approx_h_with_data(
 pub fn check_approx_h(s: &str, f: Vec<f64>, p: &str, n: usize, seed: Option<u64>) {
     check_inference(
         "approx",
-        &|p| importance_weighting_h(n, p, &Options::new(seed, false, USE_DEBUG, USE_OPT, 0)),
+        &|p| match importance_weighting_h(n, p, &Options::new(seed, false, USE_DEBUG, USE_OPT, 0)) {
+            (Either::Left(l), o) => (l, o),
+            (Either::Right(l), _) => {
+                panic!("check_inference_h_h does not have support for returning products")
+            }
+        },
         0.01,
         s,
         f,

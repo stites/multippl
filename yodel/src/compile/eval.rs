@@ -412,6 +412,7 @@ impl<'a> State<'a> {
                     EDists::Bdds(Bdds { bdds: ds }) => ds
                         .into_iter()
                         .fold(accept, |global, cur| self.mgr.and(global, cur)),
+
                     EDists::Prds(Prds { prods: dds }) => panic!("foof"),
                 };
 
