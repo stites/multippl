@@ -116,7 +116,7 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="generate data for simple HMMs")
-    parser.add_argument("--num-runs", default=10, type=int,)
+    parser.add_argument("--num-runs", default=100, type=int,)
     parser.add_argument("--num-steps", default=1_000, type=int,)
     parser.add_argument("--initial-seed", default=0, type=int,)
     parser.add_argument("--noti", default=True, type=bool,)

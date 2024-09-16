@@ -10,7 +10,7 @@ elementIn () {
 # SKIP=("grids/9x9" "arrival/9x9" "gossip/g10" "gossip/g20")
 SKIP[0]="run all things"
 NUM_STEPS=1000
-NUM_RUNS=10
+NUM_RUNS=100
 MODE=run_benchmark
 #MODE=run_avgs
 #MODE=run_clean

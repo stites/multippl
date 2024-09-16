@@ -2,7 +2,8 @@
 import argparse
 import time
 import os, sys
-import os, sys
+import numpy as np
+import scipy.stats
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from main import truth
 
@@ -15,6 +16,9 @@ mainfiles = [f for f in os.listdir('.') if os.path.isfile(f) and not (f in reser
 needs_l1 = lambda main: main[-3:] == ".yo" or main[-3:] == ".py"
 pad = max([len(m) for m in mainfiles])
 
+def mean_and_stderr(data):
+    a = 1.0 * np.array(data)
+    return np.mean(a), scipy.stats.sem(a)
 
 def str_stats(ss):
     s = []
@@ -22,12 +26,15 @@ def str_stats(ss):
         for m in mainfiles:
             if ss[m][' #'] == 0:
                 continue
-            out = ss[m][metric] if metric == " #" else sum(ss[m][metric]) / ss[m][' #']
-            s.append("{} {}: {}".format(m.ljust(pad, " "), metric, str(out)))
+            if metric == " #":
+                out = ss[m][metric]
+                s.append("{} {}: {}".format(m.ljust(pad, " "), metric, str(out)))
+            else:
+                mean, stderr = mean_and_stderr(ss[m][metric])
+                s.append("{} {}: {} ±{}".format(m.ljust(pad, " "), metric, str(mean).ljust(pad+10, " "), str(stderr)))
             s.append("\n")
         s.append("\n")
     return s
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="average everything in logs/")
@@ -43,7 +50,11 @@ if __name__ == "__main__":
             stats = {k: {" #":0,"ms":[], "l1":[]} for k in mainfiles}
             for log in filter(lambda l: l[-4:] == ".log", os.listdir(run)):
                 main = [m for m in mainfiles if log[:len(m)] == m.replace(".", "-")]
-                assert len(main) == 1, f"did not find a main file associated with {log}"
+                if len(main) == 0:
+                    print(f"warning! Did not find a main file associated with {log}")
+                    break
+                else:
+                    assert len(main) == 1, f"did not find a main file associated with {log}"
                 main = main[0]
                 with open(run + "/" + log, "r") as f:
                     out = f.readlines()
