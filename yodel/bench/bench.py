@@ -2,9 +2,10 @@
 import os
 import os.path
 import sys
+import multiprocessing
 
 
-from tqdm import tqdm
+from tqdm import tqdm, trange
 import subprocess
 import time
 from multiprocessing import Pool
@@ -56,14 +57,23 @@ def proc(args):
 def runner_(mainfile, cmd, with_seed=True, logdir="logs/", needs_timer=False, **kwargs):
     nsteps = kwargs['num_steps']
     nruns = kwargs['num_runs']
+    nthreads = kwargs['threads']
     iseed = kwargs['initial_seed']
 
     start = time.time()
+    #if nthreads:
     all_args = [(run, mainfile, nsteps, nruns, iseed, cmd, logdir, with_seed, needs_timer) for run in range(nruns)]
-    with Pool(nruns) as p:
+    with Pool(nthreads) as p:
         pbar = tqdm(p.imap_unordered(proc, all_args), total=nruns)
         pbar.set_description(mainfile + f"(n:{nsteps})")
         list(pbar)
+    # else:
+    #     with trange(nruns) as pbar:
+    #         for run in pbar:
+    #             all_args = (run, mainfile, nsteps, nruns, iseed, cmd, logdir, with_seed, needs_timer)
+    #             proc(all_args)
+    #             pbar.set_description(mainfile + f"(n:{nsteps})")
+
     end = time.time()
     noti_success(mainfile, nruns, nruns,  (end - start) / nruns)
 
@@ -120,6 +130,7 @@ if __name__ == "__main__":
     parser.add_argument("--num-steps", default=1_000, type=int,)
     parser.add_argument("--initial-seed", default=0, type=int,)
     parser.add_argument("--noti", default=True, type=bool,)
+    parser.add_argument("--threads", default=multiprocessing.cpu_count() // 2, type=int,)
     parser.add_argument("--out-dir", default="logs/", type=str,)
     args = parser.parse_args()
 

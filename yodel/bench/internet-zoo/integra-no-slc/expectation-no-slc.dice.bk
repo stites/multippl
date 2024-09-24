@@ -91,7 +91,7 @@ let arrives_at_portland = bend_to_portland || boise_to_portland || sacramento_to
 let portland = true  in
 let portland_to_seattle = if arrives_at_portland && portland then flip 0.999 else false in
 
-// let _ = observe !arrives_at_saltlake in
-let _ = observe !orem_to_saltlake && !ogden_to_saltlake && !bend_to_saltlake && !lasvegas_to_saltlake in
+// let _ = observe !orem_to_saltlake && !ogden_to_saltlake && !bend_to_saltlake && !lasvegas_to_saltlake in
+let _ = observe !chicago_to_denver && !billings_to_denver && !dallas_to_denver in
 
 arrives_at_portland

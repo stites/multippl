@@ -4,7 +4,11 @@ import time
 import os, sys
 import numpy as np
 import scipy.stats
+from rich.console import Console
+from rich.table import Table
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from main import truth
 
 DEVELOP=False
@@ -12,7 +16,9 @@ def compute_l1(ms, truth):
     return list(map(lambda x: abs(x[0] - x[1]), zip(ms, truth)))
 
 reserved = ["bench.py", "avg.py"]
-mainfiles = [f for f in os.listdir('.') if os.path.isfile(f) and not (f in reserved)]
+def endsin(f):
+    return f.split(".")[-1] in ["py", "psi", "yo"]
+mainfiles = [f for f in os.listdir('.') if os.path.isfile(f) and not (f in reserved) and endsin(f)]
 needs_l1 = lambda main: main[-3:] == ".yo" or main[-3:] == ".py"
 pad = max([len(m) for m in mainfiles])
 
@@ -36,9 +42,49 @@ def str_stats(ss):
         s.append("\n")
     return s
 
+def table_stats(exp, run, ss):
+    table = Table(title=f"{exp}: {run}", title_justify="left")
+    table_met = Table()
+    table_met.add_column("metric")
+    counts = []
+    row = []
+    row_sec = []
+    row_l1  = []
+    for m in mainfiles:
+        if ss[m][' #'] == 0:
+            continue
+        else:
+            counts.append(ss[m][' #'])
+        table_met.add_column(f"{m}")
+        table.add_column(f"{m} (l1)")
+        mn, se = mean_and_stderr(ss[m]["l1"])
+        row.append(f"{mn:.3f} ±{se:.3f}")
+        row_l1.append(f"{mn:.3f} ±{se:.3f}")
+        table.add_column(f"{m} (s)")
+        mn, se = mean_and_stderr(ss[m]["ms"])
+        mn, se = mn / 1000, se / 1000
+        row.append(f"{mn:.3f} ±{se:.3f}")
+        row_sec.append(f"{mn:.3f} ±{se:.3f}")
+
+    if any([c != counts[0] for c in counts]):
+        print(f"counts are not consistent for {exp} {run}! Got:", *counts, "\nfor: ", *mainfiles)
+        return None
+
+    if len(counts) == 0:
+        print(f"no valid runs for {exp}: {run} ")
+        return None
+
+    print("# runs:", counts[0])
+    table.add_row(*row)
+    table_met.add_row("l1", *row_l1)
+    table_met.add_row("sec", *row_sec)
+    return table, table_met
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="average everything in logs/")
     parser.add_argument("--dir", default="logs/", type=str,)
+    dir_path = os.path.dirname(__file__).split("/")[-1]
+
     args = parser.parse_args()
 
     date = time.strftime("%Y-%m-%d", time.localtime())
@@ -80,12 +126,16 @@ if __name__ == "__main__":
                     stats[main]['l1'].append(l1)
                 else:
                     stats[main]['l1'].append(0.0)
-            ss = str_stats(stats)
             if not DEVELOP:
                 with open(day + f"/{hm}.stats", "w") as f:
-                    f.writelines(ss)
-            print(run)
-            print("".join(["    " + s for s in ss]))
+                    f.writelines(str_stats(stats))
+            table = table_stats(dir_path, run, stats)
+            if table is not None:
+                tbl, mets = table
+                console = Console(record=True)
+                console.print(tbl)
+                console.print(mets)
+                console.save_text(day + f"/{hm}.stats.rich")
 
 else:
     print("please run as main", file=sys.stderr)
