@@ -16,7 +16,6 @@ from pyro.infer import config_enumerate
 import time
 
 
-
 def network():
     HYPOVOLEMIA = pyro.sample("HYPOVOLEMIA", dist.Categorical(probs=torch.tensor([0.200000,0.800000])))
     LVFAILURE = pyro.sample("LVFAILURE", dist.Categorical(probs=torch.tensor([0.050000,0.950000])))
@@ -58,42 +57,42 @@ def network():
 
     # let _ = observe CATECHOL == 0 in
 
+    return torch.tensor([LVFAILURE, HYPOVOLEMIA, ANAPHYLAXIS, ERRLOWOUTPUT, ERRCAUTER, INSUFFANESTH, FIO2, PULMEMBOLUS, INTUBATION, DISCONNECT, MINVOLSET, KINKEDTUBE])
 
-    return torch.tensor([HISTORY, PCWP, CVP, PAP, MINVOL, PRESS, EXPCO2])
-
-truth = \
- [ 0 *      0.0545
- + 1 *      0.9455
- , 0 *      0.114341
- + 1 *      0.678729
- + 2 *      0.20693
- + 3 *      0
- , 0 *      0.114341
- + 1 *      0.731104
- + 2 *      0.154555
- + 3 *      0
- , 0 *  0.049593406
- + 1 *  0.892782957
- + 2 *  0.057623637
- + 3 *  0
- , 0 *  0.778395253
- + 1 *  0.065350213
- + 2 *  0.026829179
- + 3 *  0.129425355
- , 0 *  0.027898466
- + 1 *  0.251138199
- + 2 *  0.224484428
- + 3 *  0.496478906
- , 0 *  0.032723106
- + 1 *  0.872013852
- + 2 *  0.05845093
- + 3 *  0.036812112
- ]
-
+from tmp.truth import truth
+# LVFAILURE = [0.588219487,0.411780513]
+# HYPOVOLEMIA = [0.155448582,0.844551418]
+# ANAPHYLAXIS = [0.013786974,0.986213026]
+# ERRLOWOUTPUT = [0.05,0.95]
+# ERRCAUTER = [0.042618257,0.957381743]
+# INSUFFANESTH = [0.095770351,0.904229649]
+# FIO2 = [0.049000551,0.950999449]
+# PULMEMBOLUS = [0.009656522,0.990343478]
+# INTUBATION = [0.931980061,0.02658137,0.041438569,0]
+# DISCONNECT = [0.085007035,0.914992965]
+# MINVOLSET = [0.044001378,0.757193838,0.198804784,0]
+# KINKEDTUBE = [0.095454574,0.904545426]
+# from collections import OrderedDict
+# truthdict = OrderedDict([
+#   ("LVFAILURE", LVFAILURE),
+#   ("HYPOVOLEMIA", HYPOVOLEMIA),
+#   ("ANAPHYLAXIS", ANAPHYLAXIS),
+#   ("ERRLOWOUTPUT", ERRLOWOUTPUT),
+#   ("ERRCAUTER", ERRCAUTER),
+#   ("INSUFFANESTH", INSUFFANESTH),
+#   ("FIO2", FIO2),
+#   ("PULMEMBOLUS", PULMEMBOLUS),
+#   ("INTUBATION", INTUBATION),
+#   ("DISCONNECT", DISCONNECT),
+#   ("MINVOLSET", MINVOLSET),
+#   ("KINKEDTUBE", KINKEDTUBE),
+# ])
+# truth = [sum([i * p for i, p in enumerate(ps)]) for k, ps in truthdict.items()]
 def model():
-    ls = pyro.condition(network, data={k: torch.tensor(2) for k in ["BP", "HRBP", "HRSAT", "HREKG"]})()
-    return torch.tensor([pyro.sample(f"g{i}", dist.Normal(ls[i] + 0.0, 0.25)) for i in range(len(ls))])
+    ls = pyro.condition(network, data={k: torch.tensor(0) for k in ["BP", "PCWP", "HRSAT", "EXPCO2"]})()
 
+    #return torch.tensor([pyro.sample(f"g{i}", dist.Normal(ls[i] + 0.0, 0.25)) for i in range(len(ls))])
+    return torch.tensor([i + 0.0 for i in ls])
 
 if __name__ == "__main__":
     import argparse
@@ -115,9 +114,10 @@ if __name__ == "__main__":
         start = time.time()
         importance = Importance(model, num_samples=args.num_samples)
         marginal = EmpiricalMarginal(importance.run())
-        xs = marginal.mean.flatten()
+        import bench
+        xs = bench.ismean(marginal).flatten()
         end = time.time()
         s = end - start
         print(" ".join([f"{x}" for x in xs]))
         print("{:.3f}ms".format(s * 1000))
-        #print(sum(list(map(lambda x: abs(x[0] - x[1]), zip(xs, truth)))))
+        print(sum(list(map(lambda x: abs(x[0] - x[1]), zip(xs, truth)))))
