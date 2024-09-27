@@ -4,17 +4,16 @@ import numpy as np
 import random
 import time
 import torch
+import os
 from collections import deque
 
 import pyro
 import pyro.distributions as dist
 from pyro.infer.importance import Importance
 
-num_nodes = 10
-num_steps = 3 # because /maybe/ psi will finish
-truth = [ 298 / 81 ]
-num_steps = 8 # because psi doesn't finish and 3 is really silly
-truth = [ 31052474/4782969 ]
+num_nodes = int(os.getcwd().split("/")[-1][1:])
+with open("tmp/truth.log", "r") as f:
+  truth = [ float(f.readlines()[0]) ]
 
 def forward(ix, pkt, node):
     s = pyro.sample(
@@ -38,6 +37,10 @@ def as_num(b):
     return 1.0 if b else 0.0
 
 def model():
+    num_steps = pyro.sample(
+        f"num_steps",
+        dist.Uniform(4, 8)
+    ).int().item()
     ps = node(0, 0, 0)
     indicators = [True] + [False] * (num_nodes - 1)
     q = deque(ps)

@@ -15,7 +15,7 @@ DEVELOP=False
 def compute_l1(ms, truth):
     return list(map(lambda x: abs(x[0] - x[1]), zip(ms, truth)))
 
-reserved = ["bench.py", "avg.py"]
+reserved = ["bench.py", "avg.py", "utils.py", "yo2l1.py", "truth.py", "truth.sh", "main.dice-partial"]
 def endsin(f):
     return f.split(".")[-1] in ["py", "psi", "yo"]
 mainfiles = [f for f in os.listdir('.') if os.path.isfile(f) and not (f in reserved) and endsin(f)]
@@ -67,8 +67,8 @@ def table_stats(exp, run, ss):
         row_sec.append(f"{mn:.3f} ±{se:.3f}")
 
     if any([c != counts[0] for c in counts]):
-        print(f"counts are not consistent for {exp} {run}! Got:", *counts, "\nfor: ", *mainfiles)
-        return None
+        print(f"WARNING! counts are not consistent for {exp} {run}! Got:", *counts, "\nfor: ", *mainfiles)
+        # return None
 
     if len(counts) == 0:
         print(f"no valid runs for {exp}: {run} ")
@@ -98,7 +98,7 @@ if __name__ == "__main__":
                 main = [m for m in mainfiles if log[:len(m)] == m.replace(".", "-")]
                 if len(main) == 0:
                     print(f"warning! Did not find a main file associated with {log}")
-                    break
+                    continue
                 else:
                     assert len(main) == 1, f"did not find a main file associated with {log}"
                 main = main[0]

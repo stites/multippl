@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+import os
+import sys
 import pyro
 import numpy as np
 import random
@@ -10,11 +12,10 @@ import pyro
 import pyro.distributions as dist
 from pyro.infer.importance import Importance
 
-num_nodes = 4
-num_steps = 3
-truth = [ 28 / 9 ]
-num_steps = 8
-truth = [ 8492 / 2187 ]
+num_nodes = int(os.getcwd().split("/")[-1][1:])
+with open("tmp/truth.log", "r") as f:
+  truth = [ float(f.readlines()[0]) ]
+
 def forward(ix, pkt, node):
     s = pyro.sample(
         f"{ix}_n{node}_{pkt}",
@@ -37,6 +38,10 @@ def as_num(b):
     return 1.0 if b else 0.0
 
 def model():
+    num_steps = pyro.sample(
+        f"num_steps",
+        dist.Uniform(4, 8)
+    ).int().item()
     ps = node(0, 0, 0)
     indicators = [True] + [False] * (num_nodes - 1)
     q = deque(ps)

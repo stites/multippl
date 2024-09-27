@@ -1,0 +1,514 @@
+exact fn network() -> Bool {
+  let Age = discrete(0.2, 0.6, 0.2) in
+  let Mileage = discrete(0.1, 0.4, 0.4, 0.1) in
+
+
+  let SocioEcon
+    =    if (Age == 0) then discrete(0.40, 0.40, 0.19, 0.01)
+    else if (Age == 1) then discrete(0.40, 0.40, 0.19, 0.01)
+    else                    discrete(0.50, 0.20, 0.29, 0.01) in
+  // let SocioEcon = sample(exact(SocioEcon)) in
+
+  let GoodStudent
+    =    if ((SocioEcon == 0) && (Age == 0)) then discrete(0.1, 0.9)
+    else if ((SocioEcon == 1) && (Age == 0)) then discrete(0.2, 0.8)
+    else if ((SocioEcon == 2) && (Age == 0)) then discrete(0.5, 0.5)
+    else if ((SocioEcon == 3) && (Age == 0)) then discrete(0.4, 0.6)
+    else if ((SocioEcon == 0) && (Age == 1)) then discrete(0.0, 1.0)
+    else if ((SocioEcon == 1) && (Age == 1)) then discrete(0.0, 1.0)
+    else if ((SocioEcon == 2) && (Age == 1)) then discrete(0.0, 1.0)
+    else if ((SocioEcon == 3) && (Age == 1)) then discrete(0.0, 1.0)
+    else if ((SocioEcon == 0) && (Age == 2)) then discrete(0.0, 1.0)
+    else if ((SocioEcon == 1) && (Age == 2)) then discrete(0.0, 1.0)
+    else if ((SocioEcon == 2) && (Age == 2)) then discrete(0.0, 1.0)
+    else                                          discrete(0.0, 1.0) in
+  // let GoodStudent = sample(exact(GoodStudent)) in
+
+  let RiskAversion
+    =    if ((Age == 0) && (SocioEcon == 0)) then discrete(0.02, 0.58, 0.30, 0.10)
+    else if ((Age == 1) && (SocioEcon == 0)) then discrete(0.015, 0.285, 0.500, 0.200)
+    else if ((Age == 2) && (SocioEcon == 0)) then discrete(0.01, 0.09, 0.40, 0.50)
+    else if ((Age == 0) && (SocioEcon == 1)) then discrete(0.02, 0.38, 0.50, 0.10)
+    else if ((Age == 1) && (SocioEcon == 1)) then discrete(0.015, 0.185, 0.600, 0.200)
+    else if ((Age == 2) && (SocioEcon == 1)) then discrete(0.01, 0.04, 0.35, 0.60)
+    else if ((Age == 0) && (SocioEcon == 2)) then discrete(0.02, 0.48, 0.40, 0.10)
+    else if ((Age == 1) && (SocioEcon == 2)) then discrete(0.015, 0.285, 0.500, 0.200)
+    else if ((Age == 2) && (SocioEcon == 2)) then discrete(0.01, 0.09, 0.40, 0.50)
+    else if ((Age == 0) && (SocioEcon == 3)) then discrete(0.02, 0.58, 0.30, 0.10)
+    else if ((Age == 1) && (SocioEcon == 3)) then discrete(0.015, 0.285, 0.400, 0.300)
+    else                                          discrete(0.01, 0.09, 0.40, 0.50) in
+
+  let SeniorTrain
+    =    if ((Age == 0) && (RiskAversion == 0)) then discrete(0.0, 1.0)
+    else if ((Age == 1) && (RiskAversion == 0)) then discrete(0.0, 1.0)
+    else if ((Age == 2) && (RiskAversion == 0)) then discrete(0.000001, 0.999999)
+    else if ((Age == 0) && (RiskAversion == 1)) then discrete(0.0, 1.0)
+    else if ((Age == 1) && (RiskAversion == 1)) then discrete(0.0, 1.0)
+    else if ((Age == 2) && (RiskAversion == 1)) then discrete(0.000001, 0.999999)
+    else if ((Age == 0) && (RiskAversion == 2)) then discrete(0.0, 1.0)
+    else if ((Age == 1) && (RiskAversion == 2)) then discrete(0.0, 1.0)
+    else if ((Age == 2) && (RiskAversion == 2)) then discrete(0.3, 0.7)
+    else if ((Age == 0) && (RiskAversion == 3)) then discrete(0.0, 1.0)
+    else if ((Age == 1) && (RiskAversion == 3)) then discrete(0.0, 1.0)
+    else                                             discrete(0.9, 0.1) in
+
+  let DrivingSkill
+    =    if ((Age == 0) && (SeniorTrain == 0)) then discrete(0.50, 0.45, 0.05)
+    else if ((Age == 1) && (SeniorTrain == 0)) then discrete(0.3, 0.6, 0.1)
+    else if ((Age == 2) && (SeniorTrain == 0)) then discrete(0.1, 0.6, 0.3)
+    else if ((Age == 0) && (SeniorTrain == 1)) then discrete(0.50, 0.45, 0.05)
+    else if ((Age == 1) && (SeniorTrain == 1)) then discrete(0.3, 0.6, 0.1)
+    else                                            discrete(0.4, 0.5, 0.1) in
+
+  let ys = sample {
+    DrivingSkill <- exact(DrivingSkill);
+    RiskAversion <- exact(RiskAversion);
+    SocioEcon <- exact(SocioEcon);
+
+    DrivQuality
+      ~ (  if ((DrivingSkill[0]) && (RiskAversion[0])) then discrete(1.0, 0.0, 0.0)
+      else if ((DrivingSkill[1]) && (RiskAversion[0])) then discrete(0.5, 0.2, 0.3)
+      else if ((DrivingSkill[2]) && (RiskAversion[0])) then discrete(0.3, 0.2, 0.5)
+      else if ((DrivingSkill[0]) && (RiskAversion[1])) then discrete(1.0, 0.0, 0.0)
+      else if ((DrivingSkill[1]) && (RiskAversion[1])) then discrete(0.3, 0.4, 0.3)
+      else if ((DrivingSkill[2]) && (RiskAversion[1])) then discrete(0.01, 0.01, 0.98)
+      else if ((DrivingSkill[0]) && (RiskAversion[2])) then discrete(1.0, 0.0, 0.0)
+      else if ((DrivingSkill[1]) && (RiskAversion[2])) then discrete(0.0, 1.0, 0.0)
+      else if ((DrivingSkill[2]) && (RiskAversion[2])) then discrete(0.0, 0.0, 1.0)
+      else if ((DrivingSkill[0]) && (RiskAversion[3])) then discrete(1.0, 0.0, 0.0)
+      else if ((DrivingSkill[1]) && (RiskAversion[3])) then discrete(0.0, 0.8, 0.2)
+      else                                                      discrete(0.0, 0.0, 1.0));
+
+    HomeBase
+      ~ (  if ((RiskAversion[0]) && (SocioEcon[0])) then discrete(0.000001, 0.800000, 0.049999, 0.150000)
+      else if ((RiskAversion[1]) && (SocioEcon[0])) then discrete(0.000001, 0.800000, 0.050000, 0.149999)
+      else if ((RiskAversion[2]) && (SocioEcon[0])) then discrete(0.000001, 0.800000, 0.050000, 0.149999)
+      else if ((RiskAversion[3]) && (SocioEcon[0])) then discrete(0.000001, 0.800000, 0.050000, 0.149999)
+      else if ((RiskAversion[0]) && (SocioEcon[1])) then discrete(0.15, 0.80, 0.04, 0.01)
+      else if ((RiskAversion[1]) && (SocioEcon[1])) then discrete(0.01, 0.25, 0.60, 0.14)
+      else if ((RiskAversion[2]) && (SocioEcon[1])) then discrete(0.299999, 0.000001, 0.600000, 0.100000)
+      else if ((RiskAversion[3]) && (SocioEcon[1])) then discrete(0.950000, 0.000001, 0.024445, 0.025554)
+      else if ((RiskAversion[0]) && (SocioEcon[2])) then discrete(0.35, 0.60, 0.04, 0.01)
+      else if ((RiskAversion[1]) && (SocioEcon[2])) then discrete(0.2, 0.4, 0.3, 0.1)
+      else if ((RiskAversion[2]) && (SocioEcon[2])) then discrete(0.500000, 0.000001, 0.400000, 0.099999)
+      else if ((RiskAversion[3]) && (SocioEcon[2])) then discrete(0.999997, 0.000001, 0.000001, 0.000001)
+      else if ((RiskAversion[0]) && (SocioEcon[3])) then discrete(0.489999, 0.500000, 0.000001, 0.010000)
+      else if ((RiskAversion[1]) && (SocioEcon[3])) then discrete(0.950000, 0.000001, 0.000001, 0.049998)
+      else if ((RiskAversion[2]) && (SocioEcon[3])) then discrete(0.850000, 0.000001, 0.001000, 0.148999)
+      else                                                   discrete(0.999997, 0.000001, 0.000001, 0.000001));
+
+
+    AntiTheft
+      ~ (  if ((RiskAversion[0]) && (SocioEcon[0])) then discrete(0.000001, 0.999999)
+      else if ((RiskAversion[1]) && (SocioEcon[0])) then discrete(0.000001, 0.999999)
+      else if ((RiskAversion[2]) && (SocioEcon[0])) then discrete(0.1, 0.9)
+      else if ((RiskAversion[3]) && (SocioEcon[0])) then discrete(0.95, 0.05)
+      else if ((RiskAversion[0]) && (SocioEcon[1])) then discrete(0.000001, 0.999999)
+      else if ((RiskAversion[1]) && (SocioEcon[1])) then discrete(0.000001, 0.999999)
+      else if ((RiskAversion[2]) && (SocioEcon[1])) then discrete(0.3, 0.7)
+      else if ((RiskAversion[3]) && (SocioEcon[1])) then discrete(0.999999, 0.000001)
+      else if ((RiskAversion[0]) && (SocioEcon[2])) then discrete(0.05, 0.95)
+      else if ((RiskAversion[1]) && (SocioEcon[2])) then discrete(0.2, 0.8)
+      else if ((RiskAversion[2]) && (SocioEcon[2])) then discrete(0.9, 0.1)
+      else if ((RiskAversion[3]) && (SocioEcon[2])) then discrete(0.999999, 0.000001)
+      else if ((RiskAversion[0]) && (SocioEcon[3])) then discrete(0.5, 0.5)
+      else if ((RiskAversion[1]) && (SocioEcon[3])) then discrete(0.5, 0.5)
+      else if ((RiskAversion[2]) && (SocioEcon[3])) then discrete(0.8, 0.2)
+      else                                                   discrete(0.999999, 0.000001));
+
+    OtherCar
+      ~ (  if (SocioEcon[0]) then discrete(0.5, 0.5)
+      else if (SocioEcon[1]) then discrete(0.8, 0.2)
+      else if (SocioEcon[2]) then discrete(0.9, 0.1)
+      else                          discrete(0.95, 0.05));
+
+    DrivHist
+      ~ (  if ((DrivingSkill[0]) && (RiskAversion[0])) then discrete(0.001, 0.004, 0.995)
+      else if ((DrivingSkill[1]) && (RiskAversion[0])) then discrete(0.1, 0.3, 0.6)
+      else if ((DrivingSkill[2]) && (RiskAversion[0])) then discrete(0.3, 0.3, 0.4)
+      else if ((DrivingSkill[0]) && (RiskAversion[1])) then discrete(0.002, 0.008, 0.990)
+      else if ((DrivingSkill[1]) && (RiskAversion[1])) then discrete(0.5, 0.3, 0.2)
+      else if ((DrivingSkill[2]) && (RiskAversion[1])) then discrete(0.6, 0.3, 0.1)
+      else if ((DrivingSkill[0]) && (RiskAversion[2])) then discrete(0.03, 0.15, 0.82)
+      else if ((DrivingSkill[1]) && (RiskAversion[2])) then discrete(0.90, 0.07, 0.03)
+      else if ((DrivingSkill[2]) && (RiskAversion[2])) then discrete(0.990000, 0.009999, 0.000001)
+      else if ((DrivingSkill[0]) && (RiskAversion[3])) then discrete(0.3, 0.3, 0.4)
+      else if ((DrivingSkill[1]) && (RiskAversion[3])) then discrete(0.95, 0.04, 0.01)
+      else                                                      discrete(0.999998, 0.000001, 0.000001));
+
+    ( DrivingSkill
+    , DrivQuality
+    , HomeBase
+    , AntiTheft
+    , OtherCar
+    , DrivHist
+    )
+  } in
+  let DrivingSkill = ys[0] in
+  let DrivQuality  = ys[1] in
+  let HomeBase     = ys[2] in
+  let AntiTheft    = ys[3] in
+  let OtherCar     = ys[4] in
+  let DrivHist     = ys[5] in
+
+
+  let VehicleYear
+    =    if ((SocioEcon == 0) && (RiskAversion == 0)) then discrete(0.15, 0.85)
+    else if ((SocioEcon == 1) && (RiskAversion == 0)) then discrete(0.3, 0.7)
+    else if ((SocioEcon == 2) && (RiskAversion == 0)) then discrete(0.8, 0.2)
+    else if ((SocioEcon == 3) && (RiskAversion == 0)) then discrete(0.9, 0.1)
+    else if ((SocioEcon == 0) && (RiskAversion == 1)) then discrete(0.15, 0.85)
+    else if ((SocioEcon == 1) && (RiskAversion == 1)) then discrete(0.3, 0.7)
+    else if ((SocioEcon == 2) && (RiskAversion == 1)) then discrete(0.8, 0.2)
+    else if ((SocioEcon == 3) && (RiskAversion == 1)) then discrete(0.9, 0.1)
+    else if ((SocioEcon == 0) && (RiskAversion == 2)) then discrete(0.15, 0.85)
+    else if ((SocioEcon == 1) && (RiskAversion == 2)) then discrete(0.3, 0.7)
+    else if ((SocioEcon == 2) && (RiskAversion == 2)) then discrete(0.8, 0.2)
+    else if ((SocioEcon == 3) && (RiskAversion == 2)) then discrete(0.9, 0.1)
+    else if ((SocioEcon == 0) && (RiskAversion == 3)) then discrete(0.15, 0.85)
+    else if ((SocioEcon == 1) && (RiskAversion == 3)) then discrete(0.3, 0.7)
+    else if ((SocioEcon == 2) && (RiskAversion == 3)) then discrete(0.8, 0.2)
+    else                                                   discrete(0.9, 0.1) in
+
+  let MakeModel
+    =    if ((SocioEcon == 0) && (RiskAversion == 0)) then discrete(0.1, 0.7, 0.2, 0.0, 0.0)
+    else if ((SocioEcon == 1) && (RiskAversion == 0)) then discrete(0.15, 0.20, 0.65, 0.00, 0.00)
+    else if ((SocioEcon == 2) && (RiskAversion == 0)) then discrete(0.20, 0.05, 0.30, 0.45, 0.00)
+    else if ((SocioEcon == 3) && (RiskAversion == 0)) then discrete(0.30, 0.01, 0.09, 0.40, 0.20)
+    else if ((SocioEcon == 0) && (RiskAversion == 1)) then discrete(0.1, 0.7, 0.2, 0.0, 0.0)
+    else if ((SocioEcon == 1) && (RiskAversion == 1)) then discrete(0.15, 0.20, 0.65, 0.00, 0.00)
+    else if ((SocioEcon == 2) && (RiskAversion == 1)) then discrete(0.20, 0.05, 0.30, 0.45, 0.00)
+    else if ((SocioEcon == 3) && (RiskAversion == 1)) then discrete(0.30, 0.01, 0.09, 0.40, 0.20)
+    else if ((SocioEcon == 0) && (RiskAversion == 2)) then discrete(0.1, 0.7, 0.2, 0.0, 0.0)
+    else if ((SocioEcon == 1) && (RiskAversion == 2)) then discrete(0.15, 0.20, 0.65, 0.00, 0.00)
+    else if ((SocioEcon == 2) && (RiskAversion == 2)) then discrete(0.20, 0.05, 0.30, 0.45, 0.00)
+    else if ((SocioEcon == 3) && (RiskAversion == 2)) then discrete(0.30, 0.01, 0.09, 0.40, 0.20)
+    else if ((SocioEcon == 0) && (RiskAversion == 3)) then discrete(0.1, 0.7, 0.2, 0.0, 0.0)
+    else if ((SocioEcon == 1) && (RiskAversion == 3)) then discrete(0.15, 0.20, 0.65, 0.00, 0.00)
+    else if ((SocioEcon == 2) && (RiskAversion == 3)) then discrete(0.20, 0.05, 0.30, 0.45, 0.00)
+    else                                                   discrete(0.30, 0.01, 0.09, 0.40, 0.20) in
+  // let MakeModel = sample(exact(MakeModel)) in
+
+  let Antilock
+    =    if ((MakeModel == 0) && (VehicleYear == 0)) then discrete(0.9, 0.1)
+    else if ((MakeModel == 1) && (VehicleYear == 0)) then discrete(0.001, 0.999)
+    else if ((MakeModel == 2) && (VehicleYear == 0)) then discrete(0.4, 0.6)
+    else if ((MakeModel == 3) && (VehicleYear == 0)) then discrete(0.99, 0.01)
+    else if ((MakeModel == 4) && (VehicleYear == 0)) then discrete(0.99, 0.01)
+    else if ((MakeModel == 0) && (VehicleYear == 1)) then discrete(0.1, 0.9)
+    else if ((MakeModel == 1) && (VehicleYear == 1)) then discrete(0.0, 1.0)
+    else if ((MakeModel == 2) && (VehicleYear == 1)) then discrete(0.0, 1.0)
+    else if ((MakeModel == 3) && (VehicleYear == 1)) then discrete(0.3, 0.7)
+    else                                                  discrete(0.15, 0.85) in
+  // let Antilock = sample(exact(Antilock)) in
+
+  let Accident
+    =    if ((Antilock == 0) && (Mileage == 0) && (DrivQuality == 0)) then discrete(0.70, 0.20, 0.07, 0.03)
+    else if ((Antilock == 1) && (Mileage == 0) && (DrivQuality == 0)) then discrete(0.6, 0.2, 0.1, 0.1)
+    else if ((Antilock == 0) && (Mileage == 1) && (DrivQuality == 0)) then discrete(0.4, 0.3, 0.2, 0.1)
+    else if ((Antilock == 1) && (Mileage == 1) && (DrivQuality == 0)) then discrete(0.3, 0.2, 0.2, 0.3)
+    else if ((Antilock == 0) && (Mileage == 2) && (DrivQuality == 0)) then discrete(0.3, 0.3, 0.2, 0.2)
+    else if ((Antilock == 1) && (Mileage == 2) && (DrivQuality == 0)) then discrete(0.2, 0.2, 0.2, 0.4)
+    else if ((Antilock == 0) && (Mileage == 3) && (DrivQuality == 0)) then discrete(0.2, 0.2, 0.3, 0.3)
+    else if ((Antilock == 1) && (Mileage == 3) && (DrivQuality == 0)) then discrete(0.1, 0.1, 0.3, 0.5)
+    else if ((Antilock == 0) && (Mileage == 0) && (DrivQuality == 1)) then discrete(0.990, 0.007, 0.002, 0.001)
+    else if ((Antilock == 1) && (Mileage == 0) && (DrivQuality == 1)) then discrete(0.980, 0.010, 0.005, 0.005)
+    else if ((Antilock == 0) && (Mileage == 1) && (DrivQuality == 1)) then discrete(0.980, 0.010, 0.005, 0.005)
+    else if ((Antilock == 1) && (Mileage == 1) && (DrivQuality == 1)) then discrete(0.960, 0.020, 0.015, 0.005)
+    else if ((Antilock == 0) && (Mileage == 2) && (DrivQuality == 1)) then discrete(0.970, 0.020, 0.007, 0.003)
+    else if ((Antilock == 1) && (Mileage == 2) && (DrivQuality == 1)) then discrete(0.950, 0.030, 0.015, 0.005)
+    else if ((Antilock == 0) && (Mileage == 3) && (DrivQuality == 1)) then discrete(0.95, 0.03, 0.01, 0.01)
+    else if ((Antilock == 1) && (Mileage == 3) && (DrivQuality == 1)) then discrete(0.94, 0.03, 0.02, 0.01)
+    else if ((Antilock == 0) && (Mileage == 0) && (DrivQuality == 2)) then discrete(0.9990, 0.0007, 0.0002, 0.0001)
+    else if ((Antilock == 1) && (Mileage == 0) && (DrivQuality == 2)) then discrete(0.995, 0.003, 0.001, 0.001)
+    else if ((Antilock == 0) && (Mileage == 1) && (DrivQuality == 2)) then discrete(0.995, 0.003, 0.001, 0.001)
+    else if ((Antilock == 1) && (Mileage == 1) && (DrivQuality == 2)) then discrete(0.990, 0.007, 0.002, 0.001)
+    else if ((Antilock == 0) && (Mileage == 2) && (DrivQuality == 2)) then discrete(0.990, 0.007, 0.002, 0.001)
+    else if ((Antilock == 1) && (Mileage == 2) && (DrivQuality == 2)) then discrete(0.980, 0.010, 0.005, 0.005)
+    else if ((Antilock == 0) && (Mileage == 3) && (DrivQuality == 2)) then discrete(0.985, 0.010, 0.003, 0.002)
+    else                                                                  discrete(0.980, 0.010, 0.007, 0.003) in
+
+  let CarValue
+    =    if ((MakeModel == 0) && (VehicleYear == 0) && (Mileage == 0)) then discrete(0.00, 0.10, 0.80, 0.09, 0.01)
+    else if ((MakeModel == 1) && (VehicleYear == 0) && (Mileage == 0)) then discrete(0.1, 0.8, 0.1, 0.0, 0.0)
+    else if ((MakeModel == 2) && (VehicleYear == 0) && (Mileage == 0)) then discrete(0.0, 0.1, 0.9, 0.0, 0.0)
+    else if ((MakeModel == 3) && (VehicleYear == 0) && (Mileage == 0)) then discrete(0.0, 0.0, 0.0, 1.0, 0.0)
+    else if ((MakeModel == 4) && (VehicleYear == 0) && (Mileage == 0)) then discrete(0.0, 0.0, 0.0, 0.0, 1.0)
+    else if ((MakeModel == 0) && (VehicleYear == 1) && (Mileage == 0)) then discrete(0.03, 0.30, 0.60, 0.06, 0.01)
+    else if ((MakeModel == 1) && (VehicleYear == 1) && (Mileage == 0)) then discrete(0.25, 0.70, 0.05, 0.00, 0.00)
+    else if ((MakeModel == 2) && (VehicleYear == 1) && (Mileage == 0)) then discrete(0.2, 0.3, 0.5, 0.0, 0.0)
+    else if ((MakeModel == 3) && (VehicleYear == 1) && (Mileage == 0)) then discrete(0.01, 0.09, 0.20, 0.70, 0.00)
+    else if ((MakeModel == 4) && (VehicleYear == 1) && (Mileage == 0)) then discrete(0.000001, 0.000001, 0.000001, 0.000001, 0.999996)
+    else if ((MakeModel == 0) && (VehicleYear == 0) && (Mileage == 1)) then discrete(0.00, 0.10, 0.80, 0.09, 0.01)
+    else if ((MakeModel == 1) && (VehicleYear == 0) && (Mileage == 1)) then discrete(0.1, 0.8, 0.1, 0.0, 0.0)
+    else if ((MakeModel == 2) && (VehicleYear == 0) && (Mileage == 1)) then discrete(0.0, 0.1, 0.9, 0.0, 0.0)
+    else if ((MakeModel == 3) && (VehicleYear == 0) && (Mileage == 1)) then discrete(0.0, 0.0, 0.0, 1.0, 0.0)
+    else if ((MakeModel == 4) && (VehicleYear == 0) && (Mileage == 1)) then discrete(0.0, 0.0, 0.0, 0.0, 1.0)
+    else if ((MakeModel == 0) && (VehicleYear == 1) && (Mileage == 1)) then discrete(0.16, 0.50, 0.30, 0.03, 0.01)
+    else if ((MakeModel == 1) && (VehicleYear == 1) && (Mileage == 1)) then discrete(0.7000, 0.2999, 0.0001, 0.0000, 0.0000)
+    else if ((MakeModel == 2) && (VehicleYear == 1) && (Mileage == 1)) then discrete(0.5, 0.3, 0.2, 0.0, 0.0)
+    else if ((MakeModel == 3) && (VehicleYear == 1) && (Mileage == 1)) then discrete(0.05, 0.15, 0.30, 0.50, 0.00)
+    else if ((MakeModel == 4) && (VehicleYear == 1) && (Mileage == 1)) then discrete(0.000001, 0.000001, 0.000001, 0.000001, 0.999996)
+    else if ((MakeModel == 0) && (VehicleYear == 0) && (Mileage == 2)) then discrete(0.00, 0.10, 0.80, 0.09, 0.01)
+    else if ((MakeModel == 1) && (VehicleYear == 0) && (Mileage == 2)) then discrete(0.1, 0.8, 0.1, 0.0, 0.0)
+    else if ((MakeModel == 2) && (VehicleYear == 0) && (Mileage == 2)) then discrete(0.0, 0.1, 0.9, 0.0, 0.0)
+    else if ((MakeModel == 3) && (VehicleYear == 0) && (Mileage == 2)) then discrete(0.0, 0.0, 0.0, 1.0, 0.0)
+    else if ((MakeModel == 4) && (VehicleYear == 0) && (Mileage == 2)) then discrete(0.0, 0.0, 0.0, 0.0, 1.0)
+    else if ((MakeModel == 0) && (VehicleYear == 1) && (Mileage == 2)) then discrete(0.40, 0.47, 0.10, 0.02, 0.01)
+    else if ((MakeModel == 1) && (VehicleYear == 1) && (Mileage == 2)) then discrete(0.990000, 0.009999, 0.000001, 0.000000, 0.000000)
+    else if ((MakeModel == 2) && (VehicleYear == 1) && (Mileage == 2)) then discrete(0.7, 0.2, 0.1, 0.0, 0.0)
+    else if ((MakeModel == 3) && (VehicleYear == 1) && (Mileage == 2)) then discrete(0.1, 0.3, 0.3, 0.3, 0.0)
+    else if ((MakeModel == 4) && (VehicleYear == 1) && (Mileage == 2)) then discrete(0.000001, 0.000001, 0.000001, 0.000001, 0.999996)
+    else if ((MakeModel == 0) && (VehicleYear == 0) && (Mileage == 3)) then discrete(0.00, 0.10, 0.80, 0.09, 0.01)
+    else if ((MakeModel == 1) && (VehicleYear == 0) && (Mileage == 3)) then discrete(0.1, 0.8, 0.1, 0.0, 0.0)
+    else if ((MakeModel == 2) && (VehicleYear == 0) && (Mileage == 3)) then discrete(0.0, 0.1, 0.9, 0.0, 0.0)
+    else if ((MakeModel == 3) && (VehicleYear == 0) && (Mileage == 3)) then discrete(0.0, 0.0, 0.0, 1.0, 0.0)
+    else if ((MakeModel == 4) && (VehicleYear == 0) && (Mileage == 3)) then discrete(0.0, 0.0, 0.0, 0.0, 1.0)
+    else if ((MakeModel == 0) && (VehicleYear == 1) && (Mileage == 3)) then discrete(0.90, 0.06, 0.02, 0.01, 0.01)
+    else if ((MakeModel == 1) && (VehicleYear == 1) && (Mileage == 3)) then discrete(0.999998, 0.000001, 0.000001, 0.000000, 0.000000)
+    else if ((MakeModel == 2) && (VehicleYear == 1) && (Mileage == 3)) then discrete(0.990000, 0.009999, 0.000001, 0.000000, 0.000000)
+    else if ((MakeModel == 3) && (VehicleYear == 1) && (Mileage == 3)) then discrete(0.2, 0.2, 0.3, 0.3, 0.0)
+    else                                                                   discrete(0.000001, 0.000001, 0.000001, 0.000001, 0.999996) in
+
+  let Theft
+    =    if ((AntiTheft == 0) && (HomeBase == 0) && (CarValue == 0)) then discrete(0.000001, 0.999999)
+    else if ((AntiTheft == 1) && (HomeBase == 0) && (CarValue == 0)) then discrete(0.000001, 0.999999)
+    else if ((AntiTheft == 0) && (HomeBase == 1) && (CarValue == 0)) then discrete(0.0005, 0.9995)
+    else if ((AntiTheft == 1) && (HomeBase == 1) && (CarValue == 0)) then discrete(0.001, 0.999)
+    else if ((AntiTheft == 0) && (HomeBase == 2) && (CarValue == 0)) then discrete(0.00001, 0.99999)
+    else if ((AntiTheft == 1) && (HomeBase == 2) && (CarValue == 0)) then discrete(0.00001, 0.99999)
+    else if ((AntiTheft == 0) && (HomeBase == 3) && (CarValue == 0)) then discrete(0.00001, 0.99999)
+    else if ((AntiTheft == 1) && (HomeBase == 3) && (CarValue == 0)) then discrete(0.00001, 0.99999)
+    else if ((AntiTheft == 0) && (HomeBase == 0) && (CarValue == 1)) then discrete(0.000002, 0.999998)
+    else if ((AntiTheft == 1) && (HomeBase == 0) && (CarValue == 1)) then discrete(0.000002, 0.999998)
+    else if ((AntiTheft == 0) && (HomeBase == 1) && (CarValue == 1)) then discrete(0.002, 0.998)
+    else if ((AntiTheft == 1) && (HomeBase == 1) && (CarValue == 1)) then discrete(0.005, 0.995)
+    else if ((AntiTheft == 0) && (HomeBase == 2) && (CarValue == 1)) then discrete(0.0001, 0.9999)
+    else if ((AntiTheft == 1) && (HomeBase == 2) && (CarValue == 1)) then discrete(0.0002, 0.9998)
+    else if ((AntiTheft == 0) && (HomeBase == 3) && (CarValue == 1)) then discrete(0.00002, 0.99998)
+    else if ((AntiTheft == 1) && (HomeBase == 3) && (CarValue == 1)) then discrete(0.0001, 0.9999)
+    else if ((AntiTheft == 0) && (HomeBase == 0) && (CarValue == 2)) then discrete(0.000003, 0.999997)
+    else if ((AntiTheft == 1) && (HomeBase == 0) && (CarValue == 2)) then discrete(0.000003, 0.999997)
+    else if ((AntiTheft == 0) && (HomeBase == 1) && (CarValue == 2)) then discrete(0.005, 0.995)
+    else if ((AntiTheft == 1) && (HomeBase == 1) && (CarValue == 2)) then discrete(0.01, 0.99)
+    else if ((AntiTheft == 0) && (HomeBase == 2) && (CarValue == 2)) then discrete(0.0003, 0.9997)
+    else if ((AntiTheft == 1) && (HomeBase == 2) && (CarValue == 2)) then discrete(0.0005, 0.9995)
+    else if ((AntiTheft == 0) && (HomeBase == 3) && (CarValue == 2)) then discrete(0.00005, 0.99995)
+    else if ((AntiTheft == 1) && (HomeBase == 3) && (CarValue == 2)) then discrete(0.0002, 0.9998)
+    else if ((AntiTheft == 0) && (HomeBase == 0) && (CarValue == 3)) then discrete(0.000002, 0.999998)
+    else if ((AntiTheft == 1) && (HomeBase == 0) && (CarValue == 3)) then discrete(0.000002, 0.999998)
+    else if ((AntiTheft == 0) && (HomeBase == 1) && (CarValue == 3)) then discrete(0.005, 0.995)
+    else if ((AntiTheft == 1) && (HomeBase == 1) && (CarValue == 3)) then discrete(0.01, 0.99)
+    else if ((AntiTheft == 0) && (HomeBase == 2) && (CarValue == 3)) then discrete(0.0003, 0.9997)
+    else if ((AntiTheft == 1) && (HomeBase == 2) && (CarValue == 3)) then discrete(0.0005, 0.9995)
+    else if ((AntiTheft == 0) && (HomeBase == 3) && (CarValue == 3)) then discrete(0.00005, 0.99995)
+    else if ((AntiTheft == 1) && (HomeBase == 3) && (CarValue == 3)) then discrete(0.0002, 0.9998)
+    else if ((AntiTheft == 0) && (HomeBase == 0) && (CarValue == 4)) then discrete(0.000001, 0.999999)
+    else if ((AntiTheft == 1) && (HomeBase == 0) && (CarValue == 4)) then discrete(0.000001, 0.999999)
+    else if ((AntiTheft == 0) && (HomeBase == 1) && (CarValue == 4)) then discrete(0.000001, 0.999999)
+    else if ((AntiTheft == 1) && (HomeBase == 1) && (CarValue == 4)) then discrete(0.000001, 0.999999)
+    else if ((AntiTheft == 0) && (HomeBase == 2) && (CarValue == 4)) then discrete(0.000001, 0.999999)
+    else if ((AntiTheft == 1) && (HomeBase == 2) && (CarValue == 4)) then discrete(0.000001, 0.999999)
+    else if ((AntiTheft == 0) && (HomeBase == 3) && (CarValue == 4)) then discrete(0.000001, 0.999999)
+    else                                                                  discrete(0.000001, 0.999999) in
+
+
+  let xs = sample {
+    Accident <- exact(Accident);
+    MakeModel <- exact(MakeModel);
+    VehicleYear <- exact(VehicleYear);
+
+    ILiCost
+      ~ (  if (Accident[0]) then discrete(1.0, 0.0, 0.0, 0.0)
+      else if (Accident[1]) then discrete(0.999000, 0.000998, 0.000001, 0.000001)
+      else if (Accident[2]) then discrete(0.90, 0.05, 0.03, 0.02)
+      else                         discrete(0.80, 0.10, 0.06, 0.04));
+    RuggedAuto
+      ~ (  if ((MakeModel[0]) && (VehicleYear[0])) then discrete(0.95, 0.04, 0.01)
+      else if ((MakeModel[1]) && (VehicleYear[0])) then discrete(0.5, 0.5, 0.0)
+      else if ((MakeModel[2]) && (VehicleYear[0])) then discrete(0.2, 0.6, 0.2)
+      else if ((MakeModel[3]) && (VehicleYear[0])) then discrete(0.1, 0.6, 0.3)
+      else if ((MakeModel[4]) && (VehicleYear[0])) then discrete(0.05, 0.55, 0.40)
+      else if ((MakeModel[0]) && (VehicleYear[1])) then discrete(0.95, 0.04, 0.01)
+      else if ((MakeModel[1]) && (VehicleYear[1])) then discrete(0.9, 0.1, 0.0)
+      else if ((MakeModel[2]) && (VehicleYear[1])) then discrete(0.05, 0.55, 0.40)
+      else if ((MakeModel[3]) && (VehicleYear[1])) then discrete(0.1, 0.6, 0.3)
+      else                                                  discrete(0.05, 0.55, 0.40));
+    (ILiCost, RuggedAuto)
+  } in
+  let ILiCost    = xs[0] in
+  let RuggedAuto = xs[1] in
+
+
+  let ThisCarDam
+    =    if ((Accident == 0) && (RuggedAuto == 0)) then discrete(1.0     , 0.0     , 0.0     , 0.0)
+    else if ((Accident == 1) && (RuggedAuto == 0)) then discrete(0.001   , 0.900   , 0.098   , 0.001)
+    else if ((Accident == 2) && (RuggedAuto == 0)) then discrete(0.000001, 0.000999, 0.700000, 0.299000)
+    else if ((Accident == 3) && (RuggedAuto == 0)) then discrete(0.000001, 0.000009, 0.000090, 0.999900)
+    else if ((Accident == 0) && (RuggedAuto == 1)) then discrete(1.0     , 0.0     , 0.0     , 0.0)
+    else if ((Accident == 1) && (RuggedAuto == 1)) then discrete(0.200000, 0.750000, 0.049999, 0.000001)
+    else if ((Accident == 2) && (RuggedAuto == 1)) then discrete(0.001   , 0.099   , 0.800   , 0.100)
+    else if ((Accident == 3) && (RuggedAuto == 1)) then discrete(0.000001, 0.000999, 0.009000, 0.990000)
+    else if ((Accident == 0) && (RuggedAuto == 2)) then discrete(1.0     , 0.0     , 0.0     , 0.0)
+    else if ((Accident == 1) && (RuggedAuto == 2)) then discrete(0.700000, 0.290000, 0.009999, 0.000001)
+    else if ((Accident == 2) && (RuggedAuto == 2)) then discrete(0.05    , 0.60    , 0.30    , 0.05)
+    else                                                discrete(0.05    , 0.20    , 0.20    , 0.55) in
+
+  let ThisCarCost
+    =    if ((ThisCarDam == 0) && (CarValue == 0) && (Theft == 0)) then discrete(0.2, 0.8, 0.0, 0.0)
+    else if ((ThisCarDam == 1) && (CarValue == 0) && (Theft == 0)) then discrete(0.15, 0.85, 0.00, 0.00)
+    else if ((ThisCarDam == 2) && (CarValue == 0) && (Theft == 0)) then discrete(0.05, 0.95, 0.00, 0.00)
+    else if ((ThisCarDam == 3) && (CarValue == 0) && (Theft == 0)) then discrete(0.03, 0.97, 0.00, 0.00)
+    else if ((ThisCarDam == 0) && (CarValue == 1) && (Theft == 0)) then discrete(0.05, 0.95, 0.00, 0.00)
+    else if ((ThisCarDam == 1) && (CarValue == 1) && (Theft == 0)) then discrete(0.03, 0.97, 0.00, 0.00)
+    else if ((ThisCarDam == 2) && (CarValue == 1) && (Theft == 0)) then discrete(0.01, 0.99, 0.00, 0.00)
+    else if ((ThisCarDam == 3) && (CarValue == 1) && (Theft == 0)) then discrete(0.000001, 0.999999, 0.000000, 0.000000)
+    else if ((ThisCarDam == 0) && (CarValue == 2) && (Theft == 0)) then discrete(0.04, 0.01, 0.95, 0.00)
+    else if ((ThisCarDam == 1) && (CarValue == 2) && (Theft == 0)) then discrete(0.03, 0.02, 0.95, 0.00)
+    else if ((ThisCarDam == 2) && (CarValue == 2) && (Theft == 0)) then discrete(0.001, 0.001, 0.998, 0.000)
+    else if ((ThisCarDam == 3) && (CarValue == 2) && (Theft == 0)) then discrete(0.000001, 0.000001, 0.999998, 0.000000)
+    else if ((ThisCarDam == 0) && (CarValue == 3) && (Theft == 0)) then discrete(0.04, 0.01, 0.95, 0.00)
+    else if ((ThisCarDam == 1) && (CarValue == 3) && (Theft == 0)) then discrete(0.03, 0.02, 0.95, 0.00)
+    else if ((ThisCarDam == 2) && (CarValue == 3) && (Theft == 0)) then discrete(0.001, 0.001, 0.998, 0.000)
+    else if ((ThisCarDam == 3) && (CarValue == 3) && (Theft == 0)) then discrete(0.000001, 0.000001, 0.999998, 0.000000)
+    else if ((ThisCarDam == 0) && (CarValue == 4) && (Theft == 0)) then discrete(0.04, 0.01, 0.20, 0.75)
+    else if ((ThisCarDam == 1) && (CarValue == 4) && (Theft == 0)) then discrete(0.02, 0.03, 0.25, 0.70)
+    else if ((ThisCarDam == 2) && (CarValue == 4) && (Theft == 0)) then discrete(0.001, 0.001, 0.018, 0.980)
+    else if ((ThisCarDam == 3) && (CarValue == 4) && (Theft == 0)) then discrete(0.000001, 0.000001, 0.009998, 0.990000)
+    else if ((ThisCarDam == 0) && (CarValue == 0) && (Theft == 1)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((ThisCarDam == 1) && (CarValue == 0) && (Theft == 1)) then discrete(0.95, 0.05, 0.00, 0.00)
+    else if ((ThisCarDam == 2) && (CarValue == 0) && (Theft == 1)) then discrete(0.25, 0.75, 0.00, 0.00)
+    else if ((ThisCarDam == 3) && (CarValue == 0) && (Theft == 1)) then discrete(0.05, 0.95, 0.00, 0.00)
+    else if ((ThisCarDam == 0) && (CarValue == 1) && (Theft == 1)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((ThisCarDam == 1) && (CarValue == 1) && (Theft == 1)) then discrete(0.95, 0.05, 0.00, 0.00)
+    else if ((ThisCarDam == 2) && (CarValue == 1) && (Theft == 1)) then discrete(0.15, 0.85, 0.00, 0.00)
+    else if ((ThisCarDam == 3) && (CarValue == 1) && (Theft == 1)) then discrete(0.01, 0.99, 0.00, 0.00)
+    else if ((ThisCarDam == 0) && (CarValue == 2) && (Theft == 1)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((ThisCarDam == 1) && (CarValue == 2) && (Theft == 1)) then discrete(0.99, 0.01, 0.00, 0.00)
+    else if ((ThisCarDam == 2) && (CarValue == 2) && (Theft == 1)) then discrete(0.01, 0.01, 0.98, 0.00)
+    else if ((ThisCarDam == 3) && (CarValue == 2) && (Theft == 1)) then discrete(0.005, 0.005, 0.990, 0.000)
+    else if ((ThisCarDam == 0) && (CarValue == 3) && (Theft == 1)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((ThisCarDam == 1) && (CarValue == 3) && (Theft == 1)) then discrete(0.99, 0.01, 0.00, 0.00)
+    else if ((ThisCarDam == 2) && (CarValue == 3) && (Theft == 1)) then discrete(0.005, 0.005, 0.990, 0.000)
+    else if ((ThisCarDam == 3) && (CarValue == 3) && (Theft == 1)) then discrete(0.001, 0.001, 0.998, 0.000)
+    else if ((ThisCarDam == 0) && (CarValue == 4) && (Theft == 1)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((ThisCarDam == 1) && (CarValue == 4) && (Theft == 1)) then discrete(0.98, 0.01, 0.01, 0.00)
+    else if ((ThisCarDam == 2) && (CarValue == 4) && (Theft == 1)) then discrete(0.003, 0.003, 0.044, 0.950)
+    else                                                                discrete(0.000001, 0.000001, 0.029998, 0.970000) in
+
+  let OtherCarCost
+    =    if ((Accident == 0) && (RuggedAuto == 0)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((Accident == 1) && (RuggedAuto == 0)) then discrete(0.99000, 0.00500, 0.00499, 0.00001)
+    else if ((Accident == 2) && (RuggedAuto == 0)) then discrete(0.60000, 0.20000, 0.19998, 0.00002)
+    else if ((Accident == 3) && (RuggedAuto == 0)) then discrete(0.20000, 0.40000, 0.39996, 0.00004)
+    else if ((Accident == 0) && (RuggedAuto == 1)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((Accident == 1) && (RuggedAuto == 1)) then discrete(0.9799657, 0.009999650, 0.009984651, 0.00004999825)
+    else if ((Accident == 2) && (RuggedAuto == 1)) then discrete(0.50000, 0.20000, 0.29997, 0.00003)
+    else if ((Accident == 3) && (RuggedAuto == 1)) then discrete(0.10000, 0.50000, 0.39994, 0.00006)
+    else if ((Accident == 0) && (RuggedAuto == 2)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((Accident == 1) && (RuggedAuto == 2)) then discrete(0.95000, 0.03000, 0.01998, 0.00002)
+    else if ((Accident == 2) && (RuggedAuto == 2)) then discrete(0.40000, 0.30000, 0.29996, 0.00004)
+    else                                                discrete(0.0050, 0.5500, 0.4449, 0.0001) in
+
+
+  let PropCost
+    =    if ((OtherCarCost == 0) && (ThisCarCost == 0)) then discrete(0.7, 0.3, 0.0, 0.0)
+    else if ((OtherCarCost == 1) && (ThisCarCost == 0)) then discrete(0.00, 0.95, 0.05, 0.00)
+    else if ((OtherCarCost == 2) && (ThisCarCost == 0)) then discrete(0.00, 0.00, 0.98, 0.02)
+    else if ((OtherCarCost == 3) && (ThisCarCost == 0)) then discrete(0.0, 0.0, 0.0, 1.0)
+    else if ((OtherCarCost == 0) && (ThisCarCost == 1)) then discrete(0.00, 0.95, 0.05, 0.00)
+    else if ((OtherCarCost == 1) && (ThisCarCost == 1)) then discrete(0.0, 0.6, 0.4, 0.0)
+    else if ((OtherCarCost == 2) && (ThisCarCost == 1)) then discrete(0.0, 0.0, 0.8, 0.2)
+    else if ((OtherCarCost == 3) && (ThisCarCost == 1)) then discrete(0.0, 0.0, 0.0, 1.0)
+    else if ((OtherCarCost == 0) && (ThisCarCost == 2)) then discrete(0.00, 0.00, 0.98, 0.02)
+    else if ((OtherCarCost == 1) && (ThisCarCost == 2)) then discrete(0.00, 0.00, 0.95, 0.05)
+    else if ((OtherCarCost == 2) && (ThisCarCost == 2)) then discrete(0.0, 0.0, 0.6, 0.4)
+    else if ((OtherCarCost == 3) && (ThisCarCost == 2)) then discrete(0.0, 0.0, 0.0, 1.0)
+    else if ((OtherCarCost == 0) && (ThisCarCost == 3)) then discrete(0.0, 0.0, 0.0, 1.0)
+    else if ((OtherCarCost == 1) && (ThisCarCost == 3)) then discrete(0.0, 0.0, 0.0, 1.0)
+    else if ((OtherCarCost == 2) && (ThisCarCost == 3)) then discrete(0.0, 0.0, 0.0, 1.0)
+    else                                                     discrete(0.0, 0.0, 0.0, 1.0) in
+  observe PropCost == 3 in
+
+  let MedCost = sample {
+    MakeModel <- exact(MakeModel);
+    VehicleYear <- exact(VehicleYear);
+    Airbag ~
+      (    if ((MakeModel[0]) && (VehicleYear[0])) then discrete(1.0, 0.0)
+      else if ((MakeModel[1]) && (VehicleYear[0])) then discrete(1.0, 0.0)
+      else if ((MakeModel[2]) && (VehicleYear[0])) then discrete(1.0, 0.0)
+      else if ((MakeModel[3]) && (VehicleYear[0])) then discrete(1.0, 0.0)
+      else if ((MakeModel[4]) && (VehicleYear[0])) then discrete(1.0, 0.0)
+      else if ((MakeModel[0]) && (VehicleYear[1])) then discrete(0.1, 0.9)
+      else if ((MakeModel[1]) && (VehicleYear[1])) then discrete(0.05, 0.95)
+      else if ((MakeModel[2]) && (VehicleYear[1])) then discrete(0.2, 0.8)
+      else if ((MakeModel[3]) && (VehicleYear[1])) then discrete(0.6, 0.4)
+      else                                                  discrete(0.1, 0.9) );
+
+    Cushioning ~ (
+           if ((RuggedAuto == 0) && (Airbag == 0)) then discrete(0.5, 0.3, 0.2, 0.0)
+      else if ((RuggedAuto == 1) && (Airbag == 0)) then discrete(0.0, 0.1, 0.6, 0.3)
+      else if ((RuggedAuto == 2) && (Airbag == 0)) then discrete(0.0, 0.0, 0.0, 1.0)
+      else if ((RuggedAuto == 0) && (Airbag == 1)) then discrete(0.7, 0.3, 0.0, 0.0)
+      else if ((RuggedAuto == 1) && (Airbag == 1)) then discrete(0.1, 0.6, 0.3, 0.0)
+      else                                              discrete(0.0, 0.0, 0.7, 0.3));
+
+    Accident <- exact(Accident);
+    Age <- exact(Age);
+    ~ (  if ((Accident[0]) && (Age[0]) && (Cushioning == 0)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((Accident[1]) && (Age[0]) && (Cushioning == 0)) then discrete(0.960, 0.030, 0.009, 0.001)
+    else if ((Accident[2]) && (Age[0]) && (Cushioning == 0)) then discrete(0.5, 0.2, 0.2, 0.1)
+    else if ((Accident[3]) && (Age[0]) && (Cushioning == 0)) then discrete(0.3, 0.3, 0.2, 0.2)
+    else if ((Accident[0]) && (Age[1]) && (Cushioning == 0)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((Accident[1]) && (Age[1]) && (Cushioning == 0)) then discrete(0.960, 0.030, 0.009, 0.001)
+    else if ((Accident[2]) && (Age[1]) && (Cushioning == 0)) then discrete(0.5, 0.2, 0.2, 0.1)
+    else if ((Accident[3]) && (Age[1]) && (Cushioning == 0)) then discrete(0.3, 0.3, 0.2, 0.2)
+    else if ((Accident[0]) && (Age[2]) && (Cushioning == 0)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((Accident[1]) && (Age[2]) && (Cushioning == 0)) then discrete(0.90, 0.07, 0.02, 0.01)
+    else if ((Accident[2]) && (Age[2]) && (Cushioning == 0)) then discrete(0.3, 0.3, 0.2, 0.2)
+    else if ((Accident[3]) && (Age[2]) && (Cushioning == 0)) then discrete(0.2, 0.2, 0.3, 0.3)
+    else if ((Accident[0]) && (Age[0]) && (Cushioning == 1)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((Accident[1]) && (Age[0]) && (Cushioning == 1)) then discrete(0.9800, 0.0190, 0.0009, 0.0001)
+    else if ((Accident[2]) && (Age[0]) && (Cushioning == 1)) then discrete(0.80, 0.15, 0.03, 0.02)
+    else if ((Accident[3]) && (Age[0]) && (Cushioning == 1)) then discrete(0.5, 0.2, 0.2, 0.1)
+    else if ((Accident[0]) && (Age[1]) && (Cushioning == 1)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((Accident[1]) && (Age[1]) && (Cushioning == 1)) then discrete(0.9800, 0.0190, 0.0009, 0.0001)
+    else if ((Accident[2]) && (Age[1]) && (Cushioning == 1)) then discrete(0.80, 0.15, 0.03, 0.02)
+    else if ((Accident[3]) && (Age[1]) && (Cushioning == 1)) then discrete(0.5, 0.2, 0.2, 0.1)
+    else if ((Accident[0]) && (Age[2]) && (Cushioning == 1)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((Accident[1]) && (Age[2]) && (Cushioning == 1)) then discrete(0.950, 0.040, 0.007, 0.003)
+    else if ((Accident[2]) && (Age[2]) && (Cushioning == 1)) then discrete(0.5, 0.2, 0.2, 0.1)
+    else if ((Accident[3]) && (Age[2]) && (Cushioning == 1)) then discrete(0.3, 0.3, 0.2, 0.2)
+    else if ((Accident[0]) && (Age[0]) && (Cushioning == 2)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((Accident[1]) && (Age[0]) && (Cushioning == 2)) then discrete(0.99000, 0.00990, 0.00009, 0.00001)
+    else if ((Accident[2]) && (Age[0]) && (Cushioning == 2)) then discrete(0.95, 0.02, 0.02, 0.01)
+    else if ((Accident[3]) && (Age[0]) && (Cushioning == 2)) then discrete(0.90, 0.07, 0.02, 0.01)
+    else if ((Accident[0]) && (Age[1]) && (Cushioning == 2)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((Accident[1]) && (Age[1]) && (Cushioning == 2)) then discrete(0.99000, 0.00990, 0.00009, 0.00001)
+    else if ((Accident[2]) && (Age[1]) && (Cushioning == 2)) then discrete(0.95, 0.02, 0.02, 0.01)
+    else if ((Accident[3]) && (Age[1]) && (Cushioning == 2)) then discrete(0.90, 0.07, 0.02, 0.01)
+    else if ((Accident[0]) && (Age[2]) && (Cushioning == 2)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((Accident[1]) && (Age[2]) && (Cushioning == 2)) then discrete(0.970, 0.025, 0.003, 0.002)
+    else if ((Accident[2]) && (Age[2]) && (Cushioning == 2)) then discrete(0.90, 0.07, 0.02, 0.01)
+    else if ((Accident[3]) && (Age[2]) && (Cushioning == 2)) then discrete(0.60, 0.30, 0.07, 0.03)
+    else if ((Accident[0]) && (Age[0]) && (Cushioning == 3)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((Accident[1]) && (Age[0]) && (Cushioning == 3)) then discrete(0.999000, 0.000990, 0.000009, 0.000001)
+    else if ((Accident[2]) && (Age[0]) && (Cushioning == 3)) then discrete(0.990, 0.007, 0.002, 0.001)
+    else if ((Accident[3]) && (Age[0]) && (Cushioning == 3)) then discrete(0.95, 0.03, 0.01, 0.01)
+    else if ((Accident[0]) && (Age[1]) && (Cushioning == 3)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((Accident[1]) && (Age[1]) && (Cushioning == 3)) then discrete(0.999000, 0.000990, 0.000009, 0.000001)
+    else if ((Accident[2]) && (Age[1]) && (Cushioning == 3)) then discrete(0.990, 0.007, 0.002, 0.001)
+    else if ((Accident[3]) && (Age[1]) && (Cushioning == 3)) then discrete(0.95, 0.03, 0.01, 0.01)
+    else if ((Accident[0]) && (Age[2]) && (Cushioning == 3)) then discrete(1.0, 0.0, 0.0, 0.0)
+    else if ((Accident[1]) && (Age[2]) && (Cushioning == 3)) then discrete(0.990, 0.007, 0.002, 0.001)
+    else if ((Accident[2]) && (Age[2]) && (Cushioning == 3)) then discrete(0.95, 0.03, 0.01, 0.01)
+    else                                                              discrete(0.90, 0.05, 0.03, 0.02)
+    )
+  } in
+
+
+  (Age, Mileage)
+}
+sample {
+  exact(network())
+}

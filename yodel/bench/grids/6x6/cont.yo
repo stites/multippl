@@ -1,0 +1,48 @@
+sample {
+  x00 <- ~bern(1.0 / 3.0);
+  x01 <- if x00 then ~bern(1.0 / 4.0) else ~bern(1.0 / 5.0);
+  x02 <- if x01 then ~bern(1.0 / 4.0) else ~bern(1.0 / 5.0);
+  x03 <- if x02 then ~bern(1.0 / 4.0) else ~bern(1.0 / 5.0);
+  x04 <- if x03 then ~bern(1.0 / 4.0) else ~bern(1.0 / 5.0);
+  x10 <- if x00 then ~bern(1.0 / 4.0) else ~bern(1.0 / 5.0);
+  x20 <- if x10 then ~bern(1.0 / 4.0) else ~bern(1.0 / 5.0);
+  x30 <- if x20 then ~bern(1.0 / 4.0) else ~bern(1.0 / 5.0);
+  x40 <- if x30 then ~bern(1.0 / 4.0) else ~bern(1.0 / 5.0);
+  x50 <- if x40 then ~bern(1.0 / 4.0) else ~bern(1.0 / 5.0);
+  x05 <- if x04 then ~bern(1.0 / 4.0) else ~bern(1.0 / 5.0);
+  x11 <- if  x10 &&  x01 then ~bern(1.0 / 6.0) else if  x10 && !x01 then ~bern(1.0 / 7.0) else if !x10 &&  x01 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x12 <- if  x11 &&  x02 then ~bern(1.0 / 6.0) else if  x11 && !x02 then ~bern(1.0 / 7.0) else if !x11 &&  x02 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x13 <- if  x12 &&  x03 then ~bern(1.0 / 6.0) else if  x12 && !x03 then ~bern(1.0 / 7.0) else if !x12 &&  x03 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x21 <- if  x20 &&  x11 then ~bern(1.0 / 6.0) else if  x20 && !x11 then ~bern(1.0 / 7.0) else if !x20 &&  x11 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x22 <- if  x21 &&  x12 then ~bern(1.0 / 6.0) else if  x21 && !x12 then ~bern(1.0 / 7.0) else if !x21 &&  x12 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x31 <- if  x30 &&  x21 then ~bern(1.0 / 6.0) else if  x30 && !x21 then ~bern(1.0 / 7.0) else if !x30 &&  x21 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x41 <- if  x40 &&  x31 then ~bern(1.0 / 6.0) else if  x40 && !x31 then ~bern(1.0 / 7.0) else if !x40 &&  x31 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x32 <- if  x31 &&  x22 then ~bern(1.0 / 6.0) else if  x31 && !x22 then ~bern(1.0 / 7.0) else if !x31 &&  x22 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x23 <- if  x22 &&  x13 then ~bern(1.0 / 6.0) else if  x22 && !x13 then ~bern(1.0 / 7.0) else if !x22 &&  x13 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x14 <- if  x13 &&  x04 then ~bern(1.0 / 6.0) else if  x13 && !x04 then ~bern(1.0 / 7.0) else if !x13 &&  x04 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x15 <- if  x14 &&  x05 then ~bern(1.0 / 6.0) else if  x14 && !x05 then ~bern(1.0 / 7.0) else if !x14 &&  x05 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x24 <- if  x23 &&  x14 then ~bern(1.0 / 6.0) else if  x23 && !x14 then ~bern(1.0 / 7.0) else if !x23 &&  x14 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x25 <- if  x24 &&  x15 then ~bern(1.0 / 6.0) else if  x24 && !x15 then ~bern(1.0 / 7.0) else if !x24 &&  x15 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x33 <- if  x32 &&  x23 then ~bern(1.0 / 6.0) else if  x32 && !x23 then ~bern(1.0 / 7.0) else if !x32 &&  x23 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x34 <- if  x33 &&  x24 then ~bern(1.0 / 6.0) else if  x33 && !x24 then ~bern(1.0 / 7.0) else if !x33 &&  x24 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x35 <- if  x34 &&  x25 then ~bern(1.0 / 6.0) else if  x34 && !x25 then ~bern(1.0 / 7.0) else if !x34 &&  x25 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x42 <- if  x41 &&  x32 then ~bern(1.0 / 6.0) else if  x41 && !x32 then ~bern(1.0 / 7.0) else if !x41 &&  x32 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x43 <- if  x42 &&  x33 then ~bern(1.0 / 6.0) else if  x42 && !x33 then ~bern(1.0 / 7.0) else if !x42 &&  x33 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x44 <- if  x43 &&  x34 then ~bern(1.0 / 6.0) else if  x43 && !x34 then ~bern(1.0 / 7.0) else if !x43 &&  x34 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x45 <- if  x44 &&  x35 then ~bern(1.0 / 6.0) else if  x44 && !x35 then ~bern(1.0 / 7.0) else if !x44 &&  x35 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x51 <- if  x50 &&  x41 then ~bern(1.0 / 6.0) else if  x50 && !x41 then ~bern(1.0 / 7.0) else if !x50 &&  x41 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x52 <- if  x51 &&  x42 then ~bern(1.0 / 6.0) else if  x51 && !x42 then ~bern(1.0 / 7.0) else if !x51 &&  x42 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x53 <- if  x52 &&  x43 then ~bern(1.0 / 6.0) else if  x52 && !x43 then ~bern(1.0 / 7.0) else if !x52 &&  x43 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  x54 <- if  x53 &&  x44 then ~bern(1.0 / 6.0) else if  x53 && !x44 then ~bern(1.0 / 7.0) else if !x53 &&  x44 then ~bern(1.0 / 8.0) else ~bern(1.0 / 9.0);
+  d55 <- if  x54 &&  x45 then bern(1.0 / 6.0) else if  x54 && !x45 then bern(1.0 / 7.0) else if !x54 &&  x45 then bern(1.0 / 8.0) else bern(1.0 / 9.0);
+
+  observe true from d55;
+
+  ( x00, x01, x02, x03, x04, x05
+  , x10, x11, x12, x13, x14, x15
+  , x20, x21, x22, x23, x24, x25
+  , x30, x31, x32, x33, x34, x35
+  , x40, x41, x42, x43, x44, x45
+  , x50, x51, x52, x53, x54, true
+  )
+}

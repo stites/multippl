@@ -102,7 +102,8 @@ def pyrunner(mainfile, logdir="logs/", **kwargs):
 
 def timedrunner(bin, mainfile, logdir="logs/", **kwargs):
     # cmd = [benchdir + "time.sh", bin, mainfile]
-    cmd = [bin, mainfile]
+    extracli = kwargs['extracli'] if 'extracli' in kwargs else []
+    cmd = [bin, *extracli, mainfile]
     runner_(mainfile, cmd, with_seed=False, logdir=logdir, needs_timer=True, **kwargs)
 
 def yorunner(mainfile, logdir="logs/", **kwargs):
@@ -126,10 +127,11 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="generate data for simple HMMs")
+    parser.add_argument("--psi", default=False, action='store_true')
     parser.add_argument("--num-runs", default=100, type=int,)
     parser.add_argument("--num-steps", default=1_000, type=int,)
     parser.add_argument("--initial-seed", default=0, type=int,)
-    parser.add_argument("--noti", default=True, type=bool,)
+    parser.add_argument("--noti", default=False, action='store_true')
     parser.add_argument("--threads", default=multiprocessing.cpu_count() // 2, type=int,)
     parser.add_argument("--out-dir", default="logs/", type=str,)
     args = parser.parse_args()
@@ -138,7 +140,8 @@ if __name__ == "__main__":
     hm  = time.strftime("%H:%M", time.localtime())
     logdir = args.out_dir + date + "/" + hm + "/"
     os.makedirs(logdir, exist_ok=True)
-    reserved = ["bench.py", "avg.py"]
+    reserved = ["bench.py", "avg.py", "utils.py", "yo2l1.py", "truth.py", "truth.sh", "main.dice-partial"]
+
     files = [f for f in os.listdir('.') if os.path.isfile(f) and not (f in reserved)]
 
     path = os.getcwd()
@@ -147,32 +150,33 @@ if __name__ == "__main__":
     args = vars(args)
     num_steps = args["num_steps"]
     for f in files:
-        if f[-3:] == ".py":
+        if f[-3:] == ".py" and not args['psi']:
             #if "hbn" in parentpath:
             #    args["num_steps"] = 100
             pyrunner(f, logdir=logdir, **args)
             #if "hbn" in parentpath:
             #    args["num_steps"] = num_steps
             pass
-        elif f[-5:] == ".dice":
+        elif f[-5:] == ".dice" and not args['psi']:
             args["num_steps"] = 1
             timedrunner("dice", f, logdir=logdir, **args)
             args["num_steps"] = num_steps
             pass
-        elif f[-4:] == ".psi":
+        elif f[-4:] == ".psi" and args['psi']:
             args["num_steps"] = 1
-            timedrunner("psi", f, logdir=logdir, **args)
+            timedrunner("psi", f, logdir=logdir, extracli=['--dp'], **args)
             args["num_steps"] = num_steps
             pass
-        elif (f[:5] == "grids" and f[-3:] == ".yo" and len(f) == 11) or (   # grids#x#.yo
-              f[:5] == "grids" and f[-9:] == "-obs01.yo" and len(f) == 17) or ( # grids#x#-obs01.yo
-              f == "exact.yo"): # exact.yo
+        elif (not args['psi'] and
+              (f[:5] == "grids" and f[-3:] == ".yo" and len(f) == 11) or (   # grids#x#.yo
+               f[:5] == "grids" and f[-9:] == "-obs01.yo" and len(f) == 17) or ( # grids#x#-obs01.yo
+               f == "exact.yo" or f == "disc.yo")): # disc programs
             # we are compiling exactly, only use one sample
             args["num_steps"] = 1
             yorunner(f, logdir=logdir, **args)
             args["num_steps"] = num_steps
             pass
-        elif f[-3:] == ".yo":
+        elif f[-3:] == ".yo" and not args['psi']:
             #if "hbn" in parentpath:
             #    args["num_steps"] = 100
             yorunner(f, logdir=logdir, **args)

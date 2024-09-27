@@ -83,7 +83,8 @@ sample {
   q  <- [];
   q  <- push(q, p1);
   q  <- push(q, p2);
-  num_steps <- 8;
+  num_steps ~ discrete(0.25,0.25,0.25,0.25);
+  num_steps <- num_steps + 4;
   while (num_steps > 0) {
     nxt <- head(q);
     q   <- tail(q);
