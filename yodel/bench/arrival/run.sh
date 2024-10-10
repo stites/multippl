@@ -20,18 +20,23 @@ case $1 in
     BENCH_PSI=0
     CLEAN=0
     ;;
+
   bench)
     echo "bench)"
     AVG=1
     BENCH=1
-    BENCH_PSI=1
     CLEAN=0
     shift
     while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
       --clean) CLEAN=1 ;;
       --no-avg) AVG=0 ;;
-      --no-psi) BENCH_PSI=0 ;;
-      --psi) BENCH_PSI=1 ;;
+      --no-psi)
+        BENCH_PSI=0
+        ;;
+      --psi)
+        BENCH=0
+        BENCH_PSI=1
+        ;;
     esac; shift; done
     if [[ "$1" == '--' ]]; then shift; fi
     ;;
@@ -62,8 +67,8 @@ run_benchmark() {
     fi
     echo "with $NUM_THREADS threads"
     COMMAND="python ./bench.py --num-runs $NUM_RUNS --num-steps $NUM_STEPS --threads $NUM_THREADS $PSI_FLAG"
-    echo $COMMAND
-    (cd "$1" && eval ${COMMAND} )
+    echo "$COMMAND"
+    (cd "$1" && eval "${COMMAND}" )
 }
 run_clean() {
     (cd "$1" && rm -rf logs/)
@@ -79,7 +84,7 @@ function run_phase {
           continue
       else
           if [ -d "$exp" ]; then
-              echo $MODE "$exp"
+              echo "$MODE" "$exp"
               $MODE "$exp" "$PSIARG"
           fi
       fi

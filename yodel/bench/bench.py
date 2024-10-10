@@ -150,39 +150,42 @@ if __name__ == "__main__":
     args = vars(args)
     num_steps = args["num_steps"]
     for f in files:
-        if f[-3:] == ".py" and not args['psi']:
-            #if "hbn" in parentpath:
-            #    args["num_steps"] = 100
-            pyrunner(f, logdir=logdir, **args)
-            #if "hbn" in parentpath:
-            #    args["num_steps"] = num_steps
-            pass
-        elif f[-5:] == ".dice" and not args['psi']:
+        if args['psi'] and f[-4:] == ".psi":
             args["num_steps"] = 1
-            timedrunner("dice", f, logdir=logdir, **args)
+            timedrunner("psi", f, logdir=logdir, extracli=[], **args)
             args["num_steps"] = num_steps
             pass
-        elif f[-4:] == ".psi" and args['psi']:
-            args["num_steps"] = 1
-            timedrunner("psi", f, logdir=logdir, extracli=['--dp'], **args)
-            args["num_steps"] = num_steps
-            pass
-        elif (not args['psi'] and
-              (f[:5] == "grids" and f[-3:] == ".yo" and len(f) == 11) or (   # grids#x#.yo
-               f[:5] == "grids" and f[-9:] == "-obs01.yo" and len(f) == 17) or ( # grids#x#-obs01.yo
-               f == "exact.yo" or f == "disc.yo")): # disc programs
-            # we are compiling exactly, only use one sample
-            args["num_steps"] = 1
-            yorunner(f, logdir=logdir, **args)
-            args["num_steps"] = num_steps
-            pass
-        elif f[-3:] == ".yo" and not args['psi']:
-            #if "hbn" in parentpath:
-            #    args["num_steps"] = 100
-            yorunner(f, logdir=logdir, **args)
-            #if "hbn" in parentpath:
-            #    args["num_steps"] = num_steps
-            pass
+        elif not args['psi']:
+            if f[-3:] == ".py":
+                pyrunner(f, logdir=logdir, **args)
+                pass
+            elif f[-5:] == ".dice":
+                args["num_steps"] = 1
+                timedrunner("dice", f, logdir=logdir, **args)
+                args["num_steps"] = num_steps
+                pass
+            elif (f[:5] == "grids" and f[-3:] == ".yo" and len(f) == 11) or (   # grids#x#.yo
+                  f[:5] == "grids" and f[-9:] == "-obs01.yo" and len(f) == 17) or ( # grids#x#-obs01.yo
+                  f == "exact.yo" or f == "disc.yo"): # disc programs
+                # we are compiling exactly, only use one sample
+                isexact = (f[:5] == "grids" and f[-3:] == ".yo" and len(f) == 11) or (   # grids#x#.yo
+                   f[:5] == "grids" and f[-9:] == "-obs01.yo" and len(f) == 17) or ( # grids#x#-obs01.yo
+                   f == "exact.yo" or f == "disc.yo")
+                notpsi = not args['psi']
+                print(isexact,'and' , notpsi, '=', isexact and notpsi)
+                args["num_steps"] = 1
+                yorunner(f, logdir=logdir, **args)
+                args["num_steps"] = num_steps
+                pass
+            elif f[-3:] == ".yo" and not args['psi']:
+                #if "hbn" in parentpath:
+                #    args["num_steps"] = 100
+                yorunner(f, logdir=logdir, **args)
+                #if "hbn" in parentpath:
+                #    args["num_steps"] = num_steps
+                pass
+            else:
+                print(f"WARNING! saw unexpected file {f}")
         else:
             print(f"WARNING! saw unexpected file {f}")
 
