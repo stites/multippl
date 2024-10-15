@@ -63,7 +63,17 @@ if __name__ == "__main__":
     from prior import prior
     def deltal1(ms, truth):
         return list(map(lambda x: abs(x[0] - x[1]), zip(ms, truth)))
-    print('[', ", ".join(['{:0.3f}'.format(i) for i in truth]), ']', " 𝝙", '{:0.3f}'.format(sum(deltal1(truth, prior))))
+    tot = sum(deltal1(truth, prior))
+    print('[', ", ".join(['{:0.3f}'.format(i) for i in truth]), ']', " 𝝙", '{:0.3f}'.format(tot))
+
+    print("\nsorted 𝝙:")
+    tmpl = "{:<" + str(max([len(k) for k in truthdict.keys()])) + "}"
+    sizes = [(d, k) for k, d in zip(truthdict.keys(), deltal1(truth, prior))]
+    roll = 0
+    for (d, k) in sorted(sizes, key=lambda t: t[0], reverse=True):
+        roll += d
+        print('{:0.3f}'.format(d), tmpl.format(k), "\t", '({:0.3f}; {:>3}%)'.format(roll, '{:0.0f}'.format(roll / tot * 100)))
+
 EOF
 
 python "$TRUTH_FILE"

@@ -83,7 +83,8 @@ def _noti(title, message):
         env = os.environ.copy()
         subprocess.run(["noti", "-o", "-t", f"\"{title}\"", '-m', f'"{message}"'], env=env)
     else:
-        print(title, ":", message)
+        #print(title, ":", message)
+        pass
 
 def noti_failed(mainfile, exitcode, run_ix, num_runs):
     title = f"{mainfile} ({run_ix} / {num_runs}): {exitcode}"
@@ -172,7 +173,6 @@ if __name__ == "__main__":
                    f[:5] == "grids" and f[-9:] == "-obs01.yo" and len(f) == 17) or ( # grids#x#-obs01.yo
                    f == "exact.yo" or f == "disc.yo")
                 notpsi = not args['psi']
-                print(isexact,'and' , notpsi, '=', isexact and notpsi)
                 args["num_steps"] = 1
                 yorunner(f, logdir=logdir, **args)
                 args["num_steps"] = num_steps

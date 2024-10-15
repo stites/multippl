@@ -27,7 +27,7 @@ macro_rules! assert_children {
 }
 
 fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVal> {
-    assert_eq!(n.kind(), "sanf");
+    assert_eq!(n.kind(), "sanf", "{}", n.to_sexp());
     let mut c_ = c.clone();
     let mut cs = n.named_children(&mut c_);
     let n = cs.next().unwrap();
