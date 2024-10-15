@@ -146,6 +146,8 @@
         devshells.default.packages = with pkgs;
           [
             (python3.withPackages (p: [p.pyro-ppl p.ipython p.rich] ++ p.pyro-ppl.optional-dependencies.extras))
+            bc
+            ghc
 
             config.packages.dice
             config.packages.psi
