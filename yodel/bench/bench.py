@@ -174,6 +174,7 @@ if __name__ == "__main__":
                    f == "exact.yo" or f == "disc.yo")
                 notpsi = not args['psi']
                 args["num_steps"] = 1
+
                 yorunner(f, logdir=logdir, **args)
                 args["num_steps"] = num_steps
                 pass

@@ -164,27 +164,37 @@ impl SugarMagicEnv {
             )),
             EFlip(_, param) => Ok(EFlip((), Box::new(desugar_eanf(param)?))),
             EObserve(_, a, e) => {
-                match observed_int(a) {
-                    None => Ok(EObserve(
-                        (),
-                        Box::new(desugar_eanf(a)?),
-                        Box::new(self.desugar_eexpr(e)?),
-                    )),
-                    Some((v, i)) => {
-                        match self.discretes.get(&v) {
-                            None => panic!("type checking for observed discrete"),
-                            Some(vs) => {
-                                let rebind = AnfUD::<EVal>::AVar((), vs[i].clone());
-                                // let reobserve = AnfUD::<EVal>::EQ(rebind, EVal::EBdd(BddPtr::PtrTrue));
-                                Ok(EObserve(
-                                    (),
-                                    Box::new(rebind),
-                                    Box::new(self.desugar_eexpr(e)?),
-                                ))
-                            }
-                        }
-                    }
-                }
+                Ok(EObserve(
+                    (),
+                    Box::new(desugar_eanf(a)?),
+                    Box::new(self.desugar_eexpr(e)?),
+                ))
+                // match observed_int(a) {
+                //     None => Ok(EObserve(
+                //         (),
+                //         Box::new(desugar_eanf(a)?),
+                //         Box::new(self.desugar_eexpr(e)?),
+                //     )),
+                //     // Some(_) => Ok(EObserve(
+                //     //     (),
+                //     //     Box::new(desugar_eanf(a)?),
+                //     //     Box::new(self.desugar_eexpr(e)?),
+                //     // )),
+                //     Some((v, i)) => {
+                //         match self.discretes.get(&v) {
+                //             None => panic!("type checking for observed discrete"),
+                //             Some(vs) => {
+                //                 let rebind = AnfUD::<EVal>::AVar((), vs[i].clone());
+                //                 // let reobserve = AnfUD::<EVal>::EQ(rebind, EVal::EBdd(BddPtr::PtrTrue));
+                //                 Ok(EObserve(
+                //                     (),
+                //                     Box::new(rebind),
+                //                     Box::new(self.desugar_eexpr(e)?),
+                //                 ))
+                //             }
+                //         }
+                //     }
+                // }
             }
             EApp(_, f, args) => Ok(EApp((), f.clone(), desugar_eanf_vec(args)?)),
             EIterate(_, f, init, times) => Ok(EIterate(
