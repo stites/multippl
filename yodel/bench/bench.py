@@ -3,6 +3,7 @@ import os
 import os.path
 import sys
 import multiprocessing
+import shutil
 
 
 from tqdm import tqdm, trange
@@ -11,26 +12,24 @@ import time
 from multiprocessing import Pool
 import multiprocessing.context as ctx
 
-DEVELOP=False
-#USE_NOTI=False if DEVELOP else True
-USE_NOTI=False
-TIMEOUT_SEC= 20 if DEVELOP else 10 * 60 # = 30min
-repo_dir = subprocess.Popen(['git', 'rev-parse', '--show-toplevel'], stdout=subprocess.PIPE).communicate()[0].rstrip().decode('utf-8')
-benchdir = f"{repo_dir}/yodel/bench/"
+DEVELOP = False
+# USE_NOTI=False if DEVELOP else True
+USE_NOTI = False
+TIMEOUT_SEC = 20 if DEVELOP else 10 * 60  # = 30min
 
 def mkoutpath(logdir, mainfile, nsteps, seed, date, hm):
-    outfilepath = logdir + "_".join([
-        f"{mainfile.replace('.', '-')}",
-        f"n{nsteps}",
-        f"s{seed}",
-        f"{date}_{hm}.log"])
+    outfilepath = logdir + "_".join(
+        [f"{mainfile.replace('.', '-')}", f"n{nsteps}", f"s{seed}", f"{date}_{hm}.log"]
+    )
     return outfilepath
 
 
 def proc(args):
-    run, mainfile, nsteps, nruns, initial_seed, cmd, logdir, with_seed, needs_timer = args
+    run, mainfile, nsteps, nruns, initial_seed, cmd, logdir, with_seed, needs_timer = (
+        args
+    )
     date = time.strftime("%Y-%m-%d", time.localtime())
-    hm  = time.strftime("%H:%M", time.localtime())
+    hm = time.strftime("%H:%M", time.localtime())
     seed = run + initial_seed
     outfilepath = mkoutpath(logdir, mainfile, nsteps, seed, date, hm)
 
@@ -54,15 +53,19 @@ def proc(args):
             outfile.write(f"timeout@{TIMEOUT_SEC} (seconds)\n")
         noti_failed(mainfile, 124, run, nruns)
 
+
 def runner_(mainfile, cmd, with_seed=True, logdir="logs/", needs_timer=False, **kwargs):
-    nsteps = kwargs['num_steps']
-    nruns = kwargs['num_runs']
-    nthreads = kwargs['threads']
-    iseed = kwargs['initial_seed']
+    nsteps = kwargs["num_steps"]
+    nruns = kwargs["num_runs"]
+    nthreads = kwargs["threads"]
+    iseed = kwargs["initial_seed"]
 
     start = time.time()
-    #if nthreads:
-    all_args = [(run, mainfile, nsteps, nruns, iseed, cmd, logdir, with_seed, needs_timer) for run in range(nruns)]
+    # if nthreads:
+    all_args = [
+        (run, mainfile, nsteps, nruns, iseed, cmd, logdir, with_seed, needs_timer)
+        for run in range(nruns)
+    ]
     with Pool(nthreads) as p:
         pbar = tqdm(p.imap_unordered(proc, all_args), total=nruns)
         pbar.set_description(mainfile + f"(n:{nsteps})")
@@ -75,75 +78,127 @@ def runner_(mainfile, cmd, with_seed=True, logdir="logs/", needs_timer=False, **
     #             pbar.set_description(mainfile + f"(n:{nsteps})")
 
     end = time.time()
-    noti_success(mainfile, nruns, nruns,  (end - start) / nruns)
+    noti_success(mainfile, nruns, nruns, (end - start) / nruns)
+
 
 def _noti(title, message):
     if USE_NOTI:
         import subprocess, os
+
         env = os.environ.copy()
-        subprocess.run(["noti", "-o", "-t", f"\"{title}\"", '-m', f'"{message}"'], env=env)
+        subprocess.run(
+            ["noti", "-o", "-t", f'"{title}"', "-m", f'"{message}"'], env=env
+        )
     else:
-        #print(title, ":", message)
+        # print(title, ":", message)
         pass
+
 
 def noti_failed(mainfile, exitcode, run_ix, num_runs):
     title = f"{mainfile} ({run_ix} / {num_runs}): {exitcode}"
     message = "failed!"
     _noti(title, message)
 
+
 def noti_success(mainfile, run_ix, num_runs, sec_per_run):
     title = f"{mainfile} ({run_ix} / {num_runs})"
     message = "done! @ {:.2f}s".format(sec_per_run)
     _noti(title, message)
 
+
 def pyrunner(mainfile, logdir="logs/", **kwargs):
-    #cmd = ["python", mainfile, "--num-samples", str(kwargs['num_steps']), "--num-runs", "1", "--seed"]
-    cmd = ["python", mainfile, "--num-samples", str(kwargs['num_steps']), "--seed"]
+    # cmd = ["python", mainfile, "--num-samples", str(kwargs['num_steps']), "--num-runs", "1", "--seed"]
+    cmd = ["python", mainfile, "--num-samples", str(kwargs["num_steps"]), "--seed"]
     runner_(mainfile, cmd, with_seed=True, logdir=logdir, needs_timer=False, **kwargs)
+
 
 def timedrunner(bin, mainfile, logdir="logs/", **kwargs):
     # cmd = [benchdir + "time.sh", bin, mainfile]
-    extracli = kwargs['extracli'] if 'extracli' in kwargs else []
+    extracli = kwargs["extracli"] if "extracli" in kwargs else []
     cmd = [bin, *extracli, mainfile]
     runner_(mainfile, cmd, with_seed=False, logdir=logdir, needs_timer=True, **kwargs)
 
+
 def yorunner(mainfile, logdir="logs/", **kwargs):
-    subprocess.run(["cargo", "build", "--release", "--bin", "yodel"],
-                   stdout=subprocess.DEVNULL,
-                   stderr=subprocess.DEVNULL,
-                   )
-    yodelbin = f"{repo_dir}/target/release/yodel"
+
+    yodelbin = shutil.which("yodel")
+    if yodelbin is None:
+        subprocess.run(
+            ["cargo", "build", "--release", "--bin", "yodel"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        repo_dir = (
+           subprocess.Popen(["git", "rev-parse", "--show-toplevel"], stdout=subprocess.PIPE)
+           .communicate()[0]
+           .rstrip()
+           .decode("utf-8")
+          )
+        yodelbin = f"{repo_dir}/target/release/yodel"
+
     if not os.path.isfile(yodelbin):
         raise Exception("yodel binary was not built correctly")
     else:
         yodelcmd = [yodelbin]
         filearg = ["--file", mainfile]
         dataarg = ["--data", "data.json"] if os.path.isfile("data.json") else []
-        nsteps = ["--steps", str(kwargs['num_steps'])]
-        cmd = yodelcmd + filearg + dataarg + nsteps + [ "--rng" ]
-        runner_(mainfile, cmd, with_seed=True, logdir=logdir, needs_timer=False, **kwargs)
+        nsteps = ["--steps", str(kwargs["num_steps"])]
+        cmd = yodelcmd + filearg + dataarg + nsteps + ["--rng"]
+        runner_(
+            mainfile, cmd, with_seed=True, logdir=logdir, needs_timer=False, **kwargs
+        )
+
 
 if __name__ == "__main__":
     import sys
     import argparse
 
     parser = argparse.ArgumentParser(description="generate data for simple HMMs")
-    parser.add_argument("--psi", default=False, action='store_true')
-    parser.add_argument("--num-runs", default=100, type=int,)
-    parser.add_argument("--num-steps", default=1_000, type=int,)
-    parser.add_argument("--initial-seed", default=0, type=int,)
-    parser.add_argument("--noti", default=False, action='store_true')
-    parser.add_argument("--threads", default=multiprocessing.cpu_count() // 2, type=int,)
-    parser.add_argument("--out-dir", default="logs/", type=str,)
+    parser.add_argument("--psi", default=False, action="store_true")
+    parser.add_argument(
+        "--num-runs",
+        default=100,
+        type=int,
+    )
+    parser.add_argument(
+        "--num-steps",
+        default=1_000,
+        type=int,
+    )
+    parser.add_argument(
+        "--initial-seed",
+        default=0,
+        type=int,
+    )
+    parser.add_argument("--noti", default=False, action="store_true")
+    parser.add_argument(
+        "--threads",
+        default=multiprocessing.cpu_count() // 2,
+        type=int,
+    )
+    parser.add_argument(
+        "--logdir",
+        default="logs/",
+        type=str,
+    )
     args = parser.parse_args()
 
     date = time.strftime("%Y-%m-%d", time.localtime())
-    hm  = time.strftime("%H:%M", time.localtime())
-    logdir = args.out_dir + date + "/" + hm + "/"
+    hm = time.strftime("%H:%M", time.localtime())
+    logdir = args.logdir + "/" + date + "/" + hm + "/"
+    args.logdir = logdir
     os.makedirs(logdir, exist_ok=True)
-    reserved = ["bench.py", "avg.py", "utils.py", "yo2l1.py", "truth.py", "truth.sh", "main.dice-partial"]
+    reserved = [
+        "bench.py",
+        "avg.py",
+        "utils.py",
+        "yo2l1.py",
+        "truth.py",
+        "truth.sh",
+        "main.dice-partial",
+    ]
 
-    files = [f for f in os.listdir('.') if os.path.isfile(f) and not (f in reserved)]
+    files = [f for f in os.listdir(".") if os.path.isfile(f) and not (f in reserved)]
 
     path = os.getcwd()
     parentpath = os.path.abspath(os.path.join(path, os.pardir))
@@ -151,38 +206,46 @@ if __name__ == "__main__":
     args = vars(args)
     num_steps = args["num_steps"]
     for f in files:
-        if args['psi'] and f[-4:] == ".psi":
+        if args["psi"] and f[-4:] == ".psi":
             args["num_steps"] = 1
-            timedrunner("psi", f, logdir=logdir, extracli=[], **args)
+            timedrunner("psi", f, extracli=[], **args)
             args["num_steps"] = num_steps
             pass
-        elif not args['psi']:
+        elif not args["psi"]:
             if f[-3:] == ".py":
-                pyrunner(f, logdir=logdir, **args)
+                pyrunner(f, **args)
                 pass
             elif f[-5:] == ".dice":
                 args["num_steps"] = 1
-                timedrunner("dice", f, logdir=logdir, **args)
+                timedrunner("dice", f, **args)
                 args["num_steps"] = num_steps
                 pass
-            elif (f[:5] == "grids" and f[-3:] == ".yo" and len(f) == 11) or (   # grids#x#.yo
-                  f[:5] == "grids" and f[-9:] == "-obs01.yo" and len(f) == 17) or ( # grids#x#-obs01.yo
-                  f == "exact.yo" or f == "disc.yo"): # disc programs
+            elif (
+                (f[:5] == "grids" and f[-3:] == ".yo" and len(f) == 11)
+                or (  # grids#x#.yo
+                    f[:5] == "grids" and f[-9:] == "-obs01.yo" and len(f) == 17
+                )
+                or (f == "exact.yo" or f == "disc.yo")  # grids#x#-obs01.yo
+            ):  # disc programs
                 # we are compiling exactly, only use one sample
-                isexact = (f[:5] == "grids" and f[-3:] == ".yo" and len(f) == 11) or (   # grids#x#.yo
-                   f[:5] == "grids" and f[-9:] == "-obs01.yo" and len(f) == 17) or ( # grids#x#-obs01.yo
-                   f == "exact.yo" or f == "disc.yo")
-                notpsi = not args['psi']
+                isexact = (
+                    (f[:5] == "grids" and f[-3:] == ".yo" and len(f) == 11)
+                    or (  # grids#x#.yo
+                        f[:5] == "grids" and f[-9:] == "-obs01.yo" and len(f) == 17
+                    )
+                    or (f == "exact.yo" or f == "disc.yo")  # grids#x#-obs01.yo
+                )
+                notpsi = not args["psi"]
                 args["num_steps"] = 1
 
-                yorunner(f, logdir=logdir, **args)
+                yorunner(f, **args)
                 args["num_steps"] = num_steps
                 pass
-            elif f[-3:] == ".yo" and not args['psi']:
-                #if "hbn" in parentpath:
+            elif f[-3:] == ".yo" and not args["psi"]:
+                # if "hbn" in parentpath:
                 #    args["num_steps"] = 100
-                yorunner(f, logdir=logdir, **args)
-                #if "hbn" in parentpath:
+                yorunner(f, **args)
+                # if "hbn" in parentpath:
                 #    args["num_steps"] = num_steps
                 pass
             else:
@@ -192,8 +255,9 @@ if __name__ == "__main__":
 
 else:
     import torch
+
     def ismean(em):
-        keepdim=False
+        keepdim = False
         value = em._samples
         weights = em._log_weights.reshape(
             em._log_weights.size()
@@ -201,6 +265,6 @@ else:
         )
         dim = em._aggregation_dim
         probs = weights.exp()
-        return (value * probs).sum(
+        return (value * probs).sum(dim=dim, keepdim=keepdim) / probs.sum(
             dim=dim, keepdim=keepdim
-        ) / probs.sum(dim=dim, keepdim=keepdim)
+        )

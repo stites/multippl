@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set +e #otherwise the script will exit on error. needed for set membership check
 
+# SKIP=("grids/9x9" "arrival/9x9" "gossip/g10" "gossip/g20")
+SKIP[0]="run all things"
+NUM_STEPS=1000
+NUM_RUNS=100
+NUM_THREADS="$(($(\grep -c ^processor /proc/cpuinfo) / 2))"
+LOGDIR="logs/"
+
 CLEAN=0
 BENCH=0
 BENCH_PSI=0
@@ -30,9 +37,11 @@ case $1 in
     while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
       --clean) CLEAN=1 ;;
       --no-avg) AVG=0 ;;
-      --no-psi)
-        BENCH_PSI=0
-        ;;
+      --threads) shift; NUM_THREADS=$1 ;;
+      --runs) shift; NUM_RUNS=$1 ;;
+      --steps) shift; NUM_STEPS=$1 ;;
+      --logdir) shift; LOGDIR=$1 ;;
+      --no-psi) BENCH_PSI=0 ;;
       --psi)
         BENCH=0
         BENCH_PSI=1
@@ -41,7 +50,16 @@ case $1 in
     if [[ "$1" == '--' ]]; then shift; fi
     ;;
   *)
-    echo "please use one of ./run.sh clean|avg|bench"
+    echo "./run.sh [clean|avg|bench]"
+    echo "bench options:"
+    echo "  --logdir      set the log directory for cached content."
+    echo "  --clean       also clean the logdir"
+    echo "  --no-avg      don't run avg.py"
+    echo "  --threads     # threads to use for benchmarking. Default: half of available via nprocs"
+    echo "  --runs        # of runs to average over. Default: 100"
+    echo "  --steps       # of steps per run. Default: 1000"
+    echo "  --[no-]psi    include psi in the evaluation: Default: --no-psi"
+    exit 1
 esac
 
 # from https://stackoverflow.com/a/8574392/1529734
@@ -51,14 +69,9 @@ elementIn () {
   for e; do [[ "$e" == "$match" ]] && return 0; done
   return 1
 }
-# SKIP=("grids/9x9" "arrival/9x9" "gossip/g10" "gossip/g20")
-SKIP[0]="run all things"
-NUM_STEPS=1000
-NUM_RUNS=100
-NUM_THREADS="$(($(\grep -c ^processor /proc/cpuinfo) / 2))"
 
 run_avgs() {
-    (cd "$1" && python avg.py)
+    (cd "$1" && python ./avg.py)
 }
 run_benchmark() {
     PSI_FLAG=""
@@ -66,7 +79,7 @@ run_benchmark() {
         PSI_FLAG="--psi"
     fi
     echo "with $NUM_THREADS threads"
-    COMMAND="python ./bench.py --num-runs $NUM_RUNS --num-steps $NUM_STEPS --threads $NUM_THREADS $PSI_FLAG"
+    COMMAND="python ./bench.py --num-runs $NUM_RUNS --num-steps $NUM_STEPS --logdir $LOGDIR --threads $NUM_THREADS $PSI_FLAG"
     echo "$COMMAND"
     (cd "$1" && eval "${COMMAND}" )
 }

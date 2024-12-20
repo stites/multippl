@@ -6,6 +6,7 @@ import numpy as np
 import scipy.stats
 from rich.console import Console
 from rich.table import Table
+from datetime import datetime
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -80,20 +81,41 @@ def table_stats(exp, run, ss):
     table_met.add_row("sec", *row_sec)
     return table, table_met
 
+def isdate(x):
+    try:
+        datetime.strptime(x, "%Y-%m-%d")
+        return True
+    except ValueError:
+        return False
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="average everything in logs/")
-    parser.add_argument("--dir", default="logs/", type=str,)
-    dir_path = os.path.dirname(__file__).split("/")[-1]
+    parser.add_argument("--logdir", default="logs/", type=str,)
+    experiment_name = os.path.dirname(__file__).split("/")[-1]
 
     args = parser.parse_args()
 
-    date = time.strftime("%Y-%m-%d", time.localtime())
+    subdirs = list(filter(lambda f: os.path.isdir(args.logdir + f), os.listdir(args.logdir)))
+    isdev   = all([isdate(sd) for sd in subdirs])
+    experiments = {"bayesnets", "arrival", "grids", "gossip"}
+    isfinal = all([sd in experiments for sd in subdirs])
 
-    for day in filter(lambda f: os.path.isdir(args.dir + f), os.listdir(args.dir)):
-        day = args.dir + "/" + day + "/"
+    if not (isdev or isfinal):
+        print("ambiguous log folder structure. Expecting <logdir>/[<experiment>/]<%Y-%m-%d>/")
+        sys.exit(1)
+    ex = experiment_name if isfinal  else ""
+
+    print("logdir", args.logdir)
+    print(args.logdir + ex + "/")
+    print(list(filter(lambda f: os.path.isdir(args.logdir + ex + "/" + f), os.listdir(args.logdir))))
+    for day in filter(lambda f: os.path.isdir(args.logdir + ex + "/" + f), os.listdir(args.logdir)):
+        day = args.logdir + "/" + day + "/"
+        print("day", day)
         for hm in filter(lambda f: os.path.isdir(day + f), os.listdir(day)):
             run = day + "/" + hm + "/"
+            print("run", run)
             stats = {k: {" #":0,"ms":[], "l1":[]} for k in mainfiles}
+
+
             for log in filter(lambda l: l[-4:] == ".log", os.listdir(run)):
                 main = [m for m in mainfiles if log[:len(m)] == m.replace(".", "-")]
                 if len(main) == 0:
@@ -129,7 +151,8 @@ if __name__ == "__main__":
             if not DEVELOP:
                 with open(day + f"/{hm}.stats", "w") as f:
                     f.writelines(str_stats(stats))
-            table = table_stats(dir_path, run, stats)
+            # FIXME replace with logdir?
+            table = table_stats(experiment_name, run, stats)
             if table is not None:
                 tbl, mets = table
                 console = Console(record=True)

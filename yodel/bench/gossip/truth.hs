@@ -1,3 +1,10 @@
+#!/usr/bin/env cabal
+{- cabal:
+build-depends: base, containers
+-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
+{-# LANGUAGE Strict #-}
 module Main where
 
 import System.Environment (getArgs)

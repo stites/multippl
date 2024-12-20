@@ -8,9 +8,9 @@
     devshell.url = "github:numtide/devshell";
     crane.url = "github:ipetkov/crane/v0.16.2";
     cachix-push.url = "github:juspay/cachix-push";
-    #ppls.url = "path:/home/stites/git/multilang/ppl-benchmarks";
     rsdd.url = "github:stites/rsdd/yodel-additions?dir=nix";
-    ppls.url = "git+ssh://git@gitlab.com/stites/ppl-benchmarks";
+
+    dice.url = "github:stites/dice.nix";
 
     # clean up dependencies
     pre-commit.url = "github:cachix/pre-commit-hooks.nix";
@@ -18,13 +18,7 @@
     rsdd.inputs.nixpkgs.follows = "nixpkgs";
   };
 
-  outputs = {
-    self,
-    nixpkgs,
-    devenv,
-    flake-parts,
-    ...
-  } @ inputs:
+  outputs = {flake-parts, ...} @ inputs:
     flake-parts.lib.mkFlake {inherit inputs;} {
       imports = [
         inputs.pre-commit.flakeModule
@@ -53,6 +47,8 @@
             ".cc"
             ".gyp"
             ".h"
+            # filter nix so that we don't rebuild on configs
+            ".nix"
           ])
           || (craneLib.filterCargoSources path type))
         ./.;
@@ -83,13 +79,20 @@
           // {
             NIX_DEBUG = 0;
             doCheck = false;
+            pname = "multippl";
           });
       in {
         checks = import ./nix/checks.nix {inherit lib system my-crate craneLib commonArgs cargoArtifacts;};
         packages.default = my-crate;
-        packages.dice = inputs'.ppls.packages.dice;
-        packages.psi = inputs'.ppls.packages.psi;
+        packages.multippl = my-crate;
+        packages.dice = inputs'.dice.packages.default;
+        packages.psi = pkgs.callPackage ./nix/psi-solver.nix {};
+        packages.pyro = pkgs.python3.withPackages (p: [p.pyro-ppl p.scipy p.ipython p.rich] ++ p.pyro-ppl.optional-dependencies.extras);
         packages.dev = my-dev-crate;
+        packages.benchmark-cli = pkgs.callPackage ./nix/benchmark/cli.nix {
+          inherit (config.packages) psi pyro multippl dice;
+        };
+
         packages.dev-test = craneLib.cargoNextest (commonArgs
           // {
             cargoArtifacts = cargoDevArtifacts;
@@ -98,7 +101,6 @@
             partitions = 1;
             partitionType = "count";
           });
-
         pre-commit.check.enable = false; # still need to download rsdd from github in offline mode, not sure how to do that right now
         pre-commit.settings.hooks = {
           shellcheck.enable = true;
@@ -119,7 +121,6 @@
             name = "ts2emacs";
             help = "compile tree-sitter-yodel.so to ~/.emacs.d/tree-sitter/";
             # https://github.com/tree-sitter/tree-sitter/discussions/1711
-            # https://github.com/tree-sitter/tree-sitter/discussions/1711
             command = let
               cmd = dir: ''
                 echo "generating yodel.so in user-emacs-directory: ${dir}"
@@ -136,21 +137,14 @@
           }
         ];
         devshells.default.devshell.startup.install-pre-commit-hooks.text = config.pre-commit.devShell.shellHook;
-        devshells.default.env = [
-          # apparently this makes the pre-commit hooks cry :' (
-          #{
-          #  name = "CARGO_REGISTRIES_CRATES_IO_PROTOCOL";
-          #  value = "sparse";
-          #}
-        ];
         devshells.default.packages = with pkgs;
           [
-            (python3.withPackages (p: [p.pyro-ppl p.ipython p.rich] ++ p.pyro-ppl.optional-dependencies.extras))
             bc
             ghc
 
             config.packages.dice
             config.packages.psi
+            config.packages.pyro
           ]
           ++ [
             cargo
