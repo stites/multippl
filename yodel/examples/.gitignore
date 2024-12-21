@@ -1,15 +1,3 @@
------Initial gitignore.io list----
------Save to /home/stites/.cache/git-extras/gi_list-----
-
-Usage:
-  git ignore-io <types>...                    Show gitignore template
-                [-a|--append] <types>...      Append new .gitignore content to .gitignore under the current directory
-                [-r|--replace] <types>...      Export new .gitignore to the current directory (The old one will be replaced)
-                [-l|--list-in-table]          Print available types in table format
-                [-L|--list-alphabetically]    Print available types in alphabetical order    
-                [-s|--search] <word>          Search word in available types
-                [-t|--show-update-time]       Show the last modified time of /home/stites/.cache/git-extras/gi_list (where the list of available types is stored)
-                [-u|--update-list]            Update /home/stites/.cache/git-extras/gi_list
 # Created by https://www.toptal.com/developers/gitignore/api/python
 # Edit at https://www.toptal.com/developers/gitignore?templates=python
 

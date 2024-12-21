@@ -85,9 +85,8 @@ in
       cat <<EOF > $out/bin/multippl-benchmark
       #!${bashInteractive}/bin/bash
       WORKING_DIR=\$(pwd)
-      for exp in "grids" "arrival" "gossip" "bayesnets"; do
-          cd $out/bench/\$exp
-          if bash ./run.sh "\$@" --logdir \$WORKING_DIR/logs/\$exp; then continue; else exit 1; fi
+      for exp in grids/3x3 grids/6x6 grids/9x9 arrival/tree-15 arrival/tree-31 arrival/tree-63 gossip/g4 gossip/g10 gossip/g20 bayesnets/insurance bayesnets/alarm; do
+          ((echo \$exp && cd $out/bench/\$exp && ${pyro}/bin/python ./bench.py "\$@" --logdir \$WORKING_DIR/logs/\$exp) || exit 1)
       done
       EOF
       chmod a+x $out/bin/multippl-benchmark
