@@ -24,6 +24,6 @@ in {
   bench = pkgs.callPackage ./generic.nix (input-pkgs
     // {
       name = "multippl-bench";
-      config.Cmd = "${config.packages.benchmark}/bin/benchmark";
+      config.Cmd = "${config.packages.benchmark-cli}/bin/multippl-benchmark";
     });
 }

@@ -83,6 +83,7 @@
           });
       in {
         checks = import ./nix/checks.nix {inherit lib system my-crate craneLib commonArgs cargoArtifacts;};
+
         packages.default = my-crate;
         packages.multippl = my-crate;
         packages.dice = inputs'.dice.packages.default;
@@ -92,7 +93,6 @@
         packages.benchmark-cli = pkgs.callPackage ./nix/benchmark/cli.nix {
           inherit (config.packages) psi pyro multippl dice;
         };
-
         packages.dev-test = craneLib.cargoNextest (commonArgs
           // {
             cargoArtifacts = cargoDevArtifacts;
@@ -101,6 +101,10 @@
             partitions = 1;
             partitionType = "count";
           });
+        packages.docker-bin = (pkgs.callPackage ./nix/docker {inherit config;}).bin;
+        packages.docker-repl = (pkgs.callPackage ./nix/docker {inherit config;}).repl;
+        packages.docker-bench = (pkgs.callPackage ./nix/docker {inherit config;}).bench;
+
         pre-commit.check.enable = false; # still need to download rsdd from github in offline mode, not sure how to do that right now
         pre-commit.settings.hooks = {
           shellcheck.enable = true;
