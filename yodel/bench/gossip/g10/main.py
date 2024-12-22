@@ -11,8 +11,8 @@ import pyro
 import pyro.distributions as dist
 from pyro.infer.importance import Importance
 
-num_nodes = int(os.getcwd().split("/")[-1][1:])
-with open("tmp/truth.log", "r") as f:
+num_nodes = int(os.path.dirname(__file__).split("/")[-1][1:])
+with open(os.path.dirname(__file__)+"/tmp/truth.log", "r") as f:
   truth = [ float(f.readlines()[0]) ]
 
 def forward(ix, pkt, node):

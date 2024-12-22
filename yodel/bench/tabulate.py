@@ -24,19 +24,23 @@ EXPERIMENTS = {"bayesnets", "arrival", "grids", "gossip"}
 needs_l1 = lambda main: main[-3:] == ".yo" or main[-3:] == ".py"
 
 
-def latest_experiment_ts(subex):
+def experiment_folders(logroot, subex):
     allruns = []
-    for day in filter(lambda f: os.path.isdir(subex + "/" + f), os.listdir(subex)):
+    for day in filter(lambda f: os.path.isdir(f"{logroot}/{subex}/{f}"), os.listdir(f"{logroot}/{subex}")):
         for hm in filter(
-            lambda f: os.path.isdir(subex + "/" + day + "/" + f),
-            os.listdir(subex + "/" + day),
+            lambda t: os.path.isdir(f"{logroot}/{subex}/{day}/{t}"),
+            os.listdir(f"{logroot}/{subex}/{day}"),
         ):
             allruns.append(datetime.strptime(f"{day} {hm}", "%Y-%m-%d %H:%M"))
-    return sorted(allruns, reverse=True)[0]
+    return allruns
 
 
-def experiment(subex):
-    return latest_experiment_ts(subex).strftime(subex + "/%Y-%m-%d/%H:%M")
+def merge_experiments(logroot, subex):
+    for dir in experiment_folders(logroot, subex):
+        logtime = dir.strftime(subex + "/%Y-%m-%d/%H:%M")
+        logdir = f"{logroot}/{logtime}"
+        for log in filter(lambda l: l[-4:] == ".log", os.listdir(logdir)):
+            yield logdir, log
 
 
 def get_mainfiles(expdir):
@@ -50,7 +54,6 @@ def get_mainfiles(expdir):
 def get_truth(expdir):
     sys.path.append(expdir)
     from main import truth
-
     sys.path.pop()
     return truth
 
@@ -71,7 +74,8 @@ def get_output(logdir, log):
         out = f.readlines()
         out = "".join(out).rstrip().split("\n")
     if len(out) == 1 and out[0] == "":
-        raise Exception(f"incomplete run: {logdir}/{log} is empty!")
+        return None
+        #raise Exception(f"incomplete run: {logdir}/{log} is empty!")
     last = out[-1]
     if last == "":
         raise Exception(f"last is empty! full output is:\n{out}")
@@ -81,7 +85,12 @@ def get_output(logdir, log):
     if last[: len("timeout")] == "timeout":
         return None
     else:
-        return [float(f) for f in out[-2].rstrip().split()], float(last[:-2])
+        # PSI outputs can vary, ms cannot
+        try:
+            val = [float(f) for f in out[-2].rstrip().split()]
+        except:
+            val = []
+        return val, float(last[:-2])
 
 
 def main(args):
@@ -99,19 +108,24 @@ def main(args):
     results = dict()
     for ex in EXPERIMENTS:
         ex_folder = ex + "/"
-        for subex in map(
-            lambda f: ex_folder + f, os.listdir(f"{args.logdir}/{ex_folder}")
-        ):
-            logdir = os.getcwd() + "/" + experiment(f"{args.logdir}/{subex}")
-            expdir = os.path.dirname(os.path.abspath(__file__)) + "/" + subex
+        for subex in os.listdir(f"{args.logdir}/{ex_folder}"):
+            subex = f"{ex_folder}{subex}"
+            expdir = os.path.dirname(os.path.abspath(__file__)) + f"/{subex}"
+
             mainfiles = get_mainfiles(expdir)
             truth = get_truth(expdir)
             stats = {k: {" #": 0, "ms": [], "l1": []} for k in mainfiles}
-            for log in filter(lambda l: l[-4:] == ".log", os.listdir(logdir)):
-                main = get_mainfile(mainfiles, log, expdir)
-                output = get_output(logdir, log)
+
+            for logdir, log in merge_experiments(args.logdir, subex):
+                try:
+                    main = get_mainfile(mainfiles, log, expdir)
+                    output = get_output(logdir, log)
+                except:
+                    continue
                 if output is None:
-                    print(f"got timeout for {log}")
+                    # we tabulate these
+                    #print(f"got timeout for {log}")
+                    pass
                 else:
                     out, ms = output
                     stats[main]["ms"].append(ms)
@@ -122,7 +136,6 @@ def main(args):
                     else:
                         stats[main]["l1"].append(0.0)
             results[subex] = dict(stats=stats, mainfiles=mainfiles)
-        # tbl, mets = table_stats(expdir, "", stats, mainfiles)
 
     console = Console(record=True)
     (h, d, w) = full_table(results)
@@ -263,8 +276,11 @@ def endsin(f):
 
 
 def mean_and_stderr(data):
-    a = 1.0 * np.array(data)
-    return np.mean(a), scipy.stats.sem(a)
+    if len(data) == 1:
+        return data[0], 0
+    else:
+        a = 1.0 * np.array(data)
+        return np.mean(a), (0 if len(data) < 1 else scipy.stats.sem(a))
 
 
 if __name__ == "__main__":

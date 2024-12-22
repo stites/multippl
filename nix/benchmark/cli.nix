@@ -67,6 +67,7 @@ in
       mkdir -p $out/bench/bayesnets
       cp {yodel,$out}/bench/avg.py
       cp {yodel,$out}/bench/bench.py
+      cp {yodel,$out}/bench/tabulate.py
       substituteInPlace $out/bench/bench.py \
           --replace "cmd = [\"python" "cmd = [\"${pyro}/bin/python" \
           --replace "timedrunner(\"psi" "timedrunner(\"${psi}/bin/psi" \
@@ -82,22 +83,10 @@ in
         cp -r yodel/bench/$ex $out/bench/$ex
       done
 
-      cat <<EOF > $out/bin/multippl-benchmark
-      #!${bashInteractive}/bin/bash
-      WORKING_DIR=\$(pwd)
-      for exp in grids/3x3 grids/6x6 grids/9x9 arrival/tree-15 arrival/tree-31 arrival/tree-63 gossip/g4 gossip/g10 gossip/g20 bayesnets/insurance bayesnets/alarm; do
-          ((echo \$exp && cd $out/bench/\$exp && ${pyro}/bin/python ./bench.py "\$@" --logdir \$WORKING_DIR/logs/\$exp) || exit 1)
-      done
-      echo "non-PSI evaluations complete. running PSI evaluations now."
-      sleep 3
-      for exp in grids/3x3 grids/6x6 grids/9x9 arrival/tree-15 arrival/tree-31 arrival/tree-63 gossip/g4 gossip/g10 gossip/g20 bayesnets/insurance bayesnets/alarm; do
-          ((echo \$exp && cd $out/bench/\$exp && ${pyro}/bin/python ./bench.py "\$@" --psi --logdir \$WORKING_DIR/logs/\$exp) || exit 1)
-      done
+      substituteInPlace nix/benchmark/cli.sh --replace "python" "${pyro}/bin/python" \
+                                             --replace "yodel/bench/" "$out/bench/"
 
-      echo "all evaluations complete. tabulating results now..."
-      sleep 3
-      ((echo \$exp && cd $out/bench/ && ${pyro}/bin/python ./tabulate.py --logdir \$WORKING_DIR/logs) || exit 1)
-      EOF
+      cp nix/benchmark/cli.sh $out/bin/multippl-benchmark
       chmod a+x $out/bin/multippl-benchmark
     '';
   }

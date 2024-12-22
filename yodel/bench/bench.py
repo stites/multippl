@@ -37,7 +37,7 @@ def proc(args):
     cmd = cmd if not with_seed else cmd + [str(seed)]
     try:
         with open(outfilepath, "w") as outfile:
-            p = subprocess.run(cmd, stdout=outfile, timeout=TIMEOUT_SEC)
+            p = subprocess.run(cmd, stdout=outfile, stderr=subprocess.DEVNULL, timeout=TIMEOUT_SEC)
             if needs_timer:
                 sec = time.time() - start
                 outfile.write(f"{sec * 1000}ms\n")
@@ -47,6 +47,7 @@ def proc(args):
             noti_success(mainfile, 1, nruns, (end1 - start))
 
         if p.returncode > 0:
+            os.remove(outfilepath)
             noti_failed(mainfile, p.returncode, run, nruns)
     except (subprocess.TimeoutExpired, ctx.TimeoutError):
         with open(outfilepath, "w") as outfile:
@@ -61,7 +62,6 @@ def runner_(mainfile, cmd, with_seed=True, logdir="logs/", needs_timer=False, **
     iseed = kwargs["initial_seed"]
 
     start = time.time()
-    # if nthreads:
     all_args = [
         (run, mainfile, nsteps, nruns, iseed, cmd, logdir, with_seed, needs_timer)
         for run in range(nruns)
@@ -70,13 +70,6 @@ def runner_(mainfile, cmd, with_seed=True, logdir="logs/", needs_timer=False, **
         pbar = tqdm(p.imap_unordered(proc, all_args), total=nruns)
         pbar.set_description(mainfile + f"(n:{nsteps})")
         list(pbar)
-    # else:
-    #     with trange(nruns) as pbar:
-    #         for run in pbar:
-    #             all_args = (run, mainfile, nsteps, nruns, iseed, cmd, logdir, with_seed, needs_timer)
-    #             proc(all_args)
-    #             pbar.set_description(mainfile + f"(n:{nsteps})")
-
     end = time.time()
     noti_success(mainfile, nruns, nruns, (end - start) / nruns)
 
@@ -120,7 +113,6 @@ def timedrunner(bin, mainfile, logdir="logs/", **kwargs):
 
 
 def yorunner(mainfile, logdir="logs/", **kwargs):
-
     yodelbin = shutil.which("yodel")
     if yodelbin is None:
         subprocess.run(
@@ -192,7 +184,7 @@ if __name__ == "__main__":
         "bench.py",
         "avg.py",
         "utils.py",
-        "yo2l1.py",
+        "stdin2l1.py",
         "truth.py",
         "truth.sh",
         "main.dice-partial",
