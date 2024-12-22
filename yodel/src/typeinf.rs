@@ -151,18 +151,6 @@ fn typeinference_eexpr(e: &grammar::EExprInferable) -> Result<EExprTyped> {
     use crate::grammar::EExpr::*;
     match e {
         EAnf(_, a) => Ok(EAnf((), Box::new(typeinference_anf(&ETy::EBool, a)?))),
-        // EPrj(_ty, i, a) => {
-        //     // ignore types for now.
-        //     Ok(EPrj(
-        //         ignored_etype(),
-        //         Box::new(typeinference_anf(&ignored_etype(), i)?),
-        //         Box::new(typeinference_anf(&ignored_etype(), a)?),
-        //     ))
-        // }
-        // EProd(_ty, anfs) => Ok(EProd(
-        //     ignored_etype(),
-        //     typeinference_anfs(&ignored_etype(), anfs)?,
-        // )),
         ELetIn(_ty, s, ebound, ebody) => Ok(ELetIn(
             LetInTypes {
                 bindee: ignored_etype(),

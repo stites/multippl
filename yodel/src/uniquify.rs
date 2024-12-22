@@ -39,15 +39,6 @@ pub mod grammar {
         pub num_uids: u64,
         pub iterates: bool,
     }
-    // impl Default for FnCounts {
-    //     fn default() -> Self {
-    //         Self {
-    //             num_calls: 0,
-    //             num_uids: 0,
-    //             iterates: false,
-    //         }
-    //     }
-    // }
     impl fmt::Display for UniqueId {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(f, "#{}", self.0)
@@ -60,9 +51,6 @@ pub mod grammar {
 
         AVarExt<EVal>: UniqueId,
         AVarExt<SVal>: UniqueId,
-
-     // APrjExt<SVal>: UniqueId,
-     // APrjExt<EVal>: UniqueId,
 
         // this should actually be (), but just to keep things simple, I'll keep
         // this symmetric with SVal
@@ -124,7 +112,6 @@ impl SymEnv {
             None => format!("_{sym}"),
             Some(var) => {
                 // push named variables onto the current stack frame
-                // println!("var {var:?}");
                 let cur = self.current_frame();
                 cur.insert(var.clone());
                 var
@@ -311,11 +298,6 @@ impl SymEnv {
                 Box::new(self.uniquify_anf(var)?),
                 Box::new(self.uniquify_anf(ix)?),
             )),
-            // AnfPrj(_, s, ix) => {
-            //     let uid = self.get_or_create(s.to_string())?;
-            //     Ok(AnfPrj(uid, s.to_string(), Box::new(self.uniquify_anf(ix)?)))
-            // }
-
             // Distributions
             AnfBernoulli(_, x) => Ok(AnfBernoulli(self.fresh(), Box::new(self.uniquify_anf(x)?))),
             AnfPoisson(_, x) => Ok(AnfPoisson(self.fresh(), Box::new(self.uniquify_anf(x)?))),
@@ -341,12 +323,6 @@ impl SymEnv {
         use crate::grammar::EExpr::*;
         match e {
             EAnf(_, a) => Ok(EAnf((), Box::new(self.uniquify_anf(a)?))),
-            // EPrj(_, i, a) => Ok(EPrj(
-            //     (),
-            //     Box::new(self.uniquify_anf(i)?),
-            //     Box::new(self.uniquify_anf(a)?),
-            // )),
-            // EProd(_, anfs) => Ok(EProd((), self.uniquify_anfs(anfs)?)),
             ELetIn(_, s, ebound, ebody) => {
                 trace!("elet {:?}", s);
                 // too lazy to do something smarter

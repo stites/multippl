@@ -34,35 +34,10 @@ fn free_variables_0() {
 
     check_approx("free/x,y", vec![1.0 / 3.0, 1.0 / 3.0], &mk("(x, y)"), n);
     check_approx1("free/y ", 1.0 / 3.0, &mk("y"), n);
-
-    // check_invariant("free/y,x", None, None, &mk(b!("y", "x")));
-    // check_invariant("free/x ", None, None, &mk(var!("x")));
 }
 
 pub fn allmarg(x: &str, y: &str) -> String {
     format!("({x}, {y}, {x} || {y}, {x} && {y})")
-}
-#[test]
-// #[traced_test]
-#[ignore]
-fn free_variable_2_inv() {
-    let mk = |ret: &str| {
-        r#"exact {
-  let x = flip (1.0/3.0) in
-  let y = (let x0 = flip 1.0 / 5.0 in x0 || x) in
-  observe (x || y) in
-  "#
-        .to_owned()
-            + ret
-            + "\n}"
-    };
-    let n = 500;
-    (|p: String| check_invariant("free2/x*y ", None, None, &p))(mk(&allmarg("x", "y")));
-    (|p: String| check_approx("free2/x*y", vec![0.714285714], &p, n))(mk("x"));
-    (|p: String| check_approx("---------", vec![1.000000000], &p, n))(mk("y"));
-    (|p: String| check_approx("---------", vec![0.714285714, 1.0, 1.0, 0.714285714], &p, n))(mk(
-        &allmarg("x", "y"),
-    ));
 }
 
 #[test]
@@ -79,14 +54,6 @@ fn free_variable_2_inv_small() {
             + "\n}"
     };
     check_approx_h("freevars2_inv", vec![0.5], &mk("x"), 3, Some(0));
-
-    // let n = 500;
-    // (|p: String| check_invariant("free2/x*y ", None, None, &p))(mk(&allmarg("x", "y")));
-    // (|p: String| check_approx("free2/x*y", vec![0.714285714], &p, n))(mk("x"));
-    // (|p: String| check_approx("---------", vec![1.000000000], &p, n))(mk("y"));
-    // (|p: String| check_approx("---------", vec![0.714285714, 1.0, 1.0, 0.714285714], &p, n))(mk(
-    //     &allmarg("x", "y"),
-    // ));
 }
 
 #[test]
@@ -220,28 +187,7 @@ fn free_variables_shared_tuple() {
     };
     check_approx_h("sharedtuple", vec![1.0 / 3.0, 1.0 / 3.0], mk(), 3, Some(0));
 }
-#[test]
-#[ignore = "type-checking error? not a problem with the current functionality"]
-fn free_variable_2_approx_again() {
-    let mk = |ret: &str| {
-        r#"exact {
-        let x = flip 1.0 / 3.0 in
-        let y = sample { x0 ~ bern 1.0 / 5.0; x <- exact ( x ); x0 || x } in
-        observe ( x || y ) in
-        "#
-        .to_owned()
-            + ret
-            + r"\n}"
-    };
-    check_approx(
-        "free2/x*y",
-        vec![0.714285714, 1.0, 1.0, 0.714285714],
-        &mk(&allmarg("x", "y")),
-        10000,
-    );
-    check_approx1("free2/x", 0.714285714, &mk("x"), 10000);
-    check_approx1("free2/x&y", 0.714285714, &mk("x && y"), 10000);
-}
+
 #[test]
 fn observe_with_free_var_sampled() {
     let mk = |ret: &str| {

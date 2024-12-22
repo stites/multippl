@@ -1,5 +1,4 @@
 #![allow(non_camel_case_types)]
-
 use crate::*;
 
 use crate::data::errors;
@@ -163,39 +162,11 @@ impl SugarMagicEnv {
                 Box::new(self.desugar_eexpr(f)?),
             )),
             EFlip(_, param) => Ok(EFlip((), Box::new(desugar_eanf(param)?))),
-            EObserve(_, a, e) => {
-                Ok(EObserve(
-                    (),
-                    Box::new(desugar_eanf(a)?),
-                    Box::new(self.desugar_eexpr(e)?),
-                ))
-                // match observed_int(a) {
-                //     None => Ok(EObserve(
-                //         (),
-                //         Box::new(desugar_eanf(a)?),
-                //         Box::new(self.desugar_eexpr(e)?),
-                //     )),
-                //     // Some(_) => Ok(EObserve(
-                //     //     (),
-                //     //     Box::new(desugar_eanf(a)?),
-                //     //     Box::new(self.desugar_eexpr(e)?),
-                //     // )),
-                //     Some((v, i)) => {
-                //         match self.discretes.get(&v) {
-                //             None => panic!("type checking for observed discrete"),
-                //             Some(vs) => {
-                //                 let rebind = AnfUD::<EVal>::AVar((), vs[i].clone());
-                //                 // let reobserve = AnfUD::<EVal>::EQ(rebind, EVal::EBdd(BddPtr::PtrTrue));
-                //                 Ok(EObserve(
-                //                     (),
-                //                     Box::new(rebind),
-                //                     Box::new(self.desugar_eexpr(e)?),
-                //                 ))
-                //             }
-                //         }
-                //     }
-                // }
-            }
+            EObserve(_, a, e) => Ok(EObserve(
+                (),
+                Box::new(desugar_eanf(a)?),
+                Box::new(self.desugar_eexpr(e)?),
+            )),
             EApp(_, f, args) => Ok(EApp((), f.clone(), desugar_eanf_vec(args)?)),
             EIterate(_, f, init, times) => Ok(EIterate(
                 (),
@@ -333,46 +304,6 @@ pub mod integers {
             ),
         }
     }
-    #[cfg(test)]
-    mod tests {
-        use super::*;
-        #[test]
-        #[ignore = "i just changed onehot, not testing for the moment"]
-        fn test_onehot() {
-            for x in [0, 1, 5, 10] {
-                let oh = as_onehot(x);
-                assert_eq!(from_prod_val(&oh).unwrap(), x);
-            }
-        }
-    }
-    // pub fn integer_op(e: &Anf<Inferable, EVal>) {
-    //     todo!()
-    // }
-    // pub fn prod2usize(p: Anf<Inferable, EVal>) -> Option<usize> {
-    //     match p {
-    //         Anf::AVal(_, EVal::EProd(prod)) => {
-    //             let (ix, sum) =
-    //                 prod.iter()
-    //                     .enumerate()
-    //                     .fold(Some((0, 0)), |memo, (ix, x)| match (memo, x) {
-    //                         (Some((one_ix, tot)), EVal::EBdd(bdd)) => match bdd {
-    //                             BddPtr::PtrTrue => Some((ix, tot + 1)),
-    //                             BddPtr::PtrFalse => Some((one_ix, tot)),
-    //                             _ => None,
-
-    //                         }
-    //                         _ => None,
-    //                     })?;
-
-    //             if sum != 1 {
-    //                 None
-    //             } else {
-    //                 Some(ix)
-    //             }
-    //         }
-    //         _ => None,
-    //     }
-    // }
 }
 
 pub mod discrete {
@@ -495,9 +426,6 @@ pub mod discrete {
         params2named_statements(&discrete_id, &names, params)
     }
 
-    // pub fn last_conj2vec(f: Anf<UD, EVal>) -> Anf<UD, EVal> {
-    //     Anf::AVal((), EVal::EFloat(f))
-    // }
     pub fn mk_final_result(finvars: &Vec<String>) -> EExprUD {
         mk_final_conditional_int(finvars)
     }
@@ -537,17 +465,6 @@ pub mod discrete {
             .map(|v| AnfUD::<EVal>::AVar((), v.clone()))
             .collect_vec();
         EExpr::EAnf((), Box::new(AnfUD::<EVal>::AnfProd(oh)))
-        // let last = mk_cond(
-        //     vars.pop().unwrap(),
-        //     Anf::AVal((), EVal::EInteger(n - 1)),
-        //     EExpr::EAnf((), Box::new(Anf::AVal((), EVal::EInteger(n)))),
-        // );
-        // vars.into_iter()
-        //     .enumerate()
-        //     .rev()
-        //     .fold(last, |rest, (i, var)| {
-        //         mk_cond(var.to_string(), Anf::AVal((), EVal::EInteger(i + 1)), rest)
-        //     })
     }
 
     pub fn params2named_statements(
@@ -763,85 +680,6 @@ pub mod discrete {
             let bindings = from_params(&params);
             println!("{:?}", bindings);
             // assert!(false);
-        }
-        #[test]
-        #[ignore = "saw a let binding, too little time to test"]
-        pub fn test_params2bindings_next() {
-            let params = floats2eanf(vec![0.2, 0.8]);
-            let bindings = from_params(&params);
-            println!("{:?}", bindings);
-            // assert!(false); should be a let binding
-        }
-
-        #[test]
-        #[ignore = "just for validation at the moment"]
-        pub fn test_params2bindings_next_next() {
-            let params = floats2eanf(vec![1.0, 0.0, 0.0]);
-            let bindings = from_params(&params);
-            println!("{:?}", bindings);
-            assert!(false);
-        }
-
-        #[test]
-        #[ignore = "these are no longer valid"]
-        pub fn test_desugared_int1() {
-            let finvars = vec!["a".to_string(), "b".to_string()];
-            let ret = mk_final_conditional_int(&finvars);
-            assert_eq!(
-                ret,
-                mk_cond(
-                    "a".to_string(),
-                    Anf::AVal((), EVal::EInteger(1)),
-                    EExpr::EAnf((), Box::new(Anf::AVal((), EVal::EInteger(2))))
-                )
-            );
-        }
-
-        #[test]
-        #[ignore = "these are no longer valid"]
-        pub fn test_desugared_int2() {
-            let finvars = vec!["a".to_string(), "b".to_string(), "c".to_string()];
-            let ret = mk_final_conditional_int(&finvars);
-            assert_eq!(
-                ret,
-                mk_cond(
-                    "a".to_string(),
-                    Anf::AVal((), EVal::EInteger(1)),
-                    mk_cond(
-                        "b".to_string(),
-                        Anf::AVal((), EVal::EInteger(2)),
-                        EExpr::EAnf((), Box::new(Anf::AVal((), EVal::EInteger(3))))
-                    )
-                )
-            );
-        }
-
-        #[test]
-        #[ignore = "these are no longer valid"]
-        pub fn test_desugared_int3() {
-            let finvars = vec![
-                "a".to_string(),
-                "b".to_string(),
-                "c".to_string(),
-                "d".to_string(),
-            ];
-            let ret = mk_final_conditional_int(&finvars);
-            assert_eq!(
-                ret,
-                mk_cond(
-                    "a".to_string(),
-                    Anf::AVal((), EVal::EInteger(1)),
-                    mk_cond(
-                        "b".to_string(),
-                        Anf::AVal((), EVal::EInteger(2)),
-                        mk_cond(
-                            "c".to_string(),
-                            Anf::AVal((), EVal::EInteger(3)),
-                            EExpr::EAnf((), Box::new(Anf::AVal((), EVal::EInteger(4))))
-                        )
-                    )
-                )
-            );
         }
     }
 }

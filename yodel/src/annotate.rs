@@ -480,20 +480,6 @@ impl LabelEnv {
                 Box::new(self.annotate_sanf(tr)?),
                 Box::new(self.annotate_sanf(x)?),
             )),
-
-            // AnfPrj(uid, s, ix) => {
-            //     let var = self.get_var(uid)?;
-            //     match var {
-            //         Var::Named(nvar) => Ok(AnfPrj(
-            //             nvar,
-            //             s.to_string(),
-            //             Box::new(self.annotate_sanf(ix)?),
-            //         )),
-            //         Var::Bdd(_) => panic!("bdd vars are never referenced by source code!"),
-            //         Var::Sampled(_) => panic!("sampled vars are never referenced by source code!"),
-            //     }
-            // }
-
             // Distributions
             AnfBernoulli(id, x) => {
                 let var = SampledVar::new(*id, SDist::SBernoulli, self.letpos.clone());
@@ -590,19 +576,6 @@ impl LabelEnv {
                 Box::new(self.annotate_eanf(tr)?),
                 Box::new(self.annotate_eanf(x)?),
             )),
-
-            // AnfPrj(uid, s, ix) => {
-            //     let var = self.get_var(uid)?;
-            //     match var {
-            //         Var::Named(nvar) => Ok(AnfPrj(
-            //             nvar,
-            //             s.to_string(),
-            //             Box::new(self.annotate_eanf(ix)?),
-            //         )),
-            //         Var::Bdd(_) => panic!("bdd vars are never referenced by source code!"),
-            //         Var::Sampled(_) => panic!("sampled vars are never referenced by source code!"),
-            //     }
-            // }
 
             // Distributions
             _ => errors::not_in_exact(),

@@ -37,29 +37,12 @@ pub fn renderfloats(fs: &[f64], high_prec: bool) -> String {
 
 pub fn renderbdds<V: std::fmt::Debug>(fs: &Option<V>) -> String {
     format!("{:?}", fs)
-    // match fs {
-    //     Some(f) =>format!("{:?}", b),
-    //     None =>format!("", b),
-    // }
-    // rendervec(&fs.map(|b| format!("{:?}", b)))
 }
 
 pub fn rendervar(var: &Var) -> String {
-    format!(
-        "({:?})",
-        var,
-        // var.label
-        //     .map_or_else(|| "L-".to_string(), |l| format!("L{}", l.value())),
-    )
+    format!("({:?})", var,)
 }
 pub fn rendersubs(fs: &HashMap<UniqueId, (Vec<EVal>, Var)>) -> String {
-    // format!(
-    //     "[{}]",
-    //     &fs.iter()
-    //         .map(|(k, (b, var))| format!("{:?}@{}: {}", k, rendervar(var), renderbdds(b)))
-    //         .collect_vec()
-    //         .join(" ,")
-    // )
     panic!()
 }
 pub fn fmt_f64(high_precision: bool) -> impl Fn(f64) -> String {
@@ -89,17 +72,8 @@ pub fn render_history(xss: &[Vec<f64>], high_precision: bool) -> String {
         .map(|ws| format!("[{}]", ws))
         .join(", ")
 }
-// pub fn renderw(ws: &WeightMap) -> String {
-//     ws.weights
-//         .iter()
-//         .map(|(k, w)| format!("L{}: ({:.4}, {:.4})", k.value(), w.lo, w.hi))
-//         .join(", ")
-// }
 pub fn renderp<V: std::fmt::Debug + Clone + PartialEq>(ps: &SubstMap<V>) -> String {
     String::new()
-    // ps.iter()
-    //     .map(|(k, v)| format!("{k}: {}", renderbdds(&v.val())))
-    //     .join(", ")
 }
 pub fn renderssubs(ps: &SubstMap<SVal>) -> String {
     ps.iter().map(|(k, x)| format!("{k}: {:?}", x)).join(", ")
@@ -109,7 +83,6 @@ pub fn renderssubs(ps: &SubstMap<SVal>) -> String {
 macro_rules! debug_step {
     ($s:expr, $ctx:expr, $comp:expr) => {{
         debug!(
-            // "{}, [{}], [{}]",
             "{}, [{}]",
             $s,
             renderp(&$ctx.substitutions),
@@ -122,11 +95,9 @@ macro_rules! debug_step {
 macro_rules! debug_step_ng {
     ($s:expr, $ctx:expr, $comp:expr) => {{
         debug!(
-            // "{}, e[{}], e[{}], s[{}]",
             "{}, e[{}], s[{}]",
             $s,
             renderp(&$ctx.exact.substitutions),
-            // renderw(&$ctx.exact.weightmap),
             renderssubs(&$ctx.sample.substitutions),
         );
         debug_compiled!($comp);
@@ -136,7 +107,6 @@ macro_rules! debug_step_ng {
             "{}, e[{}], s[{}]",
             $s,
             renderp(&$ctx.exact.substitutions),
-            // renderw(&$ctx.exact.weightmap),
             renderssubs(&$ctx.sample.substitutions),
         );
         if $type == "sample" {
@@ -154,9 +124,7 @@ macro_rules! debug_compiled {
         debug!("      \\||/  {}", renderbdds(&$comp.out));
         debug!("      \\||/  {:?}", $comp.accept.print_bdd());
         debug!("      \\||/  [{}]", renderp(&$comp.substitutions));
-        // debug!("      \\||/  {}", weights);
         debug!("----------------------------------------");
-        // })
     }};
     (@ $comp:expr) => {{
         debug!("      \\||/  {:?}", &$comp.out);

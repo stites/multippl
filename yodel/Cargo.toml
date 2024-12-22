@@ -3,21 +3,6 @@ name = "yodel"
 version = "0.1.0"
 edition = "2021"
 
-# [[bench]]
-# name = "grids"
-# harness = false
-# required-features = ["criterion"]
-
-[[bin]]
-name = "plot-grids"
-path = "exe/plots/grids/mod.rs"
-required-features = ["plots"]
-
-[[bin]]
-name = "plot-bns"
-path = "exe/plots/bns/mod.rs"
-required-features = ["plots"]
-
 [dependencies]
 rsdd = { workspace = true }
 rsgm = { workspace = true }

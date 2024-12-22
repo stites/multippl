@@ -30,9 +30,6 @@ mod uniquify;
 
 mod annotate;
 
-// pub mod analysis; // punt on this
-// pub use crate::analysis::sampling::*;
-
 // interface
 pub mod compile;
 
@@ -41,10 +38,7 @@ pub use pipeline::*;
 
 pub mod inference;
 
-// extras
-pub mod bayesian_network;
 pub mod upcast;
-// pub mod grids;
 pub mod utils;
 
 #[cfg(test)]
