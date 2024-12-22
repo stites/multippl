@@ -1,5 +1,0 @@
-exact {
-  let distA = flip 0.5 in
-  observe (distA == true) in
-  distA
-}

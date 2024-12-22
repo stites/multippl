@@ -1,9 +1,0 @@
-exact {
-  let x = flip 1.0 / 3.0 in
-  let y = sample(exact {
-    let y = flip 1.0 / 4.0 in
-    observe x || y in
-    y
-  }) in
-  x
-}

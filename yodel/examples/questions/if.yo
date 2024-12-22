@@ -1,9 +1,0 @@
-exact {
-  let x = flip 1.0 / 3.0 in
-  if x then
-    let y = flip 1.0 / 4.0 in
-    observe x || y in
-    x
-  else
-    x
-}

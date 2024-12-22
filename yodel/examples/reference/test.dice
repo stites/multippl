@@ -1,4 +1,0 @@
-let x = flip 1/3 in
-let l = x in
-let tmp = observe x in
-l
