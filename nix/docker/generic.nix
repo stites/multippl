@@ -6,6 +6,10 @@
   psi,
   python-with-pyro,
   multippl,
+  dice,
+  benchmark-cli,
+  bash,
+  coreutils,
 }:
 dockerTools.buildImage {
   inherit name;
@@ -13,7 +17,7 @@ dockerTools.buildImage {
 
   copyToRoot = buildEnv {
     name = "image-root";
-    paths = [psi python-with-pyro multippl];
+    paths = [psi python-with-pyro multippl dice benchmark-cli bash coreutils];
     pathsToLink = ["/bin"];
   };
   config =

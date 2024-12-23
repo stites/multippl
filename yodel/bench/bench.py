@@ -38,17 +38,20 @@ def proc(args):
     try:
         with open(outfilepath, "w") as outfile:
             p = subprocess.run(cmd, stdout=outfile, stderr=subprocess.DEVNULL, timeout=TIMEOUT_SEC)
-            if needs_timer:
+            if needs_timer and p.returncode == 0:
                 sec = time.time() - start
                 outfile.write(f"{sec * 1000}ms\n")
+
+        if p.returncode > 0:
+            os.remove(outfilepath)
+            noti_failed(mainfile, p.returncode, run, nruns)
 
         if run == 0 and p.returncode == 0:
             end1 = time.time()
             noti_success(mainfile, 1, nruns, (end1 - start))
 
-        if p.returncode > 0:
-            os.remove(outfilepath)
-            noti_failed(mainfile, p.returncode, run, nruns)
+
+
     except (subprocess.TimeoutExpired, ctx.TimeoutError):
         with open(outfilepath, "w") as outfile:
             outfile.write(f"timeout@{TIMEOUT_SEC} (seconds)\n")
@@ -178,6 +181,7 @@ if __name__ == "__main__":
     date = time.strftime("%Y-%m-%d", time.localtime())
     hm = time.strftime("%H:%M", time.localtime())
     logdir = args.logdir + "/" + date + "/" + hm + "/"
+    print("logdir =", logdir)
     args.logdir = logdir
     os.makedirs(logdir, exist_ok=True)
     reserved = [

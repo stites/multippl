@@ -10,7 +10,6 @@ NUM_STEPS=1000
 
 PSI_THREADS=1
 PSI_RUNS=100
-PSI_STEPS=1000
 
 LOGDIR=$WORKING_DIR/logs
 
@@ -18,13 +17,12 @@ case $1 in
   all)
     shift
     while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
-      --threads)     shift; NUM_THREADS=$1 ;;
+      --num-threads)     shift; NUM_THREADS=$1 ;;
       --num-runs)    shift; NUM_RUNS=$1    ;;
       --num-steps)   shift; NUM_STEPS=$1   ;;
 
       --psi-threads) shift; PSI_THREADS=$1 ;;
       --psi-runs)    shift; PSI_RUNS=$1    ;;
-      --psi-steps)   shift; PSI_STEPS=$1   ;; # this actually does nothing
 
       --logdir)      shift; LOGDIR=$1      ;;
     esac; shift; done
@@ -47,7 +45,6 @@ case $1 in
         ( (cd "$BENCH_DIR/$exp" && \
              python ./bench.py --psi \
                  --threads   "$PSI_THREADS" \
-                 --num-steps "$PSI_STEPS" \
                  --num-runs  "$PSI_RUNS" \
                  --logdir    "$LOGDIR/$exp" ) || exit 1)
     done
@@ -66,7 +63,7 @@ case $1 in
     echo ""
     echo "subcommand: all -- run all benchmarks (psi benchmarks last), then tabulate"
     echo ""
-    echo "    --threads NUM_THREADS     Number of threads to use for non-psi benchmarks. Default: 1."
+    echo "    --num-threads NUM_THREADS Number of threads to use for non-psi benchmarks. Default: 1."
     echo "    --num-runs NUM_RUNS       Number of runs to use for non-psi benchmarks. Default: 100."
     echo "    --num-steps NUM_STEPS     Number of steps per run to use for non-psi, approximate benchmarks. Default: 1000."
     echo ""
