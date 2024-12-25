@@ -20,7 +20,9 @@ fn mk_output_samples(mgr: &mut Mgr, prev_samples: &BddPtr, dist: BddPtr, sample:
 }
 
 pub fn magsafe(theta_q: f64) -> f64 {
-    let tolerance = std::f64::EPSILON * 10.0; // there might be some math on these floats, maybe one order of magnitude more than eps
+    // there might be some math on these floats,
+    // maybe one order of magnitude more than eps
+    let tolerance = std::f64::EPSILON * 10.0;
     if (1.0 - theta_q).abs() < tolerance {
         1.0
     } else if theta_q.abs() < tolerance {
@@ -29,13 +31,13 @@ pub fn magsafe(theta_q: f64) -> f64 {
         theta_q
     }
 }
+
 #[inline]
 pub fn exact2sample_bdd_eff(
     state: &mut super::eval::State,
     out: &mut Output,
     dist: &BddPtr,
 ) -> bool {
-    // let wmc_params = out.exact.weightmap.as_params(state.opts.max_label);
     let wmc_params = state.wmc.params();
     let accept = out.exact.accept;
     let ss = GetSamples::samples(&out.exact, state.mgr, state.opts.sample_pruning);
@@ -48,15 +50,10 @@ pub fn exact2sample_bdd_eff(
     debug!("    theta_q: {}", theta_q);
     debug!(" #rec calls: {}", state.mgr.num_recursive_calls());
 
-    // for v in crate::utils::variables(*dist) {
-    //     debug!("w {:?}: {:?}", v, wmc_params.get_var_weight(v));
-    // }
-
     let bern = statrs::distribution::Bernoulli::new(theta_q).unwrap();
     let s = sample_from(state, bern) == 1.0;
 
     let weight = if s { theta_q } else { 1.0 - theta_q };
-    // state.mult_pq(weight, weight);
 
     // sample in sequence. A smarter sample would compile
     // all samples of a multi-rooted BDD, but I need to futz

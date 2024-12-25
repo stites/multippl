@@ -5,8 +5,6 @@ use clap::Parser;
 use clap_verbosity_flag::LevelFilter as VerbLevel;
 use clap_verbosity_flag::Verbosity;
 use itertools::*;
-use multippl::pipeline::{DataPoints, Datum};
-use serde_json::Value;
 use std::error::Error;
 use std::fs;
 use std::path::PathBuf;
@@ -48,14 +46,6 @@ struct Args {
 
     // #[clap(short, long, value_parser)]
     // stats_window: u64, // use optimizations
-
-    // string delimited list of variables to append query that are not in the return
-    #[clap(short, long, value_parser)]
-    post: Option<String>,
-
-    // placeholder
-    #[clap(short, long, value_parser)]
-    data: Option<String>,
 }
 
 fn verbosity_to_tracing(lvl: VerbLevel) -> Level {
@@ -81,64 +71,6 @@ fn setup_tracing(lvl: Level) {
         .with_max_level(lvl)
         .event_format(format)
         .init();
-}
-
-fn read_data(ofp: Option<String>) -> DataPoints {
-    ofp.and_then(|fp| {
-        let datafile = fs::read_to_string(fp).ok()?;
-        let parsed: Value = serde_json::from_str(&datafile).ok()?;
-        parsed
-            .as_object()?
-            .into_iter()
-            .map(|(k, v)| {
-                let v = serde_json::from_value::<Vec<Value>>(v.clone())
-                    .ok()?
-                    .into_iter()
-                    .map(|v| match &v {
-                        Value::Bool(x) => Some(Datum::Bool(*x)),
-                        Value::Number(x) => Some(if x.is_u64() {
-                            Datum::Int(x.as_u64()?)
-                        } else {
-                            Datum::Float(x.as_f64()?)
-                        }),
-                        Value::Array(xs) => {
-                            if xs[0].is_u64() {
-                                xs.iter()
-                                    .map(|x| match x {
-                                        Value::Number(x) => Some(x.as_u64()?),
-                                        _ => None,
-                                    })
-                                    .collect::<Option<Vec<_>>>()
-                                    .map(Datum::Ints)
-                            } else if xs[0].is_f64() {
-                                xs.iter()
-                                    .map(|x| match x {
-                                        Value::Number(x) => Some(x.as_f64()?),
-                                        _ => None,
-                                    })
-                                    .collect::<Option<Vec<_>>>()
-                                    .map(Datum::Floats)
-                            } else if xs[0].is_boolean() {
-                                xs.iter()
-                                    .map(|x| match x {
-                                        Value::Bool(x) => Some(*x),
-                                        _ => None,
-                                    })
-                                    .collect::<Option<Vec<_>>>()
-                                    .map(Datum::Bools)
-                            } else {
-                                None
-                            }
-                        }
-                        _ => None,
-                    })
-                    .collect::<Option<_>>()?;
-
-                Some((k.clone(), v))
-            })
-            .collect::<Option<_>>()
-    })
-    .unwrap_or_default()
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -171,8 +103,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("       Seed: {:?}", args.rng);
     info!("Debug level: {:?}", lvl);
     info!(" report BDD: {}", args.stats);
-    info!("!!   +query: {:?}", args.post); // FIXME: unused
-    info!("!!data file: {:?}", args.data);
     setup_tracing(lvl);
 
     let pth = PathBuf::from(args.file);
@@ -182,12 +112,10 @@ fn main() -> Result<(), Box<dyn Error>> {
     debug!("program:\n{}\n", src);
 
     let options = multippl::pipeline::Options::new(args.rng, false, false, false, 0);
-    let datapoints = read_data(args.data); // FIXME unused
 
     debug!("compilation options: {:?}", options);
     let now = Instant::now();
-    let (query, stats) =
-        multippl::inference::importance_weighting_h_h(args.steps, &src, &options, datapoints);
+    let (query, stats) = multippl::inference::importance_weighting_h(args.steps, &src, &options);
     let elapsed_time = now.elapsed();
     if args.stats {
         println!("{:?}", stats);

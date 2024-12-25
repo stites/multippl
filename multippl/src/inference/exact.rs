@@ -23,10 +23,7 @@ pub fn exact_inferable(p: &ProgramInferable) -> (Vec<f64>, Option<WmcStats>) {
     let mut opt = crate::pipeline::Options::stoch();
     opt.exact_only = true;
     let exact = p.strip_samples().ok().unwrap();
-    let (mut mgr, p, lenv, _) =
-        crate::pipeline::make_mgr_and_ir_with_data_h(&exact, crate::pipeline::DataSet::empty())
-            .ok()
-            .unwrap();
+    let (mut mgr, p, lenv) = crate::pipeline::make_mgr_and_ir_h(&exact).ok().unwrap();
     tracing::debug!(",====================================.");
     tracing::debug!("| manager compiled! building program |");
     tracing::debug!("`===================================='");

@@ -266,9 +266,7 @@ macro_rules! run {
         let mut opt = $crate::pipeline::Options::stoch();
         opt.exact_only = true;
         let exact = $code.strip_samples().ok().unwrap();
-        let (mut mgr, p, lenv, _) = make_mgr_and_ir_with_data_h(&exact, DataSet::empty())
-            .ok()
-            .unwrap();
+        let (mut mgr, p, lenv) = make_mgr_and_ir(&exact).ok().unwrap();
         tracing::debug!(",====================================.");
         tracing::debug!("| manager compiled! building program |");
         tracing::debug!("`===================================='");
@@ -306,20 +304,9 @@ pub fn runner(
     p: &Program<crate::annotate::grammar::Annotated>,
     lenv: &LabelEnv,
 ) -> Result<PartialROut> {
-    runner_with_data(mgr, rng, wmc, opt, p, lenv, 0, &DataView::empty())
-}
-
-pub fn runner_with_data(
-    mgr: &mut Mgr,
-    rng: &mut StdRng,
-    wmc: WmcP,
-    opt: &Options,
-    p: &Program<crate::annotate::grammar::Annotated>,
-    lenv: &LabelEnv,
-    step: usize,
-    dv: &DataView,
-) -> Result<PartialROut> {
     let sample_pruning = opt.opt;
+    let step = 0;
+    let dv = &DataView::empty();
 
     tracing::debug!("program running...");
     let mut state = State::new(
@@ -348,34 +335,15 @@ pub fn runner_with_data(
 pub fn make_mgr_and_ir(
     code: &str,
 ) -> Result<(Mgr, Program<crate::annotate::grammar::Annotated>, LabelEnv)> {
-    let (m, p, l, _) = make_mgr_and_ir_with_data(code, DataSet::empty())?;
-    Ok((m, p, l))
-}
-
-pub fn make_mgr_and_ir_with_data(
-    code: &str,
-    ds: DataSet,
-) -> Result<(
-    Mgr,
-    Program<crate::annotate::grammar::Annotated>,
-    LabelEnv,
-    DataView,
-)> {
     tracing::info!("compiling code:\n{code}");
     tracing::trace!("making manager");
     let p = crate::parser::program::parse(code)?;
-    make_mgr_and_ir_with_data_h(&p, ds)
+    make_mgr_and_ir_h(&p)
 }
 
-pub fn make_mgr_and_ir_with_data_h(
+pub fn make_mgr_and_ir_h(
     p: &ProgramInferable,
-    ds: DataSet,
-) -> Result<(
-    Mgr,
-    Program<crate::annotate::grammar::Annotated>,
-    LabelEnv,
-    DataView,
-)> {
+) -> Result<(Mgr, Program<crate::annotate::grammar::Annotated>, LabelEnv)> {
     tracing::debug!("(parsed)");
     tracing::debug!("(parsed) >>> {p:?}");
     tracing::debug!("(parsed)");
@@ -392,7 +360,8 @@ pub fn make_mgr_and_ir_with_data_h(
     tracing::debug!("(desugared) >>> {p:?}");
     tracing::debug!("(desugared)");
     let mut env = SymEnv::default();
-    let mut dv = DataView::new(ds);
+
+    let mut dv = DataView::new(DataSet::empty());
     let p = env.uniquify_with_data(&p, &mut dv)?.0;
     tracing::debug!("(uniquifyed)");
     tracing::debug!("(uniquifyed) >>> {p:?}");
@@ -406,5 +375,5 @@ pub fn make_mgr_and_ir_with_data_h(
     let maxlbl = ar.maxbdd.0;
     tracing::debug!("(manager created with max label: {maxlbl})");
     let mgr = crate::data::new_manager(maxlbl);
-    Ok((mgr, p, lenv, dv))
+    Ok((mgr, p, lenv))
 }

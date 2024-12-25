@@ -142,28 +142,6 @@ pub fn check_exact(s: &str, f: Vec<f64>, p: &str) {
 pub fn check_exact1(s: &str, f: f64, p: &str) {
     check_exact(s, vec![f], p)
 }
-pub fn check_approx_h_with_data(
-    s: &str,
-    f: Vec<f64>,
-    p: &str,
-    n: usize,
-    seed: Option<u64>,
-    dp: DataPoints,
-) {
-    check_inference_h_h(
-        "approx",
-        &|p, d| {
-            importance_weighting_h_h(n, p, &Options::new(seed, false, USE_DEBUG, USE_OPT, 0), d)
-        },
-        0.01,
-        s,
-        f,
-        p,
-        true,
-        dp,
-    );
-}
-
 pub fn check_approx_h(s: &str, f: Vec<f64>, p: &str, n: usize, seed: Option<u64>) {
     check_inference(
         "approx",

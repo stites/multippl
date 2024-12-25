@@ -26,7 +26,6 @@ use std::string::String;
 use tracing::*;
 
 pub use crate::data::errors::{CompileError, Result};
-// pub use crate::data::importance::{Importance, I};
 pub use crate::data::output::{Output, SubstMap};
 pub use crate::data::Weight;
 use CompileError::*;
@@ -131,17 +130,6 @@ pub fn eval_eite_output(
 ) -> Result<EOutput> {
     let dist = match (&truthy.exact.out, &falsey.exact.out) {
         (Some(l), Some(r)) => ite_bdds(state, guard, l, r),
-        // (Some(EVal::EBdd(tdist)), Some(EVal::EBdd(fdist))) => {
-        //     EVal::EBdd(state.mgr.ite(guard, *tdist, *fdist))
-        // }
-        // (Some(EVal::EProd(ts)), Some(EVal::EProd(fs))) => EVal::EProd(
-        //     izip!(ts, fs)
-        //         .map(|tf| match tf {
-        //             (EVal::EBdd(t), EVal::EBdd(f)) => EVal::EBdd(state.mgr.ite(guard, *t, *f)),
-        //             _ => panic!("typecheck failed to unify ITE-statement with products of BDDs"),
-        //         })
-        //         .collect_vec(),
-        // ),
         (t, f) => panic!(
             "typecheck failed to catch EIte with\ntruthy: {t:?}\nfalsey: {f:?}",
             t = t,
@@ -206,11 +194,6 @@ pub fn eval_elet_output(
 ) -> Result<EOutput> {
     let accept = mgr.and(body.exact.accept, ctx.exact.accept);
     let samples = mk_elet_output_samples(opts, mgr, &ctx.exact.samples, &body.exact.samples);
-
-    // let probabilities = izip!(bound.probabilities.clone(), body.probabilities)
-    //     .map(|(p1, p2)| p1 * p2)
-    //     .collect_vec();
-    // // let importance = I::Weight(bound.importance.weight() * body.importance.weight());
 
     let c = EOutput {
         out: body.exact.out,
@@ -280,12 +263,7 @@ impl<'a> State<'a> {
     }
     pub fn next_bdd(&mut self, flip: BddVar) -> (VarLabel, BddPtr) {
         match self.next {
-            None => {
-                // let label = calculate_label(&self.call_stack, flip.label, self.fnctx, self.while_index, self.fun_stats);
-                // let ptr = self.mgr.var(label, true);
-                // (label, ptr)
-                self.mgr.new_var(true)
-            }
+            None => self.mgr.new_var(true),
             Some(lbl) => {
                 let label = lbl;
                 self.next = Some(VarLabel::new(label.value() + 1));
@@ -306,7 +284,6 @@ impl<'a> State<'a> {
     #[inline(always)]
     pub fn score(&mut self, s: f64) {
         self.log_weight = self.log_weight.add(Ln::new(s));
-        // println!("\t\t{}>>>{:?}", s, self.log_weight);
     }
     pub fn eval_program_with_data(
         &mut self,
@@ -328,22 +305,11 @@ impl<'a> State<'a> {
             }
             Program::SDefine(f, e) => {
                 tracing::trace!("skipping sdefine... (collected in annotate)");
-                // tracing::debug!("fun: {f:?}");
-                // let name = f
-                //     .clone()
-                //     .name
-                //     .expect("all defined functions must have a name");
-                // self.fns.insert(name, Fn::Sample(f.clone()));
                 self.eval_program_with_data(e, dview)
             }
             Program::EDefine(f, e) => {
                 tracing::trace!("skipping edefine... (collected in annotate)");
                 tracing::debug!("fun: {f:?}");
-                // let name = f
-                //     .clone()
-                //     .name
-                //     .expect("all defined functions must have a name");
-                // self.fns.insert(name, Fn::Exact(f.clone()));
                 self.eval_program_with_data(e, dview)
             }
         }
@@ -400,10 +366,6 @@ impl<'a> State<'a> {
 
                 let comp = eval_eanf(self, &ctx, a)?;
 
-                // debug!("In. Accept {}", &ctx.accept.print_bdd());
-                // debug!("Comp. dist {}", renderbdds(&comp.dists));
-
-                // except everything up to this point
                 let accept = ctx.exact.accept;
                 // and include any sample consistency that is necessary
                 let ss = ctx.exact.samples(self.mgr, self.opts.sample_pruning);
@@ -413,19 +375,6 @@ impl<'a> State<'a> {
                 // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
                 // Score the program:
                 let wmc_params = self.wmc.params();
-                // this closure is _always_ run.
-                // span!(Level::DEBUG, "scoring observe").in_scope(|| {
-                //     println!("here...");
-                //     let avars = crate::utils::variables(dist);
-                //     for (i, var) in avars.iter().enumerate() {
-                //         debug!("{}@{:?}: {:?}", i, var, wmc_params.get_var_weight(*var));
-                //     }
-                //     debug!("WMCParams  {:?}", wmc_params);
-                //     debug!("Accept     {}", &dist.print_bdd());
-                //     // FIXME: should be aggregating these stats somewhere
-                //     debug!("using opt? {}", self.opts.sample_pruning);
-                // });
-
                 let ss = ctx.exact.samples(self.mgr, self.opts.sample_pruning);
                 let (wmc, _) = crate::inference::calculate_wmc_prob(
                     self.mgr,
@@ -434,19 +383,8 @@ impl<'a> State<'a> {
                     ctx.exact.accept,
                     ss,
                 );
-                // let (wmc, _) = crate::inference::calculate_wmc_prob_debug(
-                //     self.mgr,
-                //     wmc_params,
-                //     dist,
-                //     ctx.exact.accept,
-                //     ss,
-                // );
-                // println!("dist       {}", &dist.print_bdd());
-                // println!("accept     {}", &ctx.exact.accept.print_bdd());
-                // println!("WMC        {}", &wmc);
-
                 self.score(wmc);
-                // // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+                // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
                 let o = EOutput {
                     out: Some(EVal::EBdd(BddPtr::PtrTrue)),
@@ -456,7 +394,6 @@ impl<'a> State<'a> {
                 };
 
                 debug_step_ng!("observe", ctx, o);
-                // let ctx = ctx.mk_eoutput(o);
                 let newctx = Ctx::from(&ctx.mk_eoutput(o));
                 self.eval_eexpr(newctx, rest)
             }
@@ -475,8 +412,6 @@ impl<'a> State<'a> {
                     Some(bdd) => bdd,
                 };
 
-                // let (pred_dist, (wmc_true, wmc_false)) = eval_eite_predicate(self, &ctx, cond)?;
-
                 let tspan = tracing::span!(tracing::Level::DEBUG, "tru");
                 let _tenter = tspan.enter();
                 let truthy = self.eval_eexpr(ctx.clone(), t)?;
@@ -487,9 +422,6 @@ impl<'a> State<'a> {
                 let falsey = self.eval_eexpr(ctx.clone(), f)?;
                 drop(_fenter);
 
-                // if truthy.exact.out.is_none() != falsey.exact.out.len() {
-                //     return Err(TypeError(format!("Expected both branches of ITE to return same len tuple\nGot (left): {:?}\nGot (right):{:?}", truthy.exact.out.len(), falsey.exact.out.len(),)));
-                // }
                 let o: EOutput = eval_eite_output(self, &ctx, pred_dist, truthy, falsey)?;
                 debug_step_ng!("ite", ctx, &o);
                 let out = ctx.mk_eoutput(o);
@@ -503,13 +435,11 @@ impl<'a> State<'a> {
                 let bound = self.eval_eexpr(ctx.clone(), ebound)?;
                 debug!("ebound: {:?}", bound.exact.out);
 
-                // let mut newctx = ctx.new_from_eoutput(&bound);
                 let mut newctx = Ctx::from(&bound);
-                newctx.exact.substitutions.insert(
-                    d.id(),
-                    // Subst::mk(bound.exact.out.clone(), Some(Var::Named(d.clone()))),
-                    bound.exact.out.clone().unwrap(),
-                );
+                newctx
+                    .exact
+                    .substitutions
+                    .insert(d.id(), bound.exact.out.clone().unwrap());
                 let body = self.eval_eexpr(newctx, ebody)?;
 
                 let o = eval_elet_output(self.mgr, &ctx, bound, body, &self.opts)?;
@@ -550,11 +480,7 @@ impl<'a> State<'a> {
 
                         let mut subs = ctx.exact.substitutions.clone();
                         for (param, val) in params.iter().zip(argvals.iter()) {
-                            subs.insert(
-                                param.id(),
-                                // Subst::mk(vec![val.clone()], Some(Var::Named(param.clone()))),
-                                val.clone(), // Subst::mk(vec![val.clone()], Some(Var::Named(param.clone()))),
-                            );
+                            subs.insert(param.id(), val.clone());
                         }
                         let mut callerctx = ctx.clone();
                         callerctx.exact.substitutions = subs;
@@ -657,8 +583,7 @@ impl<'a> State<'a> {
                 newctx
                     .sample
                     .substitutions
-                    // .insert(d.id(), Subst::mk(bound.sample.out.clone(), None));
-                    .insert(d.id(), bound.sample.out.unwrap()); // Subst::mk(bound.sample.out.clone(), None));
+                    .insert(d.id(), bound.sample.out.unwrap());
                 let out = self.eval_sexpr(newctx, body)?;
 
                 debug_step_ng!(format!("let-in {}", name), ctx, out; "sample");
@@ -752,36 +677,6 @@ impl<'a> State<'a> {
                 let valueso = crate::compile::anf::eval_sanf(self, &ctx, values)?;
 
                 errors::TODO()
-                // if valueso.out.len() != 1 {
-                //     errors::typecheck_failed()
-                // } else {
-                //     let vs = match &valueso.out {
-                //        Some(SVal::SProd(vs)) => Ok(vs),
-                //        Some(SVal::SVec(vs)) => Ok(vs),
-                //        _ => errors::typecheck_failed(),
-                //     }?;
-
-                //     let (initialo, initial) = crate::compile::anf::eval_sanf(&mut self, &ctx, initial)?;
-
-                //     let mut bodytr = None;
-                //     let outs = vs.iter().map(|v| {
-                //         let mut newctx = Ctx::from(&ctx.mk_soutput(valueso.clone()));
-                //         newctx
-                //             .sample
-                //             .substitutions
-                //             .insert(argvar.id(), vec![v.clone()]);
-                //         let (o, b) = self.eval_sexpr(newctx, body)?;
-                //         bodytr = Some(b);
-                //         if o.sample.out.len() != 1 {
-                //             errors::typecheck_failed()
-                //         } else {
-                //             Ok(o.sample.out[0].clone())
-                //         }
-                //     }).collect::<Result<Vec<SVal>>>()?;
-                //     let sout = ctx.sample.as_output(outs);
-                //     let out = ctx.mk_soutput(sout);
-                //     Ok((out.clone(), SMap(out, argname.clone(), Box::new(bodytr.unwrap()), Box::new(arg))))
-                // }
             }
             SApp(fcall, fname, args) => {
                 let span = tracing::span!(tracing::Level::DEBUG, "app");
@@ -930,7 +825,6 @@ impl<'a> State<'a> {
                         //         })
                         //         .collect::<Result<Vec<f64>>>()?;
                         //     let vs = <nalgebra::base::DVector<f64> as From<Vec<f64>>>::from(vs);
-
                         //     statrs::distribution::ContinuousCDF::cdf(&dist, &vs)
                         // }
                         (Dist::Uniform(lo, hi), SVal::SFloat(f)) => {
@@ -966,31 +860,6 @@ impl<'a> State<'a> {
                 let eval = out.exact.out.clone().unwrap();
                 let sval = self.sexact_embed(&mut out, &eval)?;
                 let val = Self::sexact_embed_oh(eval, sval);
-
-                // let val = match (&eval, SExpr::<Trace>::embed(&eval)) {
-                //     (_, Ok(sv)) => sv,
-                //     (EVal::EBdd(dist), Err(_)) => {
-                //         let sample = exact2sample_bdd_eff(self, &mut out, dist);
-                //         SVal::SBool(sample)
-                //     }
-                //     // best effort for prods
-                //     (EVal::EProd(vs), Err(e)) => SVal::SProd(
-                //         vs.iter()
-                //             .map(|v| {
-                //                 Ok(match (&v, SExpr::<Trace>::embed(v)) {
-                //                     (EVal::EBdd(dist), Err(_)) => {
-                //                         let sample = exact2sample_bdd_eff(self, &mut out, dist);
-                //                         SVal::SBool(sample)
-                //                     }
-                //                     (_, Ok(v)) => v,
-                //                     (_, Err(e)) => return Err(e),
-                //                 })
-                //             })
-                //             .collect::<Result<Vec<_>>>()?,
-                //     ),
-                //     (_, Err(e)) => return Err(e),
-                // };
-                // println!("boundary sample: {:?}", val);
                 out.sample.out = Some(val);
                 Ok(out)
             }
