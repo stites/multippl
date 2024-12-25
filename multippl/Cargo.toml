@@ -1,5 +1,5 @@
 [package]
-name = "yodel"
+name = "multippl"
 version = "0.1.0"
 edition = "2021"
 
@@ -14,7 +14,7 @@ tracing-subscriber = { workspace = true }
 tracing-test = { workspace = true }
 tree-sitter = { workspace = true }
 rustc-hash = { workspace = true }
-tree-sitter-yodel = { path = "../tree-sitter-yodel" }
+tree-sitter-multippl = { path = "../tree-sitter-multippl" }
 ttg = { path = "../ttg" }
 indexmap = "1.9.3"
 

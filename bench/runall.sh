@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 WORKING_DIR=$(pwd)
 NUM_THREADS=1
-BENCH_DIR=yodel/bench/
+BENCH_DIR=bench/
 declare -a EXPERIMENTS=(grids/3x3 grids/6x6 grids/9x9 arrival/tree-15 arrival/tree-31 arrival/tree-63 gossip/g4 gossip/g10 gossip/g20 bayesnets/insurance bayesnets/alarm)
 
 NUM_THREADS=1

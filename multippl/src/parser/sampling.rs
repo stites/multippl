@@ -7,7 +7,7 @@ use std::collections::VecDeque;
 use tree_sitter::*;
 
 use super::*;
-use tree_sitter_yodel;
+use tree_sitter_multippl;
 
 macro_rules! assert_children {
     ( $src:expr, $x:expr, $count:literal, $node:expr, $c:expr ) => {{

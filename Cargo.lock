@@ -1067,6 +1067,43 @@ dependencies = [
 ]
 
 [[package]]
+name = "multippl"
+version = "0.1.0"
+dependencies = [
+ "clap 4.3.19",
+ "clap-verbosity-flag",
+ "criterion 0.4.0",
+ "csv",
+ "indexmap",
+ "itertools",
+ "nalgebra",
+ "num-rational 0.4.1",
+ "num-traits",
+ "paste",
+ "plotters",
+ "quickcheck",
+ "quickcheck_macros",
+ "rand 0.8.5",
+ "rayon",
+ "rsdd",
+ "rsgm",
+ "rsgm_networks",
+ "rustc-hash",
+ "serde",
+ "serde_json",
+ "spinoff",
+ "statrs",
+ "test-log",
+ "time 0.3.34",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-test",
+ "tree-sitter",
+ "tree-sitter-multippl",
+ "ttg",
+]
+
+[[package]]
 name = "nalgebra"
 version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2213,7 +2250,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "tree-sitter-yodel"
+name = "tree-sitter-multippl"
 version = "0.0.1"
 dependencies = [
  "cc",
@@ -2510,41 +2547,4 @@ dependencies = [
  "dlib",
  "once_cell",
  "pkg-config",
-]
-
-[[package]]
-name = "yodel"
-version = "0.1.0"
-dependencies = [
- "clap 4.3.19",
- "clap-verbosity-flag",
- "criterion 0.4.0",
- "csv",
- "indexmap",
- "itertools",
- "nalgebra",
- "num-rational 0.4.1",
- "num-traits",
- "paste",
- "plotters",
- "quickcheck",
- "quickcheck_macros",
- "rand 0.8.5",
- "rayon",
- "rsdd",
- "rsgm",
- "rsgm_networks",
- "rustc-hash",
- "serde",
- "serde_json",
- "spinoff",
- "statrs",
- "test-log",
- "time 0.3.34",
- "tracing",
- "tracing-subscriber",
- "tracing-test",
- "tree-sitter",
- "tree-sitter-yodel",
- "ttg",
 ]

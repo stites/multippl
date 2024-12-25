@@ -1,10 +1,11 @@
+extern crate multippl;
 extern crate tracing;
-extern crate yodel;
 
 use clap::Parser;
 use clap_verbosity_flag::LevelFilter as VerbLevel;
 use clap_verbosity_flag::Verbosity;
 use itertools::*;
+use multippl::pipeline::{DataPoints, Datum};
 use serde_json::Value;
 use std::error::Error;
 use std::fs;
@@ -12,7 +13,6 @@ use std::path::PathBuf;
 use std::time::*;
 use tracing::*;
 use tracing_subscriber::fmt;
-use yodel::pipeline::{DataPoints, Datum};
 
 #[derive(Parser, Debug)]
 #[clap(author, version, about, long_about = None)]
@@ -181,13 +181,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     let src = fs::read_to_string(pth)?;
     debug!("program:\n{}\n", src);
 
-    let options = yodel::pipeline::Options::new(args.rng, false, false, false, 0);
+    let options = multippl::pipeline::Options::new(args.rng, false, false, false, 0);
     let datapoints = read_data(args.data); // FIXME unused
 
     debug!("compilation options: {:?}", options);
     let now = Instant::now();
     let (query, stats) =
-        yodel::inference::importance_weighting_h_h(args.steps, &src, &options, datapoints);
+        multippl::inference::importance_weighting_h_h(args.steps, &src, &options, datapoints);
     let elapsed_time = now.elapsed();
     if args.stats {
         println!("{:?}", stats);
@@ -201,17 +201,6 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         }
     }
-    // if format!("{:?}", query).len() < 80 {
-    //     println!("   Computed: {:?}", query);
-    // } else {
-    //     println!("Computed:\n{:?}", query);
-    // }
-
     println!("{}ms", elapsed_time.as_millis());
-    // if elapsed_time.as_secs() > 1 {
-    //     println!("{}s", elapsed_time.as_secs());
-    // } else {
-    //     println!("{}ms", elapsed_time.as_millis());
-    // }
     Ok(())
 }

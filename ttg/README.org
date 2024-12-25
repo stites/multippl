@@ -1,0 +1,10 @@
+#+title: MultiPPL's Trees That Grow library
+
+This library provides a procmacro for defining and managing the Trees That Grow
+"TTG" abstraction for the compiler passes of MultiPPL. The idea is to have a
+generalized IR which is shared across all compiler passes. This sub-library
+hard-codes the passes used in multippl and generalizing the procmacro for
+broader use is left to future work.
+
+For more details on Trees That Grow, refer to Najd and Peyton-Jones (2017) /Trees
+That Grow/, Journal of Universal Computer Science.

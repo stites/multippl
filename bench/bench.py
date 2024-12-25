@@ -116,10 +116,10 @@ def timedrunner(bin, mainfile, logdir="logs/", **kwargs):
 
 
 def yorunner(mainfile, logdir="logs/", **kwargs):
-    yodelbin = shutil.which("yodel")
-    if yodelbin is None:
+    multipplbin = shutil.which("multippl")
+    if multipplbin is None:
         subprocess.run(
-            ["cargo", "build", "--release", "--bin", "yodel"],
+            ["cargo", "build", "--release", "--bin", "multippl"],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
@@ -129,16 +129,16 @@ def yorunner(mainfile, logdir="logs/", **kwargs):
            .rstrip()
            .decode("utf-8")
           )
-        yodelbin = f"{repo_dir}/target/release/yodel"
+        multipplbin = f"{repo_dir}/target/release/multippl"
 
-    if not os.path.isfile(yodelbin):
-        raise Exception("yodel binary was not built correctly")
+    if not os.path.isfile(multipplbin):
+        raise Exception("multippl binary was not built correctly")
     else:
-        yodelcmd = [yodelbin]
+        multipplcmd = [multipplbin]
         filearg = ["--file", mainfile]
         dataarg = ["--data", "data.json"] if os.path.isfile("data.json") else []
         nsteps = ["--steps", str(kwargs["num_steps"])]
-        cmd = yodelcmd + filearg + dataarg + nsteps + ["--rng"]
+        cmd = multipplcmd + filearg + dataarg + nsteps + ["--rng"]
         runner_(
             mainfile, cmd, with_seed=True, logdir=logdir, needs_timer=False, **kwargs
         )

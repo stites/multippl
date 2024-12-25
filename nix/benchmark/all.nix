@@ -33,7 +33,7 @@ in
     buildPhase = let
       go = name:
         builtins.concatStringsSep "\n" (map erun [
-          "cd yodel/bench/${name}"
+          "cd bench/${name}"
           "${bash}/bin/bash $(pwd)/run.sh bench ${
             if bench_psi
             then "--psi"
@@ -48,7 +48,7 @@ in
           "bayesnets"
         ])
         ++ (map erun [
-          "cd yodel/bench/gossip"
+          "cd bench/gossip"
           "CABAL_DIR=$PWD/.cabal ${cabal}/bin/cabal user-config init"
           "CABAL_DIR=$PWD/.cabal ${cabal}/bin/cabal user-config update --augment='offline: True'"
           "CABAL_DIR=$PWD/.cabal ${cabal}/bin/cabal user-config update --augment='active-repositories: :none'"
@@ -56,20 +56,20 @@ in
           "CABAL_DIR=$PWD/.cabal ${cabal}/bin/cabal build --offline truth.hs"
           "cp $(CABAL_DIR=$PWD/.cabal ${cabal}/bin/cabal list-bin truth.hs) truth"
           "cd -"
-          "cd yodel/bench/gossip/g4"
+          "cd bench/gossip/g4"
           "${bash}/bin/bash ./truth.sh"
           "cd -"
-          "cd yodel/bench/gossip/g10"
+          "cd bench/gossip/g10"
           "${bash}/bin/bash ./truth.sh"
           "cd -"
-          "cd yodel/bench/gossip/g20"
+          "cd bench/gossip/g20"
           "${bash}/bin/bash ./truth.sh"
           "cd -"
           (go "gossip")
           "mkdir -p $out/logs/g{4,10,20}"
-          "mv yodel/bench/gossip/g20/logs $out/logs/g20"
-          "mv yodel/bench/gossip/g10/logs $out/logs/g10"
-          "mv yodel/bench/gossip/g4/logs  $out/logs/g4"
+          "mv bench/gossip/g20/logs $out/logs/g20"
+          "mv bench/gossip/g10/logs $out/logs/g10"
+          "mv bench/gossip/g4/logs  $out/logs/g4"
           "ls $out/logs/g4"
         ]));
   }

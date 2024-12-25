@@ -20,7 +20,7 @@ in {
   bin = pkgs.callPackage ./generic.nix (input-pkgs
     // {
       name = "multippl-bin";
-      config.Entrypoint = "${config.packages.default}/bin/yodel";
+      config.Entrypoint = "${config.packages.default}/bin/multippl";
     });
 
   bench = pkgs.callPackage ./generic.nix (input-pkgs

@@ -8,8 +8,8 @@ use tree_sitter::{Node, Parser, Tree, TreeCursor};
 pub fn tree_parser(code: String) -> Option<Tree> {
     let mut parser = Parser::new();
     parser
-        .set_language(tree_sitter_yodel::language())
-        .expect("Error loading yodel grammar");
+        .set_language(tree_sitter_multippl::language())
+        .expect("Error loading multippl grammar");
     parser.parse(code, None)
 }
 // fn parse_program(src: &[u8], c: &mut TreeCursor, n: &Node) -> ProgramSugar {

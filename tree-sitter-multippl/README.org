@@ -1,0 +1,21 @@
+#+title: Tree-Sitter Grammar
+
+This directory contains the code to generate a tree-sitter grammar for the
+multippl programming language.
+
+* Building the Grammar
+
+To build the MultiPPL tree-sitter grammar, you'll need to have [[https://tree-sitter.github.io/tree-sitter/][tree-sitter]] installed, then run ~tree-sitter generate -b~.
+
+** Using syntax highlighting in emacs
+For emacs, run the following:
+
+#+begin_example
+cd tree-sitter-multippl
+tree-sitter generate -b --libdir $EDITOR_DATADIR/tree-sitter/
+mv $EDITOR_DATADIR/tree-sitter/{,libtree-sitter-}multippl.so
+#+end_example
+
+Where ~$EDITOR_DATADIR=~/.connfig/emacs/.local/cache~ for doom emacs.
+
+# TODO: recall how the actual config that I used

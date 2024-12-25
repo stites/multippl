@@ -1,8 +1,8 @@
 [workspace]
 resolver = "2"
 members = [
-  "yodel",
-  "tree-sitter-yodel",
+  "multippl",
+  "tree-sitter-multippl",
   "ttg",
 ]
 [workspace.package]

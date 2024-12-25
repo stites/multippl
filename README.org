@@ -1,4 +1,4 @@
-* Heterogeneous Inference with a Probabilistic Multilanguage
+* Heterogeneous Inference with a Probabilistic Multi-language
 ** file structure
 - ~nix/~ nix support files
 - ~ttg/~ trees that grow macros
@@ -11,7 +11,7 @@
     * ~yodel/bench_old~ grid based incremental tests
     * ~yodel/exe~ old plotting binaries
 * Running the benchmarks
-See [[./yodel/bench/README.org][the ~yodel/bench~ folder]]
+See [[./yodel/bench/README.org][the ~bench~ folder]]
 
 * Misc
 *** A note on the prototype name: /yodel/
@@ -21,8 +21,7 @@ cows home (convergence, anybody? 😉)
 
 
 * benchmarking
-test a run:
-
+- test a run:
 #+begin_example bash
 nix build .#docker-bench
 (docker load < result)
@@ -31,5 +30,4 @@ docker run -v $PWD/dockerdata:/data multippl-bench:latest all --psi-runs 2 --psi
 #+end_example
 
 
--
 - Residential memory is highest for psi (17.2G for the ~bayesnet/alarm~ evaluation).

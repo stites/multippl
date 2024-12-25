@@ -6,15 +6,13 @@
     nixpkgs.url = "github:nixos/nixpkgs/release-23.11";
     flake-parts.url = "github:hercules-ci/flake-parts";
     devshell.url = "github:numtide/devshell";
-    crane.url = "github:ipetkov/crane/v0.16.2";
-    cachix-push.url = "github:juspay/cachix-push";
-    rsdd.url = "github:stites/rsdd/yodel-additions?dir=nix";
-
-    dice.url = "github:stites/dice.nix";
-
-    # clean up dependencies
     pre-commit.url = "github:cachix/pre-commit-hooks.nix";
     pre-commit.inputs.nixpkgs.follows = "nixpkgs";
+    cachix-push.url = "github:juspay/cachix-push";
+
+    crane.url = "github:ipetkov/crane/v0.16.2";
+    dice.url = "github:stites/dice.nix";
+    rsdd.url = "github:stites/rsdd/yodel-additions?dir=nix";
     rsdd.inputs.nixpkgs.follows = "nixpkgs";
   };
 
@@ -79,7 +77,7 @@
           // {
             NIX_DEBUG = 0;
             doCheck = false;
-            pname = "multippl";
+            pname = "multippl-workspace";
           });
       in {
         checks = import ./nix/checks.nix {inherit lib system my-crate craneLib commonArgs cargoArtifacts;};
@@ -123,15 +121,15 @@
           }
           {
             name = "ts2emacs";
-            help = "compile tree-sitter-yodel.so to ~/.emacs.d/tree-sitter/";
+            help = "compile tree-sitter-multippl.so to ~/.emacs.d/tree-sitter/";
             # https://github.com/tree-sitter/tree-sitter/discussions/1711
             command = let
               cmd = dir: ''
-                echo "generating yodel.so in user-emacs-directory: ${dir}"
-                cd tree-sitter-yodel
+                echo "generating multippl.so in user-emacs-directory: ${dir}"
+                cd tree-sitter-multippl
                 tree-sitter generate -b --libdir ${dir}/tree-sitter/
-                echo "renaming yodel.so -> libtree-sitter-yodel.so"
-                mv ${dir}/tree-sitter/{,libtree-sitter-}yodel.so
+                echo "renaming multippl.so -> libtree-sitter-multippl.so"
+                mv ${dir}/tree-sitter/{,libtree-sitter-}multippl.so
                 echo "ls ${dir}/tree-sitter/"
                 ls ${dir}/tree-sitter/
               '';

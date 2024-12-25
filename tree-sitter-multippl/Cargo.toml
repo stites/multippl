@@ -1,10 +1,10 @@
 [package]
-name = "tree-sitter-yodel"
-description = "Yodel grammar for the tree-sitter parsing library"
+name = "tree-sitter-multippl"
+description = "MultiPPL grammar for the tree-sitter parsing library"
 version = "0.0.1"
 keywords = ["incremental", "parsing", "BDDIS"]
 categories = ["parsing", "text-editors"]
-repository = "https://github.com/stites/yodel"
+repository = "https://github.com/stites/multippl"
 edition = "2018"
 license = "MIT"
 

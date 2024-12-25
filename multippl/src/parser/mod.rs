@@ -2,7 +2,7 @@ use crate::typeinf::grammar::{AnfInferable, EExprInferable, ProgramInferable};
 use itertools::Itertools;
 use std::collections::VecDeque;
 use tree_sitter::*;
-use tree_sitter_yodel;
+use tree_sitter_multippl;
 
 use crate::grammar::*;
 
