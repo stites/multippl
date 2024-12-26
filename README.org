@@ -1,26 +1,7 @@
-* Heterogeneous Inference with a Probabilistic Multi-language
-** file structure
-- ~nix/~ nix support files
-- ~ttg/~ trees that grow macros
-- ~tree-sitter-yodel/~ tree sitter grammar and emacs mode (~./yodel-ts-mode.el~)
-- ~yodel/~ compiler code
-  + ~yodel/src~ compiler source
-  + ~yodel/bench~ python CLI to run benchmarks
-  + ~yodel/examples~ example programs
-  + out-dated folders include:
-    * ~yodel/bench_old~ grid based incremental tests
-    * ~yodel/exe~ old plotting binaries
+#+title: MultiPPL: A Probabilistic Multi-language Framework
+** examples
+* Grammar
 * Running the benchmarks
-See [[./yodel/bench/README.org][the ~bench~ folder]]
-
-* Misc
-*** A note on the prototype name: /yodel/
-Initially named /yodel/, this project was simply designed to collapse "mountains
-of BDDs" --  which sounded a bit like yodeling : ). Yodeling also brings the
-cows home (convergence, anybody? 😉)
-
-
-* benchmarking
 - test a run:
 #+begin_example bash
 nix build .#docker-bench
@@ -29,5 +10,12 @@ nix build .#docker-bench
 docker run -v $PWD/dockerdata:/data multippl-bench:latest all --psi-runs 2 --psi-threads 2 --num-threads 4 --num-runs 1)
 #+end_example
 
-
 - Residential memory is highest for psi (17.2G for the ~bayesnet/alarm~ evaluation).
+- 10 runs should give a ballpark figure for the 100 run evaluation.
+
+* folder structure
+- ~multippl/~ compiler source (see readme for compiler details)
+- ~bench/~ python/bash runners to evaluate the multippl benchmark
+- ~ttg/~ proc macros for "trees that grow" in rust
+- ~tree-sitter-multippl/~ tree sitter grammar and emacs mode (~./multippl-ts-mode.el~)
+- ~nix/~ nix support files

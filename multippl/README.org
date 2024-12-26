@@ -1,0 +1,21 @@
+#+title: The MultiPPL Compiler
+
+The MultiPPL compiler aims to be a nanopass-style compiler leveraging [[file:../ttg/README.org][trees that
+grow]] to abstract away IR boilerplate. The compiler passes are as follows:
+
+1. Parsing, using tree-sitter, lives in [[file:src/parser/][parser/]]. Notably this folder delineates
+   parsing by disc and cont and defines our grammar.
+2. Type-inference: [[file:src/typeinf.rs][typeinf.rs]]. Unimplemented. This should be removed.
+3. Type-checking: [[file:src/typecheck.rs][typecheck.rs]]. Unimplemented. Our compiler is untyped.
+4. Desugaring ([[file:src/desugar/][desugar/]]) enables basic extensions of Disc, as documented in
+   Holtzen, et al. 2021.
+5. Uniquify ([[file:src/uniquify.rs][uniquify.rs]]) provides unique identifiers for variable.
+6. Annotate ([[file:src/annotate.rs][annotate.rs]]) calculates variable labels for all BDD nodes and
+   decorates variables with debugging information.
+7. Evaluation ([[file:src/compile/][compile/]]) computes our semantics, as described in our MultiPPL
+   submission: interleaving importance weighting with knowledge compilation al a
+   RSDD.
+
+Additionally, the inference folder ([[file:src/inference/][inference/]]) provides helpers for importance
+sampling and weighted model counting. Most other files are primarily used for
+debugging purposes.

@@ -13,21 +13,29 @@ PSI_RUNS=100
 
 LOGDIR=$WORKING_DIR/logs
 
-case $1 in
+# get top-level action
+ACTION=$1
+shift
+# get command line args
+while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
+  --num-threads)     shift; NUM_THREADS=$1 ;;
+  --num-runs)    shift; NUM_RUNS=$1    ;;
+  --num-steps)   shift; NUM_STEPS=$1   ;;
+
+  --psi-threads) shift; PSI_THREADS=$1 ;;
+  --psi-runs)    shift; PSI_RUNS=$1    ;;
+
+  --logdir)      shift; LOGDIR=$1      ;;
+esac; shift; done
+if [[ "$1" == '--' ]]; then shift; fi
+
+if ! test -w "$LOGDIR"; then
+   echo "no permissions to write to $LOGDIR, likely logs were generated via"
+   echo "docker. Please correct this: chmod -R a+w $LOGDIR"
+   exit 1
+fi
+case $ACTION in
   all)
-    shift
-    while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
-      --num-threads)     shift; NUM_THREADS=$1 ;;
-      --num-runs)    shift; NUM_RUNS=$1    ;;
-      --num-steps)   shift; NUM_STEPS=$1   ;;
-
-      --psi-threads) shift; PSI_THREADS=$1 ;;
-      --psi-runs)    shift; PSI_RUNS=$1    ;;
-
-      --logdir)      shift; LOGDIR=$1      ;;
-    esac; shift; done
-    if [[ "$1" == '--' ]]; then shift; fi
-
     for exp in "${EXPERIMENTS[@]}"; do
         echo "$exp"
         ( (cd "$BENCH_DIR/$exp" && \
