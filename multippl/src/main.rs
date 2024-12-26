@@ -89,7 +89,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let lvl = verbosity_to_tracing(args.verbose.log_level_filter());
 
     info!("          /\\                                       ");
-    info!("         /**\\           The Yodel compiler         ");
+    info!("         /**\\           The MultiPPL compiler      ");
     info!("        /****\\   /\\                                ");
     info!("       /      \\ /**\\                               ");
     info!("      /  /\\    /    \\        /\\    /\\  /\\      /\\  ");

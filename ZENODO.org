@@ -1,0 +1,69 @@
+#+title: Artifact for Multi-Language Probabilistic Programming
+
+Many different probabilistic programming languages exist that specialize to
+specific kinds of probabilistic programs, broadly falling into the categories of
+approximate and exact inference.
+
+This artifact for multi-language probabilistic programming provides the MultiPPL
+compiler. MultiPPL is a host compiler of two syntactically different
+probabilistic programming languages: an "approximate language" using importance
+sampling, and an "exact language" using binary decision diagrams for knowledge
+compilation. Our work demonstrates sound interoperation of these two languages
+under a multi-language framework[1].
+
+[1] - Matthews & Findler (2007) Operational Semantics for Multi-Language Programs, ACM SIGPLAN Notices.
+* DONE Artifact Availability
+CLOSED: [2024-12-26 Thu 13:59]
+:LOGBOOK:
+- State "DONE"       from              [2024-12-26 Thu 13:59]
+:END:
+The provided artifact contains the following source, development dependencies, and executables:
+- This README
+- The multippl source code as a separate ~multippl-source.tar.gz~ file.
+- A docker image containing the following
+  + executables for development: ~cargo~, ~rustc~, ~tree-sitter~, ~cargo-nextest~, ~ghc~, ~bc~
+  + the multippl source code, located at ~/data/multippl-source~
+  + executables for benchmarking:
+    + ~multippl~ our software artifact
+    + ~python~ with ~pyro~ preinstalled, our benchmark's approximate inference alternative
+    + ~psi~, our benchmark's exact inference alternative
+    + ~dice~, used to derive components of the ground truth.
+    + ~multippl-benchmark~, a shell script which runs the benchmarks and tabulates our results.
+
+
+* TODO Quick Start
+** Hardware requirements
+There are no explicit hardware requirements for the ~mulippl~ compiler. Large exact inference programs will eventually encounter memory limitations and slow down the samples produced, but this has not been an issue for networks in our evaluations.
+** Examples
+** The Cont Language
+*** Extensions
+** The Disc Language
+*** Extensions
+
+* MultiPPL Artifact Evaluation: Validation
+The ~multippl~ compiler is responsible for providing L1 and wall-clock evaluations
+for an approximate inference evaluations in Fig 11 and a discrete probabilistic
+program evaluation in Fig 14.
+** TODO Hardware requirements
+There are no explicit hardware requirements for to produce Fig 11 and Fig 14. These
+are able to run on commercial hardware on a single thread, but the evaluation will take
+approximately XXX amount of time on an AMD Ryzen 7 PRO 6850U (4.768GHz) CPU with
+30G of RAM.
+
+Most of this evaluation occurs while waiting for 700 PSI programs (100 runs in 7
+evaluations) to reach the timeout requirements. The most expensive PSI
+evaluation is the ~bayesnets/alarm~ evaluation, which takes up 17.2G per thread of
+residential memory. ~bayesnets/insurance~ and ~grids/81~ use ~15G per thread of
+residential memory.
+
+The ~multippl-benchmark~ tool can use more threads to speed up evaluation, with
+PSI-specific flags to ensure PSI is run single-threaded. Parallelizing any exact
+inference may cause programs to crash due to OOM errors.
+** running the benchmarks via multippl-benchmark
+
+** running benchmarks individually
+
+** running benchmarks via nix flake
+MultiPPL uses nix's flakes for development. Using the source contained in ~multippl-source.tar.gz~
+** benchmark folder structure
+

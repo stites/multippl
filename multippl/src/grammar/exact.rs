@@ -103,7 +103,7 @@ impl EVal {
     }
     pub fn pretty(&self) -> String {
         match self {
-            EVal::EBdd(x) => format!("{}", x.print_bdd().to_string()),
+            EVal::EBdd(x) => x.print_bdd().to_string(),
             EVal::EFloat(x) => format!("{}", x),
             EVal::EInteger(x) => format!("{:?}", x),
             EVal::EProd(xs) => {

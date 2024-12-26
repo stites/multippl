@@ -6,6 +6,7 @@ members = [
   "ttg",
 ]
 [workspace.package]
+name = "multippl-workspace"
 version = "0.0.0"
 edition = "2021"
 
@@ -29,8 +30,6 @@ lto = true              # +++ whole-program optimization: true for a "fat" LTO p
 [workspace.dependencies]
 # rsdd = { path = "../rsdd" , features =["hypergraph"]}
 rsdd = { git = "https://github.com/stites/rsdd", branch = "yodel-additions", features =["hypergraph"] }
-rsgm = { git = "https://github.com/neuppl/rsgm" }
-rsgm_networks = { git = "ssh://git@github.com/stites/rsgm_networks.git" }
 rand = "0.8.5"
 itertools = "0.10.3"
 tracing = "0.1.37"

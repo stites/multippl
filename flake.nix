@@ -84,13 +84,12 @@
 
         packages.default = my-crate;
         packages.multippl = my-crate;
-        packages.dice = inputs'.dice.packages.default;
-        packages.psi = pkgs.callPackage ./nix/psi-solver.nix {};
-        packages.pyro = pkgs.python3.withPackages (p: [p.pyro-ppl p.scipy p.ipython p.rich] ++ p.pyro-ppl.optional-dependencies.extras);
-        packages.dev = my-dev-crate;
-        packages.benchmark-cli = pkgs.callPackage ./nix/benchmark/cli.nix {
+        packages.multippl-source = pkgs.callPackage ./nix/multippl-source.nix {inherit cargoDevArtifacts;};
+        packages.multippl-docker = pkgs.callPackage ./nix/docker.nix {inherit config;};
+        packages.multippl-benchmark = pkgs.callPackage ./nix/benchmark-scripts.nix {
           inherit (config.packages) psi pyro multippl dice;
         };
+        packages.dev = my-dev-crate;
         packages.dev-test = craneLib.cargoNextest (commonArgs
           // {
             cargoArtifacts = cargoDevArtifacts;
@@ -99,10 +98,13 @@
             partitions = 1;
             partitionType = "count";
           });
-        packages.docker-bin = (pkgs.callPackage ./nix/docker {inherit config;}).bin;
-        packages.docker-repl = (pkgs.callPackage ./nix/docker {inherit config;}).repl;
-        packages.docker-bench = (pkgs.callPackage ./nix/docker {inherit config;}).bench;
 
+        #packages.rsdd = inputs'.rsdd.packages.default;
+        packages.dice = inputs'.dice.packages.default;
+        packages.psi = pkgs.callPackage ./nix/psi-solver.nix {};
+        packages.pyro = pkgs.python3.withPackages (p: [p.pyro-ppl p.scipy p.ipython p.rich] ++ p.pyro-ppl.optional-dependencies.extras);
+
+        cachix-push.cacheName = "stites";
         pre-commit.check.enable = false; # still need to download rsdd from github in offline mode, not sure how to do that right now
         pre-commit.settings.hooks = {
           shellcheck.enable = true;
@@ -112,7 +114,18 @@
           rustfmt.enable = true;
           typos.enable = true;
         };
-        cachix-push.cacheName = "stites";
+
+        apps = rec {
+          default = {
+            type = "app";
+            program = "${config.packages.multippl}/bin/multippl";
+          };
+          benchmark = {
+            type = "app";
+            program = "${config.packages.multippl-benchmark}/bin/multippl-benchmark";
+          };
+        };
+
         devshells.default.commands = [
           {
             name = "repl";
@@ -165,6 +178,7 @@
             cargo-play # quickly run a rust file that has a main function
             valgrind
             cargo-valgrind
+            bacon
 
             cargo-tarpaulin # code coverage
 
@@ -177,7 +191,6 @@
             cargo-udeps # find out unused dependencies
             cargo-audit # search for security vulnerabilities
             cargo-flamegraph # flamegraph profiling
-            bacon
             # cargo-pants # search for security vulnerabilities (by sonatype )
           ]
           ++ lib.optionals stdenv.isDarwin []

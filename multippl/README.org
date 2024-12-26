@@ -19,3 +19,13 @@ grow]] to abstract away IR boilerplate. The compiler passes are as follows:
 Additionally, the inference folder ([[file:src/inference/][inference/]]) provides helpers for importance
 sampling and weighted model counting. Most other files are primarily used for
 debugging purposes.
+
+The MultiPPL inference strategy compiles source code down to an annotated
+intermediate representation, then evaluates the compiled artifact in a loop for
+the designated number of samples. The output of running the program is the
+importance weighted expectation of all samples.
+
+Additional entry points to this code base:
+- [[file:src/pipeline.rs][pipeline.rs]] defines the top-level ~run~ function which
+  takes in source code and outputs the weighted output of evaluation.
+- [[file:src/main.rs][main.rs]] defines the ~multippl~ executable.

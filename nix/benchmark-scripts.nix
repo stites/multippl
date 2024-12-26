@@ -1,12 +1,8 @@
 {
   stdenv,
-  bench_psi ? false,
   psi,
   pyro,
   multippl,
-  config,
-  bash,
-  bashInteractive,
   ghc,
   bc,
   dice,
@@ -22,7 +18,7 @@ in
   stdenv.mkDerivation {
     name = "multippl-benchmark-cli";
     version = "HEAD";
-    src = ../../.;
+    src = ../.;
 
     buildInputs = [
       psi
@@ -33,14 +29,7 @@ in
       dice
     ];
 
-    buildPhase = let
-      hotwire-binaries = file: ''
-        substituteInPlace ${file} \
-          --replace "cmd = [\"python" "cmd = [\"${pyro}/bin/python" \
-          --replace "timedrunner(\"psi" "timedrunner(\"${psi}/bin/psi" \
-          --replace "shutil.which(\"multippl\")" "\"${multippl}/bin/multippl\""
-      '';
-    in ''
+    buildPhase = ''
       STARTDIR=$PWD
       cd bench/gossip
       CABAL_DIR=$PWD/.cabal ${cabal}/bin/cabal user-config init

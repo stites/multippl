@@ -61,7 +61,7 @@ impl<X> Exp1<X> {
             self.count += o.count;
 
             self.wquery_sums = izip!(&self.wquery_sums, &o.wquery_sums)
-                .map(|(l, r)| adder(&l, &r))
+                .map(|(l, r)| adder(l, r))
                 .collect_vec();
         }
     }
