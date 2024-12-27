@@ -1,5 +1,5 @@
 module.exports = grammar({
-  name: 'yodel',
+  name: 'multippl',
   word: $ => $.identifier,
   rules: {
     source_file: $ => $.program,
@@ -23,8 +23,14 @@ module.exports = grammar({
       seq('(', repeat(seq($.earg, ',')), $.earg, optional(','), ')')
     ),
 
-    sfun: $ => seq('sample', 'fn', field("name", $.identifier), $.sargs, '->', $.sty, '{', $.sexpr, '}'),
-    efun: $ => seq('exact', 'fn', field("name", $.identifier), $.eargs, '->', $.ety, '{', $.eexpr, '}'),
+    sfun: $ => choice(
+      seq('sample', 'fn', field("name", $.identifier), $.sargs, '->', $.sty, '{', $.sexpr, '}'),
+      seq('sample', 'fn', field("name", $.identifier), $.sargs, '{', $.sexpr, '}'),
+    ),
+    efun: $ => choice(
+      seq('exact', 'fn', field("name", $.identifier), $.eargs, '->', $.ety, '{', $.eexpr, '}'),
+      seq('exact', 'fn', field("name", $.identifier), $.eargs, '{', $.eexpr, '}'),
+    ),
 
     eexpr: $ => choice(
       seq($.comment, $.eexpr),
@@ -79,6 +85,13 @@ module.exports = grammar({
     // ),
 
 
+    evalueprod: $ => choice(
+      seq('(', ')'),
+      seq('(', $.evalue, ',', $.evalue, optional(','), ')'),
+      seq('(', $.evalue, ',', repeat(seq($.evalue, ',')), $.evalue, optional(','), ')'),
+    ),
+
+
     eanfprod: $ => choice(
       seq('(', $.evalue, ',', $.eanf, optional(','), ')'),
       seq('(', $.eanf, ',', $.eanf, optional(','), ')'),
@@ -123,7 +136,7 @@ module.exports = grammar({
     compare_op: $ => choice('==', '<', '<=', '>', '>='),
 
     evalue: $ => choice(
-      // $.evalueprod,
+      $.evalueprod,
       $.bool,
       $.int,
       $.float,
@@ -157,10 +170,10 @@ module.exports = grammar({
       seq($.comment, $.sexpr),
       // $.comment,
       // $.sbinding_section,
-      $.smap,
+      // $.smap,
       $.swhile,
-      $.sfold,
-      $.slam,
+      // $.sfold,
+      // $.slam,
       $.sobserve,
       $.sexact,
       $.site,

@@ -1,0 +1,8 @@
+sample {
+  p ~ beta(1.0, 1.0);
+  observe true  from bern(p);
+  observe false from bern(p);
+  observe false from bern(p);
+  observe false from bern(p);
+  p
+}

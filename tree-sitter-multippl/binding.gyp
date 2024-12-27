@@ -1,7 +1,7 @@
 {
   "targets": [
     {
-      "target_name": "tree_sitter_yodel_binding",
+      "target_name": "tree_sitter_multippl_binding",
       "include_dirs": [
         "<!(node -e \"require('nan')\")",
         "src"

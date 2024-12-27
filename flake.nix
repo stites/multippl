@@ -53,9 +53,16 @@
 
         commonArgs = {
           inherit src;
+          nativeBuildInputs = with pkgs; [
+            git
+            pkg-config
+            openssl
+          ];
+
           buildInputs = with pkgs;
             [
               #tree-sitter
+              openssl
             ]
             ++ lib.optionals pkgs.stdenv.isDarwin [
               pkgs.libiconv
@@ -76,8 +83,12 @@
         my-crate = craneLib.buildPackage (commonArgs
           // {
             NIX_DEBUG = 0;
-            doCheck = false;
+            doCheck = true;
             pname = "multippl-workspace";
+            strictDeps = true;
+
+            LD_LIBRARY_PATH = "${pkgs.openssl.out}/lib";
+            CARGO_NET_GIT_FETCH_WITH_CLI = "true";
           });
       in {
         checks = import ./nix/checks.nix {inherit lib system my-crate craneLib commonArgs cargoArtifacts;};

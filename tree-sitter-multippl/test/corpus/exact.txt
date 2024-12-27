@@ -1,10 +1,40 @@
 =======================
-parens and logical formulas
+exact: logical formulas
 ====================
 exact {
-  (xs) && (ys)
+  xs && ys
 }
 ---
+
+    (source_file
+      (program
+        (eexpr
+          (eanf
+            (eanfbinop
+              (eanf
+                (identifier))
+              (bool_biop)
+              (eanf
+                (identifier)))))))
+
+=======================
+exact: parens and logical formulas
+====================
+exact {
+  xs && (ys)
+}
+---
+    (source_file
+      (program
+        (eexpr
+          (eanf
+            (eanfbinop
+              (eanf
+                (identifier))
+              (bool_biop)
+              (eanf
+                (eanf
+                  (identifier))))))))
 
 ======================
 exact: untyped trivial

@@ -31,39 +31,345 @@ The provided artifact contains the following source, development dependencies, a
     + ~multippl-benchmark~, a shell script which runs the benchmarks and tabulates our results.
 
 
-* TODO Quick Start
+* DONE Quick Start
 ** Hardware requirements
 There are no explicit hardware requirements for the ~mulippl~ compiler. Large exact inference programs will eventually encounter memory limitations and slow down the samples produced, but this has not been an issue for networks in our evaluations.
-** Examples
-** The Cont Language
-*** Extensions
-** The Disc Language
-*** Extensions
+** Running ~multippl~
+The attached docker image has it's entrypoint set to the ~multippl~ binary:
+#+begin_example bash
+docker run --rm multippl:latest --steps <STEPS> --file <FILE>
+#+end_example
+Will invokes ~multippl~, where ~--step~ is the number of samples taken in the evaluation, and ~--file~ refers
+to a valid MultiPPL program.
 
-* MultiPPL Artifact Evaluation: Validation
+To run ~multippl~ on a file outside of the docker image you must bind a docker
+mount to the image. Given a file ~example/beta-bernoulli.yo~, bind the mount
+using ~-v~ or ~--volume <HOSTPATH>:<BINDPATH>~:
+#+begin_example bash
+$ docker run --rm -v $PWD/examples:/data/examples multippl:latest --file /data/examples/beta-bernoulli.yo --steps 1000
+0.33817887009669956
+37ms
+#+end_example
+
+Notes:
+- ~--file~ can be relative to the ~/data~ directory.
+- ~/data~ contains ~multippl-source/~ so binding directly to ~/data~ will lose access to these provided source files.
+** Running ~multippl-benchmark~
+To run a our benchmarks single-threaded for 100 runs and cache the resulting
+tables in a local ~logs/~ directory, use the following command:
+#+begin_example bash
+$ docker run --rm -v $PWD/logs:/data/logs --entrypoint multippl-benchmark multippl:latest all --logdir /data/logs
+#+end_example
+
+PSI will time out on 700 evaluations, which is the most time consuming portion of the benchmark. To reduce the running time, it may be prudent to limit PSI to only 10 runs, relying on the provided standard error to reflect the numbers provided:
+#+begin_example bash
+$ docker run --rm -v $PWD/logs:/data/logs --entrypoint multippl-benchmark multippl:latest all --logdir /data/logs --psi-runs 10
+#+end_example
+
+To do a "quick evaluation" with only 10 runs, a separate flag exists for the rest of the benchmark:
+#+begin_example bash
+$ docker run --rm -v $PWD/logs:/data/logs --entrypoint multippl-benchmark multippl:latest all --logdir /data/logs --num-runs 10 --psi-runs 10
+#+end_example
+
+Tables will be cached to ~logs/hybrid.rich~ and ~logs/discrete.rich~.
+
+* TODO MultiPPL [0/3]
+MultiPPL uses ~tree-sitter~ to parse syntax with the full grammar defined in
+[[file:tree-sitter-multippl/grammar.js]]. Here we detail the top-level syntactic
+forms and how to interoperate between the Cont and Disc languages. In following
+sections we describe Cont and Disc, providing example programs for each
+sub-language, and finally we describe a small example using interoperation. All
+examples can be found in the ~examples/~ folder.
+
+A MultiPPL program is introduced using ~sample { ... }~ or ~exact { ... }~ blocks,
+corresponding to the importance sampling Cont language and the exact Disc
+language. MultiPPL supports procedures, which similarly require a ~sample~ or ~exact~ keyword to
+describe where the function is allowed to run. Procedures take rust-like function syntax:
+#+begin_src artist
+choice('sample', 'exact') 'fn' <id> '(' repeat(<id>) ')' '{' <expr> '}'
+#+end_src
+Here, ~choice~ denotes exactly one of the keywords ~sample~ or ~exact~; ~repeat~ denotes zero or more expression; ~<id>~ denotes a variable identifier; ~<expr>~ comes from the expression language of Disc or Cont; and single-quoted characters denote keywords or symbols of the host language.
+
+** TODO The Cont Language [1/2]
+*** TODO An approximate Beta-Bernoulli
+*** DONE Grammar
+CLOSED: [2024-12-26 Thu 22:52]
+:LOGBOOK:
+- State "DONE"       from              [2024-12-26 Thu 22:52]
+:END:
+A top-level summarization of Cont's grammar in [[file:tree-sitter-multippl/grammar.js][grammar.js]] is as follows:
+
+#+begin_src artist
+Variables x
+
+Expressions
+e := a                                        // all ANF forms
+  | 'while' a '{' e '}'                       // while loops
+  | x '()' | x '(' repeat(x ',') x ')'        // function application
+  |'if' '(' a ')' '{' e '}' 'else' '{' e '}'  // control flow
+  | x '<-' e ';' e                            // variable binding
+  | e ';' e                                   // sequencing
+  | '~' e                                     // sampling an expression
+  | x '~' e ';' e                             // sugar for binding a sample: x <- (~ e); e
+  | 'observe' a 'from' a                      // conditioning on soft evidence
+  | 'exact' '(' exact_e ')'                   // inlined interoperation with an expression e from Disc
+  | 'exact' '{' exact_e '}'                   // interoperation with a block expression e from Disc
+
+ANF forms
+a := x                                          // variables
+  | v                                           // values
+  | '!' a                                       // negation
+  |  x '[' a ']'                                // projections
+  | a binop a                                   // binomial operations
+  | '(' repeat(a ',') a ')'                     // products
+  | '[' a ']' | '[' repeat(a ',') a ']'         // vectors
+  | 'head' '(' a ')' | 'tail' '(' a ')'         // vector operations
+  | 'push' '(' a ',' a ')'                      // vector operations
+  | 'bern' '(' a ')'                            // Bernoulli distributions
+  | 'poisson' '(' a ')'                         // Poisson distributions
+  | 'uniform' '(' a ',' a ')'                   // Uniform distributions
+  | 'normal' '(' a ',' a ')'                    // Normal distributions
+  | 'beta' '(' a ',' a ')'                      // Beta distributions
+  | 'discrete' '(' repeat(a ',') a ')'          // Discrete distributions
+
+Binomial operations
+binop := '+' | '*' | '/' | '^' | '<' | '<=' | '==' | '>=' | '>' | '&&' | '||'
+
+Values
+v := true | false                               // booleans
+  | /-?\d+\.(?:\d*|)/                           // floating-point values
+  | /\d+/                                       // integers
+  | '[]' | '[' repeat(v ',') v ']'              // vectors
+  | '()' | '(' repeat(v ',') v ')'              // products
+  | 'bern' '(' v ')'                            // Bernoulli distributions
+  | 'poisson' '(' v ')'                         // Poisson distributions
+  | 'uniform' '(' v ',' v ')'                   // Uniform distributions
+  | 'normal' '(' v ',' v ')'                    // Normal distributions
+  | 'beta' '(' v ',' v ')'                      // Beta distributions
+  | 'discrete' '(' repeat(v ',') v ')'          // Discrete distributions
+#+end_src
+
+** TODO The Disc Language [1/2]
+*** TODO A discrete, two coins program
+**** Using multiple steps
+**** Comparing with Dice
+*** DONE Grammar
+CLOSED: [2024-12-26 Thu 22:52]
+:LOGBOOK:
+- State "DONE"       from              [2024-12-26 Thu 22:52]
+:END:
+A top-level summarization of Disc's grammar is as follows:
+
+#+begin_src artist
+Variables x
+
+Expressions
+e := a                                        // all ANF forms
+  | x '()' | x '(' repeat(a ',') a ')'        // function application
+  | 'if' a 'then' e 'else' e                  // choice
+  | 'let' x '=' e 'in' e                      // variable binding
+  | 'flip' a                                  // Bernoulli distributions
+  | 'discrete' '(' repeat(a ',') a ')'        // Discrete distributions, desugared into a sequence of flips.
+  | 'observe' a 'in' e                        // conditioning on hard evidence in a sequence
+  | 'sample' '(' sample_e ')'                 // inlined interoperation with an expression e from Cont
+  | 'sample' '{' sample_e '}'                 // interoperation with a block expression e from Cont
+
+
+ANF forms
+a := x                               // variables
+  | v                                // values
+  | '!' a                            // negation
+  | '(' repeat(a ',') a ')'          // products
+  |  x '[' a ']'                     // projections out of products
+  | a binop a                        // binomial operations
+
+Binomial operations
+binop := '+' | '*' | '/' | '^' | '<' | '<=' | '==' | '>=' | '>' | '&&' | '||'
+
+Values
+v := true | false                    // booleans
+  | /-?\d+\.(?:\d*|)/                // statically known floating-point values, or floats obtained through interop
+  | /\d+/                            // statically known integers, or integers obtained through interop
+  | '()' | '(' repeat(v ',') v ')'   // products
+#+end_src
+
+** TODO A small example with interoperation
+* DONE MultiPPL Artifact Evaluation: Validation [2/2]
+CLOSED: [2024-12-26 Thu 22:54]
+:LOGBOOK:
+- State "DONE"       from              [2024-12-26 Thu 22:54]
+:END:
 The ~multippl~ compiler is responsible for providing L1 and wall-clock evaluations
 for an approximate inference evaluations in Fig 11 and a discrete probabilistic
 program evaluation in Fig 14.
-** TODO Hardware requirements
+** Hardware requirements
 There are no explicit hardware requirements for to produce Fig 11 and Fig 14. These
-are able to run on commercial hardware on a single thread, but the evaluation will take
-approximately XXX amount of time on an AMD Ryzen 7 PRO 6850U (4.768GHz) CPU with
-30G of RAM.
+are able to run on commercial hardware on a single thread, but evaluation will take
+approximately 120 hours (5 days) on a Thinkpad T14s Gen 3 with an AMD Ryzen 7
+PRO 6850U (4.768GHz) CPU and 30G of RAM.
 
-Most of this evaluation occurs while waiting for 700 PSI programs (100 runs in 7
-evaluations) to reach the timeout requirements. The most expensive PSI
-evaluation is the ~bayesnets/alarm~ evaluation, which takes up 17.2G per thread of
-residential memory. ~bayesnets/insurance~ and ~grids/81~ use ~15G per thread of
+Of the ~120 hours evaluating, 116.6hrs are spent waiting for 700 PSI
+programs (100 runs in 7 evaluations) to reach a timeout of 10 minutes.
+Parallelizing this evaluation is not advised without large amounts of RAM, as
+the most expensive PSI benchmark, the ~bayesnets/alarm~ evaluation, takes up 17.2G
+per thread of residential memory. Close behind ~alarm~ is the PSI
+~bayesnets/insurance~ and ~grids/81~ evaluations, which use ~15G per thread of
 residential memory.
+
+Using less RAM than this should be acceptable on a single threaded evaluation,
+so long as a there is enough swap to compensate for the difference of the expected ram.
 
 The ~multippl-benchmark~ tool can use more threads to speed up evaluation, with
 PSI-specific flags to ensure PSI is run single-threaded. Parallelizing any exact
 inference may cause programs to crash due to OOM errors.
-** running the benchmarks via multippl-benchmark
 
-** running benchmarks individually
+** DONE running multippl-benchmark via docker
+CLOSED: [2024-12-26 Thu 16:14]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-12-26 Thu 16:14]
+:END:
+The ~multippl-benchmark~ script is a multi-threaded benchmark evaluator, used to produce our evaluations.
+To run the ~multippl-benchmark~ command, invoke
+#+begin_src
+$ docker run --rm --entrypoint multippl-benchmark multippl:latest
+multippl-benchmark (all|tabulate) [OPTIONS]
 
-** running benchmarks via nix flake
-MultiPPL uses nix's flakes for development. Using the source contained in ~multippl-source.tar.gz~
-** benchmark folder structure
+subcommand: all -- run all benchmarks (psi benchmarks last), then tabulate
 
+    --num-threads NUM_THREADS Number of threads to use for non-psi benchmarks. Default: 1.
+    --num-runs NUM_RUNS       Number of runs to use for non-psi benchmarks. Default: 100.
+    --num-steps NUM_STEPS     Number of steps per run to use for non-psi, approximate benchmarks. Default: 1000.
+
+    --psi-threads PSI_THREADS Number of threads to use for psi benchmarks. Default: 1.
+    --psi-runs PSI_RUNS       Number of runs to use for psi benchmarks. Default: 100.
+
+    --logdir LOGDIR           Directory to store execution logs. Defaults to <cwd>/logs.
+
+subcommand: tabulate -- skip benchmarks and tabulate
+    --logdir LOGDIR           Directory to store execution logs. Defaults to <cwd>/logs.
+#+end_src
+
+The default strategy is to run 100 evaluations, single-threaded, for 1000
+samples.
+
+To save the cached files locally, outside of docker, bind to a volume to the ~/data/logs~ directory:
+#+begin_src bash
+$ docker run --rm -v $PWD/logs:/data/logs --entrypoint multippl-benchmark multippl:latest all
+#+end_src
+
+As stated above, PSI takes a considerable amount of time to produce the
+requisite timeouts.  To reduce the running time, it may be prudent to limit PSI
+to only 10 runs, relying on the provided standard error to reflect the numbers
+provided:
+#+begin_example bash
+$ docker run --rm -v $PWD/logs:/data/logs --entrypoint multippl-benchmark multippl:latest all --logdir /data/logs --psi-runs 10
+#+end_example
+
+To do a "quick evaluation" with only 10 runs, the ~--num-runs~ flag exists for the rest of the benchmark:
+#+begin_example bash
+$ docker run --rm -v $PWD/logs:/data/logs --entrypoint multippl-benchmark multippl:latest all --logdir /data/logs --num-runs 10 --psi-runs 10
+#+end_example
+
+Tables will be cached in ~logs/hybrid.rich~ and ~logs/discrete.rich~ and timeouts will be tabulated in ~logs/timeouts~.
+
+If these tables are not produced, the log directory should be cleared and rerun. Alterntively, a partial view of the table can be made with the ~tabulate~ subcommand:
+
+#+begin_example bash
+$ docker run --rm -v $PWD/logs:/data/logs --entrypoint multippl-benchmark multippl:latest tabulate --logdir /data/logs
+#+end_example
+
+** DONE running benchmarks individually
+CLOSED: [2024-12-26 Thu 16:57]
+:LOGBOOK:
+- State "DONE"       from "TODO"       [2024-12-26 Thu 16:57]
+:END:
+To run an individual benchmark, you must first drop into an interactive zsh or bash shell:
+#+begin_example zsh
+$ docker run -it --entrypoint zsh multippl:latest
+#+end_example
+From here, you can ~cd~ into the ~./multippl-source/bench~ folder which contains the
+~bench.py~ and ~avg.py~ scripts for program execution and tabulation of a single
+experiment.
+
+Additionally, ~runall.sh~ is the source file for ~multippl-benchmark~ and
+~tabulate.py~ is invoked to produce the final tables in the ~multippl-benchmark tabulate~ subcommand.
+
+The ~bench/~ folder structure is as follows:
+- ~arrival/~ contains subdirectories ~tree-15~, ~tree-31~, and ~tree-63~.
+- ~bayesnets/~ contains subdirectories ~alarm~, and ~insurance~.
+- ~grids/~ contains subdirectories ~3x3~, ~6x6~, and ~9x9~ corresponding to the 9, 36, and 81 evaluations in Fig 11.
+- ~gossip/~ contains subdirectories ~g4~, ~g10~, and ~g20~
+
+Each directory has a mainfile corresponding to the benchmarked tool:
+- ~main.psi~ refers to the PSI program evaluated
+- ~main.py~ refers to the Pyro program evaluated
+- ~main.yo~ refers to a MultiPPL program with interoperation that is evaluated. We call this file ~diag.yo~ for the ~grids~ evaluations, as this specifies the collapsing strategy for interoperation.
+- ~cont.yo~ refers to a MultiPPL program which only defines a Cont program.
+- ~exact.yo~ refers to a MultiPPL program which only defines a Disc program.
+- ~truth.py~ (or sometimes a secondary functionality of ~main.py~) contains the derived groundtruth, used to calculate L1 distance.
+
+Each experiment's subdirectory contains a symlink to ~bench.py~ in
+~./multippl-source/bench/~. A benchmark is run by invoking ~python bench.py~ in the
+subdirectory that generates logs in the current directory. Note that these
+benchmarks default to using half of the threads visible to docker and do *not* run
+PSI by default. For example:
+
+#+begin_example zsh
+$ docker run -it --entrypoint zsh multippl:latest
+# in the docker shell
+$ cd ./multippl-source/bench/arrival/tree-15
+$ python bench.py --help
+usage: bench.py [-h] [--psi] [--num-runs NUM_RUNS] [--num-steps NUM_STEPS]
+                [--initial-seed INITIAL_SEED] [--noti] [--threads THREADS]
+                [--logdir LOGDIR]
+
+options:
+  -h, --help            show this help message and exit
+  --psi
+  --num-runs NUM_RUNS
+  --num-steps NUM_STEPS
+  --initial-seed INITIAL_SEED
+  --noti
+  --threads THREADS
+  --logdir LOGDIR
+$ python bench.py --threads 14
+logdir = logs//2024-12-26/21:47/
+main.py(n:1000): 100%|█████████████████████| 100/100 [03:38<00:00,  2.19s/it]
+WARNING! saw unexpected file network15.dice.bk
+cont.yo(n:1000): 100%|█████████████████████| 100/100 [00:10<00:00,  9.32it/s]
+main.yo(n:1000): 100%|█████████████████████| 100/100 [00:12<00:00,  7.82it/s]
+#+end_example
+Occasionally a ~*.dice.bk~ file will be detected. Dice is used for
+sub-components of the groundtruth and ~*.dice~ files are automatically run by the
+benchmark, so helper dice files are renamed to ~.dice.bk~.
+
+# ** TODO development in docker
+# To enter a development shell, change the entrypoint to ~bash~ or ~zsh~:
+#
+# #+begin_example bash
+# docker run --network host -it --entrypoint zsh multippl:latest
+# #+end_example
+# In the resulting interactive shell, ~source ./docker-entrypoint.sh~ to change into
+# the ~multippl-source~ directory and run ~git init~. From here, ~cargo build~ will
+# produce the multippl binary.
+
+* DONE Development
+CLOSED: [2024-12-26 Thu 22:54]
+:LOGBOOK:
+- State "DONE"       from              [2024-12-26 Thu 22:54]
+:END:
+** nix development and running benchmarks via nix
+MultiPPL uses nix's flakes for development. Using the source contained in
+~multippl-source.tar.gz~ and a flake-enabled ~nix~ binary, the following commands enable nix development:
+#+begin_example bash
+tar -xvzf multippl-source.tar.gz
+cd multippl-source
+git init
+#+end_example
+
+- ~nix develop~ enters a development shell.
+- ~nix flake check~ runs ~cargo nextest run~ and checks our nix derivations.
+- ~nix build .#multippl .#multippl-benchmark .#multippl-docker~ produces the
+  ~multippl~, and ~multippl-benchmark~ executables alongside the included docker
+  images.
+- ~nix run .#multippl-benchmark -- <ARGS>~ runs the ~multippl-benchmark~ executable

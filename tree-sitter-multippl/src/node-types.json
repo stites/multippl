@@ -553,11 +553,30 @@
           "named": true
         },
         {
+          "type": "evalueprod",
+          "named": true
+        },
+        {
           "type": "float",
           "named": true
         },
         {
           "type": "int",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "evalueprod",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": false,
+      "types": [
+        {
+          "type": "evalue",
           "named": true
         }
       ]
@@ -1127,15 +1146,7 @@
           "named": true
         },
         {
-          "type": "sfold",
-          "named": true
-        },
-        {
           "type": "site",
-          "named": true
-        },
-        {
-          "type": "slam",
           "named": true
         },
         {
@@ -1144,10 +1155,6 @@
         },
         {
           "type": "sletsample",
-          "named": true
-        },
-        {
-          "type": "smap",
           "named": true
         },
         {
@@ -1164,29 +1171,6 @@
         },
         {
           "type": "swhile",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
-    "type": "sfold",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "identifier",
-          "named": true
-        },
-        {
-          "type": "sanf",
-          "named": true
-        },
-        {
-          "type": "sexpr",
           "named": true
         }
       ]
@@ -1250,25 +1234,6 @@
     }
   },
   {
-    "type": "slam",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "identifier",
-          "named": true
-        },
-        {
-          "type": "sexpr",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
     "type": "slet",
     "named": true,
     "fields": {
@@ -1313,29 +1278,6 @@
       "multiple": true,
       "required": true,
       "types": [
-        {
-          "type": "sexpr",
-          "named": true
-        }
-      ]
-    }
-  },
-  {
-    "type": "smap",
-    "named": true,
-    "fields": {},
-    "children": {
-      "multiple": true,
-      "required": true,
-      "types": [
-        {
-          "type": "identifier",
-          "named": true
-        },
-        {
-          "type": "sanf",
-          "named": true
-        },
         {
           "type": "sexpr",
           "named": true

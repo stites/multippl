@@ -1,12 +1,15 @@
 #+title: The MultiPPL Compiler
 
-The MultiPPL compiler aims to be a nanopass-style compiler leveraging [[file:../ttg/README.org][trees that
-grow]] to abstract away IR boilerplate. The compiler passes are as follows:
+The MultiPPL compiler aims to be a nanopass-style compiler leveraging
+[[file:../ttg/README.org][trees that grow]] to abstract away IR boilerplate. The
+MultiPPL host language uses dynamic safety, with two initial compiler passes
+which stub out a future bidirectional type system. The compiler passes are as
+follows:
 
 1. Parsing, using tree-sitter, lives in [[file:src/parser/][parser/]]. Notably this folder delineates
    parsing by disc and cont and defines our grammar.
-2. Type-inference: [[file:src/typeinf.rs][typeinf.rs]]. Unimplemented. This should be removed.
-3. Type-checking: [[file:src/typecheck.rs][typecheck.rs]]. Unimplemented. Our compiler is untyped.
+2. Type-inference: [[file:src/typeinf.rs][typeinf.rs]]. Stub for a bidirectional type inference.
+3. Type-checking: [[file:src/typecheck.rs][typecheck.rs]]. Stub for a bidirectional type inference.
 4. Desugaring ([[file:src/desugar/][desugar/]]) enables basic extensions of Disc, as documented in
    Holtzen, et al. 2021.
 5. Uniquify ([[file:src/uniquify.rs][uniquify.rs]]) provides unique identifiers for variable.
