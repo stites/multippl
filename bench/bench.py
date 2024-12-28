@@ -178,9 +178,18 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
+    path = os.getcwd()
+    parentpath = os.path.abspath(os.path.join(path, os.pardir))
+    exp_dir = os.path.abspath(os.getcwd()).split("/")[-2:]
+    if exp_dir[0] not in {"gossip", "grids", "arrival", "bayesnets"}:
+        print("Run bench.py in an experiment folder: <gossip|grids|arrival|bayesnets>/<experiment_dir>/", file=sys.stderr)
+        sys.exit(1)
+
+    exp_dir = "/".join(exp_dir)
     date = time.strftime("%Y-%m-%d", time.localtime())
     hm = time.strftime("%H:%M", time.localtime())
-    logdir = args.logdir + "/" + date + "/" + hm + "/"
+    logdir = "/".join([args.logdir, exp_dir, date, hm]) + "/"
+
     print("logdir =", logdir)
     args.logdir = logdir
     os.makedirs(logdir, exist_ok=True)
@@ -195,9 +204,6 @@ if __name__ == "__main__":
     ]
 
     files = [f for f in os.listdir(".") if os.path.isfile(f) and not (f in reserved)]
-
-    path = os.getcwd()
-    parentpath = os.path.abspath(os.path.join(path, os.pardir))
 
     args = vars(args)
     num_steps = args["num_steps"]

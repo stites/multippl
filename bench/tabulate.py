@@ -20,7 +20,8 @@ RESERVED = [
     "truth.sh",
     "main.dice-partial",
 ]
-EXPERIMENTS = {"bayesnets", "arrival", "grids", "gossip"}
+EXPERIMENTS = {"grids"}
+#EXPERIMENTS = {"bayesnets", "arrival", "grids", "gossip"}
 needs_l1 = lambda main: main[-3:] == ".yo" or main[-3:] == ".py"
 
 
@@ -69,20 +70,21 @@ def get_mainfile(mainfiles, log, expdir):
     return main[0]
 
 
-def get_output(logdir, log):
+def get_output_and_seconds(logdir, log):
     with open(logdir + "/" + log, "r") as f:
         out = f.readlines()
         out = "".join(out).rstrip().split("\n")
+    print(out)
     if len(out) == 1 and out[0] == "":
         return None
         #raise Exception(f"incomplete run: {logdir}/{log} is empty!")
-    last = out[-1]
-    if last == "":
+    lastline_ms = out[-1]
+    if lastline_ms == "":
         raise Exception(f"last is empty! full output is:\n{out}")
-    if last[-2:] != "ms":
+    if lastline_ms[-2:] != "ms":
         raise Exception(f"expected {log} to have last line ending in 'ms'")
 
-    if last[: len("timeout")] == "timeout":
+    if lastline_ms[: len("timeout")] == "timeout":
         return None
     else:
         # PSI outputs can vary, ms cannot
@@ -90,7 +92,9 @@ def get_output(logdir, log):
             val = [float(f) for f in out[-2].rstrip().split()]
         except:
             val = []
-        return val, float(last[:-2])
+        print((lastline_ms[:-2]))
+        secs = float(lastline_ms[:-2]) / 1000.0
+        return val, secs
 
 
 def main(args):
@@ -105,21 +109,21 @@ def main(args):
         )
         sys.exit(1)
 
+    ss = []
     results = dict()
     for ex in EXPERIMENTS:
-        ex_folder = ex + "/"
-        for subex in os.listdir(f"{args.logdir}/{ex_folder}"):
-            subex = f"{ex_folder}{subex}"
+        for subex in os.listdir(f"{args.logdir}/{ex}/"):
+            subex = f"{ex}/{subex}"
             expdir = os.path.dirname(os.path.abspath(__file__)) + f"/{subex}"
 
             mainfiles = get_mainfiles(expdir)
             truth = get_truth(expdir)
-            stats = {k: {" #": 0, "ms": [], "l1": []} for k in mainfiles}
+            stats = {k: {"count": 0, "sec": [], "l1": []} for k in mainfiles}
 
             for logdir, log in merge_experiments(args.logdir, subex):
                 try:
                     main = get_mainfile(mainfiles, log, expdir)
-                    output = get_output(logdir, log)
+                    output = get_output_and_seconds(logdir, log)
                 except:
                     continue
                 if output is None:
@@ -127,16 +131,20 @@ def main(args):
                     #print(f"got timeout for {log}")
                     pass
                 else:
-                    out, ms = output
-                    stats[main]["ms"].append(ms)
-                    stats[main][" #"] += 1
+                    #if "main.py" != main:
+                    #    continue
+                    #print(output)
+                    out, sec = output
+                    ss.append(sec)
+                    stats[main]["sec"].append(sec)
+                    stats[main]["count"] += 1
                     if needs_l1(main):
                         l1 = sum(compute_l1(out, truth))
                         stats[main]["l1"].append(l1)
                     else:
                         stats[main]["l1"].append(0.0)
             results[subex] = dict(stats=stats, mainfiles=mainfiles)
-
+    print(np.array(ss).mean())
     console = Console(record=True)
     (h, d, w) = full_table(results)
     print(w)
@@ -175,64 +183,63 @@ def full_table(results):
         ncols = 2 if with_l1 else 1
         if file not in stats:
             return ["---"] * ncols
-        elif stats[file][" #"] == 0:
+        elif stats[file]["count"] == 0:
             timeout_counts[ex][file] = final_num_runs
             return ["t/o"] * ncols
         else:
-            if stats[file][" #"] < final_num_runs:
-                timeout_counts[ex][file] = final_num_runs - stats[file][" #"]
-            mss = mean_and_stderr(stats[file]["ms"])
-            # make these seconds
-            sc_mean, sc_err = [ms / 1000 for ms in mss]
-            l1_mean, l1_err = mean_and_stderr(stats[file]["l1"])
+            if stats[file]["count"] < final_num_runs:
+                timeout_counts[ex][file] = final_num_runs - stats[file]["count"]
+
+            sc_mean, sc_err = mean_and_stderr(stats[file]["sec"])
             if with_l1:
-                return (f"{sc_mean:.3f} ±{sc_err:.3f}", f"{l1_mean:.3f} ±{l1_err:.3f}")
+                l1_mean, l1_err = mean_and_stderr(stats[file]["l1"])
+                return (f"{l1_mean:.3f} ±{l1_err:.3f}", f"{sc_mean:.3f} ±{sc_err:.3f}")
             else:
                 return (f"{sc_mean:.3f} ±{sc_err:.3f}",)
 
-    for n in [15, 31, 63]:
-        exp = f"arrival/tree-{n}"
-        ss = results[exp]["stats"]
-        timeout_counts[exp] = dict()
-        hybrid.add_row(
-            exp,
-            *stat_or_timeout(exp, ss, "main.psi"),
-            *stat_or_timeout(exp, ss, "main.py"),
-            *stat_or_timeout(exp, ss, "cont.yo"),
-            *stat_or_timeout(exp, ss, "main.yo"),
-            end_section=(n == 63),
-        )
+    #for n in [15, 31, 63]:
+    #    exp = f"arrival/tree-{n}"
+    #    ss = results[exp]["stats"]
+    #    timeout_counts[exp] = dict()
+    #    hybrid.add_row(
+    #        exp,
+    #        *stat_or_timeout(exp, ss, "main.psi"),
+    #        *stat_or_timeout(exp, ss, "main.py"),
+    #        *stat_or_timeout(exp, ss, "cont.yo"),
+    #        *stat_or_timeout(exp, ss, "main.yo"),
+    #        end_section=(n == 63),
+    #    )
 
-    for n in ["alarm", "insurance"]:
-        exp = f"bayesnets/{n}"
-        ss = results[exp]["stats"]
-        timeout_counts[exp] = dict()
-        hybrid.add_row(
-            n,
-            *stat_or_timeout(exp, ss, "main.psi"),
-            *stat_or_timeout(exp, ss, "main.py"),
-            *stat_or_timeout(exp, ss, "cont.yo"),
-            *stat_or_timeout(exp, ss, "main.yo"),
-            end_section=(n == "insurance"),
-        )
+    #for n in ["alarm", "insurance"]:
+    #    exp = f"bayesnets/{n}"
+    #    ss = results[exp]["stats"]
+    #    timeout_counts[exp] = dict()
+    #    hybrid.add_row(
+    #        n,
+    #        *stat_or_timeout(exp, ss, "main.psi"),
+    #        *stat_or_timeout(exp, ss, "main.py"),
+    #        *stat_or_timeout(exp, ss, "cont.yo"),
+    #        *stat_or_timeout(exp, ss, "main.yo"),
+    #        end_section=(n == "insurance"),
+    #    )
 
-    for n in [4, 10, 20]:
-        exp = f"gossip/g{n}"
-        ss = results[exp]["stats"]
-        timeout_counts[exp] = dict()
-        hybrid.add_row(
-            f"gossip/{n}",
-            *stat_or_timeout(exp, ss, "main.psi"),
-            *stat_or_timeout(exp, ss, "main.py"),
-            *stat_or_timeout(exp, ss, "cont.yo"),
-            *stat_or_timeout(exp, ss, "main.yo"),
-            end_section=(n == 20),
-        )
+    #for n in [4, 10, 20]:
+    #    exp = f"gossip/g{n}"
+    #    ss = results[exp]["stats"]
+    #    timeout_counts[exp] = dict()
+    #    hybrid.add_row(
+    #        f"gossip/{n}",
+    #        *stat_or_timeout(exp, ss, "main.psi"),
+    #        *stat_or_timeout(exp, ss, "main.py"),
+    #        *stat_or_timeout(exp, ss, "cont.yo"),
+    #        *stat_or_timeout(exp, ss, "main.yo"),
+    #        end_section=(n == 20),
+    #    )
 
     discrete = Table(
         "# Nodes",
-        "PSI (s)",
-        "MultiPPL (Disc, s)",
+        #"PSI (s)",
+        #"MultiPPL (Disc, s)",
         "Pyro (l1)",
         "Pyro (s)",
         "MultiPPL (Cont, l1)",
@@ -242,14 +249,14 @@ def full_table(results):
         title="Discrete Benchmark",
         title_justify="left",
     )
-    for n in [3, 6, 9]:
+    for n in [3]: #, 6, 9]:
         exp = f"grids/{n}x{n}"
         ss = results[exp]["stats"]
         timeout_counts[exp] = dict()
         discrete.add_row(
             f"{n*n}",
-            *stat_or_timeout(exp, ss, "main.psi", with_l1=False),
-            *stat_or_timeout(exp, ss, "exact.yo", with_l1=False),
+            #*stat_or_timeout(exp, ss, "main.psi", with_l1=False),
+            #*stat_or_timeout(exp, ss, "exact.yo", with_l1=False),
             *stat_or_timeout(exp, ss, "main.py"),
             *stat_or_timeout(exp, ss, "cont.yo"),
             *stat_or_timeout(exp, ss, "diag.yo"),

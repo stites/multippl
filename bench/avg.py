@@ -7,6 +7,9 @@ import scipy.stats
 from rich.console import Console
 from rich.table import Table
 from datetime import datetime
+from collections import namedtuple
+import pickle
+import json
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -23,9 +26,13 @@ mainfiles = [f for f in os.listdir('.') if os.path.isfile(f) and not (f in reser
 needs_l1 = lambda main: main[-3:] == ".yo" or main[-3:] == ".py"
 pad = max([len(m) for m in mainfiles])
 
+#Entry = namedtuple('Entry', ['mean', 'stderr'])
 def mean_and_stderr(data):
     a = 1.0 * np.array(data)
-    return np.mean(a), scipy.stats.sem(a)
+    return dict(mean=np.mean(a), stderr=scipy.stats.sem(a))
+
+def mn_se_as_tuple(d):
+    return d['mean'], d['stderr']
 
 def str_stats(ss):
     s = []
@@ -37,11 +44,14 @@ def str_stats(ss):
                 out = ss[m][metric]
                 s.append("{} {}: {}".format(m.ljust(pad, " "), metric, str(out)))
             else:
-                mean, stderr = mean_and_stderr(ss[m][metric])
+                mean, stderr = mn_se_as_tuple(mean_and_stderr(ss[m][metric]))
                 s.append("{} {}: {} ±{}".format(m.ljust(pad, " "), metric, str(mean).ljust(pad+10, " "), str(stderr)))
             s.append("\n")
         s.append("\n")
     return s
+
+
+#Eval = namedtuple('Eval', ['l1', 'seconds', 'counts'])
 
 def table_stats(exp, run, ss):
     table = Table(title=f"{exp}: {run}", title_justify="left")
@@ -51,21 +61,28 @@ def table_stats(exp, run, ss):
     row = []
     row_sec = []
     row_l1  = []
+    raw = dict()
     for m in mainfiles:
+        raw[m] = dict()
         if ss[m][' #'] == 0:
             continue
         else:
             counts.append(ss[m][' #'])
         table_met.add_column(f"{m}")
         table.add_column(f"{m} (l1)")
-        mn, se = mean_and_stderr(ss[m]["l1"])
+        l1_mn_se = mean_and_stderr(ss[m]["l1"])
+        mn, se = mn_se_as_tuple(l1_mn_se)
+        raw[m]["s"] = mn
         row.append(f"{mn:.3f} ±{se:.3f}")
+
         row_l1.append(f"{mn:.3f} ±{se:.3f}")
         table.add_column(f"{m} (s)")
-        mn, se = mean_and_stderr(ss[m]["ms"])
+        sec_mn_se = mean_and_stderr(ss[m]["ms"])
+        mn, se = mn_se_as_tuple(sec_mn_se)
         mn, se = mn / 1000, se / 1000
         row.append(f"{mn:.3f} ±{se:.3f}")
         row_sec.append(f"{mn:.3f} ±{se:.3f}")
+        raw[m] = dict(l1=l1_mn_se, seconds=sec_mn_se, counts=ss[m][' #'])
 
     if any([c != counts[0] for c in counts]):
         print(f"WARNING! counts are not consistent for {exp} {run}! Got:", *counts, "\nfor: ", *mainfiles)
@@ -79,7 +96,7 @@ def table_stats(exp, run, ss):
     table.add_row(*row)
     table_met.add_row("l1", *row_l1)
     table_met.add_row("sec", *row_sec)
-    return table, table_met
+    return table, table_met, raw
 
 def isdate(x):
     try:
@@ -87,6 +104,7 @@ def isdate(x):
         return True
     except ValueError:
         return False
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="average everything in logs/")
     parser.add_argument("--logdir", default="logs/", type=str,)
@@ -94,25 +112,22 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    subdirs = list(filter(lambda f: os.path.isdir(args.logdir + f), os.listdir(args.logdir)))
-    isdev   = all([isdate(sd) for sd in subdirs])
-    experiments = {"bayesnets", "arrival", "grids", "gossip"}
-    isfinal = all([sd in experiments for sd in subdirs])
-
-    if not (isdev or isfinal):
-        print("ambiguous log folder structure. Expecting <logdir>/[<experiment>/]<%Y-%m-%d>/")
+    exp_dir = os.path.abspath(os.getcwd()).split("/")[-2:]
+    if exp_dir[0] not in {"gossip", "grids", "arrival", "bayesnets"}:
+        print("Run avg.py in an experiment folder: <gossip|grids|arrival|bayesnets>/<experiment_dir>/", file=sys.stderr)
         sys.exit(1)
-    ex = experiment_name if isfinal  else ""
+    exp_dir = "/".join(exp_dir) + "/"
 
-    print("logdir", args.logdir)
-    print(args.logdir + ex + "/")
-    print(list(filter(lambda f: os.path.isdir(args.logdir + ex + "/" + f), os.listdir(args.logdir))))
-    for day in filter(lambda f: os.path.isdir(args.logdir + ex + "/" + f), os.listdir(args.logdir)):
-        day = args.logdir + "/" + day + "/"
-        print("day", day)
+    ex = exp_dir
+
+    logdir = args.logdir + ex
+    print("logdir =", logdir)
+    # print(list(filter(lambda f: os.path.isdir(args.logdir + ex + f), os.listdir(args.logdir))))
+
+    for day in filter(lambda f: os.path.isdir(logdir + f), os.listdir(logdir)):
+        day = logdir + "/" + day + "/"
         for hm in filter(lambda f: os.path.isdir(day + f), os.listdir(day)):
             run = day + "/" + hm + "/"
-            print("run", run)
             stats = {k: {" #":0,"ms":[], "l1":[]} for k in mainfiles}
 
 
@@ -151,14 +166,19 @@ if __name__ == "__main__":
             if not DEVELOP:
                 with open(day + f"/{hm}.stats", "w") as f:
                     f.writelines(str_stats(stats))
-            # FIXME replace with logdir?
             table = table_stats(experiment_name, run, stats)
             if table is not None:
-                tbl, mets = table
+                tbl, mets, raw = table
+
                 console = Console(record=True)
                 console.print(tbl)
+                console.save_text(f"{day}/{hm}.row.rich")
+
+                console = Console(record=True)
                 console.print(mets)
-                console.save_text(day + f"/{hm}.stats.rich")
+                console.save_text(f"{day}/{hm}.stats.rich")
+                with open(f"{day}/{hm}.data.json", "w") as fp:
+                    json.dump(raw, fp)
 
 else:
     print("please run as main", file=sys.stderr)

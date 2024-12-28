@@ -278,6 +278,7 @@ If these tables are not produced, the log directory should be cleared and rerun.
 $ docker run --rm -v $PWD/logs:/data/logs --entrypoint multippl-benchmark multippl:latest tabulate --logdir /data/logs
 #+end_example
 
+
 ** DONE running benchmarks individually
 CLOSED: [2024-12-26 Thu 16:57]
 :LOGBOOK:
