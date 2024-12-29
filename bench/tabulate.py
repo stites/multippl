@@ -136,43 +136,51 @@ def full_table(results):
                 return (f"{sc_mean:.3f} ±{sc_err:.3f}",)
 
     for n in [15, 31, 63]:
-        exp = f"arrival/tree-{n}"
-        ss = results[exp]["stats"]
-        timeout_counts[exp] = dict()
-        hybrid.add_row(
-            exp,
-            *stat_or_timeout(exp, ss, "main.psi"),
-            *stat_or_timeout(exp, ss, "main.py"),
-            *stat_or_timeout(exp, ss, "cont.yo"),
-            *stat_or_timeout(exp, ss, "main.yo"),
-            end_section=(n == 63),
-        )
+        try:
+            exp = f"arrival/tree-{n}"
+            ss = results[exp]["stats"]
+            timeout_counts[exp] = dict()
+            hybrid.add_row(
+                exp,
+                *stat_or_timeout(exp, ss, "main.psi"),
+                *stat_or_timeout(exp, ss, "main.py"),
+                *stat_or_timeout(exp, ss, "cont.yo"),
+                *stat_or_timeout(exp, ss, "main.yo"),
+                end_section=(n == 63),
+            )
+        except:
+            pass
 
     for n in ["alarm", "insurance"]:
-        exp = f"bayesnets/{n}"
-        ss = results[exp]["stats"]
-        timeout_counts[exp] = dict()
-        hybrid.add_row(
-            n,
-            *stat_or_timeout(exp, ss, "main.psi"),
-            *stat_or_timeout(exp, ss, "main.py"),
-            *stat_or_timeout(exp, ss, "cont.yo"),
-            *stat_or_timeout(exp, ss, "main.yo"),
-            end_section=(n == "insurance"),
-        )
-
+        try:
+            exp = f"bayesnets/{n}"
+            ss = results[exp]["stats"]
+            timeout_counts[exp] = dict()
+            hybrid.add_row(
+                n,
+                *stat_or_timeout(exp, ss, "main.psi"),
+                *stat_or_timeout(exp, ss, "main.py"),
+                *stat_or_timeout(exp, ss, "cont.yo"),
+                *stat_or_timeout(exp, ss, "main.yo"),
+                end_section=(n == "insurance"),
+               )
+        except:
+            pass
     for n in [4, 10, 20]:
-        exp = f"gossip/g{n}"
-        ss = results[exp]["stats"]
-        timeout_counts[exp] = dict()
-        hybrid.add_row(
-            f"gossip/{n}",
-            *stat_or_timeout(exp, ss, "main.psi"),
-            *stat_or_timeout(exp, ss, "main.py"),
-            *stat_or_timeout(exp, ss, "cont.yo"),
-            *stat_or_timeout(exp, ss, "main.yo"),
-            end_section=(n == 20),
-        )
+        try:
+            exp = f"gossip/g{n}"
+            ss = results[exp]["stats"]
+            timeout_counts[exp] = dict()
+            hybrid.add_row(
+                f"gossip/{n}",
+                *stat_or_timeout(exp, ss, "main.psi"),
+                *stat_or_timeout(exp, ss, "main.py"),
+                *stat_or_timeout(exp, ss, "cont.yo"),
+                *stat_or_timeout(exp, ss, "main.yo"),
+                end_section=(n == 20),
+               )
+        except:
+            pass
 
     discrete = Table(
         "# Nodes",
@@ -188,18 +196,22 @@ def full_table(results):
         title_justify="left",
     )
     for n in [3, 6, 9]:
-        exp = f"grids/{n}x{n}"
-        ss = results[exp]
-        timeout_counts[exp] = dict()
-        discrete.add_row(
-            f"{n*n}",
-            *stat_or_timeout(exp, ss, "main.psi", with_l1=False),
-            *stat_or_timeout(exp, ss, "exact.yo", with_l1=False),
-            *stat_or_timeout(exp, ss, "main.py"),
-            *stat_or_timeout(exp, ss, "cont.yo"),
-            *stat_or_timeout(exp, ss, "diag.yo"),
-            end_section=(n == 9),
-        )
+        try:
+            exp = f"grids/{n}x{n}"
+            ss = results[exp]
+            timeout_counts[exp] = dict()
+            discrete.add_row(
+                f"{n*n}",
+                *stat_or_timeout(exp, ss, "main.psi", with_l1=False),
+                *stat_or_timeout(exp, ss, "exact.yo", with_l1=False),
+                *stat_or_timeout(exp, ss, "main.py"),
+                *stat_or_timeout(exp, ss, "cont.yo"),
+                *stat_or_timeout(exp, ss, "diag.yo"),
+                end_section=(n == 9),
+               )
+        except:
+            pass
+
     warnings = ""
     timeouts = [x > 0 for v in timeout_counts.values() for x in v.values()]
     if any(timeouts):
