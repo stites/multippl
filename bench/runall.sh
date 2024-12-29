@@ -12,6 +12,7 @@ PSI_THREADS=1
 PSI_RUNS=100
 
 LOGDIR=$WORKING_DIR/logs
+TIMEOUT_MIN=30
 
 # get top-level action
 ACTION=$1
@@ -26,6 +27,7 @@ while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
   --psi-runs)    shift; PSI_RUNS=$1    ;;
 
   --logdir)      shift; LOGDIR=$1      ;;
+  --timeout-min) shift; TIMEOUT_MIN=$1 ;;
 esac; shift; done
 if [[ "$1" == '--' ]]; then shift; fi
 
@@ -50,10 +52,11 @@ case $ACTION in
         echo "$exp"
         ( (cd "$BENCH_DIR/$exp" && \
              python ./bench.py \
-                 --threads   "$NUM_THREADS" \
-                 --num-steps "$NUM_STEPS" \
-                 --num-runs  "$NUM_RUNS" \
-                 --logdir    "$LOGDIR" && \
+                 --threads     "$NUM_THREADS" \
+                 --num-steps   "$NUM_STEPS" \
+                 --num-runs    "$NUM_RUNS" \
+                 --timeout-min "$TIMEOUT_MIN" \
+                 --logdir      "$LOGDIR" && \
              python ./avg.py --logdir "$LOGDIR"
           ) || exit 1)
     done
@@ -64,9 +67,10 @@ case $ACTION in
         echo "psi $exp"
         ( (cd "$BENCH_DIR/$exp" && \
              python ./bench.py --psi \
-                 --threads   "$PSI_THREADS" \
-                 --num-runs  "$PSI_RUNS" \
-                 --logdir    "$LOGDIR" && \
+                 --threads     "$PSI_THREADS" \
+                 --num-runs    "$PSI_RUNS" \
+                 --timeout-min "$TIMEOUT_MIN" \
+                 --logdir      "$LOGDIR" && \
              python ./avg.py --logdir "$LOGDIR") || exit 1)
     done
     echo "all evaluations complete. tabulating results now..."
@@ -91,6 +95,7 @@ case $ACTION in
     echo "    --psi-threads PSI_THREADS Number of threads to use for psi benchmarks. Default: 1."
     echo "    --psi-runs PSI_RUNS       Number of runs to use for psi benchmarks. Default: 100."
     echo ""
+    echo "    --timeout-min TIMEOUT_MIN Number of minutes before a timeout. Default 30."
     echo "    --logdir LOGDIR           Directory to store execution logs. Defaults to <cwd>/logs."
     echo ""
     echo "subcommand: tabulate -- skip benchmarks and tabulate"

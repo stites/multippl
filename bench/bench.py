@@ -12,10 +12,7 @@ import time
 from multiprocessing import Pool
 import multiprocessing.context as ctx
 
-DEVELOP = False
-# USE_NOTI=False if DEVELOP else True
 USE_NOTI = False
-TIMEOUT_SEC = 20 if DEVELOP else 10 * 60  # = 30min
 
 def mkoutpath(logdir, mainfile, nsteps, seed, date, hm):
     outfilepath = logdir + "_".join(
@@ -25,19 +22,20 @@ def mkoutpath(logdir, mainfile, nsteps, seed, date, hm):
 
 
 def proc(args):
-    run, mainfile, nsteps, nruns, initial_seed, cmd, logdir, with_seed, needs_timer = (
+    run, mainfile, nsteps, nruns, initial_seed, cmd, logdir, with_seed, needs_timer, timeout_min = (
         args
     )
     date = time.strftime("%Y-%m-%d", time.localtime())
     hm = time.strftime("%H:%M", time.localtime())
     seed = run + initial_seed
     outfilepath = mkoutpath(logdir, mainfile, nsteps, seed, date, hm)
+    timeout_sec = timeout_min * 60
 
     start = time.time()
     cmd = cmd if not with_seed else cmd + [str(seed)]
     try:
         with open(outfilepath, "w") as outfile:
-            p = subprocess.run(cmd, stdout=outfile, stderr=subprocess.DEVNULL, timeout=TIMEOUT_SEC)
+            p = subprocess.run(cmd, stdout=outfile, stderr=subprocess.DEVNULL, timeout=timeout_sec)
             if needs_timer and p.returncode == 0:
                 sec = time.time() - start
                 outfile.write(f"{sec * 1000}ms\n")
@@ -54,7 +52,7 @@ def proc(args):
 
     except (subprocess.TimeoutExpired, ctx.TimeoutError):
         with open(outfilepath, "w") as outfile:
-            outfile.write(f"timeout@{TIMEOUT_SEC} (seconds)\n")
+            outfile.write(f"timeout@{timeout_min} (min)\n")
         noti_failed(mainfile, 124, run, nruns)
 
 
@@ -63,10 +61,11 @@ def runner_(mainfile, cmd, with_seed=True, logdir="logs/", needs_timer=False, **
     nruns = kwargs["num_runs"]
     nthreads = kwargs["threads"]
     iseed = kwargs["initial_seed"]
+    timeout_min = kwargs["timeout_min"]
 
     start = time.time()
     all_args = [
-        (run, mainfile, nsteps, nruns, iseed, cmd, logdir, with_seed, needs_timer)
+        (run, mainfile, nsteps, nruns, iseed, cmd, logdir, with_seed, needs_timer, timeout_min)
         for run in range(nruns)
     ]
     with Pool(nthreads) as p:
@@ -150,6 +149,11 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="generate data for simple HMMs")
     parser.add_argument("--psi", default=False, action="store_true")
+    parser.add_argument(
+        "--timeout-min",
+        default=30,
+        type=int,
+    )
     parser.add_argument(
         "--num-runs",
         default=100,

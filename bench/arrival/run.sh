@@ -5,6 +5,7 @@ set +e #otherwise the script will exit on error. needed for set membership check
 SKIP[0]="run all things"
 NUM_STEPS=1000
 NUM_RUNS=100
+TIMEOUT_MIN=30
 NUM_THREADS="$(($(\grep -c ^processor /proc/cpuinfo) / 2))"
 LOGDIR="logs/"
 
@@ -38,6 +39,7 @@ case $1 in
       --clean) CLEAN=1 ;;
       --no-avg) AVG=0 ;;
       --threads) shift; NUM_THREADS=$1 ;;
+      --timeout-min) shift; TIMEOUT_MIN=$1 ;;
       --runs) shift; NUM_RUNS=$1 ;;
       --steps) shift; NUM_STEPS=$1 ;;
       --logdir) shift; LOGDIR=$1 ;;
@@ -56,6 +58,7 @@ case $1 in
     echo "  --clean       also clean the logdir"
     echo "  --no-avg      don't run avg.py"
     echo "  --threads     # threads to use for benchmarking. Default: half of available via nprocs"
+    echo "  --timeout-min # minutes before a timeout. Default 30"
     echo "  --runs        # of runs to average over. Default: 100"
     echo "  --steps       # of steps per run. Default: 1000"
     echo "  --[no-]psi    include psi in the evaluation: Default: --no-psi"
@@ -79,7 +82,7 @@ run_benchmark() {
         PSI_FLAG="--psi"
     fi
     echo "with $NUM_THREADS threads"
-    COMMAND="python ./bench.py --num-runs $NUM_RUNS --num-steps $NUM_STEPS --logdir $LOGDIR --threads $NUM_THREADS $PSI_FLAG"
+    COMMAND="python ./bench.py --num-runs $NUM_RUNS --timeout-min $TIMEOUT_MIN --num-steps $NUM_STEPS --logdir $LOGDIR --threads $NUM_THREADS $PSI_FLAG"
     echo "$COMMAND"
     (cd "$1" && eval "${COMMAND}" )
 }
