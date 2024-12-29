@@ -77,9 +77,8 @@ def table_stats(exp, run, ss):
 
         row_l1.append(f"{mn:.3f} ±{se:.3f}")
         table.add_column(f"{m} (s)")
-        sec_mn_se = mean_and_stderr(ss[m]["ms"])
+        sec_mn_se = mean_and_stderr(list(map(lambda x : x / 1000, ss[m]["ms"])))
         mn, se = mn_se_as_tuple(sec_mn_se)
-        mn, se = mn / 1000, se / 1000
         row.append(f"{mn:.3f} ±{se:.3f}")
         row_sec.append(f"{mn:.3f} ±{se:.3f}")
         raw[m] = dict(l1=l1_mn_se, seconds=sec_mn_se, counts=ss[m][' #'])
@@ -120,7 +119,7 @@ if __name__ == "__main__":
 
     ex = exp_dir
 
-    logdir = args.logdir + ex
+    logdir = args.logdir + "/" + ex
     print("logdir =", logdir)
     # print(list(filter(lambda f: os.path.isdir(args.logdir + ex + f), os.listdir(args.logdir))))
 

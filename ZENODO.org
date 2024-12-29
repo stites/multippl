@@ -1,17 +1,27 @@
 #+title: Artifact for Multi-Language Probabilistic Programming
-
+#+LATEX_HEADER: \usepackage[T1]{fontenc}
+#+LATEX_HEADER: \usepackage{inconsolata}
+#+LATEX_HEADER: \usepackage[a4paper, total={6in, 8in}]{geometry}
+#+LATEX_HEADER: \usepackage{enumitem}
+#+LATEX_HEADER: \setlist[itemize,1]{leftmargin=\dimexpr 26pt-.1in}
+#+OPTIONS: author:nil date:nil toc:nil
+$$\vspace{-1in}$$
 Many different probabilistic programming languages exist that specialize to
 specific kinds of probabilistic programs, broadly falling into the categories of
 approximate and exact inference.
 
-This artifact for multi-language probabilistic programming provides the MultiPPL
-compiler. MultiPPL is a host compiler of two syntactically different
-probabilistic programming languages: an "approximate language" using importance
-sampling, and an "exact language" using binary decision diagrams for knowledge
-compilation. Our work demonstrates sound interoperation of these two languages
-under a multi-language framework[1].
+This artifact for Multi-Language Probabilistic Programming provides the MultiPPL
+compiler. MultiPPL is a host compiler of two syntactically and semantically
+different probabilistic programming languages: an approximate language leveraging
+importance sampling, and an exact language using binary decision diagrams for
+knowledge compilation. Our work demonstrates sound interoperation of these two
+languages under a Matthews and Findler-style multi-language framework.
 
-[1] - Matthews & Findler (2007) Operational Semantics for Multi-Language Programs, ACM SIGPLAN Notices.
+#+begin_export latex
+  \tableofcontents
+#+end_export
+
+
 * DONE Artifact Availability
 CLOSED: [2024-12-26 Thu 13:59]
 :LOGBOOK:
@@ -46,35 +56,42 @@ To run ~multippl~ on a file outside of the docker image you must bind a docker
 mount to the image. Given a file ~example/beta-bernoulli.yo~, bind the mount
 using ~-v~ or ~--volume <HOSTPATH>:<BINDPATH>~:
 #+begin_example bash
-$ docker run --rm -v $PWD/examples:/data/examples multippl:latest --file /data/examples/beta-bernoulli.yo --steps 1000
+$ docker run --rm -v $PWD/examples:/data/examples multippl:latest \
+             --file /data/examples/beta-bernoulli.yo --steps 1000
 0.33817887009669956
 37ms
 #+end_example
 
 Notes:
+- ~--rm~ removes all state from the docker container after execution
 - ~--file~ can be relative to the ~/data~ directory.
 - ~/data~ contains ~multippl-source/~ so binding directly to ~/data~ will lose access to these provided source files.
 ** Running ~multippl-benchmark~
 To run a our benchmarks single-threaded for 100 runs and cache the resulting
 tables in a local ~logs/~ directory, use the following command:
 #+begin_example bash
-$ docker run --rm -v $PWD/logs:/data/logs --entrypoint multippl-benchmark multippl:latest all --logdir /data/logs
+$ docker run -v $PWD/logs:/data/logs --entrypoint multippl-benchmark \
+             multippl:latest all --logdir /data/logs
 #+end_example
 
 PSI will time out on 700 evaluations, which is the most time consuming portion of the benchmark. To reduce the running time, it may be prudent to limit PSI to only 10 runs, relying on the provided standard error to reflect the numbers provided:
 #+begin_example bash
-$ docker run --rm -v $PWD/logs:/data/logs --entrypoint multippl-benchmark multippl:latest all --logdir /data/logs --psi-runs 10
+$ docker run -v $PWD/logs:/data/logs --entrypoint multippl-benchmark \
+             multippl:latest all --logdir /data/logs --psi-runs 10
 #+end_example
 
 To do a "quick evaluation" with only 10 runs, a separate flag exists for the rest of the benchmark:
 #+begin_example bash
-$ docker run --rm -v $PWD/logs:/data/logs --entrypoint multippl-benchmark multippl:latest all --logdir /data/logs --num-runs 10 --psi-runs 10
+$ docker run -v $PWD/logs:/data/logs --entrypoint multippl-benchmark \
+             multippl:latest all --logdir /data/logs --num-runs 10 --psi-runs 10
 #+end_example
 
 Tables will be cached to ~logs/hybrid.rich~ and ~logs/discrete.rich~.
 
 * TODO MultiPPL [0/3]
 MultiPPL uses ~tree-sitter~ to parse syntax with the full grammar defined in
+
+@@latex:\noindent@@
 [[file:tree-sitter-multippl/grammar.js]]. Here we detail the top-level syntactic
 forms and how to interoperate between the Cont and Disc languages. In following
 sections we describe Cont and Disc, providing example programs for each
@@ -193,8 +210,8 @@ v := true | false                    // booleans
   | '()' | '(' repeat(v ',') v ')'   // products
 #+end_src
 
-** TODO A small example with interoperation
-* DONE MultiPPL Artifact Evaluation: Validation [2/2]
+** TODO Interoperation
+* DONE MultiPPL Artifact Evaluation: Validation [3/3]
 CLOSED: [2024-12-26 Thu 22:54]
 :LOGBOOK:
 - State "DONE"       from              [2024-12-26 Thu 22:54]
@@ -202,26 +219,35 @@ CLOSED: [2024-12-26 Thu 22:54]
 The ~multippl~ compiler is responsible for providing L1 and wall-clock evaluations
 for an approximate inference evaluations in Fig 11 and a discrete probabilistic
 program evaluation in Fig 14.
-** Hardware requirements
+
+An example of the expected output for a "quick evaluation" of 10 runs (as
+opposed to 100) can be found in
+~zenodo/static/10run/{timeouts,hybrid.rich,discrete.rich}~. Single-threaded, this
+execution takes approximately 9hrs 35min (575 minutes).
+** DONE Hardware requirements
+CLOSED: [2024-12-29 Sun 08:35]
+:LOGBOOK:
+- State "DONE"       from              [2024-12-29 Sun 08:35]
+:END:
 There are no explicit hardware requirements for to produce Fig 11 and Fig 14. These
 are able to run on commercial hardware on a single thread, but evaluation will take
 approximately 120 hours (5 days) on a Thinkpad T14s Gen 3 with an AMD Ryzen 7
 PRO 6850U (4.768GHz) CPU and 30G of RAM.
 
-Of the ~120 hours evaluating, 116.6hrs are spent waiting for 700 PSI
+Of the \sim120 hours evaluating, 116.6hrs are spent waiting for 700 PSI
 programs (100 runs in 7 evaluations) to reach a timeout of 10 minutes.
 Parallelizing this evaluation is not advised without large amounts of RAM, as
 the most expensive PSI benchmark, the ~bayesnets/alarm~ evaluation, takes up 17.2G
 per thread of residential memory. Close behind ~alarm~ is the PSI
-~bayesnets/insurance~ and ~grids/81~ evaluations, which use ~15G per thread of
+~bayesnets/insurance~ and ~grids/81~ evaluations, which uses \sim15G per thread of
 residential memory.
 
 Using less RAM than this should be acceptable on a single threaded evaluation,
-so long as a there is enough swap to compensate for the difference of the expected ram.
+so long as a there is enough swap to compensate for the difference of the expected RAM.
 
 The ~multippl-benchmark~ tool can use more threads to speed up evaluation, with
-PSI-specific flags to ensure PSI is run single-threaded. Parallelizing any exact
-inference may cause programs to crash due to OOM errors.
+PSI-specific flags to ensure PSI is run single-threaded. Parallelizing any
+program using exact inference may cause programs to crash due to OOM errors.
 
 ** DONE running multippl-benchmark via docker
 CLOSED: [2024-12-26 Thu 16:14]
@@ -231,22 +257,29 @@ CLOSED: [2024-12-26 Thu 16:14]
 The ~multippl-benchmark~ script is a multi-threaded benchmark evaluator, used to produce our evaluations.
 To run the ~multippl-benchmark~ command, invoke
 #+begin_src
-$ docker run --rm --entrypoint multippl-benchmark multippl:latest
+$ docker run --entrypoint multippl-benchmark multippl:latest
 multippl-benchmark (all|tabulate) [OPTIONS]
 
 subcommand: all -- run all benchmarks (psi benchmarks last), then tabulate
 
-    --num-threads NUM_THREADS Number of threads to use for non-psi benchmarks. Default: 1.
-    --num-runs NUM_RUNS       Number of runs to use for non-psi benchmarks. Default: 100.
-    --num-steps NUM_STEPS     Number of steps per run to use for non-psi, approximate benchmarks. Default: 1000.
+    --num-threads NUM_THREADS Number of threads to use for non-psi benchmarks.
+                              Default: 1.
+    --num-runs NUM_RUNS       Number of runs to use for non-psi benchmarks.
+                              Default: 100.
+    --num-steps NUM_STEPS     Number of steps per run to use for non-psi,
+                              approximate benchmarks. Default: 1000.
 
-    --psi-threads PSI_THREADS Number of threads to use for psi benchmarks. Default: 1.
-    --psi-runs PSI_RUNS       Number of runs to use for psi benchmarks. Default: 100.
+    --psi-threads PSI_THREADS Number of threads to use for psi benchmarks.
+                              Default: 1.
+    --psi-runs PSI_RUNS       Number of runs to use for psi benchmarks.
+                              Default: 100.
 
-    --logdir LOGDIR           Directory to store execution logs. Defaults to <cwd>/logs.
+    --logdir LOGDIR           Directory to store execution logs.
+                              Defaults to $PWD/logs.
 
 subcommand: tabulate -- skip benchmarks and tabulate
-    --logdir LOGDIR           Directory to store execution logs. Defaults to <cwd>/logs.
+    --logdir LOGDIR           Directory to store execution logs.
+                              Defaults to $PWD/logs.
 #+end_src
 
 The default strategy is to run 100 evaluations, single-threaded, for 1000
@@ -254,7 +287,8 @@ samples.
 
 To save the cached files locally, outside of docker, bind to a volume to the ~/data/logs~ directory:
 #+begin_src bash
-$ docker run --rm -v $PWD/logs:/data/logs --entrypoint multippl-benchmark multippl:latest all
+$ docker run -v $PWD/logs:/data/logs --entrypoint multippl-benchmark
+             multippl:latest all
 #+end_src
 
 As stated above, PSI takes a considerable amount of time to produce the
@@ -262,12 +296,14 @@ requisite timeouts.  To reduce the running time, it may be prudent to limit PSI
 to only 10 runs, relying on the provided standard error to reflect the numbers
 provided:
 #+begin_example bash
-$ docker run --rm -v $PWD/logs:/data/logs --entrypoint multippl-benchmark multippl:latest all --logdir /data/logs --psi-runs 10
+$ docker run -v $PWD/logs:/data/logs --entrypoint multippl-benchmark
+             multippl:latest all --logdir /data/logs --psi-runs 10
 #+end_example
 
 To do a "quick evaluation" with only 10 runs, the ~--num-runs~ flag exists for the rest of the benchmark:
 #+begin_example bash
-$ docker run --rm -v $PWD/logs:/data/logs --entrypoint multippl-benchmark multippl:latest all --logdir /data/logs --num-runs 10 --psi-runs 10
+$ docker run -v $PWD/logs:/data/logs --entrypoint multippl-benchmark
+             multippl:latest all --logdir /data/logs --num-runs 10 --psi-runs 10
 #+end_example
 
 Tables will be cached in ~logs/hybrid.rich~ and ~logs/discrete.rich~ and timeouts will be tabulated in ~logs/timeouts~.
@@ -275,7 +311,8 @@ Tables will be cached in ~logs/hybrid.rich~ and ~logs/discrete.rich~ and timeout
 If these tables are not produced, the log directory should be cleared and rerun. Alterntively, a partial view of the table can be made with the ~tabulate~ subcommand:
 
 #+begin_example bash
-$ docker run --rm -v $PWD/logs:/data/logs --entrypoint multippl-benchmark multippl:latest tabulate --logdir /data/logs
+$ docker run -v $PWD/logs:/data/logs --entrypoint multippl-benchmark
+             multippl:latest tabulate --logdir /data/logs
 #+end_example
 
 
@@ -333,27 +370,7 @@ options:
   --noti
   --threads THREADS
   --logdir LOGDIR
-$ python bench.py --threads 14
-logdir = logs//2024-12-26/21:47/
-main.py(n:1000): 100%|█████████████████████| 100/100 [03:38<00:00,  2.19s/it]
-WARNING! saw unexpected file network15.dice.bk
-cont.yo(n:1000): 100%|█████████████████████| 100/100 [00:10<00:00,  9.32it/s]
-main.yo(n:1000): 100%|█████████████████████| 100/100 [00:12<00:00,  7.82it/s]
 #+end_example
-Occasionally a ~*.dice.bk~ file will be detected. Dice is used for
-sub-components of the groundtruth and ~*.dice~ files are automatically run by the
-benchmark, so helper dice files are renamed to ~.dice.bk~.
-
-# ** TODO development in docker
-# To enter a development shell, change the entrypoint to ~bash~ or ~zsh~:
-#
-# #+begin_example bash
-# docker run --network host -it --entrypoint zsh multippl:latest
-# #+end_example
-# In the resulting interactive shell, ~source ./docker-entrypoint.sh~ to change into
-# the ~multippl-source~ directory and run ~git init~. From here, ~cargo build~ will
-# produce the multippl binary.
-
 * DONE Development
 CLOSED: [2024-12-26 Thu 22:54]
 :LOGBOOK:
@@ -361,7 +378,10 @@ CLOSED: [2024-12-26 Thu 22:54]
 :END:
 ** nix development and running benchmarks via nix
 MultiPPL uses nix's flakes for development. Using the source contained in
-~multippl-source.tar.gz~ and a flake-enabled ~nix~ binary, the following commands enable nix development:
+
+@@latex:\noindent@@
+~multippl-source.tar.gz~ and a flake-enabled ~nix~ binary, the following commands
+enable nix development:
 #+begin_example bash
 tar -xvzf multippl-source.tar.gz
 cd multippl-source

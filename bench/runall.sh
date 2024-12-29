@@ -29,10 +29,20 @@ while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
 esac; shift; done
 if [[ "$1" == '--' ]]; then shift; fi
 
+if [ ! -d "${LOGDIR:0:1}" ]; then
+  echo "top-level benchmarking requires an absolute log directory. Saw: $LOGDIR"
+  exit 1
+fi
+
+
+if [ ! -d "$LOGDIR" ]; then
+  mkdir -p "$LOGDIR"
+fi
+
 if ! test -w "$LOGDIR"; then
-   echo "no permissions to write to $LOGDIR, likely logs were generated via"
-   echo "docker. Please correct this: chmod -R a+w $LOGDIR"
-   exit 1
+  echo "no permissions to write to $LOGDIR, likely logs were generated via"
+  echo "docker. Please correct this: chmod -R a+w $LOGDIR"
+  exit 1
 fi
 case $ACTION in
   all)
@@ -43,7 +53,9 @@ case $ACTION in
                  --threads   "$NUM_THREADS" \
                  --num-steps "$NUM_STEPS" \
                  --num-runs  "$NUM_RUNS" \
-                 --logdir    "$LOGDIR/$exp" ) || exit 1)
+                 --logdir    "$LOGDIR" && \
+             python ./avg.py --logdir "$LOGDIR"
+          ) || exit 1)
     done
     echo "non-PSI evaluations complete. running PSI evaluations now."
     sleep 3
@@ -54,7 +66,8 @@ case $ACTION in
              python ./bench.py --psi \
                  --threads   "$PSI_THREADS" \
                  --num-runs  "$PSI_RUNS" \
-                 --logdir    "$LOGDIR/$exp" ) || exit 1)
+                 --logdir    "$LOGDIR" && \
+             python ./avg.py --logdir "$LOGDIR") || exit 1)
     done
     echo "all evaluations complete. tabulating results now..."
     sleep 3

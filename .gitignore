@@ -282,3 +282,6 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/python
 *.stats
 logs/
+ZENODO.pdf
+ZENODO.tex
+.auctex-auto
