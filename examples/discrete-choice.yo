@@ -1,0 +1,6 @@
+exact {
+  let p = flip 0.5 in
+  if p
+  then discrete(1.5, 1.5, 3.0)
+  else discrete(3.0, 1.5, 1.5)
+}

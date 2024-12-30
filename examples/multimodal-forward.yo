@@ -1,0 +1,8 @@
+sample {
+  m ~ bern(0.5);
+  if m {
+    ~normal(1, 0.5)
+  } else {
+    ~normal(-1, 0.5)
+  }
+}

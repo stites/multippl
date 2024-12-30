@@ -22,10 +22,9 @@ RESERVED = [
     "truth.sh",
     "main.dice-partial",
 ]
-EXPERIMENTS = {"grids"}
-#EXPERIMENTS = {"bayesnets", "arrival", "grids", "gossip"}
+EXPERIMENTS = {"bayesnets", "arrival", "grids", "gossip"}
 needs_l1 = lambda main: main[-3:] == ".yo" or main[-3:] == ".py"
-
+QUIET=True
 
 def experiment_folders(logroot, subex):
     allruns = []
@@ -35,6 +34,7 @@ def experiment_folders(logroot, subex):
             os.listdir(f"{logroot}/{subex}/{day}"),
         ):
             allruns.append(datetime.strptime(f"{day} {hm}", "%Y-%m-%d %H:%M"))
+
     return allruns
 
 def get_summary_json(logroot, subex):
@@ -42,7 +42,9 @@ def get_summary_json(logroot, subex):
         logtime = dir.strftime(subex + "/%Y-%m-%d/%H:%M")
         rundir = f"{logroot}/{logtime}"
         raw = f"{rundir}.data.json"
-        if not os.path.isfile(raw):
+        if not os.path.isfile(raw) :
+            if QUIET:
+                continue
             print(f"warning! {raw} not found! Please run:")
             bench_dir = os.path.abspath(os.path.join(os.path.abspath(__file__), ".."))
             print(f"  cd {bench_dir}/{subex} && python ./avg.py --logdir {logroot}")
@@ -55,12 +57,16 @@ def summary_union(ss):
     final = dict()
     all_keys = set()
     for summary in ss:
+        #print(summary.keys())
         ks = {k for k, v in summary.items() if len(v) == 0}
         if len(all_keys & ks) > 0:
             raise Exception("found overlapping experiments, please review logdir structure")
         else:
             all_keys = all_keys & ks
-        final = final | summary
+        for k, v in summary.items():
+            #print(k, v)
+            final[k] = v
+
     return final
 
 
@@ -80,7 +86,9 @@ def main(args):
     for ex in EXPERIMENTS:
         for subex in os.listdir(f"{args.logdir}/{ex}/"):
             subex = f"{ex}/{subex}"
-            results[subex] = summary_union(get_summary_json(args.logdir, subex))
+            js = get_summary_json(args.logdir, subex)
+            #print(subex, summary_union(js))
+            results[subex] = summary_union(js)
 
     console = Console(record=True)
     (h, d, w) = full_table(results)
@@ -138,7 +146,7 @@ def full_table(results):
     for n in [15, 31, 63]:
         try:
             exp = f"arrival/tree-{n}"
-            ss = results[exp]["stats"]
+            ss = results[exp]
             timeout_counts[exp] = dict()
             hybrid.add_row(
                 exp,
@@ -154,7 +162,7 @@ def full_table(results):
     for n in ["alarm", "insurance"]:
         try:
             exp = f"bayesnets/{n}"
-            ss = results[exp]["stats"]
+            ss = results[exp]
             timeout_counts[exp] = dict()
             hybrid.add_row(
                 n,
@@ -169,7 +177,7 @@ def full_table(results):
     for n in [4, 10, 20]:
         try:
             exp = f"gossip/g{n}"
-            ss = results[exp]["stats"]
+            ss = results[exp]
             timeout_counts[exp] = dict()
             hybrid.add_row(
                 f"gossip/{n}",

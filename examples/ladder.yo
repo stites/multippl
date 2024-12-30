@@ -1,0 +1,24 @@
+exact fn rung (s1) {
+  let route = flip 0.5 in
+
+  let s2 = if route then s1 else false in
+  let drop2 = flip 0.005 in
+  let go2 = s2 && !drop2 in
+
+  let s3 = if route then false else s1 in
+  let drop3 = flip 0.001 in
+  let go3 = s3 && !drop3 in
+
+  go2 || go3
+}
+sample {
+  ix ~ poisson(20.0);
+  ix <- ix + 1;
+  traversed <- true;
+  while ix > 0 {
+    traversed <- exact(rung(traversed));
+    ix <- ix - 1;
+    ()
+  };
+  traversed
+}

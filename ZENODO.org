@@ -5,6 +5,10 @@
 #+LATEX_HEADER: \usepackage{enumitem}
 #+LATEX_HEADER: \setlist[itemize,1]{leftmargin=\dimexpr 26pt-.1in}
 #+OPTIONS: author:nil date:nil toc:nil
+#+cite_export: biblatex numeric,backend=bibtex
+#+bibliography: ~/biblio/references.bib
+
+
 $$\vspace{-1in}$$
 Many different probabilistic programming languages exist that specialize to
 specific kinds of probabilistic programs, broadly falling into the categories of
@@ -13,7 +17,7 @@ approximate and exact inference.
 This artifact for Multi-Language Probabilistic Programming provides the MultiPPL
 compiler. MultiPPL is a host compiler of two syntactically and semantically
 different probabilistic programming languages: an approximate language leveraging
-importance sampling, and an exact language using binary decision diagrams for
+importance sampling, and an exact language using binary decision diagrams (BDDs) for
 knowledge compilation. Our work demonstrates sound interoperation of these two
 languages under a Matthews and Findler-style multi-language framework.
 
@@ -22,11 +26,7 @@ languages under a Matthews and Findler-style multi-language framework.
 #+end_export
 
 
-* DONE Artifact Availability
-CLOSED: [2024-12-26 Thu 13:59]
-:LOGBOOK:
-- State "DONE"       from              [2024-12-26 Thu 13:59]
-:END:
+* Artifact Availability
 The provided artifact contains the following source, development dependencies, and executables:
 - This README
 - The multippl source code as a separate ~multippl-source.tar.gz~ file.
@@ -41,13 +41,15 @@ The provided artifact contains the following source, development dependencies, a
     + ~multippl-benchmark~, a shell script which runs the benchmarks and tabulates our results.
 
 
-* DONE Quick Start
+* Quick Start
 ** Hardware requirements
 There are no explicit hardware requirements for the ~mulippl~ compiler. Large exact inference programs will eventually encounter memory limitations and slow down the samples produced, but this has not been an issue for networks in our evaluations.
 ** Running ~multippl~
 The attached docker image has it's entrypoint set to the ~multippl~ binary:
 #+begin_example bash
-docker run --rm multippl:latest --steps <STEPS> --file <FILE>
+$ wget https://zenodo.org/records/<TBD>/files/multippl-docker.tar.gz
+$ docker load --input multippl-docker.tar.gz
+$ docker run --rm multippl:latest --steps <STEPS> --file <FILE>
 #+end_example
 Will invokes ~multippl~, where ~--step~ is the number of samples taken in the evaluation, and ~--file~ refers
 to a valid MultiPPL program.
@@ -88,33 +90,318 @@ $ docker run -v $PWD/logs:/data/logs --entrypoint multippl-benchmark \
 
 Tables will be cached to ~logs/hybrid.rich~ and ~logs/discrete.rich~.
 
-* TODO MultiPPL [0/3]
+* MultiPPL
 MultiPPL uses ~tree-sitter~ to parse syntax with the full grammar defined in
 
 @@latex:\noindent@@
-[[file:tree-sitter-multippl/grammar.js]]. Here we detail the top-level syntactic
-forms and how to interoperate between the Cont and Disc languages. In following
-sections we describe Cont and Disc, providing example programs for each
-sub-language, and finally we describe a small example using interoperation. All
-examples can be found in the ~examples/~ folder.
+[[file:tree-sitter-multippl/grammar.js]]. Here we describe each sub-language in our
+framework and how to interoperate between the Cont and Disc languages by
+example, and provide a summarization of the tree-sitter grammar provided. The
+~examples/~ folder contains all programs documented.
 
-A MultiPPL program is introduced using ~sample { ... }~ or ~exact { ... }~ blocks,
-corresponding to the importance sampling Cont language and the exact Disc
-language. MultiPPL supports procedures, which similarly require a ~sample~ or ~exact~ keyword to
-describe where the function is allowed to run. Procedures take rust-like function syntax:
+---
+
+A MultiPPL program is introduced using ~exact { ... }~ or ~sample { ... }~ blocks:
+
+#+begin_src artist
+choice('exact, 'sample') '{' <expr> '}'
+#+end_src
+
+Here, ~choice~ denotes an alternative and comes from the tree-sitter metalanguage,
+while ~<expr>~ comes from the chosen expression language of Disc (~exact~) or Cont (~sample~). Single-quoted characters denote requisite symbols.
+
+MultiPPL supports procedures, which similarly require a ~sample~ or ~exact~ keyword to
+describe where the function is allowed to run:
 #+begin_src artist
 choice('sample', 'exact') 'fn' <id> '(' repeat(<id>) ')' '{' <expr> '}'
 #+end_src
-Here, ~choice~ denotes exactly one of the keywords ~sample~ or ~exact~; ~repeat~ denotes zero or more expression; ~<id>~ denotes a variable identifier; ~<expr>~ comes from the expression language of Disc or Cont; and single-quoted characters denote keywords or symbols of the host language.
+From tree-sitter we use ~repeat~ for zero-or-more repetitions, ~<id>~ is a placeholder for a variable (defined as ~x~ in each grammar), and  ~<expr>~ once again corresponds to the chosen expression language.
 
-** TODO The Cont Language [1/2]
-*** TODO An approximate Beta-Bernoulli
-*** DONE Grammar
-CLOSED: [2024-12-26 Thu 22:52]
-:LOGBOOK:
-- State "DONE"       from              [2024-12-26 Thu 22:52]
-:END:
-A top-level summarization of Cont's grammar in [[file:tree-sitter-multippl/grammar.js][grammar.js]] is as follows:
+** The Disc Language
+Disc syntax draws heavily from the Dice programming language
+[cite:@holtzen2020Scaling] and Disc's inference strategy uses the same knowledge
+compilation engine [cite:@holtzen2024Rsdd] used by Dice. The largest difference
+between the two languages Disc is currently untyped (the type-system will arrive in the
+next release). Disc allows for dynamically-allocated floating point
+values obtained by interoperation but querying these result in
+undefined behavior. The syntactic differences between Disc and Dice include:
+- ~observe~ statements are not bound expressions, but are instead statements.
+- integers are not bit-encoded and do not need an explicit size.
+
+*** two coins
+An illustrative, simple Disc program will flip two biased coins and observe an
+event that one of the two coins will land on heads:
+#+begin_example
+exact {
+  let a = flip 1.0 / 3.0 in
+  let b = flip 1.0 / 4.0 in
+  observe a || b in
+  a
+}
+#+end_example
+
+In this program ~flip~ will represent a coinflip with the
+probability of heads being ~flip~'s parameter; the first line of the program will
+create a Bernoulli distribution which returns true (ie: "heads") with probability 1/3
+and bind this to ~a~; on the next line we similarly create a Bernoulli distribution that
+is true with probability 1/4 and assign this to ~b~. Next, ~observe~ encodes
+evidence that one of these variables /must/ be true and the program queries for
+the posterior of ~a~'s distribution.
+
+We can analytically derive the solution (or construct a probability table) to
+show that the posterior of this model is 2/3. Running this program with the
+MultiPPL compiler, we see:
+
+#+begin_example
+$ docker run multippl:latest --file examples/two-coins.yo --steps 1
+0.6666666666666666
+3ms
+#+end_example
+
+In contrast to the Dice compiler, MultiPPL will take this program and produce a
+sampler which executes the program for as many samples as indicated by the
+~--steps~ flag. For this reason, the command above only returns the expectation of
+the compiled distribution and does not return a representation of the underlying
+probability table. The final line reports the wall-clock time of execution.
+
+Because we are compiling a Disc program, the sampled distribution is exact and
+is invariant to the requested number of samples. If we increase the expected
+number of samples to 10, we will observe that this is the same as compiling the
+exact distribution 10 times and taking the average of these (identical) samples.
+#+begin_example
+$ docker run multippl:latest --file examples/two-coins.yo --steps 10
+0.6666666666666667
+4ms
+#+end_example
+
+*** products
+Disc supports products and projections, and we can use this to query for ~b~'s expectation as well:
+
+#+begin_example
+exact {
+  let a = flip 1.0 / 3.0 in
+  let b = flip 1.0 / 4.0 in
+  let ab = (a, b) in
+  observe a || b in
+  (ab[0], ab[1])
+}
+#+end_example
+
+Compiling this query, will yield a space-delineated list of results and inform us that ~b~'s posterior mean is 0.5:
+#+begin_example
+$ docker run multippl:latest --file examples/two-coins-prod.yo --steps 1
+0.6666666666666666 0.5
+5ms
+#+end_example
+
+*** the discrete distribution and probabilistic choice
+The Discrete distribution takes in a list of floats, normalizes this list so
+that they form a valid probability distribution, and returns an integer.
+Integers in Disc, however, are syntactic sugar for one-hot encodings of the
+represented int. For example the following program:
+
+
+#+begin_example
+exact {
+  discrete(1.5, 1.5, 3.0)
+}
+#+end_example
+
+Is a valid query:
+#+begin_example
+$ docker run multippl:latest --file examples/discrete.yo --steps 1
+0.25 0.25 0.5
+6ms
+#+end_example
+
+If-then-else expressions in Disc denote probabilistic choice.
+
+#+begin_example
+exact {
+  let p = flip 0.5 in
+  if p
+  then discrete(1.5, 1.5, 3.0)
+  else discrete(3.0, 1.5, 1.5)
+}
+#+end_example
+
+Probabilistic choice introduces some nuance and a longer discussion of probabilistic choice in the context of our core grammar can be found in our OOPSLA submission.
+
+*** Grammar
+A top-level summarization of Disc's grammar is as follows:
+
+#+begin_src artist
+Variables x
+
+Expressions
+e := a                                        // all ANF forms
+  | x '()' | x '(' repeat(a ',') a ')'        // function application
+  | 'if' a 'then' e 'else' e                  // choice
+  | 'let' x '=' e 'in' e                      // variable binding
+  | 'flip' a                                  // Bernoulli distributions
+  | 'discrete' '(' repeat(a ',') a ')'        // Discrete distributions, desugared into a sequence of flips.
+  | 'observe' a 'in' e                        // conditioning on hard evidence in a sequence
+  | 'sample' '(' sample_e ')'                 // inlined interoperation with an expression e from Cont
+  | 'sample' '{' sample_e '}'                 // interoperation with a block expression e from Cont
+
+
+ANF forms
+a := x                               // variables
+  | v                                // values
+  | '!' a                            // negation
+  | '(' repeat(a ',') a ')'          // products
+  |  x '[' a ']'                     // projections out of products
+  | a binop a                        // binomial operations
+
+Binomial operations
+binop := '+' | '*' | '/' | '^' | '<' | '<=' | '==' | '>=' | '>' | '&&' | '||'
+
+Values
+v := true | false                    // booleans
+  | /-?\d+\.(?:\d*|)/                // statically known floating-point values, or floats obtained through interop
+  | /\d+/                            // statically known integers, or integers obtained through interop
+  | '()' | '(' repeat(v ',') v ')'   // products
+#+end_src
+
+** The Cont Language
+The Cont language is a simple sampling language that uses importance sampling as
+its approximate inference strategy. It contains common distributions-objects,
+both continuous and discrete, as well as the ability to incorporate
+soft-evidence, sample from distributions, while-loops, and conventional
+branching statements.
+
+*** An approximate Beta-Bernoulli
+A example of using Cont to find the posterior of a Beta-Bernoulli process, would like the following:
+#+begin_example
+sample {
+  p <- ~ beta(1.0, 1.0);
+  observe true  from bern(p);
+  observe false from bern(p);
+  observe false from bern(p);
+  p
+}
+#+end_example
+
+This program first samples from a Beta(1, 1) distribution with the unary =~= operator. The result is a value with uniform probability between 0 and 1, which is assigned to the variable ~p~, which will be used to parameterize the Bernoulli's distribution. This distribution then incorporates three observations into its importance weighting, which is used to score the final query's posterior which is the final line of the program. Because of conjugacy, we know that the correct posterior is a Beta distribution with $$\alpha=2$$ and $$\beta=3$$, with an expectation of $$2/(2+3)=0.4$$.
+
+**** running
+Running ~multippl~, we see that 100 samples produces the following expectation of the posterior:
+#+begin_example
+$ docker run multippl:latest --rng 1 \
+             --file examples/beta-bernoulli.yo --steps 100
+0.3899433561293662
+7ms
+#+end_example
+
+In this command, ~--rng 1~ indicates a seed, ~--file~ points to the relative path of the program in the docker container, and ~--steps 100~ defines the number of samples to produce. Increasing this number of samples, we see that our approximation converges closer to the correct value:
+#+begin_example
+$ docker run multippl:latest --rng 1 \
+         --file examples/beta-bernoulli.yo --steps 10000
+0.3989326008738859
+535ms
+#+end_example
+*** while-loops
+Four data points for inference is quite limited, requiring many samples to produce an adequate result. We may want to increase how much evidence we give our program with Cont's while-loop:
+#+begin_example
+sample {
+  p ~ beta(1.0, 1.0);
+  x <- 10;
+  while (x > 0) {
+    observe true  from bern(p);
+    observe false from bern(p);
+    observe false from bern(p);
+    x <- x - 1;
+    ()
+  };
+  p
+}
+#+end_example
+
+In the first line of our program, we use a binding =~= which is syntactic sugar for ~p <- ~ beta(1.0, 1.0)~.
+Notably, all Cont statements terminate with semicolons including ~while~-loops -- this differs from conventional imperative programs. All blocks also return expressions and so here we provide unit ~()~ to the block in this while-loop, which always discards it's final value. The posterior of this program is Beta(1+10, 1+20) with a mean of $$11/32=0.34375$$
+
+#+begin_example
+docker run multippl:latest --rng 1 \
+       --file examples/beta-bernoulli-loop.yo --steps 10000
+0.34227573553622553
+732ms
+#+end_example
+*** branching and lists
+Cont supports branching and control flow through if statements. To define a
+multi-modal Gaussian distribution, we can use samples from a Bernoulli
+distribution, and use this to select one of two modes:
+#+begin_example
+sample {
+  m ~ bern(0.5);
+  if m {
+    ~normal(1.0, 0.5)
+  } else {
+    ~normal(-1.0, 0.5)
+  }
+}
+#+end_example
+
+To perform parameter estimation for this model, we would want to write some function to perform the same scoring over both modes:
+#+begin_example
+sample fn score (p, ev) {
+  m ~ bern(p);
+  if m {
+    observe ev from normal(1.0, 0.5); ()
+  } else {
+    observe ev from normal(-1.0, 0.5); ()
+  }
+}
+sample {
+  p ~ beta(1.0, 1.0);
+  score(p, 1.0);
+  score(p, 1.0);
+  score(p, 1.0);
+  p
+}
+#+end_example
+
+The three observations above will begin to skew our posterior towards the Gaussian distribution with a mode of 1.0:
+#+begin_example
+docker run multippl:latest --rng 1 \
+       --file examples/multimodal.yo --steps 1000
+0.8051300094638457
+56ms
+#+end_example
+
+Cont has limited support for lists and includes the ~head~, ~tail~, and ~push~ functions. We can represent the same program above with a list of our evidence and iterate through this list using a ~while~ loop:
+#+begin_example
+sample fn score (p, ev) {
+  m ~ bern(p);
+  if m {
+    observe ev from normal(1.0, 0.5); ()
+  } else {
+    observe ev from normal(-1.0, 0.5); ()
+  }
+}
+sample {
+  p ~ beta(1.0, 1.0);
+  evidence <- [1.0, 1.0, 1.0];
+  i <- 3;
+  while (i > 0) {
+    score(p, evidence[i - 1]);
+    i <- i - 1;
+    ()
+  };
+  p
+}
+
+#+end_example
+
+And we can confirm that running this program with the same seed will yield the same result as before:
+#+begin_example
+docker run multippl:latest --rng 1 \
+       --file examples/multimodal-iter.yo --steps 1000
+0.8051300094638457
+79ms
+#+end_example
+
+*** Grammar
+A simplified summary of Cont's tree-sitter grammar is as follows:
 
 #+begin_src artist
 Variables x
@@ -166,94 +453,105 @@ v := true | false                               // booleans
   | 'discrete' '(' repeat(v ',') v ')'          // Discrete distributions
 #+end_src
 
-** TODO The Disc Language [1/2]
-*** TODO A discrete, two coins program
-**** Using multiple steps
-**** Comparing with Dice
-*** DONE Grammar
-CLOSED: [2024-12-26 Thu 22:52]
-:LOGBOOK:
-- State "DONE"       from              [2024-12-26 Thu 22:52]
-:END:
-A top-level summarization of Disc's grammar is as follows:
+** Interoperation
+MultiPPL provides a framework in which Cont and Disc can seamlessly interoperate
+through boundary operators, mutually defined in each language.
 
-#+begin_src artist
-Variables x
+An example of this is when we have components of a program which we would like
+to model exactly, but we would like to use this in a larger program which needs
+more flexibility and can be resoned about approximately. For instance, in the
+following program, we model a packet traversing a ladder-like network topology of
+of unbounded length. At each "rung" on the ladder, a unbiased node is selected
+for the packet to continue its traversal, and we can model each node's
+failure rate exactly.
 
-Expressions
-e := a                                        // all ANF forms
-  | x '()' | x '(' repeat(a ',') a ')'        // function application
-  | 'if' a 'then' e 'else' e                  // choice
-  | 'let' x '=' e 'in' e                      // variable binding
-  | 'flip' a                                  // Bernoulli distributions
-  | 'discrete' '(' repeat(a ',') a ')'        // Discrete distributions, desugared into a sequence of flips.
-  | 'observe' a 'in' e                        // conditioning on hard evidence in a sequence
-  | 'sample' '(' sample_e ')'                 // inlined interoperation with an expression e from Cont
-  | 'sample' '{' sample_e '}'                 // interoperation with a block expression e from Cont
+#+begin_example
+exact fn rung (s1) {
+  let route = flip 0.5 in
 
+  let s2 = if route then s1 else false in
+  let drop2 = flip 0.005 in
+  let go2 = s2 && !drop2 in
 
-ANF forms
-a := x                               // variables
-  | v                                // values
-  | '!' a                            // negation
-  | '(' repeat(a ',') a ')'          // products
-  |  x '[' a ']'                     // projections out of products
-  | a binop a                        // binomial operations
+  let s3 = if route then false else s1 in
+  let drop3 = flip 0.001 in
+  let go3 = s3 && !drop3 in
 
-Binomial operations
-binop := '+' | '*' | '/' | '^' | '<' | '<=' | '==' | '>=' | '>' | '&&' | '||'
+  go2 || go3
+}
+#+end_example
 
-Values
-v := true | false                    // booleans
-  | /-?\d+\.(?:\d*|)/                // statically known floating-point values, or floats obtained through interop
-  | /\d+/                            // statically known integers, or integers obtained through interop
-  | '()' | '(' repeat(v ',') v ')'   // products
-#+end_src
+The above function models a partial traversal through this ladder network, and
+returns a Boolean representing whether or not the packet was able to navigate
+through this sub-network without getting dropped. We want to query on the
+probability that a packet will successfully traverse all of these intermediate
+steps without getting dropped, but the network has unbounded length, which
+cannot be modelled exactly.
 
-** TODO Interoperation
-* DONE MultiPPL Artifact Evaluation: Validation [3/3]
-CLOSED: [2024-12-26 Thu 22:54]
-:LOGBOOK:
-- State "DONE"       from              [2024-12-26 Thu 22:54]
-:END:
+#+begin_example
+sample {
+  ix ~ poisson(20.0);
+  ix <- ix + 1;
+  traversed <- true;
+  while ix > 0 {
+    traversed <- exact(rung(traversed));
+    ix <- ix - 1;
+    ()
+  };
+  traversed
+}
+#+end_example
+
+Using Cont, we can model the length of this network using a Poisson distribution (with an
+average topology size of 20 rungs). We then can iterate over each subnetwork and
+return a sample encapsulating the success of the packet's traversal.
+
+Evaluating this for 1000 samples, we can find the expectation of this model to be:
+
+#+begin_example
+$ docker run multippl:latest --rng 1 \
+         --file examples/ladder.yo --steps 1000
+0.942
+604ms
+#+end_example
+
+Similarly, we can use the ~sample~ keyword inside of a Disc program to use a Cont
+value in a Disc context. The MultiPPL compiler will also provide some syntactic
+sugar when performing variable look-ups and will attempt to perform
+interoperation wherever possible (as in the case of Cont's ~traversed~ variable
+binding in the above program).
+
+For more examples of interoperation, we refer users to our submission and
+provided benchmarks.
+
+* MultiPPL Artifact Evaluation: Validation
 The ~multippl~ compiler is responsible for providing L1 and wall-clock evaluations
 for an approximate inference evaluations in Fig 11 and a discrete probabilistic
 program evaluation in Fig 14.
 
-An example of the expected output for a "quick evaluation" of 10 runs (as
-opposed to 100) can be found in
-~zenodo/static/10run/{timeouts,hybrid.rich,discrete.rich}~. Single-threaded, this
-execution takes approximately 9hrs 35min (575 minutes).
-** DONE Hardware requirements
-CLOSED: [2024-12-29 Sun 08:35]
-:LOGBOOK:
-- State "DONE"       from              [2024-12-29 Sun 08:35]
-:END:
+** Hardware requirements
 There are no explicit hardware requirements for to produce Fig 11 and Fig 14. These
-are able to run on commercial hardware on a single thread, but evaluation will take
-approximately 120 hours (5 days) on a Thinkpad T14s Gen 3 with an AMD Ryzen 7
-PRO 6850U (4.768GHz) CPU and 30G of RAM.
+are able to run on commercial hardware on a single thread, but a full evaluation
+will take >200 hours.
 
-Of the \sim120 hours evaluating, 116.6hrs are spent waiting for 700 PSI
-programs (100 runs in 7 evaluations) to reach a timeout of 10 minutes.
+Of the >200 hours ~6hrs are spent evaluating the tabulated results and 200 hours are spent waiting for 400 PSI
+programs (100 runs in 4 evaluations) to reach a timeout of 30 minutes.
 Parallelizing this evaluation is not advised without large amounts of RAM, as
 the most expensive PSI benchmark, the ~bayesnets/alarm~ evaluation, takes up 17.2G
 per thread of residential memory. Close behind ~alarm~ is the PSI
 ~bayesnets/insurance~ and ~grids/81~ evaluations, which uses \sim15G per thread of
-residential memory.
+residential memory. Using less RAM than this should be acceptable on a single
+threaded evaluation, so long as a there is enough swap to compensate for the
+difference of the expected RAM.
 
-Using less RAM than this should be acceptable on a single threaded evaluation,
-so long as a there is enough swap to compensate for the difference of the expected RAM.
+The ~multippl-benchmark~ tool can use more threads to speed up evaluation and to
+reduce the size of the timeout, with PSI-specific flags to ensure PSI is still
+run single-threaded. Parallelizing any program using exact inference may cause
+programs to crash due to OOM errors. On a Thinkpad T14s Gen 3 with an AMD Ryzen
+7 PRO 6850U (4.768GHz) CPU and 30G of RAM, the non-PSI portions of this
+benchmark can be safely run with 8 threads.
 
-The ~multippl-benchmark~ tool can use more threads to speed up evaluation, with
-PSI-specific flags to ensure PSI is run single-threaded. Parallelizing any
-program using exact inference may cause programs to crash due to OOM errors.
-
-** DONE running multippl-benchmark via docker
-CLOSED: [2024-12-26 Thu 16:14]
-:LOGBOOK:
-- State "DONE"       from "TODO"       [2024-12-26 Thu 16:14]
-:END:
+** running multippl-benchmark via docker
 The ~multippl-benchmark~ script is a multi-threaded benchmark evaluator, used to produce our evaluations.
 To run the ~multippl-benchmark~ command, invoke
 #+begin_src
@@ -274,6 +572,8 @@ subcommand: all -- run all benchmarks (psi benchmarks last), then tabulate
     --psi-runs PSI_RUNS       Number of runs to use for psi benchmarks.
                               Default: 100.
 
+    --timeout-min TIMEOUT_MIN Number of minutes before a timeout.
+                              Default 30.
     --logdir LOGDIR           Directory to store execution logs.
                               Defaults to $PWD/logs.
 
@@ -292,35 +592,28 @@ $ docker run -v $PWD/logs:/data/logs --entrypoint multippl-benchmark
 #+end_src
 
 As stated above, PSI takes a considerable amount of time to produce the
-requisite timeouts.  To reduce the running time, it may be prudent to limit PSI
-to only 10 runs, relying on the provided standard error to reflect the numbers
-provided:
+requisite timeouts. To reduce the running time, you may reduce the timeout
+duration and limit the number of runs PSI takes, relying on the provided standard error
+to reflect the numbers provided:
 #+begin_example bash
 $ docker run -v $PWD/logs:/data/logs --entrypoint multippl-benchmark
-             multippl:latest all --logdir /data/logs --psi-runs 10
+             multippl:latest all --logdir /data/logs --psi-runs 50 --timeout-min 10
 #+end_example
 
-To do a "quick evaluation" with only 10 runs, the ~--num-runs~ flag exists for the rest of the benchmark:
+To speed up the non-PSI sections of the evaluation, you may increase the number of threads without parallelizing PSI processes:
 #+begin_example bash
 $ docker run -v $PWD/logs:/data/logs --entrypoint multippl-benchmark
-             multippl:latest all --logdir /data/logs --num-runs 10 --psi-runs 10
+             multippl:latest all --logdir /data/logs --num-threads 8
 #+end_example
 
-Tables will be cached in ~logs/hybrid.rich~ and ~logs/discrete.rich~ and timeouts will be tabulated in ~logs/timeouts~.
-
-If these tables are not produced, the log directory should be cleared and rerun. Alterntively, a partial view of the table can be made with the ~tabulate~ subcommand:
+If the final table is not produced, the log directory should be cleared and the benchmark should be re-evaluated. Alternatively, a partial view of the table can be generated with the ~tabulate~ subcommand:
 
 #+begin_example bash
 $ docker run -v $PWD/logs:/data/logs --entrypoint multippl-benchmark
              multippl:latest tabulate --logdir /data/logs
 #+end_example
 
-
-** DONE running benchmarks individually
-CLOSED: [2024-12-26 Thu 16:57]
-:LOGBOOK:
-- State "DONE"       from "TODO"       [2024-12-26 Thu 16:57]
-:END:
+** running benchmarks individually
 To run an individual benchmark, you must first drop into an interactive zsh or bash shell:
 #+begin_example zsh
 $ docker run -it --entrypoint zsh multippl:latest
@@ -364,6 +657,7 @@ usage: bench.py [-h] [--psi] [--num-runs NUM_RUNS] [--num-steps NUM_STEPS]
 options:
   -h, --help            show this help message and exit
   --psi
+  --timeout-min TIMEOUT_MIN
   --num-runs NUM_RUNS
   --num-steps NUM_STEPS
   --initial-seed INITIAL_SEED
@@ -371,11 +665,9 @@ options:
   --threads THREADS
   --logdir LOGDIR
 #+end_example
-* DONE Development
-CLOSED: [2024-12-26 Thu 22:54]
-:LOGBOOK:
-- State "DONE"       from              [2024-12-26 Thu 22:54]
-:END:
+
+Running ~bench.py~ will produce cached tables and data files in the parent directory of the runlogs.
+* Development
 ** nix development and running benchmarks via nix
 MultiPPL uses nix's flakes for development. Using the source contained in
 
@@ -394,3 +686,5 @@ git init
   ~multippl~, and ~multippl-benchmark~ executables alongside the included docker
   images.
 - ~nix run .#multippl-benchmark -- <ARGS>~ runs the ~multippl-benchmark~ executable
+
+#+print_bibliography:

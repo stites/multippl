@@ -10,13 +10,13 @@ module.exports = grammar({
       seq($.sfun, $.program),
       seq($.efun, $.program),
     ),
-    sarg: $ => seq( $.identifier, ':', $.sty ),
+    sarg: $ => choice($.identifier, seq( $.identifier, ':', $.sty )),
     sargs: $ => choice(
       seq('(', ')'),
       seq('(', $.sarg, ')'),
       seq('(', repeat(seq($.sarg, ',')), $.sarg, optional(','), ')')
     ),
-    earg: $ => seq($.identifier, ':', $.ety),
+    earg: $ => choice($.identifier, seq( $.identifier, ':', $.ety )),
     eargs: $ => choice(
       seq('(', ')'),
       seq('(', $.earg, ')'),
@@ -218,6 +218,7 @@ module.exports = grammar({
     smap: $ => seq('map', '(', $.identifier, '->', $.sexpr, ')', $.sanf),
     swhile: $ => choice(
       // seq('while', '(',  $.sanf, ')', '{', $.sexpr, '}'),
+      seq('while', '(', $.sanf, ')','{', $.sexpr, '}'),
       seq('while', $.sanf, '{', $.sexpr, '}'),
     ),
 
@@ -275,7 +276,7 @@ module.exports = grammar({
     sann: $ => prec.right(4, seq($.sexpr, ':', $.sty)),
     strace: $ => seq('trace', '(', $.sanf, ')', $.sanf),
     etrace: $ => seq('trace', '(', $.eanf, ')', $.eanf),
-    nil: $ => seq('[', ']' ),
+    nil: $ => choice(seq('[', ']' ), '()'),
 
     sanfpush: $ => seq('push', '(', $.sanf, ',', $.sanf, ')'),
     sanfhead: $ => seq('head', '(', $.sanf, ')'),

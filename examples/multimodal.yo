@@ -1,0 +1,15 @@
+sample fn score (p, ev) {
+  m ~ bern(p);
+  if m {
+    observe ev from normal(1.0, 0.5); ()
+  } else {
+    observe ev from normal(-1.0, 0.5); ()
+  }
+}
+sample {
+  p ~ beta(1.0, 1.0);
+  score(p, 1.0);
+  score(p, 1.0);
+  score(p, 1.0);
+  p
+}

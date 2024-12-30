@@ -14,6 +14,7 @@ import multiprocessing.context as ctx
 
 USE_NOTI = False
 
+
 def mkoutpath(logdir, mainfile, nsteps, seed, date, hm):
     outfilepath = logdir + "_".join(
         [f"{mainfile.replace('.', '-')}", f"n{nsteps}", f"s{seed}", f"{date}_{hm}.log"]
@@ -22,9 +23,18 @@ def mkoutpath(logdir, mainfile, nsteps, seed, date, hm):
 
 
 def proc(args):
-    run, mainfile, nsteps, nruns, initial_seed, cmd, logdir, with_seed, needs_timer, timeout_min = (
-        args
-    )
+    (
+        run,
+        mainfile,
+        nsteps,
+        nruns,
+        initial_seed,
+        cmd,
+        logdir,
+        with_seed,
+        needs_timer,
+        timeout_min,
+    ) = args
     date = time.strftime("%Y-%m-%d", time.localtime())
     hm = time.strftime("%H:%M", time.localtime())
     seed = run + initial_seed
@@ -35,7 +45,9 @@ def proc(args):
     cmd = cmd if not with_seed else cmd + [str(seed)]
     try:
         with open(outfilepath, "w") as outfile:
-            p = subprocess.run(cmd, stdout=outfile, stderr=subprocess.DEVNULL, timeout=timeout_sec)
+            p = subprocess.run(
+                cmd, stdout=outfile, stderr=subprocess.DEVNULL, timeout=timeout_sec
+            )
             if needs_timer and p.returncode == 0:
                 sec = time.time() - start
                 outfile.write(f"{sec * 1000}ms\n")
@@ -47,8 +59,6 @@ def proc(args):
         if run == 0 and p.returncode == 0:
             end1 = time.time()
             noti_success(mainfile, 1, nruns, (end1 - start))
-
-
 
     except (subprocess.TimeoutExpired, ctx.TimeoutError):
         with open(outfilepath, "w") as outfile:
@@ -65,7 +75,18 @@ def runner_(mainfile, cmd, with_seed=True, logdir="logs/", needs_timer=False, **
 
     start = time.time()
     all_args = [
-        (run, mainfile, nsteps, nruns, iseed, cmd, logdir, with_seed, needs_timer, timeout_min)
+        (
+            run,
+            mainfile,
+            nsteps,
+            nruns,
+            iseed,
+            cmd,
+            logdir,
+            with_seed,
+            needs_timer,
+            timeout_min,
+        )
         for run in range(nruns)
     ]
     with Pool(nthreads) as p:
@@ -123,11 +144,13 @@ def yorunner(mainfile, logdir="logs/", **kwargs):
             stderr=subprocess.DEVNULL,
         )
         repo_dir = (
-           subprocess.Popen(["git", "rev-parse", "--show-toplevel"], stdout=subprocess.PIPE)
-           .communicate()[0]
-           .rstrip()
-           .decode("utf-8")
-          )
+            subprocess.Popen(
+                ["git", "rev-parse", "--show-toplevel"], stdout=subprocess.PIPE
+            )
+            .communicate()[0]
+            .rstrip()
+            .decode("utf-8")
+        )
         multipplbin = f"{repo_dir}/target/release/multippl"
 
     if not os.path.isfile(multipplbin):
@@ -147,7 +170,7 @@ if __name__ == "__main__":
     import sys
     import argparse
 
-    parser = argparse.ArgumentParser(description="generate data for simple HMMs")
+    parser = argparse.ArgumentParser()
     parser.add_argument("--psi", default=False, action="store_true")
     parser.add_argument(
         "--timeout-min",
@@ -186,7 +209,10 @@ if __name__ == "__main__":
     parentpath = os.path.abspath(os.path.join(path, os.pardir))
     exp_dir = os.path.abspath(os.getcwd()).split("/")[-2:]
     if exp_dir[0] not in {"gossip", "grids", "arrival", "bayesnets"}:
-        print("Run bench.py in an experiment folder: <gossip|grids|arrival|bayesnets>/<experiment_dir>/", file=sys.stderr)
+        print(
+            "Run bench.py in an experiment folder: <gossip|grids|arrival|bayesnets>/<experiment_dir>/",
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     exp_dir = "/".join(exp_dir)

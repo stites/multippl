@@ -13,7 +13,7 @@ where
     pub name: Option<String>,
     pub arguments: Vec<<Expr as Lang>::Anf>, // should just be a string
     pub body: Expr,
-    pub returnty: <Expr as Lang>::Ty,
+    pub returnty: Option<<Expr as Lang>::Ty>,
 }
 
 impl<Expr> Function<Expr>

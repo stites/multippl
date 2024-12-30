@@ -1,0 +1,6 @@
+exact {
+  let a = flip 1.0 / 3.0 in
+  let b = flip 1.0 / 4.0 in
+  observe a || b in
+  a
+}

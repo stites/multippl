@@ -287,39 +287,43 @@ pub fn parse_sval(src: &[u8], c: &mut TreeCursor, n: &Node) -> SVal {
     }
 }
 
-pub fn parse_stype(src: &[u8], c: &mut TreeCursor, n: &Node) -> STy {
-    assert_eq!(n.kind(), "sty");
-    let mut c_ = c.clone();
-    let mut cs = n.named_children(&mut c_);
-    let n = cs.next().unwrap();
-    match n.kind() {
-        "tyBool" => {
-            STy::SBool
-        }
-        "tyFloat" => {
-            STy::SFloat
-        }
-        "tyInt" => {
-            STy::SInt
-        }
-        "tyDistribution" => {
-            STy::SDistribution
-        }
-        "tyVec" => {
-            let mut c_ = c.clone();
-            let mut cs = n.named_children(&mut c_);
+pub fn parse_stype(src: &[u8], c: &mut TreeCursor, n: &Node) -> Option<STy> {
+    if n.kind() != "sty" {
+        return None;
+    } else {
+        let mut c_ = c.clone();
+        let mut cs = n.named_children(&mut c_);
+        let n = cs.next().unwrap();
+        let ty = match n.kind() {
+            "tyBool" => {
+                STy::SBool
+            }
+            "tyFloat" => {
+                STy::SFloat
+            }
+            "tyInt" => {
+                STy::SInt
+            }
+            "tyDistribution" => {
+                STy::SDistribution
+            }
+            "tyVec" => {
+                let mut c_ = c.clone();
+                let mut cs = n.named_children(&mut c_);
 
-            let ty = cs.next().unwrap();
-            let ty = parse_stype(src, c, &ty);
+                let ty = cs.next().unwrap();
+                let ty = parse_stype(src, c, &ty);
 
-            STy::SVec(Box::new(ty))
-        }
-        "styProd" => {
-            STy::SProd(parse_vec(src, c, n, |a, b, c| parse_stype(a, b, &c)))
-        }
-        s => panic!(
-            "unexpected tree-sitter type (kind `{}`) (#named_children: {})! Likely, you need to rebuild the tree-sitter parser\nsexp: {}", s, n.named_child_count(), n.to_sexp()
-        ),
+                STy::SVec(Box::new(ty.unwrap()))
+            }
+            "styProd" => {
+                STy::SProd(parse_vec(src, c, n, |a, b, c| parse_stype(a, b, &c).unwrap()))
+            }
+            s => panic!(
+                "unexpected tree-sitter type (kind `{}`) (#named_children: {})! Likely, you need to rebuild the tree-sitter parser\nsexp: {}", s, n.named_child_count(), n.to_sexp()
+            ),
+        };
+        Some(ty)
     }
 }
 
@@ -565,13 +569,13 @@ mod sampling_parser_tests {
             name: Some("foo".to_string()),
             arguments: [AVar(Some(EBool), "s1".to_string())].to_vec(),
             body: EAnf((), Box::new(AVar(None, "bar".to_string()))),
-            returnty: EBool,
+            returnty: Some(EBool),
         };
         let sfun: Function<SExpr<Inferable>> = Function {
             name: Some("foo".to_string()),
             arguments: [AVar(Some(SBool), "s1".to_string())].to_vec(),
             body: SAnf((), Box::new(AVar(None, "bar".to_string()))),
-            returnty: SBool,
+            returnty: Some(SBool),
         };
         let prg = SLetIn(
             None,

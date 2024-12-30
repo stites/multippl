@@ -120,8 +120,55 @@ sample {
                   (tyVec
                     (sty
                       (tyBool))))))))))
-
-
+================
+sample: multimodal
+================
+sample {
+  m ~ bern(0.5);
+  if m {
+    ~normal(1.0, 0.5)
+  } else {
+    ~normal(-1.0, 0.5)
+  }
+}
+----------
+    (source_file
+      (program
+        (sexpr
+          (sletsample
+            (identifier)
+            (sexpr
+              (sanf
+                (sanfbern
+                  (sanf
+                    (svalue
+                      (float))))))
+            (sexpr
+              (site
+                (sanf
+                  (identifier))
+                (sexpr
+                  (ssample
+                    (sexpr
+                      (sanf
+                        (sanfnormal
+                          (sanf
+                            (svalue
+                              (float)))
+                          (sanf
+                            (svalue
+                              (float))))))))
+                (sexpr
+                  (ssample
+                    (sexpr
+                      (sanf
+                        (sanfnormal
+                          (sanf
+                            (svalue
+                              (float)))
+                          (sanf
+                            (svalue
+                              (float))))))))))))))
 
 ======================
 sample: healthcare

@@ -15,9 +15,13 @@ pub fn parse_earg(src: &[u8], c: &mut TreeCursor, n: &Node) -> Anf<Inferable, EV
     let argname = parse_str(src, &argname);
     // println!("argname: {}", argname);
 
-    let ty = cs.next().unwrap();
-    let ty = parse_etype(src, c, &ty);
-    Anf::AVar(Some(ty), argname)
+    match cs.next() {
+        Some(ty) => {
+            let ty = parse_etype(src, c, &ty);
+            Anf::AVar(ty, argname)
+        }
+        None => Anf::AVar(None, argname),
+    }
 }
 pub fn parse_eargs(src: &[u8], c: &mut TreeCursor, n: &Node) -> Vec<Anf<Inferable, EVal>> {
     // println!("eargs: {}", n.to_sexp());
@@ -35,11 +39,15 @@ pub fn parse_efunction(src: &[u8], c: &mut TreeCursor, n: &Node) -> Function<EEx
     let arguments = cs.next().unwrap();
     let arguments = parse_eargs(src, c, &arguments);
 
-    let returnty = cs.next().unwrap();
-    let returnty = parse_etype(src, c, &returnty);
-
-    let body = cs.next().unwrap();
-    let body = parse_eexpr(src, c, &body);
+    let returntysrc = cs.next().unwrap();
+    let returnty = parse_etype(src, c, &returntysrc);
+    let body = match &returnty {
+        None => parse_eexpr(src, c, &returntysrc),
+        Some(rt) => {
+            let body = cs.next().unwrap();
+            parse_eexpr(src, c, &body)
+        }
+    };
 
     Function {
         name: Some(name),
@@ -56,9 +64,13 @@ pub fn parse_sarg(src: &[u8], c: &mut TreeCursor, n: &Node) -> Anf<Inferable, SV
     let argname = cs.next().unwrap();
     let argname = parse_str(src, &argname);
 
-    let ty = cs.next().unwrap();
-    let ty = parse_stype(src, c, &ty);
-    Anf::AVar(Some(ty), argname)
+    match cs.next() {
+        Some(ty) => {
+            let ty = parse_stype(src, c, &ty);
+            Anf::AVar(ty, argname)
+        }
+        None => Anf::AVar(None, argname),
+    }
 }
 pub fn parse_sargs(src: &[u8], c: &mut TreeCursor, n: &Node) -> Vec<Anf<Inferable, SVal>> {
     parse_vec(src, c, *n, |src, c, node| parse_sarg(src, c, &node))
@@ -74,11 +86,15 @@ pub fn parse_sfunction(src: &[u8], c: &mut TreeCursor, n: &Node) -> Function<SEx
     let arguments = cs.next().unwrap();
     let arguments = parse_sargs(src, c, &arguments);
 
-    let returnty = cs.next().unwrap();
-    let returnty = parse_stype(src, c, &returnty);
-
-    let body = cs.next().unwrap();
-    let body = parse_sexpr(src, c, &body);
+    let returntysrc = cs.next().unwrap();
+    let returnty = parse_stype(src, c, &returntysrc);
+    let body = match &returnty {
+        None => parse_sexpr(src, c, &returntysrc),
+        Some(rt) => {
+            let body = cs.next().unwrap();
+            parse_sexpr(src, c, &body)
+        }
+    };
 
     Function {
         name: Some(name),

@@ -33,9 +33,10 @@ in
           zsh
           iputils
           iproute2
-          coreutils
+          coreutils-full
           ncurses
           openssl
+          nix
 
           # dev dependencies
           tree-sitter
@@ -60,6 +61,7 @@ in
       #!${pkgs.runtimeShell}
       mkdir -p /data/logs
       cp -r ${multippl-source}/local/share/multippl-source /data/multippl-source
+      cp -r ${multippl-source}/local/share/multippl-source/examples /data/examples
       chmod -R a+rw /data/multippl-source
       cat <<EOF > /data/docker-entrypoint.sh
       #!/bin/bash
