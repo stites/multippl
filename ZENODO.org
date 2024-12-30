@@ -19,7 +19,7 @@ compiler. MultiPPL is a host compiler of two syntactically and semantically
 different probabilistic programming languages: an approximate language leveraging
 importance sampling, and an exact language using binary decision diagrams (BDDs) for
 knowledge compilation. Our work demonstrates sound interoperation of these two
-languages under a Matthews and Findler-style multi-language framework.
+languages under a Matthews and Findler-style multi-language framework[cite:@matthews2007Operational].
 
 #+begin_export latex
   \tableofcontents
@@ -42,7 +42,7 @@ The provided artifact contains the following source, development dependencies, a
 
 
 * Quick Start
-** Hardware requirements
+** Hardware Requirements
 There are no explicit hardware requirements for the ~mulippl~ compiler. Large exact inference programs will eventually encounter memory limitations and slow down the samples produced, but this has not been an issue for networks in our evaluations.
 ** Running ~multippl~
 The attached docker image has it's entrypoint set to the ~multippl~ binary:
@@ -128,7 +128,7 @@ undefined behavior. The syntactic differences between Disc and Dice include:
 - ~observe~ statements are not bound expressions, but are instead statements.
 - integers are not bit-encoded and do not need an explicit size.
 
-*** two coins
+*** Example: Two Coins
 An illustrative, simple Disc program will flip two biased coins and observe an
 event that one of the two coins will land on heads:
 #+begin_example
@@ -174,7 +174,7 @@ $ docker run multippl:latest --file examples/two-coins.yo --steps 10
 4ms
 #+end_example
 
-*** products
+*** Products
 Disc supports products and projections, and we can use this to query for ~b~'s expectation as well:
 
 #+begin_example
@@ -194,7 +194,7 @@ $ docker run multippl:latest --file examples/two-coins-prod.yo --steps 1
 5ms
 #+end_example
 
-*** the discrete distribution and probabilistic choice
+*** The Discrete Distribution and Probabilistic Choice
 The Discrete distribution takes in a list of floats, normalizes this list so
 that they form a valid probability distribution, and returns an integer.
 Integers in Disc, however, are syntactic sugar for one-hot encodings of the
@@ -270,7 +270,7 @@ both continuous and discrete, as well as the ability to incorporate
 soft-evidence, sample from distributions, while-loops, and conventional
 branching statements.
 
-*** An approximate Beta-Bernoulli
+*** An Approximate Beta-Bernoulli
 A example of using Cont to find the posterior of a Beta-Bernoulli process, would like the following:
 #+begin_example
 sample {
@@ -300,7 +300,7 @@ $ docker run multippl:latest --rng 1 \
 0.3989326008738859
 535ms
 #+end_example
-*** while-loops
+*** While-loops
 Four data points for inference is quite limited, requiring many samples to produce an adequate result. We may want to increase how much evidence we give our program with Cont's while-loop:
 #+begin_example
 sample {
@@ -326,7 +326,7 @@ docker run multippl:latest --rng 1 \
 0.34227573553622553
 732ms
 #+end_example
-*** branching and lists
+*** Branching and Lists
 Cont supports branching and control flow through if statements. To define a
 multi-modal Gaussian distribution, we can use samples from a Bernoulli
 distribution, and use this to select one of two modes:
@@ -529,7 +529,7 @@ The ~multippl~ compiler is responsible for providing L1 and wall-clock evaluatio
 for an approximate inference evaluations in Fig 11 and a discrete probabilistic
 program evaluation in Fig 14.
 
-** Hardware requirements
+** Hardware Requirements
 There are no explicit hardware requirements for to produce Fig 11 and Fig 14. These
 are able to run on commercial hardware on a single thread, but a full evaluation
 will take >200 hours.
@@ -551,7 +551,7 @@ programs to crash due to OOM errors. On a Thinkpad T14s Gen 3 with an AMD Ryzen
 7 PRO 6850U (4.768GHz) CPU and 30G of RAM, the non-PSI portions of this
 benchmark can be safely run with 8 threads.
 
-** running multippl-benchmark via docker
+** Running ~multippl-benchmark~ via Docker
 The ~multippl-benchmark~ script is a multi-threaded benchmark evaluator, used to produce our evaluations.
 To run the ~multippl-benchmark~ command, invoke
 #+begin_src
@@ -613,7 +613,7 @@ $ docker run -v $PWD/logs:/data/logs --entrypoint multippl-benchmark
              multippl:latest tabulate --logdir /data/logs
 #+end_example
 
-** running benchmarks individually
+** Running Benchmarks Individually
 To run an individual benchmark, you must first drop into an interactive zsh or bash shell:
 #+begin_example zsh
 $ docker run -it --entrypoint zsh multippl:latest
@@ -668,7 +668,7 @@ options:
 
 Running ~bench.py~ will produce cached tables and data files in the parent directory of the runlogs.
 * Development
-** nix development and running benchmarks via nix
+** Nix Development and Running Benchmarks via Nix
 MultiPPL uses nix's flakes for development. Using the source contained in
 
 @@latex:\noindent@@
