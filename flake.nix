@@ -127,7 +127,8 @@
         };
 
         apps = rec {
-          default = {
+          default = multippl;
+          multippl = {
             type = "app";
             program = "${config.packages.multippl}/bin/multippl";
           };
