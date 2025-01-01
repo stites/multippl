@@ -146,7 +146,6 @@ exact {
 #+end_example
 
 # Probabilistic choice introduces some nuance and a longer discussion of probabilistic choice in the context of our core grammar can be found in our OOPSLA submission.
-
 *** Grammar
 A top-level summarization of Disc's grammar is as follows:
 
@@ -377,7 +376,7 @@ An example of this is when we have components of a program which we would like
 to model exactly, but we would like to use this in a larger program which needs
 more flexibility and can be resoned about approximately. For instance, in the
 following program, we model a packet traversing a ladder-like network topology of
-of unbounded length. At each "rung" on the ladder, a unbiased node is selected
+unbounded length. At each "rung" on the ladder, a unbiased node is selected
 for the packet to continue its traversal, and we can model each node's
 failure rate exactly.
 
@@ -438,6 +437,31 @@ binding in the above program).
 
 For more examples of interoperation, we refer users to our submission and
 provided benchmarks.
+** Sample Consistency
+When interoperating, it is worth noting that Disc program which are repeatedly
+sampled adhere to /sample consistency/. As an example, consider the following
+program:
+
+#+begin_example
+exact {
+  let X = flip 0.5 in
+  sample {
+    y <- exact(X);
+    z <- exact(X);
+    y || z
+  }
+}
+
+#+end_example
+
+Here, we have a random variable ~X~ defined in Disc, referenced twice from Cont.
+When we evaluate the boundary which binds ~X~ to ~y~ we sample the Disc program. On
+next line, when we again reference ~X~ and bind it to ~z~, the sample must be consistent with the previous sample. Running this program, we can confirm that this is the case:
+#+begin_example
+$ multippl --file examples/sample-consistency.yo --steps 1000 --rng 1
+0.503
+80ms
+#+end_example
 
 * Nix Development
 MultiPPL uses nix's flakes for development. Using a flake-enabled ~nix~ binary,

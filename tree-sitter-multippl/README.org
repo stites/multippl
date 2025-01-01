@@ -18,4 +18,96 @@ mv $EDITOR_DATADIR/tree-sitter/{,libtree-sitter-}multippl.so
 
 Where ~$EDITOR_DATADIR=~/.connfig/emacs/.local/cache~ for doom emacs.
 
-# TODO: recall how the actual config that I used
+* Testing the grammar
+
+Running ~tree-sitter test~ from this subdirectory will run tree-sitter tests in ~tests/corpus/*.txt~ files.
+
+* Grammar overview
+** Disc
+A top-level summarization of Disc's grammar is as follows:
+
+#+begin_src artist
+Variables x
+
+Expressions
+e := a                                        // all ANF forms
+  | x '()' | x '(' repeat(a ',') a ')'        // function application
+  | 'if' a 'then' e 'else' e                  // choice
+  | 'let' x '=' e 'in' e                      // variable binding
+  | 'flip' a                                  // Bernoulli distributions
+  | 'discrete' '(' repeat(a ',') a ')'        // Discrete distributions, desugared into a sequence of flips.
+  | 'observe' a 'in' e                        // conditioning on hard evidence in a sequence
+  | 'sample' '(' sample_e ')'                 // inlined interoperation with an expression e from Cont
+  | 'sample' '{' sample_e '}'                 // interoperation with a block expression e from Cont
+
+
+ANF forms
+a := x                               // variables
+  | v                                // values
+  | '!' a                            // negation
+  | '(' repeat(a ',') a ')'          // products
+  |  x '[' a ']'                     // projections out of products
+  | a binop a                        // binomial operations
+
+Binomial operations
+binop := '+' | '*' | '/' | '^' | '<' | '<=' | '==' | '>=' | '>' | '&&' | '||'
+
+Values
+v := true | false                    // booleans
+  | /-?\d+\.(?:\d*|)/                // statically known floating-point values, or floats obtained through interop
+  | /\d+/                            // statically known integers, or integers obtained through interop
+  | '()' | '(' repeat(v ',') v ')'   // products
+#+end_src
+
+** Cont
+A simplified summary of Cont's tree-sitter grammar is as follows:
+
+#+begin_src artist
+Variables x
+
+Expressions
+e := a                                        // all ANF forms
+  | 'while' a '{' e '}'                       // while loops
+  | x '()' | x '(' repeat(x ',') x ')'        // function application
+  |'if' '(' a ')' '{' e '}' 'else' '{' e '}'  // control flow
+  | x '<-' e ';' e                            // variable binding
+  | e ';' e                                   // sequencing
+  | '~' e                                     // sampling an expression
+  | x '~' e ';' e                             // sugar for binding a sample: x <- (~ e); e
+  | 'observe' a 'from' a                      // conditioning on soft evidence
+  | 'exact' '(' exact_e ')'                   // inlined interoperation with an expression e from Disc
+  | 'exact' '{' exact_e '}'                   // interoperation with a block expression e from Disc
+
+ANF forms
+a := x                                          // variables
+  | v                                           // values
+  | '!' a                                       // negation
+  |  x '[' a ']'                                // projections
+  | a binop a                                   // binomial operations
+  | '(' repeat(a ',') a ')'                     // products
+  | '[' a ']' | '[' repeat(a ',') a ']'         // vectors
+  | 'head' '(' a ')' | 'tail' '(' a ')'         // vector operations
+  | 'push' '(' a ',' a ')'                      // vector operations
+  | 'bern' '(' a ')'                            // Bernoulli distributions
+  | 'poisson' '(' a ')'                         // Poisson distributions
+  | 'uniform' '(' a ',' a ')'                   // Uniform distributions
+  | 'normal' '(' a ',' a ')'                    // Normal distributions
+  | 'beta' '(' a ',' a ')'                      // Beta distributions
+  | 'discrete' '(' repeat(a ',') a ')'          // Discrete distributions
+
+Binomial operations
+binop := '+' | '*' | '/' | '^' | '<' | '<=' | '==' | '>=' | '>' | '&&' | '||'
+
+Values
+v := true | false                               // booleans
+  | /-?\d+\.(?:\d*|)/                           // floating-point values
+  | /\d+/                                       // integers
+  | '[]' | '[' repeat(v ',') v ']'              // vectors
+  | '()' | '(' repeat(v ',') v ')'              // products
+  | 'bern' '(' v ')'                            // Bernoulli distributions
+  | 'poisson' '(' v ')'                         // Poisson distributions
+  | 'uniform' '(' v ',' v ')'                   // Uniform distributions
+  | 'normal' '(' v ',' v ')'                    // Normal distributions
+  | 'beta' '(' v ',' v ')'                      // Beta distributions
+  | 'discrete' '(' repeat(v ',') v ')'          // Discrete distributions
+#+end_src

@@ -63,7 +63,7 @@ in
           --replace "timedrunner(\"dice" "timedrunner(\"${dice}/bin/dice" \
           --replace "shutil.which(\"multippl\")" "\"${multippl}/bin/multippl\""
       substituteInPlace bench/arrival/run.sh --replace "python" "${pyro}/bin/python"
-      cp {,$out/}bench/runall.sh
+      cp {,$out/}bench/multippl-benchmark.sh
 
       cp {,$out/}bench/stdin2l1.py
       cp {,$out/}bench/util.py
@@ -72,10 +72,10 @@ in
         cp -r bench/$ex $out/bench/$ex
       done
 
-      substituteInPlace bench/runall.sh --replace "python" "${pyro}/bin/python" \
+      substituteInPlace bench/multippl-benchmark.sh --replace "python" "${pyro}/bin/python" \
                                         --replace "bench/" "$out/bench/"
 
-      cp bench/runall.sh $out/bin/multippl-benchmark
+      cp bench/multippl-benchmark.sh $out/bin/multippl-benchmark
       chmod a+x $out/bin/multippl-benchmark
     '';
   }

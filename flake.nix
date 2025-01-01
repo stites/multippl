@@ -45,8 +45,11 @@
             ".cc"
             ".gyp"
             ".h"
-            # filter nix so that we don't rebuild on configs
-            ".nix"
+            ## filter nix so that we don't rebuild on configs
+            #".nix"
+            #".org"
+            #".md"
+            #".log"
           ])
           || (craneLib.filterCargoSources path type))
         ./.;
@@ -90,13 +93,43 @@
             LD_LIBRARY_PATH = "${pkgs.openssl.out}/lib";
             CARGO_NET_GIT_FETCH_WITH_CLI = "true";
           });
+        crossnix = import inputs.nixpkgs {
+          localSystem = "x86_64-linux";
+          crossSystem = "aarch64-darwin";
+        };
       in {
         checks = import ./nix/checks.nix {inherit lib system my-crate craneLib commonArgs cargoArtifacts;};
 
         packages.default = my-crate;
         packages.multippl = my-crate;
         packages.multippl-source = pkgs.callPackage ./nix/multippl-source.nix {inherit cargoDevArtifacts;};
-        packages.multippl-docker = pkgs.callPackage ./nix/docker.nix {inherit config;};
+        packages.multippl-docker-nix_x86_64 = pkgs.callPackage ./nix/docker-nix.nix {
+          multippl = config.packages.default;
+          multippl-source = config.packages.multippl-source;
+          multippl-benchmark = config.packages.multippl-benchmark;
+          psi = config.packages.psi;
+          python-with-pyro = config.packages.pyro;
+          dice = config.packages.dice;
+          archSuffix = "x86_64";
+        };
+        packages.multippl-docker_x86_64 = pkgs.callPackage ./nix/docker.nix {
+          multippl = config.packages.default;
+          multippl-source = config.packages.multippl-source;
+          multippl-benchmark = config.packages.multippl-benchmark;
+          psi = config.packages.psi;
+          python-with-pyro = config.packages.pyro;
+          dice = config.packages.dice;
+          archSuffix = "x86_64";
+        };
+        packages.multippl-docker_arm64 = crossnix.callPackage ./nix/docker.nix {
+          multippl = config.packages.default;
+          multippl-source = config.packages.multippl-source;
+          multippl-benchmark = config.packages.multippl-benchmark;
+          psi = config.packages.psi;
+          python-with-pyro = config.packages.pyro;
+          dice = config.packages.dice;
+          archSuffix = "arm64";
+        };
         packages.multippl-benchmark = pkgs.callPackage ./nix/benchmark-scripts.nix {
           inherit (config.packages) psi pyro multippl dice;
         };

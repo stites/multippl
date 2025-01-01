@@ -1,20 +1,26 @@
 {
-  config,
   pkgs,
   dockerTools,
   buildEnv,
+  archSuffix,
+  psi,
+  python-with-pyro,
+  multippl,
+  dice,
+  multippl-benchmark,
+  multippl-source,
   ...
 }: let
-  multippl = config.packages.default;
-  multippl-source = config.packages.multippl-source;
-  multippl-benchmark = config.packages.multippl-benchmark;
-  psi = config.packages.psi;
-  python-with-pyro = config.packages.pyro;
-  dice = config.packages.dice;
+  #multippl = config.packages.default;
+  #multippl-source = config.packages.multippl-source;
+  #multippl-benchmark = config.packages.multippl-benchmark;
+  #psi = config.packages.psi;
+  #python-with-pyro = config.packages.pyro;
+  #dice = config.packages.dice;
 in
   dockerTools.buildImage {
     name = "multippl";
-    tag = "latest";
+    tag = "latest-${archSuffix}";
 
     copyToRoot = buildEnv {
       name = "image-root";
@@ -37,6 +43,9 @@ in
           ncurses
           openssl
           nix
+          vim
+          neovim
+          emacs
 
           # dev dependencies
           tree-sitter
@@ -63,7 +72,7 @@ in
       cp -r ${multippl-source}/local/share/multippl-source /data/multippl-source
       cp -r ${multippl-source}/local/share/multippl-source/examples /data/examples
       chmod -R a+rw /data/multippl-source
-      cat <<EOF > /data/docker-entrypoint.sh
+      cat <<EOF > /data/entrypoint.sh
       #!/bin/bash
       echo \$PWD
       git config --global http.sslVerify false
@@ -75,9 +84,10 @@ in
       echo "Please use the nix development shell if you are interested in a preconfigured development environment,"
       echo "or file an issue on GitHub."
       EOF
+      cd /data
     '';
     config = {
       WorkingDir = "/data";
-      Entrypoint = ["${config.packages.multippl}/bin/multippl"];
+      Entrypoint = ["${pkgs.zsh}/bin/zsh"];
     };
   }

@@ -1,0 +1,8 @@
+exact {
+  let X = flip 0.5 in
+  sample {
+    y <- exact(X);
+    z <- exact(X);
+    y || z
+  }
+}
