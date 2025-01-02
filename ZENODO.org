@@ -72,11 +72,11 @@ In our work, we make the following contributions:
 
 # The MultiPPL compiler is developed on a Linux x86_64 architecture with Rust
 # 1.73, under the NixOS operating system.
-The ~multippl~ binary requires a Linux operating system running x86_64. We provide
-a docker image which supports ~linux/x86_64~ or ~linux/amd64~ hosts[1]. MultiPPL has
-minimal hardware requirements -- it runs a single-threaded, CPU-bound process --
-but certain MultiPPL programs will require more RAM depending on the complexity
-of Disc-encoded discrete conditional independency structures.
+The ~multippl~ binary requires a Linux operating system on x86_64 or arm64
+architecture[1].  MultiPPL has minimal hardware requirements -- it runs a
+single-threaded, CPU-bound process -- but certain MultiPPL programs will require
+more RAM depending on the complexity of Disc-encoded discrete conditional
+independency structures.
 
 When verifying the benchmarks and reproducing Figures 11 and 14 we intentionally
 evaluate memory-intensive MultiPPL programs. These benchmarks can still be safely run
@@ -84,9 +84,7 @@ on commercial hardware but do take a significant time to run, single-threaded.
 Depending on how much memory is available, it is possible to parallelize this
 evaluation and we provide guidelines in the [[id:ca3ce6a5-edd9-48c2-bd04-f83f12d7015e][Step-by-Step Instructions]].
 
-[1]: We do not officially support ~linux/amd64/v8~ docker hosts, provided by
-~colima~ on some configurations of MacOS. It is possible to run ~multippl~ this way,
-but users may see a significant slow-down.
+[1]: For OSX users, we provide docker images built natively for both architectures.
 
 * Getting Started
 :PROPERTIES:
@@ -96,7 +94,7 @@ but users may see a significant slow-down.
 
 Software requirements for MultiPPL are:
 - for the ~multippl~ binary: ~tree-sitter~, ~cargo~ and ~rustc~ 1.73.0
-- for benchmark evaluation: ~python~ (with ~pyro~, ~numpy~, and ~scipy~), ~psi~, ~dice~, ~bash~, ~ghc~, ~bc~
+- for benchmark evaluation: ~python~ 3.11.6 (with ~pyro~ 1.8.6, ~numpy~, and ~scipy~), ~psi~, ~dice~, ~bash~, ~ghc~, ~bc~
 
 The docker image provides all of the above in ~$PATH~, as well as the
 ~multippl-benchmark~ script (an alias to ~bench/multippl-benchmark.sh~) which runs the
@@ -375,8 +373,8 @@ purposes.
 For development, a nix derivation provides a reusable development environment.
 In this environment, users may additionally validate the test suite (~cargo nextest run~)
 and generate documentation (~cargo doc~), but this functionality is limited to
-~x86_64-linux~ users. A summary of the provided nix features can be found in the
-project's ~README.org~ file.
+~x86_64-linux~ and ~aarch64-linux~ users. A summary of the provided nix features can
+be found in the project's ~README.org~ file.
 
 
 #+print_bibliography:
