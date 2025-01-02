@@ -112,23 +112,13 @@
           dice = config.packages.dice;
           archSuffix = "x86_64";
         };
-        packages.multippl-docker_x86_64 = pkgs.callPackage ./nix/docker.nix {
+        packages.multippl-docker = pkgs.callPackage ./nix/docker.nix {
           multippl = config.packages.default;
           multippl-source = config.packages.multippl-source;
           multippl-benchmark = config.packages.multippl-benchmark;
           psi = config.packages.psi;
           python-with-pyro = config.packages.pyro;
           dice = config.packages.dice;
-          archSuffix = "x86_64";
-        };
-        packages.multippl-docker_arm64 = crossnix.callPackage ./nix/docker.nix {
-          multippl = config.packages.default;
-          multippl-source = config.packages.multippl-source;
-          multippl-benchmark = config.packages.multippl-benchmark;
-          psi = config.packages.psi;
-          python-with-pyro = config.packages.pyro;
-          dice = config.packages.dice;
-          archSuffix = "arm64";
         };
         packages.multippl-benchmark = pkgs.callPackage ./nix/benchmark-scripts.nix {
           inherit (config.packages) psi pyro multippl dice;

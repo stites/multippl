@@ -2,7 +2,6 @@
   pkgs,
   dockerTools,
   buildEnv,
-  archSuffix,
   psi,
   python-with-pyro,
   multippl,
@@ -20,7 +19,7 @@
 in
   dockerTools.buildImage {
     name = "multippl";
-    tag = "latest-${archSuffix}";
+    tag = "latest";
 
     copyToRoot = buildEnv {
       name = "image-root";
