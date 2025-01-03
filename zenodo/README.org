@@ -1,12 +1,14 @@
-#+title: Artifact for Multi-Language Probabilistic Programming
+#+title: Artifact: Multi-Language Probabilistic Programming
 #+LATEX_HEADER: \usepackage[T1]{fontenc}
 #+LATEX_HEADER: \usepackage{inconsolata}
 #+LATEX_HEADER: \usepackage[a4paper, total={6in, 8in}]{geometry}
 #+LATEX_HEADER: \usepackage{enumitem}
 #+LATEX_HEADER: \setlist[itemize,1]{leftmargin=\dimexpr 26pt-.1in}
-#+OPTIONS: author:nil date:nil toc:nil
+#+OPTIONS: toc:nil
 #+cite_export: biblatex numeric,backend=bibtex
 #+bibliography: references.bib
+#+AUTHOR: Sam Stites, John M. Li, Steven Holtzen
+#+EMAIL: {stites.s,li.john,s.holtzen}@northeastern.edu
 
 * Overview
 # In the Introduction, briefly explain the purpose of the artifact and how it supports the paper. We recommend listing all claims in the paper and stating whether or not each is supported. For supported claims, say how the artifact provides support. For unsupported claims, explain why they are omitted.
@@ -72,8 +74,8 @@ In our work, we make the following contributions:
 
 # The MultiPPL compiler is developed on a Linux x86_64 architecture with Rust
 # 1.73, under the NixOS operating system.
-The ~multippl~ binary requires a Linux operating system on x86_64 or arm64
-architecture[1].  MultiPPL has minimal hardware requirements -- it runs a
+The ~multippl~ binary requires a Linux operating system on x86\_64 or arm64
+architecture[fn:2].  MultiPPL has minimal hardware requirements -- it runs a
 single-threaded, CPU-bound process -- but certain MultiPPL programs will require
 more RAM depending on the complexity of Disc-encoded discrete conditional
 independency structures.
@@ -84,7 +86,8 @@ on commercial hardware but do take a significant time to run, single-threaded.
 Depending on how much memory is available, it is possible to parallelize this
 evaluation and we provide guidelines in the [[id:ca3ce6a5-edd9-48c2-bd04-f83f12d7015e][Step-by-Step Instructions]].
 
-[1]: For OSX users, we provide docker images built natively for both architectures.
+# Footnotes
+# [1]: For OSX users, we provide docker images built natively for both architectures.
 
 * Getting Started
 :PROPERTIES:
@@ -104,13 +107,12 @@ also available.
 Use the docker image to enter a ~zsh~ shell, replacing ~x86_64~ with ~arm64~ depending
 your operating system architecture.
 #+begin_example
-$ wget https://zenodo.org/records/<TBD>/files/multippl-docker-x86_64.tar.gz
 $ docker load --input multippl-docker-x86_64.tar.gz
 $ docker run -it multippl:latest
 #+end_example
 
-The provided image is large (>1Gb downloaded, \sim8.5Gb decompressed) so ~wget~ and
-~docker load~ will take a few minutes to run. Using docker you can also
+The provided image is large (<2GB downloaded, \sim9GB decompressed) so ~wget~ and
+~docker load~ will take several minutes to run. Using docker you can also
 bind a local directory to the container by passing the ~-v <HOSTDIR>:<DOCKERDIR>~
 flag:
 
@@ -248,7 +250,9 @@ memory. Example runs include the following:
   + in this evaluation ~grids/9x9~ times out for 8 runs of the MultiPPL program
     (~diag.yo~) and 8 runs of the Disc-only program (~exact.yo~). This is visible in
     the logs as "counts are not consistent for . ~$LOGDIR~! Got: 10 2 2 10." In
-    the final ~/data/logs/timeouts~ file ~grids/9x9~ shows 98 timeouts for the
+    the final
+
+    @@latex:\noindent@@ ~/data/logs/timeouts~ file ~grids/9x9~ shows 98 timeouts for the
     associated files (this file is relative to the full 100 evaluations).
 - a quick run on rk3588 (2h 13m): ~4threads-10runs-no-psi_rk3588-aarch64.log~
   + in this evaluation ~grids/9x9~ times out for 9 runs for the Disc-only program
@@ -291,7 +295,9 @@ statistics will be aggregated at the end of each experiment and partial results
 will be output to the terminal. We store this data in the ~<date>~ folder as
 ~<HH:MM>.data.json~.
 
-The final table is produce by ~bench/tabulate.py~ and is automatically invoked by ~multippl-benchmark all~.
+The final table is produce by ~bench/tabulate.py~ and is automatically invoked by
+
+@@latex:\noindent@@ ~multippl-benchmark all~.
 Alternatively, it is possible to run this individually using the
 ~multippl-benchmark tabulate~ subcommand. The ~tabulate.py~ script will print all
 output to the terminal and cache results in the ~LOGDIR~ folder. If the final
@@ -312,7 +318,9 @@ render the results.
 # python avg.py
 #+end_example
 
-Python scripts ~./bench.py~ and ~./avg.py~ are symlinks to the respective files in ~/data/multippl-source/bench~, but must be run from a directory with PSI/MultiPPL/Pyro main files.
+Python scripts ~./bench.py~ and ~./avg.py~ are symlinks to the respective files in
+
+@@latex:\noindent@@ ~/data/multippl-source/bench~, but must be run from a directory with PSI/MultiPPL/Pyro main files.
 
 Additionally, ~/data/multippl-source/bench~ includes ~multippl-benchmark.sh~, the
 source for the ~multippl-benchmark~ command, and ~tabulate.py~, used to produce the
@@ -398,3 +406,7 @@ be found in the project's ~README.org~ file.
 
 
 #+print_bibliography:
+
+* Footnotes
+
+[fn:2] For OSX users, we provide docker images for both architectures.
