@@ -23,19 +23,27 @@ function help {
     echo ""
     echo "subcommand: all -- run all benchmarks (psi benchmarks last), then tabulate"
     echo ""
-    echo "    --num-threads NUM_THREADS Number of threads to use for non-psi benchmarks. Default: 1."
-    echo "    --num-runs NUM_RUNS       Number of runs to use for non-psi benchmarks. Default: 100."
-    echo "    --num-steps NUM_STEPS     Number of steps per run to use for non-psi, approximate benchmarks. Default: 1000."
+    echo "    --num-threads NUM_THREADS Number of threads to use for non-psi benchmarks."
+    echo "                              Default: 1."
+    echo "    --num-runs    NUM_RUNS    Number of runs to use for non-psi benchmarks."
+    echo "                              Default: 100."
+    echo "    --num-steps   NUM_STEPS   Number of steps per run to use for non-psi,"
+    echo "                              approximate benchmarks. Default: 1000."
     echo ""
-    echo "    --psi-threads PSI_THREADS Number of threads to use for PSI benchmarks. Default: 1."
-    echo "    --psi-runs PSI_RUNS       Number of runs to use for PSI benchmarks. Default: 100."
+    echo "    --psi-threads PSI_THREADS Number of threads to use for PSI benchmarks."
+    echo "                              Default: 1."
+    echo "    --psi-runs    PSI_RUNS    Number of runs to use for PSI benchmarks."
+    echo "                              Default: 100."
     echo "    --no-psi                  Skip PSI benchmarks."
     echo ""
-    echo "    --timeout-min TIMEOUT_MIN Number of minutes before a timeout. Default 30."
-    echo "    --logdir LOGDIR           Directory to store execution logs. Defaults to <cwd>/logs."
+    echo "    --timeout-min TIMEOUT_MIN Number of minutes before a timeout."
+    echo "                              Default 30."
+    echo "    --logdir      LOGDIR      Directory to store execution logs."
+    echo "                              Defaults to <cwd>/logs."
     echo ""
     echo "subcommand: tabulate -- skip benchmarks and tabulate"
-    echo "    --logdir LOGDIR           Directory to store execution logs. Defaults to <cwd>/logs."
+    echo "    --logdir      LOGDIR      Directory to store execution logs."
+    echo "                              Defaults to <cwd>/logs."
     echo ""
 
 }
@@ -47,7 +55,7 @@ while [[ "$1" =~ ^- && ! "$1" == "--" ]]; do case $1 in
 
   --psi-threads) shift; PSI_THREADS=$1 ;;
   --psi-runs)    shift; PSI_RUNS=$1    ;;
-  --no-psi)      shift; RUN_PSI=0       ;;
+  --no-psi)             RUN_PSI=0      ;;
 
   --logdir)      shift; LOGDIR=$1      ;;
   --timeout-min) shift; TIMEOUT_MIN=$1 ;;
