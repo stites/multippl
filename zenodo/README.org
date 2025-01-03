@@ -6,7 +6,7 @@
 #+LATEX_HEADER: \setlist[itemize,1]{leftmargin=\dimexpr 26pt-.1in}
 #+OPTIONS: author:nil date:nil toc:nil
 #+cite_export: biblatex numeric,backend=bibtex
-#+bibliography: ~/biblio/references.bib
+#+bibliography: references.bib
 
 * Overview
 # In the Introduction, briefly explain the purpose of the artifact and how it supports the paper. We recommend listing all claims in the paper and stating whether or not each is supported. For supported claims, say how the artifact provides support. For unsupported claims, explain why they are omitted.
@@ -33,7 +33,7 @@ In our work, we make the following contributions:
     the provided source code.
 - We validate the practical effectiveness of MultiPPL by showing that its
   practicality on heterogeneous examples with complex conditional dependency
-  structures.
+  structures and compare it to PSI[cite:@gehr2016PSI] and Pyro[cite:@bingham2019Pyro].
   + This claim is validated by Figures 11 and 14. This artifact reproduces and
     supports these claims with the ~multippl-benchmark~ script that generates the
     L1 columns exactly, and reproduces the wall-clock columns relative to the
@@ -106,7 +106,7 @@ your operating system architecture.
 #+begin_example
 $ wget https://zenodo.org/records/<TBD>/files/multippl-docker-x86_64.tar.gz
 $ docker load --input multippl-docker-x86_64.tar.gz
-$ docker run -it multippl:latest-x86_64
+$ docker run -it multippl:latest
 #+end_example
 
 The provided image is large (>1Gb downloaded, \sim8.5Gb decompressed) so ~wget~ and
@@ -115,7 +115,7 @@ bind a local directory to the container by passing the ~-v <HOSTDIR>:<DOCKERDIR>
 flag:
 
 #+begin_example
-$ docker run -v $PWD/local:/data/local -it multippl:latest-x86_64
+$ docker run -v $PWD/local:/data/local -it multippl:latest
 #+end_example
 
 Code examples below assume that they are run in the zsh shell providde by
@@ -178,7 +178,7 @@ The ~bench.py~ script does not run PSI by default. We can verify its presence us
 #+end_example
 # The Getting Started Guide should be as simple as possible, and yet it should stress the key elements of your artifact. Anyone who has followed the Getting Started Guide should have no technical difficulties with the rest of your artifact.
 
-* TODO Step-by-Step Instructions
+* Step-by-Step Instructions
 :PROPERTIES:
 :ID:       ca3ce6a5-edd9-48c2-bd04-f83f12d7015e
 :END:
@@ -199,14 +199,14 @@ different configurations for running ~multippl-benchmark~, and how to run
 benchmarks individually.
 
 
-*** TODO Expected running time of ~multippl-benchmark~
+*** Expected running time of ~multippl-benchmark~
 Figures 11 and 14 from our paper are produced by running all evaluations, single
-threaded, on an AMD EPYC 7543 Processor with 2.8GHz and 500 GiB of RAM. All
+threaded, on an AMD EPYC 7543 Processor with 2.8GHz and 500 GB of RAM. All
 examples produced in this document and in our README are run on a Thinkpad T14s
-Gen 3 with an AMD Ryzen 7 PRO 6850U (4.768GHz) CPU and 30G of RAM.
+Gen 3 with an AMD Ryzen 7 PRO 6850U (4.768GHz) CPU and 16GB of RAM.
 
 While there are no explicit hardware requirements for produce Fig 11 and Fig 14,
-running all benchmarks sequentially will take XXXh XXXm on the T14s laptop to
+running all benchmarks sequentially will take 8h 21m on the T14s laptop to
 finish the non-PSI evaluations. Under this sequential configuration, PSI will
 take an impractical amount of time evaluating 400 programs, only to timeout at
 the 30-minute mark (used in our figures). Additionally, the benchmark cannot run
@@ -215,7 +215,7 @@ thread of residential memory for certain programs. This may cause your
 laptop/desktop to crash.
 
 ** Running ~multippl-benchmark~
-*** TODO Quick Start
+*** Quick Start
 To run our benchmarks sequentially with the default configuration (100 runs, including PSI) simply run
 #+begin_example bash
 $ multippl-benchmark all --logdir /data/logs
@@ -225,15 +225,34 @@ This outputs all program outputs to the ~/data/logs~ directory. It may be helpfu
 to run ~docker~ with the ~-v $PWD/logs:/data/logs~ flag, so that logs and the cached
 tables can saved locally.
 
-To run a "quick" evaluation, you can parallelize the benchmark for the non-PSI evaluations, change the timeout (in minutes), and disable evaluating PSI:
+To run a "quick" evaluation, you can parallelize the benchmark for the non-PSI evaluations, change the timeout (in minutes), limit to 10 runs, and disable evaluating PSI:
 
 #+begin_example bash
 $ multippl-benchmark all --logdir /data/logs --num-threads 4 \
-                         --timeout-min 2 --no-psi
+                         --timeout-min 2 --num-runs 10 --no-psi
 #+end_example
 
-The above command takes XXXh XXXm on the T14s laptop referenced above and the
-provided ~--timeout-min~ flag will not skip any evaluations.
+The above command takes 1h 4m on the T14s laptop referenced above and the
+provided ~--timeout-min~ flag will not skip any evaluations. Example logs of the
+"full" and "quick" evaluations run on the T14s can be found in the
+~multippl-source/zenodo/example-runs/~ folder. Evaluations use fixed seed and
+users should expect to see the same L1 values for comparable configurations.
+Examining these logs also gives a better sense of the duration for individual
+benchmarks. Logs in this directory also reference the rk3588 CPU chipset -- this
+is a 4+4-core CPU (four 2.4GHz cores, four 1.8GHz cores) with 32GB RAM.
+Evaluations on the corresponding laptop limit docker resource usage to 16GB of
+memory. Example runs include the following:
+- a default run without PSI on T14s (8h 21m): ~sequential-100runs-no-psi_T14s-x86_64.log~
+- a default run without PSI on rk3588 (22h 34m): ~sequential-100runs-no-psi_rk3588-aarch64.log~
+- a quick run on T14S (1h 4m): ~4threads-10runs-no-psi_T14s-x86_64.log~
+  + in this evaluation ~grids/9x9~ times out for 8 runs of the MultiPPL program
+    (~diag.yo~) and 8 runs of the Disc-only program (~exact.yo~). This is visible in
+    the logs as "counts are not consistent for . ~$LOGDIR~! Got: 10 2 2 10." In
+    the final ~/data/logs/timeouts~ file ~grids/9x9~ shows 98 timeouts for the
+    associated files (this file is relative to the full 100 evaluations).
+- a quick run on rk3588 (2h 13m): ~4threads-10runs-no-psi_rk3588-aarch64.log~
+  + in this evaluation ~grids/9x9~ times out for 9 runs for the Disc-only program
+    ~exact.yo~, and fails to execute the MultiPPL program ~diag.yo~.
 
 *** Additional configuration options for ~multippl-benchmark~
 The ~multippl-benchmark~ script provides more parameters which may be of interest:
@@ -272,12 +291,13 @@ statistics will be aggregated at the end of each experiment and partial results
 will be output to the terminal. We store this data in the ~<date>~ folder as
 ~<HH:MM>.data.json~.
 
-The final table is produce by ~bench/tabulate.py~, which is invoked after
-~multippl-benchmark all~ and can be run individually with ~multippl-benchmark
-tabulate~. This will be printed to standard out.  If the final table is not
-produced, the log directory should be cleared and the benchmark should be
-re-evaluated to prevent rendering a table of partial information. Cached results
-of ~multippl-benchmark all~ includes:
+The final table is produce by ~bench/tabulate.py~ and is automatically invoked by ~multippl-benchmark all~.
+Alternatively, it is possible to run this individually using the
+~multippl-benchmark tabulate~ subcommand. The ~tabulate.py~ script will print all
+output to the terminal and cache results in the ~LOGDIR~ folder. If the final
+table is not produced, the log directory should be cleared and the benchmark
+should be re-evaluated to prevent rendering a table of partial information.
+Cached results include:
 - ~$LOGDIR/hybrid.rich~ the table corresponding to Figure 11
 - ~$LOGDIR/discrete.rich~ the table corresponding to Figure 14
 - ~$LOGDIR/timeouts~ a tally of all programs which have timed out.
