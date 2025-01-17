@@ -104,10 +104,10 @@ The docker image provides all of the above in ~$PATH~, as well as the
 benchmarks and produces Fig 11 and 14. For convenience: ~zsh~, ~emacs~, and ~vim~ are
 also available.
 
-Use the docker image to enter a ~zsh~ shell, replacing ~x86_64~ with ~arm64~ depending
+Use the docker image to enter a ~zsh~ shell, replacing ~amd64~ with ~arm64~ depending
 your operating system architecture.
 #+begin_example
-$ docker load --input multippl-docker-x86_64.tar.gz
+$ docker load --input multippl-docker-amd64.tar.gz
 $ docker run -it multippl:latest
 #+end_example
 
