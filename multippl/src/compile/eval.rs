@@ -97,7 +97,7 @@ pub fn ite_bdds(state: &mut super::eval::State, guard: BddPtr, l: &EVal, r: &EVa
                     [ts.clone(), vec![EBdd(BddPtr::PtrFalse); diff]].concat(),
                     fs.clone(),
                 )
-            } else if ts.len() < fs.len() {
+            } else if ts.len() > fs.len() {
                 let diff = ts.len() - fs.len();
                 (
                     ts.clone(),
@@ -112,6 +112,19 @@ pub fn ite_bdds(state: &mut super::eval::State, guard: BddPtr, l: &EVal, r: &EVa
                     .map(|(t, f)| ite_bdds(state, guard, &t, &f))
                     .collect_vec(),
             )
+        }
+        (EInteger(lint), EInteger(rint)) => {
+            let left = EProd([vec![EBdd(BddPtr::PtrFalse); *lint ], vec![EBdd(BddPtr::PtrTrue)]].concat());
+            let right = EProd([vec![EBdd(BddPtr::PtrFalse); *rint ], vec![EBdd(BddPtr::PtrTrue)]].concat());
+            ite_bdds(state, guard, &left, &right)
+        }
+        (left, EInteger(rint)) => {
+            let right = EProd([vec![EBdd(BddPtr::PtrFalse); *rint ], vec![EBdd(BddPtr::PtrTrue)]].concat());
+            ite_bdds(state, guard, &left, &right)
+        }
+        (EInteger(lint), right) => {
+            let left = EProd([vec![EBdd(BddPtr::PtrFalse); *lint ], vec![EBdd(BddPtr::PtrTrue)]].concat());
+            ite_bdds(state, guard, &left, &right)
         }
         (t, f) => panic!(
             "typecheck failed to catch EIte unification with\ntruthy: {t:?}\nfalsey: {f:?}",

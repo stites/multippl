@@ -1000,3 +1000,15 @@ exact {
               (sizedint
                 (int)
                 (int)))))))
+
+================================
+exact can handle dice ints x2
+================================
+exact {
+  // simulate dataset with d=3, n=5, p=0.75, with integers instead of bools
+  let x0_0_bool = flip 0.75 in
+  let x0_0 = if x0_0_bool then int(3, 1) else int(3, 0) in
+  let xor0_1 = flip 0.75 in let x0_1 = if x0_0_bool ^ xor0_1 then int(3, 1) else int(3, 0) in
+  x
+}
+------------------------

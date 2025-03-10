@@ -9,6 +9,7 @@ use rsdd::builder::bdd_builder::DDNNFPtr;
 use rsdd::builder::bdd_plan::BddPlan;
 use time::OffsetDateTime;
 use tracing::*;
+use Either::*;
 
 use super::eval::State;
 
@@ -176,6 +177,28 @@ pub fn eval_eanf_numop<'a>(
                 let out = ctx.exact.as_output(Some(EVal::EProd(new_oh)));
                 Ok(out)
             }
+        }
+        (Some(EVal::EProd(ls)), Some(EVal::EProd(rs))) => {
+            let mut fin = vec![BddPtr::PtrFalse; ls.len() + rs.len()];
+            let lbdds = ls.iter().map(as_bdd).collect_vec();
+            let rbdds = rs.iter().map(as_bdd).collect_vec();
+            for (li, l) in lbdds.iter().enumerate() {
+                for (ri, r) in rbdds.iter().enumerate() {
+                    let l_and_r = state.mgr.and(*l, *r);
+                    let prv_or_this = state.mgr.or(fin[li + ri], l_and_r);
+                    fin[li + ri] = prv_or_this;
+                }
+            }
+            let fin = fin.into_iter().map(EVal::EBdd).collect_vec();
+            let out = ctx.exact.as_output(Some(EVal::EProd(fin)));
+            Ok(out)
+            // build more bdd bindings?
+            // [a, b, c] + [d, e, f] =
+            // >           [a&d, a&e | b&d, a&f | b&e | c&d, b&f | c&e, c&f]
+            // > if a then [  d,         e,               f,         _,   _]
+            // > if b then [  0,         d,               e,         f,   _]
+            // > if c then [  0,         0,               d,         e,   f]
+
         }
         // (Some(EVal::EInteger(l)], _) => return errors::erased(),
         // (_, [EVal::EInteger(r))) => return errors::erased(),

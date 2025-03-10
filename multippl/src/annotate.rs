@@ -556,6 +556,10 @@ impl LabelEnv {
                 Box::new(self.annotate_eanf(bl)?),
                 Box::new(self.annotate_eanf(br)?),
             )),
+            Xor(bl, br) => Ok(Xor(
+                Box::new(self.annotate_eanf(bl)?),
+                Box::new(self.annotate_eanf(br)?),
+            )),
             Neg(bl) => Ok(Neg(Box::new(self.annotate_eanf(bl)?))),
 
             // Numerics

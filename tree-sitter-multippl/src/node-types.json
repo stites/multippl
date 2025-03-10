@@ -563,6 +563,10 @@
         {
           "type": "int",
           "named": true
+        },
+        {
+          "type": "sizedint",
+          "named": true
         }
       ]
     }
@@ -1234,6 +1238,21 @@
     }
   },
   {
+    "type": "sizedint",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "int",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
     "type": "slet",
     "named": true,
     "fields": {
@@ -1611,6 +1630,10 @@
     "named": false
   },
   {
+    "type": "**",
+    "named": false
+  },
+  {
     "type": "+",
     "named": false
   },
@@ -1752,6 +1775,10 @@
   },
   {
     "type": "in",
+    "named": false
+  },
+  {
+    "type": "int",
     "named": false
   },
   {
