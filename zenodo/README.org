@@ -120,7 +120,7 @@ flag:
 $ docker run -v $PWD/local:/data/local -it multippl:latest
 #+end_example
 
-Code examples below assume that they are run in the zsh shell providde by
+Code examples below assume that they are run in the zsh shell provided by
 docker. Once in the shell, note the provided examples and source code.
 
 #+begin_example
@@ -178,6 +178,7 @@ The ~bench.py~ script does not run PSI by default. We can verify its presence us
 # which psi
 /bin/psi
 #+end_example
+
 # The Getting Started Guide should be as simple as possible, and yet it should stress the key elements of your artifact. Anyone who has followed the Getting Started Guide should have no technical difficulties with the rest of your artifact.
 
 * Step-by-Step Instructions
