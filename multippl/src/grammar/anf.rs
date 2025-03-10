@@ -21,6 +21,7 @@ where
     // Boolean ops
     And(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
     Or(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
+    Xor(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
     Neg(Box<Anf<X, Val>>),
 
     // Numerics

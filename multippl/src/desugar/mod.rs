@@ -46,6 +46,7 @@ pub fn desugar_eanf(a: &AnfUD<EVal>) -> Result<AnfUD<EVal>> {
         // Booleans
         And(l, r) => desugar_eanf_binop(l, r, And),
         Or(l, r) => desugar_eanf_binop(l, r, Or),
+        Xor(l, r) => desugar_eanf_binop(l, r, Xor),
         Neg(p) => Ok(Neg(Box::new(desugar_eanf(p)?))),
 
         // Numerics

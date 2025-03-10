@@ -985,3 +985,18 @@ exact {
                 (int)))))))
 
 
+================================
+exact can handle dice ints (just ignore the size)
+================================
+exact {
+  int(3, 1)
+}
+------------------------
+    (source_file
+      (program
+        (eexpr
+          (eanf
+            (evalue
+              (sizedint
+                (int)
+                (int)))))))

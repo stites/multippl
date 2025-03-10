@@ -149,6 +149,7 @@ where
         // Booleans
         And(l, r) => typecheck_anf_binop(l, r, And),
         Or(l, r) => typecheck_anf_binop(l, r, Or),
+        Xor(l, r) => typecheck_anf_binop(l, r, Xor),
         Neg(bl) => Ok(Neg(Box::new(typecheck_anf(bl)?))),
 
         // Numerics

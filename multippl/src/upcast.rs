@@ -55,6 +55,7 @@ where
         // Booleans
         And(l, r) => upcast_anf_binop(l, r, And),
         Or(l, r) => upcast_anf_binop(l, r, Or),
+        Xor(l, r) => upcast_anf_binop(l, r, Xor),
         Neg(bl) => Ok(Neg(Box::new(upcast_anf(bl)?))),
 
         // Numerics

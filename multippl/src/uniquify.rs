@@ -264,6 +264,7 @@ impl SymEnv {
             // Booleans
             And(l, r) => self.uniquify_anf_binop(l, r, And),
             Or(l, r) => self.uniquify_anf_binop(l, r, Or),
+            Xor(l, r) => self.uniquify_anf_binop(l, r, Xor),
             Neg(bl) => Ok(Neg(Box::new(self.uniquify_anf(bl)?))),
 
             // Numerics

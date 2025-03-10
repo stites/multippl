@@ -120,7 +120,7 @@ module.exports = grammar({
     ),
 
     bool: $ => choice('true', 'false'),
-    bool_biop: $ => choice('||', '&&'),
+    bool_biop: $ => choice('||', '&&', '^'),
 
     bool_unop: $ => '!',
 
@@ -132,13 +132,14 @@ module.exports = grammar({
     // comment: $ => token(seq("//", /[^\n]*/)), // like this
 
     int: $ => /\d+/,
-    numeric_op: $ => choice('*', '/', '+', '-', '^'),
+    numeric_op: $ => choice('*', '/', '+', '-', '**'),
     compare_op: $ => choice('==', '<', '<=', '>', '>='),
-
+    sizedint: $ => seq('int', '(', $.int, ',', $.int,  ')'),
     evalue: $ => choice(
       $.evalueprod,
       $.bool,
       $.int,
+      $.sizedint,
       $.float,
     ),
 

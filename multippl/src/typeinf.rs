@@ -79,6 +79,7 @@ where
         // Booleans
         And(l, r) => typeinf_anf_binop(ty, l, r, And),
         Or(l, r) => typeinf_anf_binop(ty, l, r, Or),
+        Xor(l, r) => typeinf_anf_binop(ty, l, r, Xor),
         Neg(bl) => Ok(Neg(Box::new(typeinference_anf(ty, bl)?))),
 
         // Numerics

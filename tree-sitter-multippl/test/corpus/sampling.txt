@@ -214,13 +214,13 @@ sample {
     };
   inpatientExpenditure ~
     if (preExistingCond == 0) {
-      normal( 100 + (300 * daysHospitalStay), 30^2 )
+      normal( 100 + (300 * daysHospitalStay), 30 ** 2 )
     } else if (preExistingCond == 1) {
-      normal( 100 + (550 * daysHospitalStay), 50^2 )
+      normal( 100 + (550 * daysHospitalStay), 50 ** 2 )
     } else {
-      normal( 100 + (800 * daysHospitalStay), 100^2 )
+      normal( 100 + (800 * daysHospitalStay), 100 ** 2 )
     };
-  taxes ~ normal(120 + (1.02 * inpatientExpenditure) + (1.05 * outpatientExpenditure), 10^2);
+  taxes ~ normal(120 + (1.02 * inpatientExpenditure) + (1.05 * outpatientExpenditure), 10 ** 2);
   taxes
 }
 
@@ -658,13 +658,13 @@ sample {
     };
   inpatientExpenditure ~
     if (preExistingCond == 0) {
-      normal( 100 + (300 * daysHospitalStay), 30^2 )
+      normal( 100 + (300 * daysHospitalStay), 30 ** 2 )
     } else if (preExistingCond == 1) {
-      normal( 100 + (550 * daysHospitalStay), 50^2 )
+      normal( 100 + (550 * daysHospitalStay), 50 ** 2 )
     } else {
-      normal( 100 + (800 * daysHospitalStay), 100^2 )
+      normal( 100 + (800 * daysHospitalStay), 100 ** 2 )
     };
-  taxes ~ normal(120 + (1.02 * inpatientExpenditure) + (1.05 * outpatientExpenditure), 10^2);
+  taxes ~ normal(120 + (1.02 * inpatientExpenditure) + (1.05 * outpatientExpenditure), 10 ** 2);
   taxes
 }
 

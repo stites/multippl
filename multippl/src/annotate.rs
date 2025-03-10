@@ -447,6 +447,10 @@ impl LabelEnv {
                 Box::new(self.annotate_sanf(bl)?),
                 Box::new(self.annotate_sanf(br)?),
             )),
+            Xor(bl, br) => Ok(Xor(
+                Box::new(self.annotate_sanf(bl)?),
+                Box::new(self.annotate_sanf(br)?),
+            )),
             Neg(bl) => Ok(Neg(Box::new(self.annotate_sanf(bl)?))),
 
             // Numerics

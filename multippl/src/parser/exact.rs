@@ -102,6 +102,7 @@ fn parse_eanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EVal> {
             match op.as_str() {
                 "&&" => Anf::And(Box::new(l), Box::new(r)),
                 "||" => Anf::Or(Box::new(l), Box::new(r)),
+                "^" => Anf::Xor(Box::new(l), Box::new(r)),
                 "/" => Anf::Div(Box::new(l), Box::new(r)),
                 "*" => Anf::Mult(Box::new(l), Box::new(r)),
                 "+" => Anf::Plus(Box::new(l), Box::new(r)),
@@ -158,12 +159,28 @@ fn parse_eval(src: &[u8], c: &mut TreeCursor, n: Node) -> EVal {
             let ix = istr.parse::<usize>().unwrap();
             EVal::EInteger(ix)
         }
+        "sizedint" => EVal::EInteger(parse_esizedint(src, c, &n).unwrap()),
         "float" => {
             let istr = parse_str(src, &n);
             let x = istr.parse::<f64>().unwrap();
             EVal::EFloat(x)
         }
         _ => panic!("invalid value! found sexp:\n{}", n.to_sexp()),
+    }
+}
+pub fn parse_esizedint(src: &[u8], c: &mut TreeCursor, n: &Node) -> Option<usize> {
+    use ETy::*;
+    if n.kind() != "sizedint" {
+        return None;
+    } else {
+        let mut c_ = c.clone();
+        let mut cs = n.named_children(&mut c_);
+        let n = cs.next().unwrap();
+        let str_size = parse_str(src, &n);
+        let n = cs.next().unwrap();
+        let str_int = parse_str(src, &n);
+        let i = str_int.parse::<usize>().unwrap();
+        Some(i)
     }
 }
 

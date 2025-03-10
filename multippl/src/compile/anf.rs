@@ -461,6 +461,7 @@ pub fn eval_sanf<'a>(
             }
         }
         Or(bl, br) => eval_sanf_bop(state, ctx, bl, br, |a, b| a || b, Or),
+        Xor(bl, br) => eval_sanf_bop(state, ctx, bl, br, |a, b| a ^ b, Xor),
         And(bl, br) => eval_sanf_bop(state, ctx, bl, br, |a, b| a && b, And),
 
         Plus(bl, br) => eval_sanf_numop(state, ctx, bl, br, |a, b| a + b, |a, b| a + b, Plus),
@@ -686,6 +687,7 @@ pub fn eval_eanf<'a>(
             }
         }
         Or(bl, br) => eval_eanf_bop(state, ctx, bl, br, |mgr, l, r| mgr.or(*l, *r), Or),
+        Xor(bl, br) => eval_eanf_bop(state, ctx, bl, br, |mgr, l, r| mgr.xor(*l, *r), Xor),
         And(bl, br) => eval_eanf_bop(state, ctx, bl, br, |mgr, l, r| mgr.and(*l, *r), Or),
 
         Plus(bl, br) => {
