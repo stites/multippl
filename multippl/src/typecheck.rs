@@ -187,6 +187,7 @@ where
         // Distributions
         AnfBernoulli(_, x) => Ok(AnfBernoulli((), Box::new(typecheck_anf(x)?))),
         AnfPoisson(_, x) => Ok(AnfPoisson((), Box::new(typecheck_anf(x)?))),
+        AnfBinomial(_, l, r) => typecheck_anf_binop(l, r, |l, r| AnfBinomial((), l, r)),
         AnfUniform(_, l, r) => typecheck_anf_binop(l, r, |l, r| AnfUniform((), l, r)),
         AnfNormal(_, l, r) => typecheck_anf_binop(l, r, |l, r| AnfNormal((), l, r)),
         AnfBeta(_, l, r) => typecheck_anf_binop(l, r, |l, r| AnfBeta((), l, r)),

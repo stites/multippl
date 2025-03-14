@@ -45,6 +45,7 @@ crate::TTG!(
 #[derive(Debug, Clone, PartialEq)]
 pub enum Dist {
     Bern(f64),
+    Binomial(f64, u64),
     Discrete(Vec<f64>),
     Uniform(f64, f64),
     Normal(f64, f64),

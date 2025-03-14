@@ -54,6 +54,11 @@ where
     // Distributions
     AnfBernoulli(<ADistExt<Val> as ξ<X>>::Ext, Box<Anf<X, Val>>),
     AnfDiscrete(<ADistExt<Val> as ξ<X>>::Ext, Vec<Anf<X, Val>>),
+    AnfBinomial(
+        <ADistExt<Val> as ξ<X>>::Ext,
+        Box<Anf<X, Val>>,
+        Box<Anf<X, Val>>,
+    ),
     AnfUniform(
         <ADistExt<Val> as ξ<X>>::Ext,
         Box<Anf<X, Val>>,

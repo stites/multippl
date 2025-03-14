@@ -81,6 +81,7 @@ pub fn desugar_eanf(a: &AnfUD<EVal>) -> Result<AnfUD<EVal>> {
 
         AnfBernoulli(_, x) => errors::not_in_exact(),
         AnfPoisson(_, x) => errors::not_in_exact(),
+        AnfBinomial(_, l, r) => errors::not_in_exact(),
         AnfUniform(_, l, r) => errors::not_in_exact(),
         AnfNormal(_, l, r) => errors::not_in_exact(),
         AnfBeta(_, l, r) => errors::not_in_exact(),

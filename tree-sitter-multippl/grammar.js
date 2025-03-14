@@ -210,11 +210,16 @@ module.exports = grammar({
     slet: $ => choice(
       // seq($.identifier, ':', $.sty, "<-", $.sexpr, ';', $.sexpr),
       seq(field("var", $.identifier), "<-", $.sexpr, ';', $.sexpr),
+      seq("let", field("var", $.identifier), "=", $.sexpr, 'in', $.sexpr),
     ),
     sletsample: $ => choice(
       seq(field("var", $.identifier), "~", $.sexpr, ';', $.sexpr),
+      seq("let", field("var", $.identifier), "~", $.sexpr, 'in', $.sexpr),
     ),
-    sseq: $ => prec.left(-100, seq($.sexpr, ';', $.sexpr)),
+    sseq: $ => choice(
+      prec.left(-100, seq($.sexpr, ';', $.sexpr)),
+      prec.left(-100, seq($.sexpr, 'in', $.sexpr))
+    ),
     // sseq_first: $ => seq($.sexpr, ';',),
     smap: $ => seq('map', '(', $.identifier, '->', $.sexpr, ')', $.sanf),
     swhile: $ => choice(
@@ -249,6 +254,7 @@ module.exports = grammar({
       $.sanfhead,
 
       $.sanfbern,
+      $.sanfbinomial,
       $.sanfpoisson,
       $.sanfuniform,
       $.sanfnormal,
@@ -291,6 +297,7 @@ module.exports = grammar({
       $.sprod,
 
       $.sbern,
+      $.sbinomial,
       $.spoisson,
       $.suniform,
       $.snormal,
@@ -322,7 +329,8 @@ module.exports = grammar({
     // AnfPrj(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
 
     /// anf forms of distributions
-    sanfbern: $ => seq('bern', '(', $.sanf, ')'),
+    sanfbern: $ => choice(seq('bern', '(', $.sanf, ')'), seq('flip', $.sanf )),
+    sanfbinomial: $ => choice(seq('binomial', '(', $.sanf, ",", $.sanf, ')')),
     sanfpoisson: $ => seq('poisson', '(', $.sanf, ')'),
     sanfuniform: $ => seq('uniform', '(', $.sanf, ',', $.sanf, ')'),
     sanfnormal: $ => seq('normal', '(', $.sanf, ',', $.sanf, ')'),
@@ -344,6 +352,10 @@ module.exports = grammar({
     spoisson: $ => choice(
       seq('poisson', $.svalue),
       seq('poisson', '(', $.svalue, ')'),
+    ),
+    sbinomial: $ => choice(
+      //seq('binomial', $.svalue, $.svalue),
+      seq('binomial', '(', $.svalue, ',', $.svalue, ')'),
     ),
     suniform: $ => choice(
       //seq('uniform', $.svalue, $.svalue),

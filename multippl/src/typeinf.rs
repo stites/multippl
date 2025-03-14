@@ -119,6 +119,7 @@ where
         // Distributions
         AnfBernoulli(_, x) => Ok(AnfBernoulli((), Box::new(typeinference_anf(ty, x)?))),
         AnfPoisson(_, x) => Ok(AnfPoisson((), Box::new(typeinference_anf(ty, x)?))),
+        AnfBinomial(_, l, r) => typeinf_anf_binop(ty, l, r, |l, r| AnfBinomial((), l, r)),
         AnfUniform(_, l, r) => typeinf_anf_binop(ty, l, r, |l, r| AnfUniform((), l, r)),
         AnfNormal(_, l, r) => typeinf_anf_binop(ty, l, r, |l, r| AnfNormal((), l, r)),
         AnfBeta(_, l, r) => typeinf_anf_binop(ty, l, r, |l, r| AnfBeta((), l, r)),

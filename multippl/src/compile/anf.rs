@@ -198,7 +198,6 @@ pub fn eval_eanf_numop<'a>(
             // > if a then [  d,         e,               f,         _,   _]
             // > if b then [  0,         d,               e,         f,   _]
             // > if c then [  0,         0,               d,         e,   f]
-
         }
         // (Some(EVal::EInteger(l)], _) => return errors::erased(),
         // (_, [EVal::EInteger(r))) => return errors::erased(),
@@ -221,6 +220,13 @@ pub fn eval_sanf_bop<'a>(
     match (&ol.sample.out, &or.sample.out) {
         (Some(SVal::SBool(l)), Some(SVal::SBool(r))) => {
             let out = ctx.sample.as_output(Some(SVal::SBool(bop(*l, *r))));
+            let out = ctx.mk_soutput(out);
+            Ok(out)
+        }
+        (Some(SVal::SInt(l)), Some(SVal::SInt(r))) => {
+            let l = *l == 1_u64;
+            let r = *r == 1_u64;
+            let out = ctx.sample.as_output(Some(SVal::SBool(bop(l, r))));
             let out = ctx.mk_soutput(out);
             Ok(out)
         }
@@ -409,6 +415,33 @@ fn eval_sanf_dist2(
     let o1 = eval_sanf(state, ctx, p1)?;
     match (&o0.sample.out, &o1.sample.out) {
         (Some(SVal::SFloat(l)), Some(SVal::SFloat(r))) => {
+            let out = ctx.sample.as_output(Some(SVal::SDist(mkdist(*l, *r))));
+
+            let out = ctx.mk_soutput(out);
+            let ext = (sv.clone(), out.sample.clone());
+            Ok(out)
+        }
+        (l, r) => {
+            tracing::debug!(" left: {l:?}");
+            tracing::debug!("right: {r:?}");
+
+            errors::typecheck_failed("sanf dist with 2 args not given correct arguments.")
+        }
+    }
+}
+fn eval_sanf_dist2_u64(
+    state: &mut super::eval::State,
+    ctx: &Ctx,
+    sv: &SampledVar,
+    p0: &AnfAnn<SVal>,
+    p1: &AnfAnn<SVal>,
+    mkdist: impl Fn(f64, u64) -> Dist,
+    mkanf: impl Fn((SampledVar, SOutput), Box<AnfTr<SVal>>, Box<AnfTr<SVal>>) -> AnfTr<SVal>,
+) -> Result<Output> {
+    let o0 = eval_sanf(state, ctx, p0)?;
+    let o1 = eval_sanf(state, ctx, p1)?;
+    match (&o0.sample.out, &o1.sample.out) {
+        (Some(SVal::SFloat(l)), Some(SVal::SInt(r))) => {
             let out = ctx.sample.as_output(Some(SVal::SDist(mkdist(*l, *r))));
 
             let out = ctx.mk_soutput(out);
@@ -645,6 +678,9 @@ pub fn eval_sanf<'a>(
         AnfUniform(sv, p0, p1) => {
             eval_sanf_dist2(state, ctx, sv, p0, p1, Dist::Uniform, AnfUniform)
         }
+        AnfBinomial(sv, p0, p1) => {
+            eval_sanf_dist2_u64(state, ctx, sv, p0, p1, Dist::Binomial, AnfBinomial)
+        }
         AnfNormal(sv, p0, p1) => eval_sanf_dist2(state, ctx, sv, p0, p1, Dist::Normal, AnfNormal),
         AnfBeta(sv, p0, p1) => eval_sanf_dist2(state, ctx, sv, p0, p1, Dist::Beta, AnfBeta),
         AnfDiscrete(sv, ps) => eval_sanf_dist_vec(state, ctx, sv, ps, Dist::Discrete, AnfDiscrete),
@@ -853,6 +889,7 @@ pub fn eval_eanf<'a>(
         AnfHead(xs) => errors::not_in_exact(),
         AnfTail(xs) => errors::not_in_exact(),
 
+        AnfBinomial(sv, _, _) => errors::not_in_exact(),
         AnfBernoulli(sv, p) => errors::not_in_exact(),
         AnfPoisson(sv, p) => errors::not_in_exact(),
         AnfUniform(sv, p0, p1) => errors::not_in_exact(),

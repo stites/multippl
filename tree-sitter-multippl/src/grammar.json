@@ -2155,6 +2155,39 @@
               "name": "sexpr"
             }
           ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "let"
+            },
+            {
+              "type": "FIELD",
+              "name": "var",
+              "content": {
+                "type": "SYMBOL",
+                "name": "identifier"
+              }
+            },
+            {
+              "type": "STRING",
+              "value": "="
+            },
+            {
+              "type": "SYMBOL",
+              "name": "sexpr"
+            },
+            {
+              "type": "STRING",
+              "value": "in"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "sexpr"
+            }
+          ]
         }
       ]
     },
@@ -2189,29 +2222,88 @@
               "name": "sexpr"
             }
           ]
+        },
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "let"
+            },
+            {
+              "type": "FIELD",
+              "name": "var",
+              "content": {
+                "type": "SYMBOL",
+                "name": "identifier"
+              }
+            },
+            {
+              "type": "STRING",
+              "value": "~"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "sexpr"
+            },
+            {
+              "type": "STRING",
+              "value": "in"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "sexpr"
+            }
+          ]
         }
       ]
     },
     "sseq": {
-      "type": "PREC_LEFT",
-      "value": -100,
-      "content": {
-        "type": "SEQ",
-        "members": [
-          {
-            "type": "SYMBOL",
-            "name": "sexpr"
-          },
-          {
-            "type": "STRING",
-            "value": ";"
-          },
-          {
-            "type": "SYMBOL",
-            "name": "sexpr"
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "PREC_LEFT",
+          "value": -100,
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "sexpr"
+              },
+              {
+                "type": "STRING",
+                "value": ";"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "sexpr"
+              }
+            ]
           }
-        ]
-      }
+        },
+        {
+          "type": "PREC_LEFT",
+          "value": -100,
+          "content": {
+            "type": "SEQ",
+            "members": [
+              {
+                "type": "SYMBOL",
+                "name": "sexpr"
+              },
+              {
+                "type": "STRING",
+                "value": "in"
+              },
+              {
+                "type": "SYMBOL",
+                "name": "sexpr"
+              }
+            ]
+          }
+        }
+      ]
     },
     "smap": {
       "type": "SEQ",
@@ -2556,6 +2648,10 @@
         {
           "type": "SYMBOL",
           "name": "sanfbern"
+        },
+        {
+          "type": "SYMBOL",
+          "name": "sanfbinomial"
         },
         {
           "type": "SYMBOL",
@@ -2990,6 +3086,10 @@
         },
         {
           "type": "SYMBOL",
+          "name": "sbinomial"
+        },
+        {
+          "type": "SYMBOL",
           "name": "spoisson"
         },
         {
@@ -3336,23 +3436,75 @@
       ]
     },
     "sanfbern": {
-      "type": "SEQ",
+      "type": "CHOICE",
       "members": [
         {
-          "type": "STRING",
-          "value": "bern"
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "bern"
+            },
+            {
+              "type": "STRING",
+              "value": "("
+            },
+            {
+              "type": "SYMBOL",
+              "name": "sanf"
+            },
+            {
+              "type": "STRING",
+              "value": ")"
+            }
+          ]
         },
         {
-          "type": "STRING",
-          "value": "("
-        },
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "flip"
+            },
+            {
+              "type": "SYMBOL",
+              "name": "sanf"
+            }
+          ]
+        }
+      ]
+    },
+    "sanfbinomial": {
+      "type": "CHOICE",
+      "members": [
         {
-          "type": "SYMBOL",
-          "name": "sanf"
-        },
-        {
-          "type": "STRING",
-          "value": ")"
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "binomial"
+            },
+            {
+              "type": "STRING",
+              "value": "("
+            },
+            {
+              "type": "SYMBOL",
+              "name": "sanf"
+            },
+            {
+              "type": "STRING",
+              "value": ","
+            },
+            {
+              "type": "SYMBOL",
+              "name": "sanf"
+            },
+            {
+              "type": "STRING",
+              "value": ")"
+            }
+          ]
         }
       ]
     },
@@ -3679,6 +3831,40 @@
             {
               "type": "STRING",
               "value": "("
+            },
+            {
+              "type": "SYMBOL",
+              "name": "svalue"
+            },
+            {
+              "type": "STRING",
+              "value": ")"
+            }
+          ]
+        }
+      ]
+    },
+    "sbinomial": {
+      "type": "CHOICE",
+      "members": [
+        {
+          "type": "SEQ",
+          "members": [
+            {
+              "type": "STRING",
+              "value": "binomial"
+            },
+            {
+              "type": "STRING",
+              "value": "("
+            },
+            {
+              "type": "SYMBOL",
+              "name": "svalue"
+            },
+            {
+              "type": "STRING",
+              "value": ","
             },
             {
               "type": "SYMBOL",

@@ -153,6 +153,7 @@ pub mod grammar {
         SNormal,
         SPoisson,
         SBeta,
+        SBinomial,
         SDiscrete(usize),
         SDirichlet(usize),
     }
@@ -508,6 +509,13 @@ impl LabelEnv {
                 let l = Box::new(self.annotate_sanf(l)?);
                 let r = Box::new(self.annotate_sanf(r)?);
                 Ok(AnfNormal(var, l, r))
+            }
+            AnfBinomial(id, l, r) => {
+                let var = SampledVar::new(*id, SDist::SBinomial, self.letpos.clone());
+                self.subst_var.insert(*id, Var::Sampled(var.clone()));
+                let l = Box::new(self.annotate_sanf(l)?);
+                let r = Box::new(self.annotate_sanf(r)?);
+                Ok(AnfBinomial(var, l, r))
             }
             AnfBeta(id, l, r) => {
                 let var = SampledVar::new(*id, SDist::SBeta, self.letpos.clone());

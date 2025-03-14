@@ -656,6 +656,10 @@
           "named": true
         },
         {
+          "type": "sanfbinomial",
+          "named": true
+        },
+        {
           "type": "sanfbinop",
           "named": true
         },
@@ -735,6 +739,21 @@
   },
   {
     "type": "sanfbeta",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "sanf",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sanfbinomial",
     "named": true,
     "fields": {},
     "children": {
@@ -1059,6 +1078,21 @@
   },
   {
     "type": "sbeta",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "svalue",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "sbinomial",
     "named": true,
     "fields": {},
     "children": {
@@ -1526,6 +1560,10 @@
           "named": true
         },
         {
+          "type": "sbinomial",
+          "named": true
+        },
+        {
           "type": "sdirichlet",
           "named": true
         },
@@ -1707,6 +1745,10 @@
   },
   {
     "type": "beta",
+    "named": false
+  },
+  {
+    "type": "binomial",
     "named": false
   },
   {

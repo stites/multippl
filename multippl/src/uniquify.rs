@@ -302,6 +302,7 @@ impl SymEnv {
             // Distributions
             AnfBernoulli(_, x) => Ok(AnfBernoulli(self.fresh(), Box::new(self.uniquify_anf(x)?))),
             AnfPoisson(_, x) => Ok(AnfPoisson(self.fresh(), Box::new(self.uniquify_anf(x)?))),
+            AnfBinomial(_, l, r) => self.uniquify_anf_binop_(l, r, AnfBinomial),
             AnfUniform(_, l, r) => self.uniquify_anf_binop_(l, r, AnfUniform),
             AnfNormal(_, l, r) => self.uniquify_anf_binop_(l, r, AnfNormal),
             AnfBeta(_, l, r) => self.uniquify_anf_binop_(l, r, AnfBeta),

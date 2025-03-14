@@ -191,6 +191,7 @@
           [
             bc
             ghc
+            gcc
 
             config.packages.dice
             config.packages.psi

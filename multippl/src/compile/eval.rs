@@ -114,16 +114,40 @@ pub fn ite_bdds(state: &mut super::eval::State, guard: BddPtr, l: &EVal, r: &EVa
             )
         }
         (EInteger(lint), EInteger(rint)) => {
-            let left = EProd([vec![EBdd(BddPtr::PtrFalse); *lint ], vec![EBdd(BddPtr::PtrTrue)]].concat());
-            let right = EProd([vec![EBdd(BddPtr::PtrFalse); *rint ], vec![EBdd(BddPtr::PtrTrue)]].concat());
+            let left = EProd(
+                [
+                    vec![EBdd(BddPtr::PtrFalse); *lint],
+                    vec![EBdd(BddPtr::PtrTrue)],
+                ]
+                .concat(),
+            );
+            let right = EProd(
+                [
+                    vec![EBdd(BddPtr::PtrFalse); *rint],
+                    vec![EBdd(BddPtr::PtrTrue)],
+                ]
+                .concat(),
+            );
             ite_bdds(state, guard, &left, &right)
         }
         (left, EInteger(rint)) => {
-            let right = EProd([vec![EBdd(BddPtr::PtrFalse); *rint ], vec![EBdd(BddPtr::PtrTrue)]].concat());
+            let right = EProd(
+                [
+                    vec![EBdd(BddPtr::PtrFalse); *rint],
+                    vec![EBdd(BddPtr::PtrTrue)],
+                ]
+                .concat(),
+            );
             ite_bdds(state, guard, &left, &right)
         }
         (EInteger(lint), right) => {
-            let left = EProd([vec![EBdd(BddPtr::PtrFalse); *lint ], vec![EBdd(BddPtr::PtrTrue)]].concat());
+            let left = EProd(
+                [
+                    vec![EBdd(BddPtr::PtrFalse); *lint],
+                    vec![EBdd(BddPtr::PtrTrue)],
+                ]
+                .concat(),
+            );
             ite_bdds(state, guard, &left, &right)
         }
         (t, f) => panic!(
@@ -754,6 +778,13 @@ impl<'a> State<'a> {
                             let v = SVal::SBool(v == 1.0);
                             (q, v, d)
                         }
+                        Dist::Binomial(p, n) => {
+                            let dist = statrs::distribution::Binomial::new(*p, *n).unwrap();
+                            let v = sample_from(self, dist);
+                            let q = dist.pmf(v as u64);
+                            let v = SVal::SFloat(v);
+                            (q, v, d)
+                        }
                         Dist::Discrete(ps) => {
                             let dist = statrs::distribution::Categorical::new(ps).unwrap();
                             let v = sample_from(self, &dist);
@@ -821,6 +852,10 @@ impl<'a> State<'a> {
                         (Dist::Bern(param), SVal::SBool(b)) => {
                             let dist = statrs::distribution::Bernoulli::new(*param).unwrap();
                             statrs::distribution::Discrete::pmf(&dist, *b as u64)
+                        }
+                        (Dist::Binomial(p, n), SVal::SInt(i)) => {
+                            let dist = statrs::distribution::Binomial::new(*p, *n).unwrap();
+                            statrs::distribution::Binomial::pmf(&dist, *i)
                         }
                         (Dist::Discrete(ps), SVal::SInt(i)) => {
                             let dist = statrs::distribution::Categorical::new(ps).unwrap();

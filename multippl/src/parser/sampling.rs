@@ -146,6 +146,7 @@ fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVal> {
             match op.as_str() {
                 "&&" => Anf::And(Box::new(l), Box::new(r)),
                 "||" => Anf::Or(Box::new(l), Box::new(r)),
+                "^" => Anf::Xor(Box::new(l), Box::new(r)),
 
                 "/" => Anf::Div(Box::new(l), Box::new(r)),
                 "*" => Anf::Mult(Box::new(l), Box::new(r)),
@@ -196,7 +197,18 @@ fn parse_sanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, SVal> {
 
             Anf::AnfBeta((), Box::new(c1), Box::new(c2))
         }
+        "sanfbinomial" => {
+            let mut _c = c.clone();
+            let mut cs = n.named_children(&mut _c);
 
+            let c1 = cs.next().unwrap();
+            let c1 = parse_sanf(src, c, c1);
+
+            let c2 = cs.next().unwrap();
+            let c2 = parse_sanf(src, c, c2);
+
+            Anf::AnfBinomial((), Box::new(c1), Box::new(c2))
+        }
         kind => {
             panic!(
                 "invalid expression found with kind {} and {} children!\nsexp: {}\nsrc: {}",
