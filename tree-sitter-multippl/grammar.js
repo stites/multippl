@@ -214,7 +214,7 @@ module.exports = grammar({
     ),
     sletsample: $ => choice(
       seq(field("var", $.identifier), "~", $.sexpr, ';', $.sexpr),
-      seq("let", field("var", $.identifier), "~", $.sexpr, 'in', $.sexpr),
+      seq("let", field("var", $.identifier), "~=", $.sexpr, 'in', $.sexpr),
     ),
     sseq: $ => choice(
       prec.left(-100, seq($.sexpr, ';', $.sexpr)),
@@ -235,7 +235,10 @@ module.exports = grammar({
       seq('(\\', $.identifier, '->', $.sexpr, ')'),
       seq('(\\', repeat(seq($.identifier, ',')), $.identifier, '->', $.sexpr, ')'),
     ),
-    sobserve: $ => seq('observe', $.sanf, 'from', $.sanf, ';', $.sexpr),
+    sobserve: $ => choice(
+      seq('observe', $.sanf, 'from', $.sanf, ';', $.sexpr),
+      seq('observe', $.sanf, 'from', $.sanf, 'in', $.sexpr)
+    ),
     sexact: $ => choice(
       seq('exact', '(', $.eexpr, ')' ),
       seq('exact', '{', $.eexpr, '}' ),
