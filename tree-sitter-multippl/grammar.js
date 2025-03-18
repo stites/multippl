@@ -89,14 +89,18 @@ module.exports = grammar({
       seq('(', ')'),
       seq('(', $.evalue, ',', $.evalue, optional(','), ')'),
       seq('(', $.evalue, ',', repeat(seq($.evalue, ',')), $.evalue, optional(','), ')'),
+      seq('[', ']'),
+      seq('[', $.evalue, ',', $.evalue, optional(','), ']'),
+      seq('[', $.evalue, ',', repeat(seq($.evalue, ',')), $.evalue, optional(','), ']'),
     ),
-
 
     eanfprod: $ => choice(
       seq('(', $.evalue, ',', $.eanf, optional(','), ')'),
       seq('(', $.eanf, ',', $.eanf, optional(','), ')'),
-      // seq('(', $.eanf, ',', repeat(seq($.eanf, ',')), $.evalue, ')'),
       seq('(', $.eanf, ',', repeat(seq($.eanf, ',')), $.eanf, optional(','), ')'),
+      seq('[', $.evalue, ',', $.eanf, optional(','), ']'),
+      seq('[', $.eanf, ',', $.eanf, optional(','), ']'),
+      seq('[', $.eanf, ',', repeat(seq($.eanf, ',')), $.eanf, optional(','), ']'),
     ),
 
     elet: $ => choice(
