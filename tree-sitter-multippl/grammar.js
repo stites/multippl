@@ -98,6 +98,7 @@ module.exports = grammar({
       seq('(', $.evalue, ',', $.eanf, optional(','), ')'),
       seq('(', $.eanf, ',', $.eanf, optional(','), ')'),
       seq('(', $.eanf, ',', repeat(seq($.eanf, ',')), $.eanf, optional(','), ')'),
+      seq('[', $.eanf, ']'),
       seq('[', $.evalue, ',', $.eanf, optional(','), ']'),
       seq('[', $.eanf, ',', $.eanf, optional(','), ']'),
       seq('[', $.eanf, ',', repeat(seq($.eanf, ',')), $.eanf, optional(','), ']'),
