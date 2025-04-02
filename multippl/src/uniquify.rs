@@ -295,6 +295,12 @@ impl SymEnv {
             )),
 
             AnfProd(xs) => Ok(AnfProd(self.uniquify_anf_vec(xs)?)),
+            AnfProdExpand(xs) => Ok(AnfProdExpand(
+                xs.iter()
+                    .map(|(x, y)| Ok((self.uniquify_anf(x)?, y.clone())))
+                    .collect::<Result<Vec<_>>>()?,
+            )),
+
             AnfPrj(var, ix) => Ok(AnfPrj(
                 Box::new(self.uniquify_anf(var)?),
                 Box::new(self.uniquify_anf(ix)?),

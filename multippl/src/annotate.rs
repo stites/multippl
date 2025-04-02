@@ -477,6 +477,7 @@ impl LabelEnv {
             AnfTail(xs) => Ok(AnfTail(Box::new(self.annotate_sanf(xs)?))),
 
             AnfProd(xs) => annotate_anf_vec(self, Self::annotate_sanf, xs, AnfProd),
+            AnfProdExpand(xs) => errors::not_in_sample(),
             AnfPrj(var, ix) => Ok(AnfPrj(
                 Box::new(self.annotate_sanf(var)?),
                 Box::new(self.annotate_sanf(ix)?),
@@ -584,6 +585,11 @@ impl LabelEnv {
             EQ(l, r) => annotate_anf_binop(self, Self::annotate_eanf, l, r, EQ),
 
             AnfProd(xs) => annotate_anf_vec(self, Self::annotate_eanf, xs, AnfProd),
+            AnfProdExpand(xs) => Ok(AnfProdExpand(
+                xs.iter()
+                    .map(|(x, y)| Ok((self.annotate_eanf(x)?, y.clone())))
+                    .collect::<Result<Vec<_>>>()?,
+            )),
             AnfPrj(var, ix) => Ok(AnfPrj(
                 Box::new(self.annotate_eanf(var)?),
                 Box::new(self.annotate_eanf(ix)?),

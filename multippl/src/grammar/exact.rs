@@ -85,6 +85,7 @@ pub enum EVal {
     EBdd(BddPtr),
     EFloat(f64),
     EProd(Vec<EVal>),
+    EProdExpand(Vec<(EVal, EVal)>),
     // extensions: not part of the core IR, just included in the maximal values as part of TTG
     EInteger(usize),
 }
@@ -109,6 +110,15 @@ impl EVal {
             EVal::EProd(xs) => {
                 format!("({})", xs.iter().map(Self::pretty).collect_vec().join(", "))
             }
+            EVal::EProdExpand(xs) => {
+                format!(
+                    "({})",
+                    xs.iter()
+                        .map(|(x, y)| format!("{} @ {}", Self::pretty(x), Self::pretty(y)))
+                        .collect_vec()
+                        .join(", ")
+                )
+            }
         }
     }
 }
@@ -119,6 +129,7 @@ impl Debug for EVal {
             EFloat(x) => f.write_str(&format!("EFloat({})", x)),
             EInteger(x) => f.write_str(&format!("EInteger({})", x)),
             EProd(x) => f.write_str(&format!("EProd({:?})", x)),
+            EProdExpand(x) => f.write_str(&format!("EProdExpand({:?})", x)),
             EBdd(x) => f.write_str(&format!("EBdd({:?}: {:?})", x, x.print_bdd())),
         }
     }
@@ -157,6 +168,7 @@ impl super::classes::IsTyped<ETy> for EVal {
             // EBool(_) => ETy::EBool,
             EFloat(_) => ETy::EFloat,
             EProd(vs) => ETy::EProd(vs.iter().map(|x| x.as_type()).collect_vec()),
+            EProdExpand(vs) => ETy::EProd(vs.iter().map(|(x, _)| x.as_type()).collect_vec()),
             EBdd(BddPtr::PtrTrue) => ETy::EBool,
             EBdd(BddPtr::PtrFalse) => ETy::EBool,
             EBdd(_) => ETy::EFormula,

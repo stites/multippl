@@ -37,6 +37,11 @@ fn parse_eanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EVal> {
     match n.kind() {
         "eanf" => parse_eanf(src, c, n),
         "eanfprod" => Anf::AnfProd(parse_vec(src, c, n, parse_eanf)),
+        "eanfprod_expand" => {
+            Anf::AnfProdExpand(parse_vec_tuples(src, c, n, parse_eanf, |src, c, n| {
+                EVal::EInteger(parse_int(src, c, n))
+            }))
+        }
         "eanfprj" => {
             let mut _c = c.clone();
             let mut cs = n.named_children(&mut _c);
@@ -128,6 +133,11 @@ fn parse_eanf(src: &[u8], c: &mut TreeCursor, n: Node) -> Anf<Inferable, EVal> {
     }
 }
 
+fn parse_int(src: &[u8], c: &mut TreeCursor, n: Node) -> usize {
+    let istr = parse_str(src, &n);
+    let ix = istr.parse::<usize>().unwrap();
+    ix
+}
 fn parse_eval(src: &[u8], c: &mut TreeCursor, n: Node) -> EVal {
     assert_eq!(n.kind(), "evalue");
     let mut c_ = c.clone();
@@ -154,11 +164,7 @@ fn parse_eval(src: &[u8], c: &mut TreeCursor, n: Node) -> EVal {
             };
             EVal::EBdd(BddPtr::from_bool(b))
         }
-        "int" => {
-            let istr = parse_str(src, &n);
-            let ix = istr.parse::<usize>().unwrap();
-            EVal::EInteger(ix)
-        }
+        "int" => EVal::EInteger(parse_int(src, c, n)),
         "sizedint" => EVal::EInteger(parse_esizedint(src, c, &n).unwrap()),
         "float" => {
             let istr = parse_str(src, &n);
@@ -263,7 +269,7 @@ pub fn parse_eexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> EExpr<Inferable>
             let fnname = cs.next().unwrap();
             let fnname = parse_str(src, &fnname);
 
-            let args = parse_vec_h(src, c, n, parse_eanf, 1);
+            let args = parse_vec_shift(src, c, n, parse_eanf, 1);
 
             EExpr::EApp(None, fnname, args)
         }

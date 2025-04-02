@@ -63,6 +63,55 @@ pub fn parse_vec_h<X>(
     }
     xs
 }
+pub fn parse_vec_tuples<X, Y>(
+    src: &[u8],
+    c: &mut TreeCursor,
+    n: Node,
+    parse_l: impl Fn(&[u8], &mut TreeCursor, Node) -> X,
+    parse_r: impl Fn(&[u8], &mut TreeCursor, Node) -> Y,
+) -> Vec<(X, Y)> {
+    trace!("parse_vec: {}", parse_str(src, &n));
+    trace!("     sexp: {}", n.to_sexp());
+    let nshifts = 0;
+    let mut xs = vec![];
+    let mut _c = c.clone();
+    let mut cs = n.named_children(&mut _c);
+    let mut sft = nshifts;
+    while sft > 0 {
+        cs.next();
+        sft -= 1;
+    }
+
+    for i in 0..((n.named_child_count() / 2) - nshifts) {
+        let n = cs.next().unwrap();
+        trace!(
+            "arg[({} / {})_1]: {}",
+            i,
+            ((n.named_child_count() / 2) - nshifts),
+            n.to_sexp()
+        );
+        let x = parse_l(src, c, n);
+        let nn = cs.next().unwrap();
+        trace!(
+            "arg[({} / {})_2]: {}",
+            i,
+            ((n.named_child_count() / 2) - nshifts),
+            nn.to_sexp()
+        );
+        let y = parse_r(src, c, nn);
+        xs.push((x, y));
+    }
+    xs
+}
+pub fn parse_vec_shift<X>(
+    src: &[u8],
+    c: &mut TreeCursor,
+    n: Node,
+    parse_el: impl Fn(&[u8], &mut TreeCursor, Node) -> X,
+    nshifts: usize,
+) -> Vec<X> {
+    parse_vec_h(src, c, n, parse_el, nshifts)
+}
 
 pub fn parse_vec<X>(
     src: &[u8],

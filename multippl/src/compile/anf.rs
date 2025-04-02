@@ -577,6 +577,9 @@ pub fn eval_sanf<'a>(
         ),
 
         AnfProd(anfs) => eval_sanf_vec(state, ctx, anfs, AnfProd),
+        AnfProdExpand(anfs) => {
+            errors::typecheck_failed(&format!("anf prod expand not in sampling lang"))
+        }
         AnfVec(anfs) => eval_sanf_vec(state, ctx, anfs, AnfVec),
         AnfPush(xs, x) => {
             let xs = eval_sanf(state, ctx, xs)?;
@@ -833,6 +836,16 @@ pub fn eval_eanf<'a>(
                 })
                 .collect::<Result<Vec<_>>>()?;
             Ok(ctx.exact.as_output(Some(EVal::EProd(outs))))
+        }
+        AnfProdExpand(anfs) => {
+            let outs: Vec<(EVal, EVal)> = anfs
+                .iter()
+                .map(|(a, b)| {
+                    let aout = eval_eanf(state, ctx, a)?;
+                    Ok((aout.out.unwrap(), b.clone()))
+                })
+                .collect::<Result<Vec<_>>>()?;
+            Ok(ctx.exact.as_output(Some(EVal::EProdExpand(outs))))
         }
         AnfPrj(var, ix) => {
             let ovar = eval_eanf(state, ctx, var)?;

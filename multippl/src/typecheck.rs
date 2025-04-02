@@ -126,6 +126,26 @@ where
         .map(|a| typecheck_anf(a))
         .collect::<Result<Vec<AnfUD<Val>>>>()?))
 }
+fn typecheck_anf_vec_expand<Val, X: Clone>(
+    xs: &[(grammar::AnfTyped<Val>, X)],
+    op: impl Fn(Vec<(AnfUD<Val>, X)>) -> AnfUD<Val>,
+) -> Result<AnfUD<Val>>
+where
+    AVarExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    // APrjExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    AValExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    ADistExt<Val>: ξ<Typed> + ξ<UD, Ext = ()>,
+    <AVarExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    // <APrjExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    <AValExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    <ADistExt<Val> as ξ<Typed>>::Ext: Debug + PartialEq + Clone,
+    Val: Debug + PartialEq + Clone,
+{
+    Ok(op(xs
+        .iter()
+        .map(|(a, b)| Ok((typecheck_anf(a)?, b.clone())))
+        .collect::<Result<Vec<(AnfUD<Val>, X)>>>()?))
+}
 
 pub fn typecheck_anf<Val: Debug + PartialEq + Clone>(
     a: &grammar::AnfTyped<Val>,
@@ -179,6 +199,7 @@ where
         )),
 
         AnfProd(xs) => typecheck_anf_vec(xs, AnfProd),
+        AnfProdExpand(xs) => typecheck_anf_vec_expand(xs, AnfProdExpand),
         AnfPrj(var, ix) => Ok(AnfPrj(
             Box::new(typecheck_anf(var)?),
             Box::new(typecheck_anf(ix)?),

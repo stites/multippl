@@ -46,6 +46,7 @@ where
     AnfTrace(Box<Anf<X, Val>>, Box<Anf<X, Val>>),
 
     AnfProd(Vec<Anf<X, Val>>),
+    AnfProdExpand(Vec<(Anf<X, Val>, Val)>),
     AnfPrj(
         Box<Anf<X, Val>>, // tuple to index
         Box<Anf<X, Val>>,

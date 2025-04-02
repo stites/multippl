@@ -374,6 +374,7 @@ pub fn make_mgr_and_ir_h(
     tracing::debug!("(annotated)");
     let maxlbl = ar.maxbdd.0;
     tracing::debug!("(manager created with max label: {maxlbl})");
+    // println!("{}", maxlbl);
     let mgr = crate::data::new_manager(maxlbl);
     Ok((mgr, p, lenv))
 }

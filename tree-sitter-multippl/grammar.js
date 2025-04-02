@@ -102,6 +102,11 @@ module.exports = grammar({
       seq('[', $.eanf, ',', $.eanf, optional(','), ']'),
       seq('[', $.eanf, ',', repeat(seq($.eanf, ',')), $.eanf, optional(','), ']'),
     ),
+    eanfprod_expand: $ => choice(
+      seq('#[', $.eanf, '@', $.int, ',', $.eanf, '@', $.int, optional(','), ']'),
+      seq('#[', $.eanf, '@', $.int, ',', repeat(seq($.eanf, '@', $.int, ',')), $.eanf, '@', $.int, optional(','), ']'),
+    ),
+
 
     elet: $ => choice(
       seq('let', field('var', $.identifier), '=', $.eexpr, 'in', $.eexpr),
@@ -159,6 +164,7 @@ module.exports = grammar({
     ),
     eanf: $ => choice(
       $.eanfprod,
+      $.eanfprod_expand,
       $.identifier,
       prec(6, $.evalue),
       $.eanfprj,

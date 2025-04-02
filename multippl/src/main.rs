@@ -19,7 +19,7 @@ struct Args {
     file: String,
 
     #[clap(short, long, value_parser)]
-    steps: usize,
+    samples: usize,
 
     #[clap(short, long, value_parser)]
     rng: Option<u64>,
@@ -38,6 +38,9 @@ struct Args {
 
     #[clap(long)]
     stats: bool,
+
+    #[clap(short, long)]
+    reverse_compilation: bool,
     // #[clap(short, long, value_parser)]
     // opt: bool,         // use optimizations
 
@@ -77,7 +80,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let args = Args::parse();
 
     let strstep = args
-        .steps
+        .samples
         .to_string()
         .as_bytes()
         .rchunks(3)
@@ -99,10 +102,11 @@ fn main() -> Result<(), Box<dyn Error>> {
     info!("__/__/_______/___/__\\___\\______________(art by jgs)");
     info!("---------------------------------------------------");
     info!("       File: {}", args.file);
-    info!("    # Steps: {}", strstep);
+    info!("  # Samples: {}", strstep);
     info!("       Seed: {:?}", args.rng);
     info!("Debug level: {:?}", lvl);
     info!(" report BDD: {}", args.stats);
+    info!(" rev. compl: {}", args.reverse_compilation);
     setup_tracing(lvl);
 
     let pth = PathBuf::from(args.file);
@@ -111,11 +115,12 @@ fn main() -> Result<(), Box<dyn Error>> {
     let src = fs::read_to_string(pth)?;
     debug!("program:\n{}\n", src);
 
-    let options = multippl::pipeline::Options::new(args.rng, false, false, false, 0);
+    let options =
+        multippl::pipeline::Options::new(args.rng, false, false, args.reverse_compilation, 0);
 
     debug!("compilation options: {:?}", options);
     let now = Instant::now();
-    let (query, stats) = multippl::inference::importance_weighting_h(args.steps, &src, &options);
+    let (query, stats) = multippl::inference::importance_weighting_h(args.samples, &src, &options);
     let elapsed_time = now.elapsed();
     if args.stats {
         println!("{:?}", stats);

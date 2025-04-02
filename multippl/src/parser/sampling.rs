@@ -472,7 +472,7 @@ pub fn parse_sexpr(src: &[u8], c: &mut TreeCursor, n: &Node) -> SExpr<Inferable>
             let fnname = cs.next().unwrap();
             let fnname = parse_str(src, &fnname);
 
-            let args = parse_vec_h(src, c, n, parse_sanf, 1);
+            let args = parse_vec_shift(src, c, n, parse_sanf, 1);
 
             SExpr::SApp((), fnname, args)
         }

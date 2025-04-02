@@ -35,6 +35,21 @@ crate::TTG!(
                 EProd(vs) => Ok(SProd(
                     vs.iter().map(Self::embed).collect::<Result<Vec<_>>>()?,
                 )),
+                EProdExpand(vs) => Ok(SProd(
+                    vs.iter()
+                        .map(|x| match x {
+                            (EInteger(i), EInteger(sz)) => {
+                                let mut oh = vec![SInt(0); *i];
+                                oh[*i] = SInt(1);
+                                Ok(SProd(oh))
+                            }
+                            (EProd(vs), EInteger(sz)) => Ok(SProd(
+                                vs.iter().map(Self::embed).collect::<Result<Vec<_>>>()?,
+                            )),
+                            _ => errors::semantics("expanding a non-int"),
+                        })
+                        .collect::<Result<Vec<_>>>()?,
+                )),
                 EInteger(i) => Ok(SInt(*i as u64)),
                 EBdd(_) => errors::semantics("sampling lang cannot compile a formula indirectly"),
             }

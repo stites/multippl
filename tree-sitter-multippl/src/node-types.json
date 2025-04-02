@@ -39,6 +39,10 @@
           "named": true
         },
         {
+          "type": "eanfprod_expand",
+          "named": true
+        },
+        {
           "type": "eanfunop",
           "named": true
         },
@@ -117,6 +121,25 @@
         },
         {
           "type": "evalue",
+          "named": true
+        }
+      ]
+    }
+  },
+  {
+    "type": "eanfprod_expand",
+    "named": true,
+    "fields": {},
+    "children": {
+      "multiple": true,
+      "required": true,
+      "types": [
+        {
+          "type": "eanf",
+          "named": true
+        },
+        {
+          "type": "int",
           "named": true
         }
       ]
@@ -1644,6 +1667,10 @@
     }
   },
   {
+    "type": "#[",
+    "named": false
+  },
+  {
     "type": "&&",
     "named": false
   },
@@ -1725,6 +1752,10 @@
   },
   {
     "type": ">=",
+    "named": false
+  },
+  {
+    "type": "@",
     "named": false
   },
   {

@@ -81,6 +81,11 @@ where
             Box::new(upcast_anf(x)?),
         )),
         AnfProd(xs) => upcast_anf_vec(xs, AnfProd),
+        AnfProdExpand(xs) => Ok(AnfProdExpand(
+            xs.iter()
+                .map(|(x, y)| Ok((upcast_anf(x)?, y.clone())))
+                .collect::<Result<Vec<_>>>()?,
+        )),
         AnfPrj(var, ix) => Ok(AnfPrj(
             //     (),
             Box::new(upcast_anf(var)?),

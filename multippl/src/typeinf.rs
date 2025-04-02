@@ -61,6 +61,26 @@ where
         .map(|a| typeinference_anf(ty, a))
         .collect::<Result<Vec<AnfTyped<X>>>>()?))
 }
+fn typeinf_anf_vec_expand<
+    T: Debug + PartialEq + Clone,
+    X: Debug + PartialEq + Clone,
+    Y: Debug + PartialEq + Clone,
+>(
+    ty: &T,
+    xs: &[(grammar::AnfInferable<X>, Y)],
+    op: impl Fn(Vec<(AnfTyped<X>, Y)>) -> AnfTyped<X>,
+) -> Result<AnfTyped<X>>
+where
+    AVarExt<X>: ξ<Inferable, Ext = Option<T>> + ξ<Typed, Ext = T>,
+    // APrjExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
+    AValExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
+    ADistExt<X>: ξ<Inferable, Ext = ()> + ξ<Typed, Ext = ()>,
+{
+    Ok(op(xs
+        .iter()
+        .map(|(x, y)| Ok((typeinference_anf(ty, x)?, y.clone())))
+        .collect::<Result<Vec<(AnfTyped<X>, Y)>>>()?))
+}
 fn typeinference_anf<T: Debug + PartialEq + Clone, X: Debug + PartialEq + Clone>(
     ty: &T,
     a: &grammar::AnfInferable<X>,
@@ -109,6 +129,7 @@ where
         AnfTail(xs) => Ok(AnfTail(Box::new(typeinference_anf(ty, xs)?))),
 
         AnfProd(xs) => typeinf_anf_vec(ty, xs, AnfProd),
+        AnfProdExpand(xs) => typeinf_anf_vec_expand(ty, xs, AnfProdExpand),
         AnfPrj(var, ix) => Ok(AnfPrj(
             //     (),
             Box::new(typeinference_anf(ty, var)?),
