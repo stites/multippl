@@ -906,26 +906,52 @@ impl<'a> State<'a> {
 
                 let mut out = self.eval_eexpr(ctx.clone(), eexpr)?;
                 let eval = out.exact.out.clone().unwrap();
-                let sval = self.sexact_embed(&mut out, &eval)?;
-                let val = Self::sexact_embed_oh(eval, sval);
-                out.sample.out = Some(val);
-                Ok(out)
+
+                use itertools::Either::*;
+                match self.sexact_embed(&mut out, &eval)? {
+                    Left(sval) => {
+                        let val = Self::sexact_embed_oh(eval, sval);
+                        out.sample.out = Some(val);
+                        Ok(out)
+                    }
+                    Right(sval) => {
+                        out.sample.out = Some(sval);
+                        Ok(out)
+                    }
+                }
             }
             SLetSample(_, _, _, _) => errors::erased(Trace, "let-sample"),
         }
     }
-    pub fn sexact_embed(&mut self, eout: &mut Output, eval: &EVal) -> Result<SVal> {
+    pub fn sexact_embed(&mut self, eout: &mut Output, eval: &EVal) -> Result<Either<SVal, SVal>> {
+        use itertools::Either::*;
         match eval {
             EVal::EBdd(dist) => {
                 let sample = exact2sample_bdd_eff(self, eout, dist);
-                Ok(SVal::SBool(sample))
+                Ok(Left(SVal::SBool(sample)))
             }
-            EVal::EProd(vs) => Ok(SVal::SProd(
+            EVal::EProd(vs) => Ok(Left(SVal::SProd(
                 vs.iter()
-                    .map(|v| self.sexact_embed(eout, v))
+                    .map(|v| match self.sexact_embed(eout, v)? {
+                        Left(x) => Ok(x),
+                        Right(_) => panic!("expansion is a bit of a hack"),
+                    })
                     .collect::<Result<Vec<_>>>()?,
-            )),
-            e => SExpr::<Trace>::embed(e),
+            ))),
+            EVal::EProdExpand(vs) => Ok(Right(SVal::SProd(
+                vs.iter()
+                    .map(|(l, r)| match (self.sexact_embed(eout, l)?, r) {
+                        (Left(SVal::SProd(x)), EVal::EInteger(sz)) => {
+                            assert!(x.len() == *sz, "{} != {}", x.len(), sz);
+                            //  padded_vec.resize(n, T::default());
+                            // (*sz - x.len())
+                            Ok(SVal::SProd(x))
+                        }
+                        _ => panic!("expansion is a bit of a hack"),
+                    })
+                    .collect::<Result<Vec<_>>>()?,
+            ))),
+            e => Ok(Left(SExpr::<Trace>::embed(e)?)),
         }
     }
     pub fn sexact_embed_oh(eval: EVal, sval: SVal) -> SVal {
