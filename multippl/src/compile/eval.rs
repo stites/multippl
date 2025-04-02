@@ -943,9 +943,13 @@ impl<'a> State<'a> {
                     .map(|(l, r)| match (self.sexact_embed(eout, l)?, r) {
                         (Left(SVal::SProd(x)), EVal::EInteger(sz)) => {
                             assert!(x.len() == *sz, "{} != {}", x.len(), sz);
-                            //  padded_vec.resize(n, T::default());
-                            // (*sz - x.len())
                             Ok(SVal::SProd(x))
+                        }
+                        (Left(SVal::SInt(x)), EVal::EInteger(sz)) => {
+                            assert!((x as usize) <= *sz, "{} <= {}", x, sz);
+                            let mut oh = vec![SVal::SInt(0); *sz];
+                            oh[x as usize] = SVal::SInt(1);
+                            Ok(SVal::SProd(oh))
                         }
                         _ => panic!("expansion is a bit of a hack"),
                     })
