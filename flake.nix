@@ -136,7 +136,7 @@
         #packages.rsdd = inputs'.rsdd.packages.default;
         packages.dice = inputs'.dice.packages.default;
         packages.psi = pkgs.callPackage ./nix/psi-solver.nix {};
-        packages.pyro = pkgs.python3.withPackages (p: [p.pyro-ppl p.scipy p.ipython p.rich] ++ p.pyro-ppl.optional-dependencies.extras);
+        packages.pyro = pkgs.python3.withPackages (p: with p; [pyro-ppl scipy ipython rich numpyro jax] ++ pyro-ppl.optional-dependencies.extras);
 
         cachix-push.cacheName = "stites";
         pre-commit.check.enable = false; # still need to download rsdd from github in offline mode, not sure how to do that right now
