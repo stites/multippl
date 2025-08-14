@@ -475,6 +475,6 @@ the following commands can are available
 
 * References
 
-[1] - Jacob Matthews and Robert Bruce Findler. “Operational Semantics for Multi-Language Programs”. In: ACM SIGPLAN Notices 42.1 (2007), pp. 3–10. doi: 10.1145/1190215. 1190220.
-[2] - Steven Holtzen, Guy Van den Broeck, and Todd Millstein. “Scaling Exact Inference for Discrete Probabilistic Programs”. In: Proceedings of the ACM on Programming Languages 4 (OOPSLA Nov. 2020), 140:1–140:31. doi: 10/gh4jhb.
-[3] - https://github.com/neuppl/rsdd
+- [1] Jacob Matthews and Robert Bruce Findler. “Operational Semantics for Multi-Language Programs”. In: ACM SIGPLAN Notices 42.1 (2007), pp. 3–10. doi: 10.1145/1190215. 1190220.
+- [2] Steven Holtzen, Guy Van den Broeck, and Todd Millstein. “Scaling Exact Inference for Discrete Probabilistic Programs”. In: Proceedings of the ACM on Programming Languages 4 (OOPSLA Nov. 2020), 140:1–140:31. doi: 10/gh4jhb.
+- [3] https://github.com/neuppl/rsdd
